@@ -1,0 +1,106 @@
+jpn_learning_app/
+|
+|__ lib/
+|       |__ main.dart
+|       |
+|       |__ <models>
+|       |       |__ user.dart
+|       |       |__ vocabulary.dart
+|       |       |__ scenario.dart
+|       |       |__ leaderboard.dart
+|       |       |__ question.dart
+|       |
+|       |__ <services>
+|       |       |__ auth_service.dart        # 登入/註冊
+|       |       |__ ai_service.dart          # AI 分析/角色扮演
+|       |       |__ user_service.dart        # 使用者資料/等級
+|       |       |__ vocab_service.dart       # 單字收藏
+|       |       |__ rank_service.dart        # 排行榜
+|       |       |__ tutor_service.dart       # 家教問答
+|       |
+|       |__ <providers>
+|       |       |__ auth_provider.dart
+|       |       |__ user_provider.dart
+|       |       |__ scenario_provider.dart
+|       |
+|       |__ <screens>
+|       |       |__ <auth>
+|       |       |       |__ splash_screen.dart        # 1-1 Logo
+|       |       |       |__ onboarding_screen.dart    # 1-2 介紹
+|       |       |       |__ login_screen.dart         # 1-3 登入
+|       |       |       |__ level_select_screen.dart  # 1-4-1 程度選擇
+|       |       |       |__ quick_test_screen.dart    # 1-4-2 快速測驗
+|       |       |       |__ test_result_screen.dart   # 1-4-3 測驗結果
+|       |       |
+|       |       |__ <home>
+|       |       |       |__ home_screen.dart          # 2-1 首頁
+|       |       |
+|       |       |__ <scenario>
+|       |       |       |__ camera_screen.dart        # 2-2-1-1 拍照
+|       |       |       |__ align_screen.dart         # 2-2-1-1-2 對齊場景
+|       |       |       |__ manual_search_screen.dart # 2-2-1-2 手動搜尋
+|       |       |       |__ analyzing_screen.dart     # 2-2-2 AI分析中
+|       |       |       |__ scene_result_screen.dart  # 2-2-3 辨識結果
+|       |       |       |__ roleplay_screen.dart      # 2-2-4 角色扮演
+|       |       |       |__ naturalness_screen.dart   # 2-2-5 自然度評分
+|       |       |       |__ grammar_tip_screen.dart   # 2-2-5-2 語法小教室
+|       |       |
+|       |       |__ <leaderboard>
+|       |       |       |__ leaderboard_screen.dart   # 2-3-1 排行榜
+|       |       |       |__ study_group_screen.dart   # 2-3-2 學習小組
+|       |       |
+|       |       |__ <tutor>
+|       |       |       |__ tutor_home_screen.dart    # 2-4 問題列表/FAQ
+|       |       |       |__ ask_question_screen.dart  # 選場景+提問
+|       |       |       |__ tutor_answer_screen.dart  # 家教回覆
+|       |       |
+|       |       |__ <profile>
+|       |       |       |__ profile_screen.dart       # 2-5 個人頁面
+|       |       |       |__ photo_folder_screen.dart  # 照片收藏夾
+|       |       |       |__ vocab_detail_screen.dart  # 單字詳情
+|       |       |
+|       |       |__ <premium>
+|       |               |__ premium_screen.dart       # 3-1-1 升級Premium
+|       |               |__ buy_points_screen.dart    # 3-1-2 購買J-Points
+|       |
+|       |__ <widgets>
+|       |       |__ bottom_nav_bar.dart     # 底部導航列
+|       |       |__ app_bar_widget.dart     # 頂部AppBar
+|       |       |__ radar_chart.dart        # 能力雷達圖
+|       |       |__ vocab_card.dart         # 單字卡片
+|       |       |__ scenario_card.dart      # 場景卡片
+|       |       |__ leaderboard_tile.dart   # 排行榜項目
+|       |
+|       |__ <utils>
+|               |__ constants.dart          # API URL、顏色、字型
+|               |__ api_client.dart         # HTTP請求封裝
+|
+|__ pubspec.yaml
+|__ .env
+|
+backend/
+|
+|__ <static>
+|       |__ <photos>                        # 使用者上傳的場景照片
+|
+|__ <services>
+|       |__ auth.py                         # 登入、註冊、JWT驗證
+|       |__ user.py                         # 使用者資料、等級、成就、雷達圖
+|       |__ scenario.py                     # AI場景辨識、場景紀錄
+|       |__ roleplay.py                     # AI角色扮演、自然度評分
+|       |__ vocabulary.py                   # 單字收藏、查詢
+|       |__ leaderboard.py                  # 排行榜、學習小組
+|       |__ tutor.py                        # 提問、FAQ、家教回覆
+|       |__ quiz.py                         # 新手測驗、程度判定
+|       |__ __init__.py
+|
+|__ <utils>
+|       |__ db.py                           # 資料庫連線
+|       |__ jwt_helper.py                   # JWT產生與驗證
+|       |__ ai_helper.py                    # OpenAI/Gemini API封裝
+|       |__ __init__.py
+|
+|__ app.py                                  # 主程式，註冊所有Blueprint
+|__ .env                                    # DB_URL、SECRET_KEY、API_KEY
+|__ requirements.txt
+|__ __init__.py

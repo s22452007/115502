@@ -1,4 +1,4 @@
-# jpn_learning_app_new
+# jpn_learning_app
 
 A new Flutter project.
 

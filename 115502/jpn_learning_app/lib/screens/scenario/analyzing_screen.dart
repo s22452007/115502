@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/scenario/scene_result_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/scenario/scene_result_screen.dart';
 
 // 2-2-2 AI 分析中
 class AnalyzingScreen extends StatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 class TestResultScreen extends StatelessWidget {
   const TestResultScreen({Key? key}) : super(key: key);

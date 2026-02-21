@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/auth/quick_test_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart';
 
 class LevelSelectScreen extends StatelessWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);

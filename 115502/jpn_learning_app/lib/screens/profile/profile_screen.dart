@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/widgets/bottom_nav_bar.dart';
-import 'package:jpn_learning_app_new/screens/profile/photo_folder_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/screens/profile/photo_folder_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/scenario/analyzing_screen.dart';
-import 'package:jpn_learning_app_new/screens/scenario/manual_search_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 
 class CameraScreen extends StatelessWidget {
   const CameraScreen({Key? key}) : super(key: key);

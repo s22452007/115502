@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/widgets/bottom_nav_bar.dart';
-import 'package:jpn_learning_app_new/screens/scenario/camera_screen.dart';
-import 'package:jpn_learning_app_new/screens/leaderboard/leaderboard_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);

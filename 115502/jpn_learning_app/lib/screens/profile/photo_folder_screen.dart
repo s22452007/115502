@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/profile/vocab_detail_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/profile/vocab_detail_screen.dart';
 
 class PhotoFolderScreen extends StatelessWidget {
   const PhotoFolderScreen({Key? key}) : super(key: key);

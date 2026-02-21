@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class StudyGroupScreen extends StatelessWidget {
   const StudyGroupScreen({Key? key}) : super(key: key);

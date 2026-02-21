@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/scenario/analyzing_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
 
 class ManualSearchScreen extends StatelessWidget {
   const ManualSearchScreen({Key? key}) : super(key: key);

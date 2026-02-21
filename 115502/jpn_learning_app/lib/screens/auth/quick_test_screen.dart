@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/auth/test_result_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/auth/test_result_screen.dart';
 
 class QuickTestScreen extends StatefulWidget {
   const QuickTestScreen({Key? key}) : super(key: key);

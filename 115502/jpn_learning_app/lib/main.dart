@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/screens/auth/splash_screen.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
+import 'package:jpn_learning_app/screens/auth/splash_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 void main() {
   runApp(const JpnLearningApp());

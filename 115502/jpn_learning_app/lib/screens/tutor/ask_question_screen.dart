@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/tutor/tutor_answer_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/tutor/tutor_answer_screen.dart';
 
 class AskQuestionScreen extends StatelessWidget {
   const AskQuestionScreen({Key? key}) : super(key: key);

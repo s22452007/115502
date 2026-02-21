@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/screens/scenario/grammar_tip_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/scenario/grammar_tip_screen.dart';
 
 class NaturalnessScreen extends StatelessWidget {
   const NaturalnessScreen({Key? key}) : super(key: key);

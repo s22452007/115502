@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app_new/utils/constants.dart';
-import 'package:jpn_learning_app_new/widgets/bottom_nav_bar.dart';
-import 'package:jpn_learning_app_new/screens/leaderboard/study_group_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({Key? key}) : super(key: key);

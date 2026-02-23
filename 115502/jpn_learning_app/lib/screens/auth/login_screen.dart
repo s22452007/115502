@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+// 保留了這個跳轉頁面的設定
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,88 +12,95 @@ class LoginScreen extends StatelessWidget {
       backgroundColor: AppColors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 48),
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLighter,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(Icons.camera_alt, size: 36, color: AppColors.primary),
+              const Spacer(),
+
+              // 這是你之後要換成自己 Logo 的地方 (目前先保留相機圖示)
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLighter,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(
+                  Icons.camera_alt,
+                  size: 60,
+                  color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: 40),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary),
+              const SizedBox(height: 48),
+
+              // Google 登入按鈕
+              OutlinedButton.icon(
+                onPressed: () {
+                  print('觸發 Google 登入邏輯');
+                },
+                icon: const Icon(
+                  Icons.g_mobiledata,
+                  size: 36,
+                  color: Colors.black87,
+                ),
+                label: const Text(
+                  'Sign in with Google',
+                  style: TextStyle(color: Colors.black87, fontSize: 16),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary),
+
+              // Apple 登入按鈕
+              OutlinedButton.icon(
+                onPressed: () {
+                  print('觸發 Apple 登入邏輯');
+                },
+                icon: const Icon(Icons.apple, size: 28, color: Colors.black87),
+                label: const Text(
+                  'Sign in with Apple',
+                  style: TextStyle(color: Colors.black87, fontSize: 16),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+
+              const Spacer(),
+
+              // 訪客登入按鈕 (已幫你設定好跳轉功能！)
+              TextButton(
+                onPressed: () {
+                  // 點擊後會直接跳到難易度選擇畫面
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LevelSelectScreen(),
+                    ),
+                  );
+                },
+                child: const Text(
+                  '訪客登入 (Continue as Guest)',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => Navigator.pushReplacement(
-                    context, MaterialPageRoute(builder: (_) => const LevelSelectScreen())),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                ),
-                child: const Text('Login', style: TextStyle(color: Colors.white, fontSize: 16)),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _SocialButton(icon: Icons.g_mobiledata, label: 'sign in with Google'),
-                  const SizedBox(width: 16),
-                  _SocialButton(icon: Icons.apple, label: 'Apple'),
-                ],
-              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _SocialButton({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: () {},
-      icon: Icon(icon, color: AppColors.textDark),
-      label: Text(label, style: TextStyle(color: AppColors.textDark, fontSize: 12)),
-      style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
     );
   }

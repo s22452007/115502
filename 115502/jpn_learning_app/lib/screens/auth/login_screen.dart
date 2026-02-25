@@ -26,10 +26,11 @@ class LoginScreen extends StatelessWidget {
                   color: AppColors.primaryLighter,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Icon(
-                  Icons.camera_alt,
-                  size: 60,
-                  color: AppColors.primary,
+                child: Image.asset(
+                  'assets/images/Logo.png',
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 48),

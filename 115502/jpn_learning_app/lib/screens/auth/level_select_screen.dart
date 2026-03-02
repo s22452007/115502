@@ -1,57 +1,125 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart';
+// TODO: 記得引入你的 HomeScreen
+// import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
-class LevelSelectScreen extends StatelessWidget {
+class LevelSelectScreen extends StatefulWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final levels = [
-      {'title': '超級新手', 'desc': '什麼都不懂，好想學習自立'},
-      {'title': '入門新手', 'desc': '會5字、能進行基本生活旅行，了解日文字母'},
-      {'title': '初級應用 (N5、N4)', 'desc': '板燈學基本生活句型，合場景，認識隱形無漢語'},
-      {'title': '中級對話 (N3以上)', 'desc': '能大致溝通日常生活語言到此，需要自立學習法'},
-    ];
+  State<LevelSelectScreen> createState() => _LevelSelectScreenState();
+}
 
+class _LevelSelectScreenState extends State<LevelSelectScreen> {
+  // 用來記錄目前選擇的等級索引，null 代表尚未選擇
+  int? _selectedIndex;
+
+  final List<Map<String, String>> levels = [
+    {'title': '超級新手', 'desc': '什麼都不會，就想學日文'},
+    {'title': '入門新手', 'desc': '會五十音，能進行非常簡單的自我介紹、問候'},
+    {'title': '初級應用(N5、N4)', 'desc': '能理解基本生活對話，在餐廳、超商進行簡單溝通'},
+    {'title': '中級對話(N3以上)', 'desc': '能大致聽懂日常日語對話，表達自己的想法'},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: Colors.white, // AppColors.white
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
-              const Text('歡迎加入我們！\n請選擇您目前的日語程度',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              const SizedBox(height: 32),
-              ...levels.map((l) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _LevelButton(
-                  title: l['title']!,
-                  desc: l['desc']!,
-                  onTap: () => Navigator.push(
-                      context, MaterialPageRoute(builder: (_) => const QuickTestScreen())),
-                ),
-              )),
-              const Spacer(),
-              Center(
-                child: TextButton(
-                  onPressed: () => Navigator.push(
-                      context, MaterialPageRoute(builder: (_) => const QuickTestScreen())),
-                  child: Text('我不確定，進行測驗', style: TextStyle(color: AppColors.textGrey)),
+              // --- 上半部：標題與選項 (使用 Expanded + SingleChildScrollView 讓內容過長時可滾動) ---
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 24),
+                      const Text(
+                        '歡迎加入我們！\n請選擇您目前的日語程度',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22, 
+                          fontWeight: FontWeight.bold, 
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      // 程度選擇按鈕列表
+                      ...List.generate(levels.length, (index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _LevelButton(
+                            title: levels[index]['title']!,
+                            desc: levels[index]['desc']!,
+                            isSelected: _selectedIndex == index,
+                            onTap: () {
+                              setState(() {
+                                _selectedIndex = index;
+                              });
+                            },
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              
+              // --- 下半部：底部按鈕 (固定在畫面最下方) ---
+              const SizedBox(height: 12), // 與上方選項保持一點距離
+              
+              // 我不確定，進行測驗
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const QuickTestScreen()),
+                  );
+                },
+                child: const Text(
+                  '我不確定，進行測驗', 
+                  style: TextStyle(
+                    fontSize: 16,
+                    decoration: TextDecoration.underline,
+                    color: Colors.grey, // AppColors.textGrey
+                  ),
                 ),
-                child: const Text('確定並案組始學習', style: TextStyle(color: Colors.white)),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // 確定並開始學習
+              ElevatedButton(
+                onPressed: () {
+                  if (_selectedIndex == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('請先選擇一個程度喔！')),
+                    );
+                    return;
+                  }
+                  
+                  // TODO: 儲存使用者等級
+                  
+                  print('選擇了：${levels[_selectedIndex!]['title']}');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('準備進入首頁！等級：${levels[_selectedIndex!]['title']}')),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green, // AppColors.primary
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+                ),
+                child: const Text(
+                  '確定並開始學習', 
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
+                ),
               ),
             ],
           ),
@@ -61,28 +129,57 @@ class LevelSelectScreen extends StatelessWidget {
   }
 }
 
+// 獨立出來的按鈕元件
 class _LevelButton extends StatelessWidget {
-  final String title, desc;
+  final String title;
+  final String desc;
+  final bool isSelected;
   final VoidCallback onTap;
-  const _LevelButton({required this.title, required this.desc, required this.onTap});
+
+  const _LevelButton({
+    required this.title, 
+    required this.desc, 
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12), // 讓點擊水波紋符合圓角
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.primaryLighter,
-          borderRadius: BorderRadius.circular(30),
+          // 選中時背景變深，未選中時背景較淺
+          color: isSelected ? Colors.green.withOpacity(0.8) : Colors.green.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.green : Colors.black54,
+            width: isSelected ? 2 : 1,
+          ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center, // 依照設計圖，文字似乎是置中的
           children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark)),
-            const SizedBox(height: 4),
-            Text(desc, style: TextStyle(fontSize: 12, color: AppColors.textGrey)),
+            Text(
+              title, 
+              style: TextStyle(
+                fontWeight: FontWeight.bold, 
+                fontSize: 18, 
+                color: isSelected ? Colors.white : Colors.black87
+              )
+            ),
+            const SizedBox(height: 6),
+            Text(
+              desc, 
+              style: TextStyle(
+                fontSize: 12, 
+                color: isSelected ? Colors.white70 : Colors.black54
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

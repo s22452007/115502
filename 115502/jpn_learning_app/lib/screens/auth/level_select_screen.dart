@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart'; // 確保路徑正確
 // TODO: 記得引入你的 HomeScreen
 // import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
@@ -102,11 +105,16 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     return;
                   }
                   
-                  // TODO: 儲存使用者等級
+                  // 1. 取得使用者選取的程度名稱
+                  final selectedLevelTitle = levels[_selectedIndex!]['title']!;
                   
-                  print('選擇了：${levels[_selectedIndex!]['title']}');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('準備進入首頁！等級：${levels[_selectedIndex!]['title']}')),
+                  // 2. 透過 Provider 將等級儲存起來 (這需要匯入 provider 套件)
+                  context.read<UserProvider>().setJapaneseLevel(selectedLevelTitle);
+                  
+                  // 3. 跳轉到主畫面，並移除前面的選擇畫面堆疊
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
                   );
                 },
                 style: ElevatedButton.styleFrom(

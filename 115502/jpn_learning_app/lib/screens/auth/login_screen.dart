@@ -27,7 +27,7 @@ class LoginScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Image.asset(
-                  'assets/images/logo.png',
+                  'images/logo.png',
                   width: 100,
                   height: 100,
                   fit: BoxFit.contain,

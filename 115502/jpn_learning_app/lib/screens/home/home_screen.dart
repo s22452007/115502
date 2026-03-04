@@ -3,7 +3,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
-import 'package:jpn_learning_app/screens/home/result_gallery_screen.dart'; // 加上這行，引入我們剛做好的畫廊
+import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart'; // 加上這行，引入我們剛做好的畫廊
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);

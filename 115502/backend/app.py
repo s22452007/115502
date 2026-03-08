@@ -1,13 +1,25 @@
+import os
 from flask import Flask
 from flask_cors import CORS
 from utils.db import db
 from services.quiz import quiz_bp
 
+# 1. 自動抓取 app.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
 app = Flask(__name__)
 CORS(app) # 允許跨網域請求
 
-# 設定 SQLite 資料庫，檔案會自動產生在 backend 資料夾下，名為 jlens.db
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///jlens.db'
+# 2. 強制把資料庫路徑綁定在 backend/instance/jlens.db
+# os.path.join 會幫你把路徑安全地接起來 (不管你是 Windows 還是 Mac 都不會出錯)
+instance_path = os.path.join(BASE_DIR, 'instance')
+db_path = os.path.join(instance_path, 'jlens.db')
+
+# 3. 防呆機制：如果 instance 資料夾還不存在，就自動幫你建一個
+os.makedirs(instance_path, exist_ok=True)
+
+# 設定 SQLite 資料庫，使用絕對路徑
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 初始化資料庫
@@ -22,4 +34,5 @@ with app.app_context():
 
 if __name__ == '__main__':
     print("🚀 後端伺服器啟動中...")
+    print(f"📁 資料庫已牢牢綁定於: {db_path}") 
     app.run(debug=True, port=5000)

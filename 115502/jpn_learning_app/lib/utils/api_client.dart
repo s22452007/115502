@@ -1,0 +1,35 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+class ApiClient {
+  // 因為你是用 Chrome 測試 Flutter，所以可以直接用 127.0.0.1
+  // (注意：如果你之後改用 Android 模擬器，這裡要改成 10.0.2.2)
+  static const String baseUrl = 'http://127.0.0.1:5000/api';
+
+  // 傳送測驗分數給後端的 API
+  static Future<Map<String, dynamic>> submitQuizScore(int userId, int score) async {
+    final url = Uri.parse('$baseUrl/quiz/submit');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'score': score,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // 成功的話，把後端回傳的 JSON 解析出來
+        return jsonDecode(response.body);
+      } else {
+        print('後端回傳錯誤代碼: ${response.statusCode}');
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('連線失敗: $e');
+      return {'error': e.toString()};
+    }
+  }
+}

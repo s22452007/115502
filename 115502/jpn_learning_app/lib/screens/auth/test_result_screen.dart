@@ -5,6 +5,8 @@ import 'package:jpn_learning_app/widgets/radar_chart.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart'; // 確保路徑正確
 
+import 'package:jpn_learning_app/utils/api_client.dart';
+
 class TestResultScreen extends StatelessWidget {
   final int score;
 
@@ -99,33 +101,39 @@ class TestResultScreen extends StatelessWidget {
               
               const SizedBox(height: 24),
 
-              // 底部按鈕 - 檢討錯題
-              ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('準備開發：檢討錯題功能')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green, // AppColors.primary
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('檢討錯題', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 12),
-              
               // 底部按鈕 - 開始探索 (儲存等級並跳回首頁)
               ElevatedButton(
-                onPressed: () {
-                  // 1. 把判定的等級存進 UserProvider
-                  context.read<UserProvider>().setJapaneseLevel(levelName);
-                  
-                  // 2. 直接跳轉到首頁，並清空先前的測驗畫面堆疊
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                onPressed: () async {
+                  // 1. 先顯示一個 Loading 提示，讓使用者知道正在儲存
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('正在儲存你的測驗結果...')),
                   );
+
+                  // 2. 呼叫後端 API！(這裡假設目前登入的使用者 ID 是 1)
+                  final result = await ApiClient.submitQuizScore(1, score);
+
+                  if (result.containsKey('level')) {
+                    // 3. 從後端拿到判定好的等級 (例如: '初級應用(N5、N4)')
+                    final levelFromBackend = result['level'];
+                    
+                    // 4. 存進 APP 前端的狀態裡
+                    context.read<UserProvider>().setJapaneseLevel(levelFromBackend);
+                    
+                    // 5. 成功儲存後，跳轉到首頁
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    }
+                  } else {
+                    // 如果發生錯誤的防呆處理
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('儲存失敗，請檢查網路或後端伺服器！')),
+                      );
+                    }
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.withOpacity(0.2), // AppColors.primaryLighter

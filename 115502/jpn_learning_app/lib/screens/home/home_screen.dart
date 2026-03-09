@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-// 這裡先註解掉，因為我們還沒建立排行榜的檔案
 // import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
 
@@ -14,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 2; // 預設停留在首頁 (假設 index 2 是首頁)
+  int _currentIndex = 2; // 預設停留在首頁
 
   // 設計圖裡的顏色
   final Color _goalGreen = const Color(0xFF6AA86B);
@@ -28,26 +27,53 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 🌟 這裡幫你把原本的 Header (AppBar) 加回來了！
+      // 掛上漢堡選單 (Drawer)
+      drawer: _buildDrawer(context),
+
+      // 🌟 這裡就是幫你修好的「真按鈕」標題列！
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
-        leading: const Icon(Icons.menu, color: Colors.white),
-        title: const Icon(Icons.camera_alt, color: Colors.white),
+
+        // 1. 左邊漢堡選單：綁定打開抽屜的動作
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(context).openDrawer(); // 打開側邊欄的魔法指令
+            },
+          ),
+        ),
+
+        // 2. 中間相機：點擊直接跳轉到相機頁面
+        title: IconButton(
+          icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          },
+        ),
         centerTitle: true,
-        actions: const [
-          Icon(Icons.person_outline, color: Colors.white),
-          SizedBox(width: 12),
+
+        // 3. 右邊個人檔案：目前先印出文字，之後可以連到個人頁面
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: Colors.white),
+            onPressed: () {
+              print('點擊了右側個人檔案！');
+            },
+          ),
+          const SizedBox(width: 8),
         ],
       ),
 
-      // 下方是絕美的新版內容
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- 1. 頂部招呼語 ---
             Text(
               '早安，Pin!',
               style: TextStyle(
@@ -63,7 +89,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- 2. 連續天數 & 點數 (Chips) ---
             Row(
               children: [
                 _buildStatusChip(
@@ -83,7 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 32),
 
-            // --- 3. 今日學習目標 (綠色大卡片) ---
             const Text(
               '今日學習目標',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -121,7 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // 進度條
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
@@ -139,7 +162,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         '進度 : 2/3',
                         style: TextStyle(color: Colors.white, fontSize: 14),
                       ),
-                      // 開啟相機按鈕
                       ElevatedButton(
                         onPressed: () {
                           Navigator.push(
@@ -178,7 +200,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 32),
 
-            // --- 4. 最近解鎖場景 ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -188,7 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    // 點擊查看收藏夾，進入單字畫廊
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -231,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 32),
 
-            // --- 5. 學習小組動態 ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -299,12 +318,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20), // 底部留白
+            const SizedBox(height: 20),
           ],
         ),
       ),
 
-      // --- 底部導覽列 ---
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (i) {
@@ -385,6 +403,79 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(subtitle, style: TextStyle(fontSize: 12, color: _subTextColor)),
+        ],
+      ),
+    );
+  }
+
+  // --- 漢堡選單的內部排版設計 ---
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(color: _goalGreen),
+            accountName: const Text(
+              'Pin',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            accountEmail: const Text('pin_learning@example.com'),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                'P',
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Color(0xFF6AA86B),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home_outlined),
+            title: const Text('回首頁', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('個人檔案', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bookmark_border),
+            title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ResultGalleryScreen()),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: const Text('系統設定', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.redAccent),
+            title: const Text(
+              '登出',
+              style: TextStyle(fontSize: 16, color: Colors.redAccent),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
         ],
       ),
     );

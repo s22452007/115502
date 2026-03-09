@@ -17,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 2; // 預設停留在首頁
 
   // 設計圖裡的顏色
-  final Color _goalGreen = const Color(0xFF6AA86B);
+  final Color _goalGreen = const Color.fromARGB(255, 255, 255, 255);
   final Color _cardRed = const Color.fromARGB(255, 133, 109, 160);
   final Color _cardBlue = const Color(0xFF85B8D6);
   final Color _textColor = const Color(0xFF333333);
@@ -416,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             accountEmail: const Text('pin_learning@example.com'),
             currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
+              backgroundColor: Color.fromARGB(255, 255, 255, 255),
               child: Text(
                 'P',
                 style: TextStyle(

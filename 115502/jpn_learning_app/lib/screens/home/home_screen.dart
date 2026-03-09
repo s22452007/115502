@@ -458,30 +458,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer(BuildContext context, String userName, String userEmail, String firstLetter) {
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: _goalGreen),
-            accountName: const Text(
-              'Pin',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            accountEmail: const Text('pin_learning@example.com'),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                'P',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Color(0xFF6AA86B),
-                  fontWeight: FontWeight.bold,
-                ),
+    child: ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        UserAccountsDrawerHeader(
+          decoration: BoxDecoration(color: _goalGreen),
+          accountName: Text(
+            userName, // 這裡使用傳進來的名字
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          accountEmail: Text(userEmail), // 這裡使用傳進來的 Email
+          currentAccountPicture: CircleAvatar(
+            backgroundColor: Colors.white,
+            child: Text(
+              firstLetter, // 這裡使用傳進來的第一個字母
+              style: const TextStyle(
+                fontSize: 24,
+                color: Color(0xFF6AA86B),
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
+        ),
           ListTile(
             leading: const Icon(Icons.home_outlined),
             title: const Text('回首頁', style: TextStyle(fontSize: 16)),

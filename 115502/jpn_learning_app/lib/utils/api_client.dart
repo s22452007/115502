@@ -38,6 +38,25 @@ class ApiClient {
     }
   }
 
+  // --- 重設密碼 API ---
+  static Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
+    final url = Uri.parse('$baseUrl/auth/reset_password');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email, 
+          'new_password': newPassword
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('重設密碼連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 傳送測驗分數給後端的 API
   static Future<Map<String, dynamic>> submitQuizScore(int userId, int score) async {
     final url = Uri.parse('$baseUrl/quiz/submit');

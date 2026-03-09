@@ -12,6 +12,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // 4. 我們自己寫的畫面 (跳轉用)
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
 
 // 因為需要切換「登入」與「註冊」狀態，還有接收輸入框的文字，所以要改成 StatefulWidget
 class LoginScreen extends StatefulWidget {
@@ -212,13 +213,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: 串接忘記密碼邏輯
-                      print('觸發忘記密碼邏輯');
+                      // 跳轉到忘記密碼畫面
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                      );
                     },
                     child: const Text(
                       '忘記密碼？', 
                       style: TextStyle(
-                        color: AppColors.primary, // 你的專案綠色
+                        color: AppColors.primary, 
                         decoration: TextDecoration.underline,
                       ),
                     ),

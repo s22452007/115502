@@ -47,3 +47,24 @@ def login():
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401
+    
+@auth_bp.route('/reset_password', methods=['POST'])
+def reset_password():
+    data = request.get_json()
+    email = data.get('email')
+    new_password = data.get('new_password')
+
+    if not email or not new_password:
+        return jsonify({"error": "請填寫 Email 與新密碼"}), 400
+
+    # 去資料庫找看看這個 Email 存不存在
+    user = User.query.filter_by(email=email).first()
+    
+    if not user:
+        return jsonify({"error": "找不到此 Email，請確認是否輸入正確"}), 404
+
+    # 將新密碼加密後，覆蓋掉舊密碼
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "密碼重設成功！請使用新密碼登入"}), 200

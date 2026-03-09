@@ -20,7 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // 顏色設定
   final Color _bgColor = Colors.white;
   final Color _cardColor = const Color(0xFFF1F8E9);
-  final Color _primaryGreen = const Color(0xFF6AA86B);
+  final Color _primaryGreen = const Color.fromARGB(255, 74, 124, 89);
   final Color _textColor = const Color(0xFF333333);
 
   @override

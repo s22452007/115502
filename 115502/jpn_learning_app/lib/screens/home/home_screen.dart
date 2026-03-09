@@ -18,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 2; // 預設停留在首頁
 
   // 設計圖裡的顏色
-  final Color _goalGreen = const Color(0xFF6AA86B);
+  final Color _goalGreen = const Color.fromARGB(255, 255, 255, 255);
   final Color _cardRed = const Color.fromARGB(255, 133, 109, 160);
   final Color _cardBlue = const Color(0xFF85B8D6);
   final Color _textColor = const Color(0xFF333333);
@@ -411,30 +411,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, String userName, String userEmail, String firstLetter) {
-  return Drawer(
-    child: ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        UserAccountsDrawerHeader(
-          decoration: BoxDecoration(color: _goalGreen),
-          accountName: Text(
-            userName, // 使用動態名字
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          accountEmail: Text(userEmail), // 使用動態 Email
-          currentAccountPicture: CircleAvatar(
-            backgroundColor: Colors.white,
-            child: Text(
-              firstLetter, // 使用動態第一個字母
-              style: const TextStyle(
-                fontSize: 24,
-                color: Color(0xFF6AA86B),
-                fontWeight: FontWeight.bold,
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(color: _goalGreen),
+            accountName: const Text(
+              'Pin',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            accountEmail: const Text('pin_learning@example.com'),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                'P',
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Color(0xFF6AA86B),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
           ListTile(
             leading: const Icon(Icons.home_outlined),
             title: const Text('回首頁', style: TextStyle(fontSize: 16)),

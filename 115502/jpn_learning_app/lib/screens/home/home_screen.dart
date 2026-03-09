@@ -4,6 +4,7 @@ import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 // import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
+import 'package:jpn_learning_app/screens/profile/profile_screen.dart'; // 🌟 這裡完美引入了你的個人檔案
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -17,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 設計圖裡的顏色
   final Color _goalGreen = const Color(0xFF6AA86B);
-  final Color _cardRed = const Color(0xFFE58888);
+  final Color _cardRed = const Color.fromARGB(255, 133, 109, 160);
   final Color _cardBlue = const Color(0xFF85B8D6);
   final Color _textColor = const Color(0xFF333333);
   final Color _subTextColor = const Color(0xFF888888);
@@ -27,25 +28,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 掛上漢堡選單 (Drawer)
       drawer: _buildDrawer(context),
 
-      // 🌟 這裡就是幫你修好的「真按鈕」標題列！
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
-
-        // 1. 左邊漢堡選單：綁定打開抽屜的動作
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
             onPressed: () {
-              Scaffold.of(context).openDrawer(); // 打開側邊欄的魔法指令
+              Scaffold.of(context).openDrawer();
             },
           ),
         ),
-
-        // 2. 中間相機：點擊直接跳轉到相機頁面
         title: IconButton(
           icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
           onPressed: () {
@@ -56,13 +51,15 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         centerTitle: true,
-
-        // 3. 右邊個人檔案：目前先印出文字，之後可以連到個人頁面
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.white),
             onPressed: () {
-              print('點擊了右側個人檔案！');
+              // 🌟 魔法連線在這裡！點擊立刻跳轉到個人檔案！
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
             },
           ),
           const SizedBox(width: 8),
@@ -337,7 +334,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 小元件：連續天數與點數標籤 ---
   Widget _buildStatusChip({
     required IconData icon,
     required Color iconColor,
@@ -368,7 +364,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 小元件：場景卡片 ---
   Widget _buildSceneCard(
     String title,
     String subtitle,
@@ -408,7 +403,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 漢堡選單的內部排版設計 ---
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: ListView(
@@ -445,6 +439,10 @@ class _HomeScreenState extends State<HomeScreen> {
             title: const Text('個人檔案', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ); // 🌟 抽屜裡的人頭也幫你接好線了！
             },
           ),
           ListTile(

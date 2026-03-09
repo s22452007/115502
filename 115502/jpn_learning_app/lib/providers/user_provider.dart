@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 class UserProvider extends ChangeNotifier {
-  int? _userId; // 新增：儲存使用者的專屬 ID
+  int? _userId;
   String _japaneseLevel = '';
+  String? _email;
 
   int? get userId => _userId;
   String get japaneseLevel => _japaneseLevel;
+  String? get email => _email;
 
-  // 登入或註冊成功時，把後端給的 ID 存起來
   void setUserId(int id) {
     _userId = id;
     notifyListeners();
@@ -15,6 +16,11 @@ class UserProvider extends ChangeNotifier {
 
   void setJapaneseLevel(String level) {
     _japaneseLevel = level;
+    notifyListeners();
+  }
+
+  void setEmail(String email) {
+    _email = email;
     notifyListeners();
   }
 }

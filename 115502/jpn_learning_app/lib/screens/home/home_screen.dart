@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-// import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart'; // 🌟 這裡完美引入了你的個人檔案
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -25,10 +26,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 從 Provider 抓取使用者的 Email (如果是訪客沒登入，就給個預設值)
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    // 把 Email 的 @ 前面切出來當作名字
+    final userName = userEmail.split('@')[0];
+    // 抓取名字的第一個字母當作頭像 (並轉成大寫)
+    final firstLetter = userName.isNotEmpty ? userName[0].toUpperCase() : 'G';
+
     return Scaffold(
       backgroundColor: Colors.white,
 
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, userName, userEmail, firstLetter),
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,
@@ -72,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '早安，Pin!',
+              '早安，$userName!',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -403,30 +411,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: _goalGreen),
-            accountName: const Text(
-              'Pin',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            accountEmail: const Text('pin_learning@example.com'),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                'P',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Color(0xFF6AA86B),
-                  fontWeight: FontWeight.bold,
-                ),
+  Widget _buildDrawer(BuildContext context, String userName, String userEmail, String firstLetter) {
+  return Drawer(
+    child: ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        UserAccountsDrawerHeader(
+          decoration: BoxDecoration(color: _goalGreen),
+          accountName: Text(
+            userName, // 使用動態名字
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          accountEmail: Text(userEmail), // 使用動態 Email
+          currentAccountPicture: CircleAvatar(
+            backgroundColor: Colors.white,
+            child: Text(
+              firstLetter, // 使用動態第一個字母
+              style: const TextStyle(
+                fontSize: 24,
+                color: Color(0xFF6AA86B),
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
+        ),
           ListTile(
             leading: const Icon(Icons.home_outlined),
             title: const Text('回首頁', style: TextStyle(fontSize: 16)),

@@ -68,7 +68,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result.containsKey('user_id')) {
         // 登入成功！存下 user_id
         context.read<UserProvider>().setUserId(result['user_id']);
-        
+        context.read<UserProvider>().setEmail(email); // 存入輸入的 Email
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('登入成功！')),
         );
@@ -103,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result.containsKey('user_id')) {
         // 註冊成功！存下 user_id
         context.read<UserProvider>().setUserId(result['user_id']);
+        context.read<UserProvider>().setEmail(email); // 存入輸入的 Email
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('註冊成功！請選擇您的日語程度')),

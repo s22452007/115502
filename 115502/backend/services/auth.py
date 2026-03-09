@@ -68,3 +68,23 @@ def reset_password():
     db.session.commit()
 
     return jsonify({"message": "密碼重設成功！請使用新密碼登入"}), 200
+
+@auth_bp.route('/update_level', methods=['POST'])
+def update_level():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    level = data.get('level')
+
+    if not user_id or not level:
+        return jsonify({"error": "缺少使用者 ID 或程度資訊"}), 400
+
+    # 尋找使用者
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    # 直接更新日語程度
+    user.japanese_level = level
+    db.session.commit()
+
+    return jsonify({"message": "程度更新成功！", "level": level}), 200

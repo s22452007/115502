@@ -1,11 +1,17 @@
+// 1. Flutter 官方套件
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart';
+
+// 2. 第三方套件
 import 'package:provider/provider.dart';
+
+// 3. 我們自己寫的工具與狀態管理
+import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/screens/home/home_screen.dart'; // 確保路徑正確
-// TODO: 記得引入你的 HomeScreen
-// import 'package:jpn_learning_app/screens/home/home_screen.dart';
+
+// 4. 我們自己寫的畫面 (跳轉用)
+import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart'; // 讓「我不確定」按鈕可以跳去測驗
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 class LevelSelectScreen extends StatefulWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
@@ -97,25 +103,51 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               
               // 確定並開始學習
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  // 1. 防呆：檢查有沒有選中任何一個索引
                   if (_selectedIndex == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('請先選擇一個程度喔！')),
                     );
                     return;
                   }
-                  
-                  // 1. 取得使用者選取的程度名稱
-                  final selectedLevelTitle = levels[_selectedIndex!]['title']!;
-                  
-                  // 2. 透過 Provider 將等級儲存起來 (這需要匯入 provider 套件)
-                  context.read<UserProvider>().setJapaneseLevel(selectedLevelTitle);
-                  
-                  // 3. 跳轉到主畫面，並移除前面的選擇畫面堆疊
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+
+                  // 🌟 關鍵魔法：把數字索引轉換回文字標題 (例如：將 1 轉換成 '入門新手')
+                  final String selectedTitle = levels[_selectedIndex!]['title']!;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('正在儲存您的程度...')),
                   );
+
+                  // 2. 從 Provider 抓出目前登入的 user_id
+                  final currentUserId = context.read<UserProvider>().userId;
+
+                  // 3. 如果有登入 (不是訪客)，就存進資料庫
+                  if (currentUserId != null) {
+                    // 這裡把轉換好的 selectedTitle 傳給後端
+                    final result = await ApiClient.updateLevel(currentUserId, selectedTitle);
+                    
+                    if (!context.mounted) return; // 確保畫面還活著
+
+                    if (result.containsKey('error')) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result['error'])),
+                      );
+                      return; // 儲存失敗就中斷
+                    }
+                  }
+
+                  // 4. 不管是登入還是訪客，都把程度存進 APP 暫存記憶體
+                  if (context.mounted) {
+                    // 這裡也把 selectedTitle 存進 Provider
+                    context.read<UserProvider>().setJapaneseLevel(selectedTitle);
+                    
+                    // 5. 跳轉到首頁！
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green, // AppColors.primary
@@ -137,7 +169,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
   }
 }
 
-// 獨立出來的按鈕元件
+// 獨立出來的按鈕元件 (保持你原本完美的設計)
 class _LevelButton extends StatelessWidget {
   final String title;
   final String desc;

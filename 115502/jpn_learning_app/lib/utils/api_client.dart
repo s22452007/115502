@@ -57,6 +57,25 @@ class ApiClient {
     }
   }
 
+// --- 新增：直接更新日語程度 API ---
+  static Future<Map<String, dynamic>> updateLevel(int userId, String level) async {
+    final url = Uri.parse('$baseUrl/auth/update_level');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId, 
+          'level': level
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('更新程度連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+  
   // 傳送測驗分數給後端的 API
   static Future<Map<String, dynamic>> submitQuizScore(int userId, int score) async {
     final url = Uri.parse('$baseUrl/quiz/submit');

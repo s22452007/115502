@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
+
+// --- 這裡把你截圖裡的所有重要檔案都引入進來了！ ---
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
-import 'package:jpn_learning_app/screens/profile/profile_screen.dart'; // 🌟 這裡完美引入了你的個人檔案
+import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
+import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
@@ -18,8 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 2; // 預設停留在首頁
 
   // 設計圖裡的顏色
-  final Color _goalGreen = const Color.fromARGB(255, 255, 255, 255);
-  final Color _cardRed = const Color.fromARGB(255, 133, 109, 160);
+  final Color _goalGreen = const Color(0xFF6AA86B);
+  final Color _cardRed = const Color(0xFFE58888);
   final Color _cardBlue = const Color(0xFF85B8D6);
   final Color _textColor = const Color(0xFF333333);
   final Color _subTextColor = const Color(0xFF888888);
@@ -63,7 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.white),
             onPressed: () {
-              // 🌟 魔法連線在這裡！點擊立刻跳轉到個人檔案！
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -94,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
+            // --- 點數與天數區塊 ---
             Row(
               children: [
                 _buildStatusChip(
@@ -103,11 +108,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderColor: Colors.orange.shade200,
                 ),
                 const SizedBox(width: 12),
-                _buildStatusChip(
-                  icon: Icons.monetization_on,
-                  iconColor: Colors.blue,
-                  text: '120 J-Pts',
-                  borderColor: Colors.blue.shade200,
+
+                // 🌟 連線 1：點擊 J-Pts 跳轉到 PremiumScreen
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PremiumScreen()),
+                    );
+                  },
+                  child: _buildStatusChip(
+                    icon: Icons.monetization_on,
+                    iconColor: Colors.blue,
+                    text: '120 J-Pts',
+                    borderColor: Colors.blue.shade200,
+                  ),
                 ),
               ],
             ),
@@ -263,8 +278,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   '學習小組動態',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
+
+                // 🌟 連線 2：點擊「排行榜 >」跳轉到 LeaderboardScreen
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LeaderboardScreen(),
+                      ),
+                    );
+                  },
                   child: Text(
                     '排行榜 >',
                     style: TextStyle(
@@ -277,50 +301,66 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.amber.shade100,
-                    child: const Text(
-                      'D',
-                      style: TextStyle(
-                        color: Colors.amber,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+
+            // 🌟 連線 3：點擊動態卡片跳轉到 StudyGroupScreen
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.amber.shade100,
+                      child: const Text(
+                        'D',
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Din',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Din',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '獲得了「麵食大師」徽章',
-                          style: TextStyle(fontSize: 13, color: _subTextColor),
-                        ),
-                      ],
+                          Text(
+                            '獲得了「麵食大師」徽章',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _subTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    '10m',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                  ),
-                ],
+                    Text(
+                      '10m',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -328,6 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
+      // 底部導覽列
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (i) {
@@ -336,6 +377,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          // 如果你的底部導覽列 Index 3 是排行榜，也可以在這裡加：
+          if (i == 3)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
             );
         },
       ),
@@ -450,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              ); // 🌟 抽屜裡的人頭也幫你接好線了！
+              );
             },
           ),
           ListTile(

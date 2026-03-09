@@ -109,8 +109,11 @@ class TestResultScreen extends StatelessWidget {
                     const SnackBar(content: Text('正在儲存你的測驗結果...')),
                   );
 
-                  // 2. 呼叫後端 API！(這裡假設目前登入的使用者 ID 是 1)
-                  final result = await ApiClient.submitQuizScore(1, score);
+                  // 從 Provider 抓出剛剛註冊成功存下來的 userId
+                  final currentUserId = context.read<UserProvider>().userId;
+                  
+                  // 把真正的 currentUserId 傳給後端！(防呆：如果是 null 就先傳 1 擋著)
+                  final result = await ApiClient.submitQuizScore(currentUserId ?? 1, score);
 
                   if (result.containsKey('level')) {
                     // 3. 從後端拿到判定好的等級 (例如: '初級應用(N5、N4)')

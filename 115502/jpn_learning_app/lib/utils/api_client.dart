@@ -6,6 +6,38 @@ class ApiClient {
   // (注意：如果你之後改用 Android 模擬器，這裡要改成 10.0.2.2)
   static const String baseUrl = 'http://127.0.0.1:5000/api';
 
+  // --- 註冊 API ---
+  static Future<Map<String, dynamic>> register(String email, String password) async {
+    final url = Uri.parse('$baseUrl/auth/register');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('註冊連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // --- 登入 API ---
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    final url = Uri.parse('$baseUrl/auth/login');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('登入連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 傳送測驗分數給後端的 API
   static Future<Map<String, dynamic>> submitQuizScore(int userId, int score) async {
     final url = Uri.parse('$baseUrl/quiz/submit');

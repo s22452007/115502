@@ -1,163 +1,459 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
-import 'package:jpn_learning_app/screens/profile/photo_folder_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
+// 🌟 我先把會報錯的檔案註解掉了，等你未來建好檔案再打開！
+// import 'package:jpn_learning_app/screens/profile/photo_folder_screen.dart';
+// import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
+import 'dart:math' as math;
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  int _currentIndex = 4; // 底部導覽列對應個人檔案 (index 4)
+
+  // 顏色設定
+  final Color _bgColor = Colors.white;
+  final Color _cardColor = const Color(0xFFF1F8E9);
+  final Color _primaryGreen = const Color(0xFF6AA86B);
+  final Color _textColor = const Color(0xFF333333);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: _bgColor,
+
+      drawer: _buildDrawer(context),
+
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: _cardColor,
         elevation: 0,
-        leading: Icon(Icons.menu, color: Colors.white),
-        title: Icon(Icons.camera_alt, color: Colors.white),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: _primaryGreen),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        title: IconButton(
+          icon: Icon(Icons.camera_alt_outlined, color: _primaryGreen, size: 28),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          },
+        ),
         centerTitle: true,
-        actions: [Icon(Icons.person_outline, color: Colors.white), const SizedBox(width: 12)],
+        actions: [
+          IconButton(
+            icon: Icon(Icons.person, color: _primaryGreen),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 使用者頭像與等級
-            Row(children: [
-              CircleAvatar(radius: 36, backgroundColor: AppColors.primaryLighter,
-                  child: Icon(Icons.person, color: AppColors.primary, size: 40)),
-              const SizedBox(width: 16),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Lv.3  Yu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 8),
-                SizedBox(width: 150, child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: 0.6, backgroundColor: Colors.white,
-                    valueColor: AlwaysStoppedAnimation(AppColors.primary), minHeight: 10,
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: const Color(0xFFC5E1A5),
+                  child: Icon(Icons.person, size: 50, color: _textColor),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Lv.3',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: _textColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Yu',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: _textColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: 0.3,
+                          backgroundColor: Colors.grey.shade300,
+                          valueColor: AlwaysStoppedAnimation(_primaryGreen),
+                          minHeight: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                )),
-              ]),
-            ]),
-            const SizedBox(height: 24),
-            // 能力雷達圖區
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _cardColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('能力', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 180,
-                    child: Stack(alignment: Alignment.center, children: [
-                      CustomPaint(size: const Size(180, 180), painter: _SimpleRadarPainter()),
-                      const Positioned(top: 4, child: Text('Listening', style: TextStyle(fontSize: 11, color: AppColors.textGrey))),
-                      const Positioned(right: 8, bottom: 40, child: Text('換一個', style: TextStyle(fontSize: 11, color: AppColors.textGrey))),
-                      const Positioned(bottom: 4, right: 40, child: Text('Reading', style: TextStyle(fontSize: 11, color: AppColors.textGrey))),
-                      const Positioned(bottom: 4, left: 20, child: Text('Writing', style: TextStyle(fontSize: 11, color: AppColors.textGrey))),
-                      const Positioned(left: 8, bottom: 40, child: Text('Culture', style: TextStyle(fontSize: 11, color: AppColors.textGrey))),
-                    ]),
+                  Text(
+                    '能力',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Center(
+                    child: SizedBox(
+                      width: 200,
+                      height: 200,
+                      child: CustomPaint(
+                        painter: RadarChartPainter(
+                          color: _primaryGreen,
+                          values: [0.8, 0.6, 0.9, 0.5, 0.7],
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            // 成就
-            const Text('成就', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _AchievementBadge(icon: '🍜', label: '拉麵大師', unlocked: true),
-                _AchievementBadge(icon: '☕', label: '咖啡廳大師', unlocked: true),
-                _AchievementBadge(icon: '🏯', label: '文化', unlocked: true),
-                _AchievementBadge(icon: '🔒', label: '?', unlocked: false),
-                _AchievementBadge(icon: '🔒', label: '?', unlocked: false),
-                _AchievementBadge(icon: '🔒', label: '?', unlocked: false),
-              ],
+            const SizedBox(height: 24),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _cardColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '成就',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildBadge(
+                        icon: Icons.ramen_dining,
+                        label: '拉麵大師',
+                        isUnlocked: true,
+                      ),
+                      _buildBadge(
+                        icon: Icons.local_cafe,
+                        label: '咖啡廳大師',
+                        isUnlocked: true,
+                      ),
+                      _buildBadge(
+                        icon: Icons.temple_buddhist,
+                        label: '文化',
+                        isUnlocked: true,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildBadge(
+                        icon: Icons.lock,
+                        label: '未解鎖',
+                        isUnlocked: false,
+                      ),
+                      _buildBadge(
+                        icon: Icons.lock,
+                        label: '未解鎖',
+                        isUnlocked: false,
+                      ),
+                      _buildBadge(
+                        icon: Icons.lock,
+                        label: '未解鎖',
+                        isUnlocked: false,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            // 收藏夾
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('收藏夾', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                TextButton(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PhotoFolderScreen())),
-                  child: Text('查看全部', style: TextStyle(color: AppColors.primary)),
-                ),
-              ],
+            const SizedBox(height: 24),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _cardColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '收藏夾',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _textColor,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // 🌟 安全起見，先改成跳出提示，等你建好檔案再換回來！
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('收藏夾功能即將推出！')),
+                      );
+                    },
+                    child: Text(
+                      '查看全部 >',
+                      style: TextStyle(
+                        color: _primaryGreen,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(height: 40),
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 4, onTap: (_) {}),
+
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (i) {
+          setState(() => _currentIndex = i);
+          if (i == 0)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          if (i == 2) Navigator.pop(context);
+        },
+      ),
     );
   }
-}
 
-class _AchievementBadge extends StatelessWidget {
-  final String icon, label;
-  final bool unlocked;
-  const _AchievementBadge({required this.icon, required this.label, required this.unlocked});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 48, height: 48,
-          decoration: BoxDecoration(
-            color: unlocked ? AppColors.primaryLighter : Colors.grey.shade200,
-            shape: BoxShape.circle,
+  Widget _buildBadge({
+    required IconData icon,
+    required String label,
+    required bool isUnlocked,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isUnlocked ? '你獲得了「$label」徽章！' : '多探索新場景來解鎖此徽章吧！'),
           ),
-          child: Center(child: Text(unlocked ? icon : '🔒', style: const TextStyle(fontSize: 22))),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 10, color: unlocked ? AppColors.textDark : AppColors.textGrey)),
-      ],
+        );
+      },
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: isUnlocked
+                ? const Color(0xFFC5E1A5)
+                : Colors.grey.shade300,
+            child: Icon(
+              icon,
+              size: 30,
+              color: isUnlocked ? _textColor : Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isUnlocked ? _textColor : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(color: _primaryGreen),
+            accountName: const Text(
+              'Yu',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            accountEmail: const Text('yu_learning@example.com'),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                'Y',
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Color(0xFF6AA86B),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home_outlined),
+            title: const Text('回首頁', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bookmark_border),
+            title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+              // 🌟 安全起見，先改成跳出提示
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('單字探險畫廊即將推出！')));
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: const Text('系統設定', style: TextStyle(fontSize: 16)),
+            onTap: () => Navigator.pop(context),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SimpleRadarPainter extends CustomPainter {
+class RadarChartPainter extends CustomPainter {
+  final Color color;
+  final List<double> values;
+  RadarChartPainter({required this.color, required this.values});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()..color = AppColors.primaryLighter..style = PaintingStyle.fill;
-    final borderPaint = Paint()..color = AppColors.primary..style = PaintingStyle.stroke..strokeWidth = 2;
-    final gridPaint = Paint()..color = Colors.grey.shade300..style = PaintingStyle.stroke..strokeWidth = 1;
+    final double centerX = size.width / 2;
+    final double centerY = size.height / 2;
+    final double radius = math.min(centerX, centerY) - 30;
 
-    final r = size.width / 2.5;
-    for (double pct in [0.33, 0.66, 1.0]) {
-      final path = Path();
+    final Paint gridPaint = Paint()
+      ..color = Colors.green.shade200
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    for (int step = 1; step <= 3; step++) {
+      final Path path = Path();
       for (int i = 0; i < 5; i++) {
-        final angle = (i * 72 - 90) * 3.14159 / 180;
-        final x = center.dx + r * pct * _cos5(i);
-        final y = center.dy + r * pct * _sin5(i);
-        i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
+        double angle = (math.pi * 2 / 5) * i - math.pi / 2;
+        double currentRadius = radius * (step / 3);
+        double x = centerX + currentRadius * math.cos(angle);
+        double y = centerY + currentRadius * math.sin(angle);
+        if (i == 0)
+          path.moveTo(x, y);
+        else
+          path.lineTo(x, y);
       }
       path.close();
-      canvas.drawPath(path, pct == 1.0 ? gridPaint : gridPaint);
+      canvas.drawPath(path, gridPaint);
     }
-    final path = Path();
-    final values = [0.9, 0.5, 0.7, 0.6, 0.4];
+
     for (int i = 0; i < 5; i++) {
-      final x = center.dx + r * values[i] * _cos5(i);
-      final y = center.dy + r * values[i] * _sin5(i);
-      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
+      double angle = (math.pi * 2 / 5) * i - math.pi / 2;
+      double x = centerX + radius * math.cos(angle);
+      double y = centerY + radius * math.sin(angle);
+      canvas.drawLine(Offset(centerX, centerY), Offset(x, y), gridPaint);
     }
-    path.close();
-    canvas.drawPath(path, paint);
-    canvas.drawPath(path, borderPaint);
+
+    final Path valuePath = Path();
+    final Paint valuePaint = Paint()
+      ..color = color.withOpacity(0.5)
+      ..style = PaintingStyle.fill;
+    final Paint valueStrokePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    for (int i = 0; i < 5; i++) {
+      double angle = (math.pi * 2 / 5) * i - math.pi / 2;
+      double valueRadius = radius * values[i];
+      double x = centerX + valueRadius * math.cos(angle);
+      double y = centerY + valueRadius * math.sin(angle);
+      if (i == 0)
+        valuePath.moveTo(x, y);
+      else
+        valuePath.lineTo(x, y);
+    }
+    valuePath.close();
+    canvas.drawPath(valuePath, valuePaint);
+    canvas.drawPath(valuePath, valueStrokePaint);
+
+    final List<String> labels = [
+      'Listening',
+      '換一個',
+      'Reading',
+      'Writing',
+      'Culture',
+    ];
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+
+    for (int i = 0; i < 5; i++) {
+      double angle = (math.pi * 2 / 5) * i - math.pi / 2;
+      double textRadius = radius + 15;
+      double x = centerX + textRadius * math.cos(angle);
+      double y = centerY + textRadius * math.sin(angle);
+
+      textPainter.text = TextSpan(
+        text: labels[i],
+        style: const TextStyle(color: Colors.black87, fontSize: 12),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, y - textPainter.height / 2),
+      );
+    }
   }
 
-  double _cos5(int i) => [0, 0.95, 0.59, -0.59, -0.95][i].toDouble();
-  double _sin5(int i) => [-1, -0.31, 0.81, 0.81, -0.31][i].toDouble();
-
   @override
-  bool shouldRepaint(covariant CustomPainter _) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

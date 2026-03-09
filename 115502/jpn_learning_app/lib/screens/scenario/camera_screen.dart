@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
@@ -23,7 +24,8 @@ class CameraScreen extends StatelessWidget {
           ),
           // 返回按鈕
           Positioned(
-            top: 48, left: 16,
+            top: 48,
+            left: 16,
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
               onPressed: () => Navigator.pop(context),
@@ -38,40 +40,107 @@ class CameraScreen extends StatelessWidget {
                 color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('試著拍看周遭造的任何東西！', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                const Text('（Try snapping anything！）', style: TextStyle(fontSize: 13, color: AppColors.textGrey)),
-              ]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '試著拍看周遭造的任何東西！',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  const Text(
+                    '（Try snapping anything！）',
+                    style: TextStyle(fontSize: 13, color: AppColors.textGrey),
+                  ),
+                ],
+              ),
             ),
           ),
           // 底部控制區
           Positioned(
-            bottom: 0, left: 0, right: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  IconButton(icon: const Icon(Icons.photo_library, color: Colors.white, size: 32), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.photo_library,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    onPressed: () async {
+                      try {
+                        final picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(
+                          source: ImageSource.gallery,
+                        );
+                        if (image != null && context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AnalyzingScreen(),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Error picking image: $e');
+                      }
+                    },
+                  ),
                   GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyzingScreen())),
+                    onTap: () async {
+                      try {
+                        final picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(
+                          source: ImageSource.camera,
+                        );
+                        if (image != null && context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AnalyzingScreen(),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Error picking image: $e');
+                      }
+                    },
                     child: Container(
-                      width: 72, height: 72,
-                      decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3)),
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                      ),
                     ),
                   ),
-                  IconButton(icon: const Icon(Icons.flip_camera_ios, color: Colors.white, size: 32), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.flip_camera_ios,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    onPressed: () {},
+                  ),
                 ],
               ),
             ),
           ),
           // 手動搜尋入口
           Positioned(
-            top: 48, right: 16,
+            top: 48,
+            right: 16,
             child: IconButton(
               icon: const Icon(Icons.search, color: Colors.white, size: 28),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+              ),
             ),
           ),
         ],

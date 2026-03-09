@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             // 這裡已經換成你的 Logo 圖片了！
             Image.asset(
-              'images/ねlogo.png', // 確保檔名是小寫
+              'images/nelogo.bmp', // 確保檔名是小寫
               width: 150, // 可以自行調整 Logo 大小
               height: 150,
               fit: BoxFit.contain,

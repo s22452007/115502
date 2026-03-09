@@ -9,6 +9,8 @@ import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -29,10 +31,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 從 Provider 抓取使用者的 Email (如果是訪客沒登入，就給個預設值)
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    // 把 Email 的 @ 前面切出來當作名字
+    final userName = userEmail.split('@')[0];
+    // 抓取名字的第一個字母當作頭像 (並轉成大寫)
+    final firstLetter = userName.isNotEmpty ? userName[0].toUpperCase() : 'G';
+
     return Scaffold(
       backgroundColor: Colors.white,
 
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, userName, userEmail, firstLetter),
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,
@@ -75,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '早安，Pin!',
+              '早安，$userName!',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

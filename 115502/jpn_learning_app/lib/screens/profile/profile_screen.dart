@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-// 🌟 我先把會報錯的檔案註解掉了，等你未來建好檔案再打開！
-// import 'package:jpn_learning_app/screens/profile/photo_folder_screen.dart';
-// import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'dart:math' as math;
 
 class ProfileScreen extends StatefulWidget {
@@ -25,6 +24,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 從 Provider 抓取使用者的 Email，並切出名字
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName = userEmail.split('@')[0];
+    
     return Scaffold(
       backgroundColor: _bgColor,
 
@@ -72,43 +75,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(width: 20),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Lv.3',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _textColor,
-                            ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Lv.3',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor, // 確保你有定義這個顏色變數
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Yu',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: _textColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: 0.3,
-                          backgroundColor: Colors.grey.shade300,
-                          valueColor: AlwaysStoppedAnimation(_primaryGreen),
-                          minHeight: 12,
                         ),
+                        const SizedBox(width: 12),
+                        // 🌟 把原本寫死的 'Yu' 換成變數 userName 
+                        Text(
+                          userName, 
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: 0.3,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: AlwaysStoppedAnimation(_primaryGreen), // 確保你有定義這個顏色變數
+                        minHeight: 12,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
               ],
             ),
             const SizedBox(height: 32),

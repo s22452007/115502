@@ -4,6 +4,14 @@ import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 
+// 🌟 新增了側邊欄會用到的檔案引入
+import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
+import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({Key? key}) : super(key: key);
 
@@ -44,15 +52,42 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F2),
+
+      // 🌟 1. 裝上側邊欄抽屜！
+      drawer: _buildDrawer(context),
+
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
-        leading: const Icon(Icons.menu, color: Colors.white),
-        title: const Icon(Icons.camera_alt, color: Colors.white),
+        // 🌟 2. 讓漢堡選單可以點擊打開抽屜
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        // 🌟 3. 讓相機圖示可以點擊跳轉
+        title: IconButton(
+          icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          },
+        ),
         centerTitle: true,
-        actions: const [
-          Icon(Icons.person_outline, color: Colors.white),
-          SizedBox(width: 12),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -66,10 +101,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFF5B8B5A),
-                width: 1.2,
-              ),
+              border: Border.all(color: const Color(0xFF5B8B5A), width: 1.2),
             ),
             child: Row(
               children: _tabs.asMap().entries.map((e) {
@@ -114,9 +146,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ],
       ),
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 1,
+        currentIndex: 3, // 🌟 排行榜通常是 index 3 (看你的首頁設定)
         onTap: (i) {
-          if (i == 1) return;
+          if (i == 3) return; // 如果點自己就不動
 
           if (i == 0) {
             Navigator.pushReplacement(
@@ -125,6 +157,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             );
           } else if (i == 2) {
             Navigator.pushReplacement(
+              // 🌟 假設首頁是 index 2
               context,
               MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
@@ -146,9 +179,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: isTop3
-                ? const Color(0xFFE8DCAA)
-                : const Color(0xFFE8E8E8),
+            color: isTop3 ? const Color(0xFFE8DCAA) : const Color(0xFFE8E8E8),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -217,10 +248,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               children: [
                 const Text(
                   'study group',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -254,10 +282,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               children: [
                 const Text(
                   'Shared Goal: 5000 points',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 22),
                 ClipRRect(
@@ -265,10 +290,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   child: Container(
                     height: 24,
                     decoration: BoxDecoration(
-                      border: Border.all(
-                        color: AppColors.primary,
-                        width: 1.2,
-                      ),
+                      border: Border.all(color: AppColors.primary, width: 1.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -288,10 +310,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(height: 12),
                 const Text(
                   '3000/5000',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -304,9 +323,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             height: 54,
             child: ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已提醒隊友')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('已提醒隊友')));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -316,12 +335,112 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
               child: const Text(
                 'Remind Teammates',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🌟 完美移植首頁的側邊欄 (包含朋友寫的大頭貼功能！)
+  Widget _buildDrawer(BuildContext context) {
+    final userAvatar = context.watch<UserProvider>().avatar;
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName = userEmail.split('@')[0];
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(color: Color(0xFF6AA86B)),
+            accountName: Text(
+              userName,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            accountEmail: Text(userEmail),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: const Color(0xFFC5E1A5),
+              backgroundImage: userAvatar != null
+                  ? MemoryImage(base64Decode(userAvatar))
+                  : null,
+              child: userAvatar == null
+                  ? const Icon(Icons.person, size: 50, color: Color(0xFF333333))
+                  : null,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home_outlined),
+            title: const Text('回首頁', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context); // 關抽屜
+              Navigator.pushReplacement(
+                // 跳轉首頁
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('個人檔案', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bookmark_border),
+            title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ResultGalleryScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.stars, color: Colors.orange),
+            title: const Text(
+              '訂閱與點數',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PremiumScreen()),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: const Text('系統設定', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.redAccent),
+            title: const Text(
+              '登出',
+              style: TextStyle(fontSize: 16, color: Colors.redAccent),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+            },
           ),
         ],
       ),

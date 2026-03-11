@@ -43,7 +43,8 @@ def login():
             "message": "登入成功！",
             "user_id": user.id,
             "email": user.email,
-            "japanese_level": user.japanese_level
+            "japanese_level": user.japanese_level,
+            "avatar": user.avatar
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401
@@ -88,3 +89,21 @@ def update_level():
     db.session.commit()
 
     return jsonify({"message": "程度更新成功！", "level": level}), 200
+
+@auth_bp.route('/upload_avatar', methods=['POST'])
+def upload_avatar():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    avatar_base64 = data.get('avatar')
+
+    if not user_id or not avatar_base64:
+        return jsonify({"error": "缺少使用者 ID 或圖片"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    user.avatar = avatar_base64 # 更新大頭貼
+    db.session.commit()
+
+    return jsonify({"message": "大頭貼更新成功！", "avatar": avatar_base64}), 200

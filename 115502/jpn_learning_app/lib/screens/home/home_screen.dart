@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 
-// --- 這裡把你截圖裡的所有重要檔案都引入進來了！ ---
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
@@ -11,6 +10,8 @@ import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -42,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      drawer: _buildDrawer(context, userName, userEmail, firstLetter),
+      drawer: _buildDrawer(context),
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,
@@ -459,33 +460,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawer(
-    BuildContext context,
-    String userName,
-    String userEmail,
-    String firstLetter,
-  ) {
+  Widget _buildDrawer(BuildContext context) {
+    final userAvatar = context.watch<UserProvider>().avatar;
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName = userEmail.split('@')[0];
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: _goalGreen),
+            decoration: BoxDecoration(color: const Color(0xFF6AA86B)), // 你的深綠色
             accountName: Text(
-              userName, // 這裡使用傳進來的名字
+              userName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            accountEmail: Text(userEmail), // 這裡使用傳進來的 Email
+            accountEmail: Text(userEmail),
+            // 大頭貼自動切換機制
             currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                firstLetter, // 這裡使用傳進來的第一個字母
-                style: const TextStyle(
-                  fontSize: 24,
-                  color: Color(0xFF6AA86B),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              backgroundColor: const Color(0xFFC5E1A5), // 附圖二的淺綠底色
+              // 如果資料庫有照片就解碼顯示，否則維持 null
+              backgroundImage: userAvatar != null ? MemoryImage(base64Decode(userAvatar)) : null,
+              // 如果沒有照片，就顯示附圖二的預設深灰人頭
+              child: userAvatar == null
+                  ? const Icon(Icons.person, size: 50, color: Color(0xFF333333)) 
+                  : null,
             ),
           ),
           ListTile(

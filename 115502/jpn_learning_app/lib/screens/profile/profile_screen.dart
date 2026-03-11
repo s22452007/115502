@@ -389,20 +389,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             accountEmail: Text(userEmail), // 動態 Email
             currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              // 🌟 抽屜裡的大頭貼也同步更新！
-              backgroundImage: userAvatar != null ? MemoryImage(base64Decode(userAvatar)) : null,
-              child: userAvatar == null
-                  ? Text(
-                      userName.isNotEmpty ? userName[0].toUpperCase() : 'G',
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: _primaryGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
+            backgroundColor: const Color(0xFFC5E1A5), // 淺綠底
+            backgroundImage: userAvatar != null ? MemoryImage(base64Decode(userAvatar)) : null,
+            child: userAvatar == null
+                ? const Icon(Icons.person, size: 50, color: Color(0xFF333333)) // 預設人頭
+                : null,
+          ),
           ),
           ListTile(
             leading: const Icon(Icons.home_outlined),

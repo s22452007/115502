@@ -102,4 +102,23 @@ class ApiClient {
       return {'error': e.toString()};
     }
   }
+
+  // 上傳大頭貼
+  static Future<Map<String, dynamic>> uploadAvatar(int userId, String avatarBase64) async {
+    final url = Uri.parse('$baseUrl/auth/upload_avatar');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'avatar': avatarBase64,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('上傳大頭貼連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

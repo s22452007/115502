@@ -1,11 +1,16 @@
+// 1. 核心與第三方套件
+import 'dart:convert'; // 用來解析與編碼 Base64 圖片
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; // 相簿選照片套件
+import 'package:provider/provider.dart';
+import 'dart:math' as math;
+
+// 2. 專案內部檔案
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/api_client.dart'; // 用來呼叫上傳 API
+import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-// 🌟 我先把會報錯的檔案註解掉了，等你未來建好檔案再打開！
-// import 'package:jpn_learning_app/screens/profile/photo_folder_screen.dart';
-// import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
-import 'dart:math' as math;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -23,8 +28,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final Color _primaryGreen = const Color.fromARGB(255, 74, 124, 89);
   final Color _textColor = const Color(0xFF333333);
 
+  // 🌟 魔法函式：開啟相簿、壓縮圖片並上傳給後端
+  Future<void> _pickAndUploadImage() async {
+    // 1. 檢查是否為訪客
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')),
+      );
+      return;
+    }
+
+    final picker = ImagePicker();
+    // 2. 開啟手機相簿，並限制圖片大小避免檔案過大
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 300,
+      maxHeight: 300,
+      imageQuality: 50,
+    );
+
+    if (pickedFile != null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('圖片上傳中...')),
+      );
+
+      // 3. 將圖片轉換成 Base64 字串
+      final bytes = await pickedFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+
+      // 4. 呼叫 API 儲存到後端
+      final result = await ApiClient.uploadAvatar(userId, base64String);
+
+      if (!context.mounted) return;
+
+      if (result.containsKey('avatar')) {
+        // 5. 成功！把新照片存入 Provider，畫面會自動更新
+        context.read<UserProvider>().setAvatar(result['avatar']);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('大頭貼更新成功！')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['error'] ?? '上傳失敗')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 從 Provider 抓取資料
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName = userEmail.split('@')[0];
+    final userAvatar = context.watch<UserProvider>().avatar; // 🌟 抓取大頭貼資料
+
     return Scaffold(
       backgroundColor: _bgColor,
 
@@ -65,10 +124,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: const Color(0xFFC5E1A5),
-                  child: Icon(Icons.person, size: 50, color: _textColor),
+                // 🌟 升級版的大頭貼區塊：加上點擊事件與圖片解碼顯示
+                GestureDetector(
+                  onTap: _pickAndUploadImage,
+                  child: Stack( // 用 Stack 疊加一個相機小圖示，提示可以點擊
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: const Color(0xFFC5E1A5),
+                        // 如果 userAvatar 有值，就解碼顯示；否則維持 null
+                        backgroundImage: userAvatar != null
+                            ? MemoryImage(base64Decode(userAvatar))
+                            : null,
+                        // 如果 userAvatar 沒值，才顯示預設人頭
+                        child: userAvatar == null
+                            ? Icon(Icons.person, size: 50, color: _textColor)
+                            : null,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: _primaryGreen,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -87,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'Yu',
+                            userName,
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -113,6 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 32),
 
+            // 能力雷達圖區塊 (保持不變)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -149,6 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
 
+            // 成就區塊 (保持不變)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -171,42 +257,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildBadge(
-                        icon: Icons.ramen_dining,
-                        label: '拉麵大師',
-                        isUnlocked: true,
-                      ),
-                      _buildBadge(
-                        icon: Icons.local_cafe,
-                        label: '咖啡廳大師',
-                        isUnlocked: true,
-                      ),
-                      _buildBadge(
-                        icon: Icons.temple_buddhist,
-                        label: '文化',
-                        isUnlocked: true,
-                      ),
+                      _buildBadge(icon: Icons.ramen_dining, label: '拉麵大師', isUnlocked: true),
+                      _buildBadge(icon: Icons.local_cafe, label: '咖啡廳大師', isUnlocked: true),
+                      _buildBadge(icon: Icons.temple_buddhist, label: '文化', isUnlocked: true),
                     ],
                   ),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildBadge(
-                        icon: Icons.lock,
-                        label: '未解鎖',
-                        isUnlocked: false,
-                      ),
-                      _buildBadge(
-                        icon: Icons.lock,
-                        label: '未解鎖',
-                        isUnlocked: false,
-                      ),
-                      _buildBadge(
-                        icon: Icons.lock,
-                        label: '未解鎖',
-                        isUnlocked: false,
-                      ),
+                      _buildBadge(icon: Icons.lock, label: '未解鎖', isUnlocked: false),
+                      _buildBadge(icon: Icons.lock, label: '未解鎖', isUnlocked: false),
+                      _buildBadge(icon: Icons.lock, label: '未解鎖', isUnlocked: false),
                     ],
                   ),
                 ],
@@ -214,6 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
 
+            // 收藏夾區塊 (保持不變)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -234,7 +297,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      // 🌟 安全起見，先改成跳出提示，等你建好檔案再換回來！
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('收藏夾功能即將推出！')),
                       );
@@ -260,11 +322,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         currentIndex: _currentIndex,
         onTap: (i) {
           setState(() => _currentIndex = i);
-          if (i == 0)
+          if (i == 0) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CameraScreen()),
             );
+          }
           if (i == 2) Navigator.pop(context);
         },
       ),
@@ -288,9 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: isUnlocked
-                ? const Color(0xFFC5E1A5)
-                : Colors.grey.shade300,
+            backgroundColor: isUnlocked ? const Color(0xFFC5E1A5) : Colors.grey.shade300,
             child: Icon(
               icon,
               size: 30,
@@ -311,28 +372,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildDrawer(BuildContext context) {
+    // 🌟 在抽屜裡也抓取大頭貼資訊
+    final userAvatar = context.watch<UserProvider>().avatar;
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName = userEmail.split('@')[0];
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
             decoration: BoxDecoration(color: _primaryGreen),
-            accountName: const Text(
-              'Yu',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            accountName: Text(
+              userName, // 動態名字
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            accountEmail: const Text('yu_learning@example.com'),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                'Y',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Color(0xFF6AA86B),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            accountEmail: Text(userEmail), // 動態 Email
+            currentAccountPicture: CircleAvatar(
+            backgroundColor: const Color(0xFFC5E1A5), // 淺綠底
+            backgroundImage: userAvatar != null ? MemoryImage(base64Decode(userAvatar)) : null,
+            child: userAvatar == null
+                ? const Icon(Icons.person, size: 50, color: Color(0xFF333333)) // 預設人頭
+                : null,
+          ),
           ),
           ListTile(
             leading: const Icon(Icons.home_outlined),
@@ -347,10 +409,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);
-              // 🌟 安全起見，先改成跳出提示
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('單字探險畫廊即將推出！')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('單字探險畫廊即將推出！')),
+              );
             },
           ),
           const Divider(),
@@ -365,6 +426,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+// 雷達圖繪製 (保持不變)
 class RadarChartPainter extends CustomPainter {
   final Color color;
   final List<double> values;

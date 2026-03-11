@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 
-// --- 這裡把你截圖裡的所有重要檔案都引入進來了！ ---
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
@@ -11,6 +10,8 @@ import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+
+import 'dart:convert'; // 解碼大頭貼會用到
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -36,13 +37,12 @@ class _HomeScreenState extends State<HomeScreen> {
         context.watch<UserProvider>().email ?? 'guest@example.com';
     // 把 Email 的 @ 前面切出來當作名字
     final userName = userEmail.split('@')[0];
-    // 抓取名字的第一個字母當作頭像 (並轉成大寫)
-    final firstLetter = userName.isNotEmpty ? userName[0].toUpperCase() : 'G';
 
     return Scaffold(
       backgroundColor: Colors.white,
 
-      drawer: _buildDrawer(context, userName, userEmail, firstLetter),
+      // 🌟 這裡傳遞 1 個 context 進去，對應最下面的模具！
+      drawer: _buildDrawer(context),
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,
@@ -99,7 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- 點數與天數區塊 ---
             Row(
               children: [
                 _buildStatusChip(
@@ -109,8 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderColor: Colors.orange.shade200,
                 ),
                 const SizedBox(width: 12),
-
-                // 🌟 連線 1：點擊 J-Pts 跳轉到 PremiumScreen
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -279,8 +276,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   '學習小組動態',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-
-                // 🌟 連線 2：點擊「排行榜 >」跳轉到 LeaderboardScreen
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -302,8 +297,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // 🌟 連線 3：點擊動態卡片跳轉到 StudyGroupScreen
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -374,21 +367,22 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (i) {
           setState(() => _currentIndex = i);
-          if (i == 0)
+          if (i == 0) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CameraScreen()),
             );
-          // 如果你的底部導覽列 Index 3 是排行榜，也可以在這裡加：
-          if (i == 3)
+          }
+          if (i == 3) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
             );
+          }
         },
       ),
-    );
-  }
+    ); // 👈 這是關閉 Scaffold 的括號
+  } // 👈 這是關閉 build 方法的括號
 
   Widget _buildStatusChip({
     required IconData icon,
@@ -459,33 +453,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawer(
-    BuildContext context,
-    String userName,
-    String userEmail,
-    String firstLetter,
-  ) {
+  // 🌟 這裡有確實加上 (BuildContext context) 接收那 1 個參數！
+  Widget _buildDrawer(BuildContext context) {
+    final userAvatar = context.watch<UserProvider>().avatar;
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName = userEmail.split('@')[0];
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: _goalGreen),
+            decoration: const BoxDecoration(color: Color(0xFF6AA86B)),
             accountName: Text(
               userName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             accountEmail: Text(userEmail),
             currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                firstLetter,
-                style: const TextStyle(
-                  fontSize: 24,
-                  color: Color(0xFF6AA86B),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              backgroundColor: const Color(0xFFC5E1A5),
+              backgroundImage: userAvatar != null
+                  ? MemoryImage(base64Decode(userAvatar))
+                  : null,
+              child: userAvatar == null
+                  ? const Icon(Icons.person, size: 50, color: Color(0xFF333333))
+                  : null,
             ),
           ),
           ListTile(
@@ -517,8 +510,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
-          // 👇 就是這裡！我幫你把訂閱與點數完美安插進來了！ 👇
           ListTile(
             leading: const Icon(Icons.stars, color: Colors.orange),
             title: const Text(
@@ -530,16 +521,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             onTap: () {
-              Navigator.pop(context); // 先關抽屜
+              Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const PremiumScreen()), // 跳轉
+                MaterialPageRoute(builder: (_) => const PremiumScreen()),
               );
             },
           ),
           const Divider(),
-
-          // 👆 就是這裡！ 👆
           ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: const Text('系統設定', style: TextStyle(fontSize: 16)),

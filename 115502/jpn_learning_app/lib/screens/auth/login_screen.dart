@@ -54,6 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
 
+    
+
     // 顯示 Loading 提示
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_isLogin ? '登入中...' : '註冊中...')),
@@ -66,9 +68,14 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return; // 防呆：確保畫面還在
 
       if (result.containsKey('user_id')) {
-        // 登入成功！存下 user_id
+        // 登入成功！存下 user_id 和 Email
         context.read<UserProvider>().setUserId(result['user_id']);
-        context.read<UserProvider>().setEmail(email); // 存入輸入的 Email
+        context.read<UserProvider>().setEmail(email); 
+
+        // 如果後端有回傳 avatar (大頭貼)，我們就把它存進大腦裡！
+        if (result.containsKey('avatar')) {
+          context.read<UserProvider>().setAvatar(result['avatar']);
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('登入成功！')),

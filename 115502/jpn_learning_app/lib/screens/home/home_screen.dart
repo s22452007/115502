@@ -472,14 +472,14 @@ class _HomeScreenState extends State<HomeScreen> {
           UserAccountsDrawerHeader(
             decoration: BoxDecoration(color: _goalGreen),
             accountName: Text(
-              userName, // 這裡使用傳進來的名字
+              userName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            accountEmail: Text(userEmail), // 這裡使用傳進來的 Email
+            accountEmail: Text(userEmail),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: Text(
-                firstLetter, // 這裡使用傳進來的第一個字母
+                firstLetter,
                 style: const TextStyle(
                   fontSize: 24,
                   color: Color(0xFF6AA86B),
@@ -517,7 +517,29 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+
+          // 👇 就是這裡！我幫你把訂閱與點數完美安插進來了！ 👇
+          ListTile(
+            leading: const Icon(Icons.stars, color: Colors.orange),
+            title: const Text(
+              '訂閱與點數',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context); // 先關抽屜
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PremiumScreen()), // 跳轉
+              );
+            },
+          ),
           const Divider(),
+
+          // 👆 就是這裡！ 👆
           ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: const Text('系統設定', style: TextStyle(fontSize: 16)),

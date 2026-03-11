@@ -32,7 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // 從 Provider 抓取使用者的 Email (如果是訪客沒登入，就給個預設值)
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
     // 把 Email 的 @ 前面切出來當作名字
     final userName = userEmail.split('@')[0];
     // 抓取名字的第一個字母當作頭像 (並轉成大寫)
@@ -458,30 +459,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, String userName, String userEmail, String firstLetter) {
+  Widget _buildDrawer(
+    BuildContext context,
+    String userName,
+    String userEmail,
+    String firstLetter,
+  ) {
     return Drawer(
-    child: ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        UserAccountsDrawerHeader(
-          decoration: BoxDecoration(color: _goalGreen),
-          accountName: Text(
-            userName, // 這裡使用傳進來的名字
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          accountEmail: Text(userEmail), // 這裡使用傳進來的 Email
-          currentAccountPicture: CircleAvatar(
-            backgroundColor: Colors.white,
-            child: Text(
-              firstLetter, // 這裡使用傳進來的第一個字母
-              style: const TextStyle(
-                fontSize: 24,
-                color: Color(0xFF6AA86B),
-                fontWeight: FontWeight.bold,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(color: _goalGreen),
+            accountName: Text(
+              userName, // 這裡使用傳進來的名字
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            accountEmail: Text(userEmail), // 這裡使用傳進來的 Email
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                firstLetter, // 這裡使用傳進來的第一個字母
+                style: const TextStyle(
+                  fontSize: 24,
+                  color: Color(0xFF6AA86B),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
           ListTile(
             leading: const Icon(Icons.home_outlined),
             title: const Text('回首頁', style: TextStyle(fontSize: 16)),

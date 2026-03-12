@@ -1,0 +1,38 @@
+# 實作相機拍照後透過 API 分析照片內容
+
+此計畫旨在串接前端相機拍照與後端 AI 分析 API，讓使用者拍下物件後能自動上傳並取得辨識結果。
+
+## User Review Required
+> [!IMPORTANT]
+> - 目前 API 的路徑假設為 `/api/scenario/analyze`，請確認後端是否已有此 endpoint 以及其接收圖片的格式 (優先以 Multipart form-data 上傳檔案來實作)。
+> - 辨識結果的資料結構需確認，目前會以 `Map<String, dynamic>` 接收並傳給結果頁面。
+
+## Proposed Changes
+
+---
+
+### Utils & Services
+
+#### [MODIFY] [api_client.dart](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/utils/api_client.dart)
+- 於 [ApiClient](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/utils/api_client.dart#4-125) 類別中新增 `analyzeImage(String imagePath)` 方法，使用 `http.MultipartRequest` 將圖片上傳至 `$baseUrl/scenario/analyze`。
+
+#### [MODIFY] [ai_service.dart](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/services/ai_service.dart)
+- 實作 `AiService` 類別，加入 `analyzeScene(String imagePath)` 方法，呼叫 `ApiClient.analyzeImage`，並處理相關的錯誤與回傳資料封裝。
+
+---
+
+### Screens
+
+#### [MODIFY] [camera_screen.dart](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/screens/scenario/camera_screen.dart)
+- 在 `ImagePicker` 取得 `XFile` 後，將原先直接 `Navigator.push` 寫死的 [AnalyzingScreen()](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/screens/scenario/analyzing_screen.dart#6-11) 改為傳遞圖片的路徑：[AnalyzingScreen(imagePath: image.path)](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/screens/scenario/analyzing_screen.dart#6-11)。
+
+#### [MODIFY] [analyzing_screen.dart](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/screens/scenario/analyzing_screen.dart)
+- 接收 `imagePath` 參數。
+- 將 [initState](file:///c:/Users/Administrator/115502/115502/jpn_learning_app/lib/screens/scenario/analyzing_screen.dart#14-20) 中寫死等待兩秒的邏輯，改為非同步呼叫 `AiService().analyzeScene(widget.imagePath)`。
+- 取得 API 分析結果後，再透過 `Navigator.pushReplacement` 將結果傳給 `SceneResultScreen`。
+
+## Verification Plan
+### Manual Verification
+1. 在應用程式中點擊相機圖示拍照或從相簿選取圖片。
+2. 確認畫面會帶有圖片資料進入「AI 分析中」的狀態。
+3. 確認 API 請求正確發送至後端，且成功後順利導向 `SceneResultScreen` 辨識結果頁面。

@@ -14,7 +14,7 @@ class ResultGalleryScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          '單字探險畫廊',
+          '我的單字探險',
           style: TextStyle(
             color: Colors.white,
             fontSize: 20,

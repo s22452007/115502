@@ -9,11 +9,9 @@ void main() {
   runApp(
     // 保留 MultiProvider，讓整個 APP 都能使用狀態管理
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
       // 將子元件改回你原本命名的 JpnLearningApp
-      child: const JpnLearningApp(), 
+      child: const JpnLearningApp(),
     ),
   );
 }
@@ -33,7 +31,7 @@ class JpnLearningApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
         useMaterial3: true,
       ),
-      home: const SplashScreen(), 
+      home: const SplashScreen(),
     );
   }
 }

@@ -255,7 +255,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const RolePlayIntroScreen(),
+                          builder: (_) => const RolePlayIntroScreen(
+                            imagePath: 'https://images.unsplash.com/photo-1542051812891-60521138a209?q=80&w=800&auto=format&fit=crop', // 一蘭拉麵店的示意圖
+                          ),
                         ),
                       );
                     },
@@ -274,7 +276,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const RolePlayIntroScreen(),
+                          builder: (_) => const RolePlayIntroScreen(
+                            imagePath: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop', // 新宿車站的示意圖
+                          ),
                         ),
                       );
                     },

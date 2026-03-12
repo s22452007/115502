@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
-  const RolePlayIntroScreen({super.key});
+  final String imagePath;
+
+  const RolePlayIntroScreen({
+    super.key,
+    required this.imagePath,
+  });
 
   @override
   State<RolePlayIntroScreen> createState() => _RolePlayIntroScreenState();
@@ -31,13 +36,20 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // 這裡我先放了一張網路上的居酒屋圖片，你可以換成自己的
-                Image.network(
-                  'https://images.unsplash.com/photo-1542051812891-60521138a209?q=80&w=800&auto=format&fit=crop',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Container(color: Colors.grey[800]),
-                ),
+                // 動態載入傳入的圖片路徑 (自動判斷是網路圖片還是本地資產)
+                widget.imagePath.startsWith('http')
+                    ? Image.network(
+                        widget.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(color: Colors.grey[800]),
+                      )
+                    : Image.asset(
+                        widget.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(color: Colors.grey[800]),
+                      ),
                 // 左上角返回按鈕
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 10,
@@ -80,7 +92,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                       controller: _pageController,
                       itemCount: 3, // 預設 3 張卡片
                       itemBuilder: (context, index) {
-                        return _buildWhiteCard();
+                         return _buildWhiteCard();
                       },
                     ),
                   ),
@@ -90,9 +102,9 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                     padding: EdgeInsets.only(
                       left: 24,
                       right: 24,
-                      bottom:
-                          MediaQuery.of(context).padding.bottom +
-                          24, // 避開手機底部橫條
+                      bottom: MediaQuery.of(context).padding.bottom > 0
+                          ? MediaQuery.of(context).padding.bottom + 8
+                          : 24, // 貼齊底部，僅加上安全區和一點間距
                       top: 16,
                     ),
                     child: SizedBox(

@@ -4,6 +4,7 @@ import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/role_play_intro_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
@@ -249,20 +250,40 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildSceneCard(
-                    '一蘭拉麵店',
-                    '12個新單字',
-                    Icons.ramen_dining,
-                    _cardRed,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RolePlayIntroScreen(),
+                        ),
+                      );
+                    },
+                    child: _buildSceneCard(
+                      '一蘭拉麵店',
+                      '12個新單字',
+                      Icons.ramen_dining,
+                      _cardRed,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildSceneCard(
-                    '新宿車站',
-                    '8個新單字',
-                    Icons.train,
-                    _cardBlue,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RolePlayIntroScreen(),
+                        ),
+                      );
+                    },
+                    child: _buildSceneCard(
+                      '新宿車站',
+                      '8個新單字',
+                      Icons.train,
+                      _cardBlue,
+                    ),
                   ),
                 ),
               ],

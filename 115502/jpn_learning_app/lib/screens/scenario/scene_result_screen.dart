@@ -156,70 +156,75 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'おかんじょう',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
-                fontWeight: FontWeight.bold,
+      // 🌟 用 ClipRRect 確保裡面的東西滾動時不會超出卡片的圓角
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        // 🌟 救星在這裡！加入 SingleChildScrollView 讓文字多也能滑動！
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'おかんじょう',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'お勘定',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: _darkGreen,
+              const SizedBox(height: 4),
+              Text(
+                'お勘定',
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: _darkGreen,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '結帳',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 8),
+              const Text(
+                '結帳',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-            Divider(color: Colors.grey.shade300, thickness: 1),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+              Divider(color: Colors.grey.shade300, thickness: 1),
+              const SizedBox(height: 20),
 
-            const Text(
-              'すみません、',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+              const Text(
+                'すみません、',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
-            ),
-            const Text(
-              'Excuse me,',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'お勘定をお願いします。',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+              const Text(
+                'Excuse me,',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
               ),
-            ),
-            const Text(
-              'Can I have the bill please?',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-          ],
+              const SizedBox(height: 12),
+              const Text(
+                'お勘定をお願いします。',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const Text(
+                'Can I have the bill please?',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
+  } //
 }

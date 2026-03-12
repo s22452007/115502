@@ -1,8 +1,75 @@
 from utils.db import db
+from datetime import datetime
 
+# 1. 使用者表 (User)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False) # 儲存「加密後」的密碼
     japanese_level = db.Column(db.String(50), nullable=True)  # 儲存日語程度
-    avatar = db.Column(db.Text, nullable=True) # 用來存圖片的 Base64 字串
+    avatar = db.Column(db.Text, nullable=True)  # 用來存圖片的 Base64 字串
+    
+    j_pts = db.Column(db.Integer, default=0)         
+    streak_days = db.Column(db.Integer, default=1)   
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # 關聯
+    collected_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
+    achievements = db.relationship('UserAchievement', backref='user', lazy=True)
+    abilities = db.relationship('UserAbility', backref='user', uselist=False, lazy=True) # 一對一關聯
+    unlocked_scenes = db.relationship('UserScene', backref='user', lazy=True)
+
+# 2. 場景表 (Scene)
+class Scene(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    icon_name = db.Column(db.String(50), nullable=True) 
+    vocabs = db.relationship('Vocab', backref='scene', lazy=True)
+
+# 3. 系統單字字典 (Vocab)
+class Vocab(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False)
+    word = db.Column(db.String(100), nullable=False)    
+    kana = db.Column(db.String(100), nullable=False)    
+    meaning = db.Column(db.String(200), nullable=False) 
+
+# 4. 使用者的「單字收藏夾」 (UserVocab)
+class UserVocab(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    collected_at = db.Column(db.DateTime, default=datetime.utcnow)
+    vocab = db.relationship('Vocab') 
+
+# 5. 系統徽章/成就 (Achievement)
+class Achievement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False) 
+    description = db.Column(db.String(255), nullable=True)
+
+# 6. 使用者已解鎖的徽章 (UserAchievement)
+class UserAchievement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    achievement_id = db.Column(db.Integer, db.ForeignKey('achievement.id'), nullable=False)
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    achievement = db.relationship('Achievement')
+
+# 使用者能力值表 (UserAbility) - 雷達圖專用
+class UserAbility(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    listening = db.Column(db.Float, default=0.2)  # 預設 0.2 (滿分 1.0)
+    reading = db.Column(db.Float, default=0.2)
+    writing = db.Column(db.Float, default=0.2)
+    culture = db.Column(db.Float, default=0.2)
+    speaking = db.Column(db.Float, default=0.2)
+
+# 使用者解鎖場景表 (UserScene) - 首頁進度專用
+class UserScene(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False)
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    scene = db.relationship('Scene')

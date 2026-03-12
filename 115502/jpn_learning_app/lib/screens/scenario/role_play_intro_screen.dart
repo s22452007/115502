@@ -8,7 +8,7 @@ class RolePlayIntroScreen extends StatefulWidget {
 }
 
 class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
-  // 【關鍵修改】設定 viewportFraction 讓左右兩邊的卡片可以露出一部分
+  // 控制滑動卡片，viewportFraction 讓左右卡片露出一點邊緣
   final PageController _pageController = PageController(viewportFraction: 0.85);
 
   @override
@@ -19,45 +19,45 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color cardBgColor = Color(0xFFCDE8CD); // 淺綠色底板
-    const Color buttonColor = Color(0xFF558B4F); // 深綠色按鈕
-
+    // 【終極防呆】直接把 Scaffold 的底色變成綠色，這樣最下方絕對不可能出現白底！
     return Scaffold(
-      body: Stack(
+      backgroundColor: const Color(0xFFCDE8CD),
+      body: Column(
         children: [
-          // 1. 上半部：居酒屋背景圖片
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: MediaQuery.of(context).size.height * 0.45, // 調整比例讓圖片露多一點
-            child: Container(
-              color: Colors.grey[800],
-              child: const Center(
-                child: Icon(Icons.restaurant, size: 80, color: Colors.white54),
-              ),
-              // 有真實圖片後，把上面代碼註解掉，換成這行：
-              // child: Image.asset('assets/images/izakaya_bg.png', fit: BoxFit.cover),
+          // --- 1. 上半部：背景圖片 ---
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.4, // 圖片佔畫面高度 40%
+            width: double.infinity,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 這裡我先放了一張網路上的居酒屋圖片，你可以換成自己的
+                Image.network(
+                  'https://images.unsplash.com/photo-1542051812891-60521138a209?q=80&w=800&auto=format&fit=crop',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(color: Colors.grey[800]),
+                ),
+                // 左上角返回按鈕
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 10,
+                  left: 16,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          // 左上角返回按鈕 (移到 Stack 的最外層，確保不會被圖片或綠色卡片蓋住)
-          Positioned(
-            top: 50, // 避開上方瀏海 (SafeArea)
-            left: 16,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-
-          // 2. 下半部：綠色圓角卡片區域
-          Align(
-            alignment: Alignment.bottomCenter,
+          // --- 2. 下半部：綠色區域與白色單字卡 ---
+          // 用 Expanded 強制填滿下方所有剩下的空間
+          Expanded(
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.65,
+              width: double.infinity,
               decoration: const BoxDecoration(
-                color: cardBgColor,
+                color: Color(0xFFCDE8CD),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
@@ -72,25 +72,27 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                  // 3. 【關鍵修改】中間的白色單字學習卡，改為 PageView
+                  // 【白色單字卡滑動區】
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
-                      itemCount: 3, // 假設有 3 個單字可以滑動
+                      itemCount: 3, // 預設 3 張卡片
                       itemBuilder: (context, index) {
-                        return _buildWordCard(); // 呼叫下方建立卡片的函數
+                        return _buildWhiteCard();
                       },
                     ),
                   ),
 
-                  // 4. 底部的 Start Role-Play 按鈕
+                  // 【底部按鈕】
                   Padding(
-                    padding: const EdgeInsets.only(
+                    padding: EdgeInsets.only(
                       left: 24,
                       right: 24,
-                      bottom: 32,
+                      bottom:
+                          MediaQuery.of(context).padding.bottom +
+                          24, // 避開手機底部橫條
                       top: 16,
                     ),
                     child: SizedBox(
@@ -98,7 +100,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                       height: 52,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: buttonColor,
+                          backgroundColor: const Color(0xFF558B4F),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -127,15 +129,13 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     );
   }
 
-  // 獨立抽出的白底單字卡 Widget
-  Widget _buildWordCard() {
+  // --- 獨立出來的「白色單字卡」區塊 ---
+  Widget _buildWhiteCard() {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 8,
-      ), // 左右間距，配合 viewportFraction 產生分離感
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white, // 【重點】確保這裡是白色的！
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -147,13 +147,10 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'おんせん',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-          const SizedBox(height: 4),
-          const Text(
+        children: const [
+          Text('おんせん', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          SizedBox(height: 4),
+          Text(
             'お勘定',
             style: TextStyle(
               color: Color(0xFF1B4E26),
@@ -161,8 +158,8 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
+          SizedBox(height: 4),
+          Text(
             '結帳',
             style: TextStyle(
               color: Color(0xFF1B4E26),
@@ -171,12 +168,12 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             ),
           ),
 
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
             child: Divider(color: Color(0xFFEEEEEE), thickness: 1.5),
           ),
 
-          const Text(
+          Text(
             'すみません、',
             style: TextStyle(
               color: Color(0xFF8B5A2B),
@@ -184,12 +181,12 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const Text(
+          Text(
             'Excuse me,',
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
-          const SizedBox(height: 12),
-          const Text(
+          SizedBox(height: 12),
+          Text(
             'お勘定お願いします。',
             style: TextStyle(
               color: Color(0xFF8B5A2B),
@@ -197,7 +194,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const Text(
+          Text(
             'Can I have the bill please?',
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),

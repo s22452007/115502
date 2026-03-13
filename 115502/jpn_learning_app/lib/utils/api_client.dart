@@ -121,4 +121,20 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // --- 新增：抓取個人檔案資料 API ---
+  static Future<Map<String, dynamic>> fetchProfileData(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/profile_data/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('抓取個人檔案失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

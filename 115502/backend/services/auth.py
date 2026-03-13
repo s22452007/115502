@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
-from models import User
+from models import User, UserAbility, UserAchievement, Achievement
 
 # 建立 auth 的 Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -107,3 +107,38 @@ def upload_avatar():
     db.session.commit()
 
     return jsonify({"message": "大頭貼更新成功！", "avatar": avatar_base64}), 200
+
+@auth_bp.route('/profile_data/<int:user_id>', methods=['GET'])
+def get_profile_data(user_id):
+    # 1. 抓取能力值 (雷達圖)
+    ability = UserAbility.query.filter_by(user_id=user_id).first()
+    
+    # 如果這個人還沒有能力值記錄，我們就給他一個預設值 (0.2)
+    ability_data = {
+        "listening": ability.listening if ability else 0.2,
+        "reading": ability.reading if ability else 0.2,
+        "writing": ability.writing if ability else 0.2,
+        "culture": ability.culture if ability else 0.2,
+        "speaking": ability.speaking if ability else 0.2,
+    }
+
+    # 2. 抓取成就徽章
+    # 先抓出系統裡所有的徽章總表
+    all_achievements = Achievement.query.all()
+    # 再抓出這個使用者「已經解鎖」的徽章
+    unlocked_records = UserAchievement.query.filter_by(user_id=user_id).all()
+    unlocked_ids = [record.achievement_id for record in unlocked_records]
+
+    achievements_data = []
+    for ach in all_achievements:
+        achievements_data.append({
+            "id": ach.id,
+            "name": ach.name,
+            "description": ach.description,
+            "is_unlocked": ach.id in unlocked_ids # 判斷是否有解鎖
+        })
+
+    return jsonify({
+        "ability": ability_data,
+        "achievements": achievements_data
+    }), 200

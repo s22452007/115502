@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // 相簿選照片套件
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
+import 'photo_folder_v2_screen.dart';
 
 // 2. 專案內部檔案
 import 'package:jpn_learning_app/utils/constants.dart';
@@ -297,14 +298,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('收藏夾功能即將推出！')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => PhotoFolderV2Screen()),
                       );
                     },
                     child: Text(
                       '查看全部 >',
                       style: TextStyle(
-                        color: _primaryGreen,
+                        color: _primaryGreen, // 保留您原本設定的主題綠色
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),

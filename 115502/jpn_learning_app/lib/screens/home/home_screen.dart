@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart'; // 🌟 引入新的收藏夾畫面
 
 import 'dart:convert'; // 解碼大頭貼會用到
 
@@ -231,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const ResultGalleryScreen(),
+                        builder: (_) => PhotoFolderV2Screen(), // 🌟 跳轉到新的 V2 畫面
                       ),
                     );
                   },
@@ -239,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     '查看收藏夾 >',
                     style: TextStyle(
                       fontSize: 14,
-                      color: _goalGreen,
+                      color: _goalGreen, // 這裡保留您原本設定的漂亮綠色
                       fontWeight: FontWeight.bold,
                     ),
                   ),

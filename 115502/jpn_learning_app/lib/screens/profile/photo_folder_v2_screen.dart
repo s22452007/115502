@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'album_detail_screen.dart'; // 🌟 引入相簿內容頁
+import 'album_detail_screen.dart'; 
 
 class PhotoFolderV2Screen extends StatefulWidget {
   const PhotoFolderV2Screen({Key? key}) : super(key: key);
@@ -9,23 +9,69 @@ class PhotoFolderV2Screen extends StatefulWidget {
 }
 
 class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
-  // ==========================================
-  // 🎨 Figma 設計稿精準色號
-  // ==========================================
   final Color figmaPrimaryColor = const Color(0xFF6AA86B); 
   final Color figmaBgColor = const Color(0xFFF9F9F9);      
   final Color figmaTextColor = const Color(0xFF333333);    
   final Color figmaUnselectedColor = const Color(0xFF9E9E9E); 
 
-  // 📂 假資料：收藏夾的名稱清單
-  final List<String> folderNames = [
-    '拉麵店單字',
-    '車站實用句',
-    '居酒屋會話',
-    '動漫常出',
-    '日常打招呼',
-    '機場必備'
-  ];
+  // 🌟 新增：用來記錄使用者輸入的搜尋關鍵字
+  String searchQuery = '';
+
+  Map<String, List<String>> foldersData = {
+    '拉麵店單字': ['ラーメン', '駅', '切符'],
+    '車站實用句': ['電車', 'ホーム'],
+    '居酒屋會話': ['ビール'],
+    '動漫常出': ['魔法', '世界'],
+    '日常打招呼': ['おはよう', 'こんにちは'],
+    '機場必備': ['パスポート'],
+  };
+
+  void _showAddFolderDialog() {
+    TextEditingController controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('新增收藏夾', style: TextStyle(fontWeight: FontWeight.bold, color: figmaTextColor)),
+          content: TextField(
+            controller: controller,
+            autofocus: true, 
+            decoration: InputDecoration(
+              hintText: '請輸入收藏夾名稱...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: figmaPrimaryColor, width: 2),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: figmaPrimaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  setState(() {
+                    foldersData[controller.text.trim()] = []; 
+                  });
+                  Navigator.pop(context); 
+                }
+              },
+              child: const Text('建立', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,27 +84,18 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
           icon: Icon(Icons.arrow_back_ios_new, color: figmaTextColor, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          '我的收藏夾', 
-          style: TextStyle(color: figmaTextColor, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        title: Text('我的收藏夾', style: TextStyle(color: figmaTextColor, fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: Column(
         children: [
-          // 1. 頂部搜尋欄
           _buildSearchBar(),
-          
-          // 2. 下方的收藏夾網格
-          Expanded(
-            child: _buildPhotoGrid(context),
-          ),
+          Expanded(child: _buildPhotoGrid(context)),
         ],
       ),
     );
   }
 
-  // 🔍 搜尋欄 UI
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), 
@@ -67,11 +104,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04), 
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 3)),
           ],
         ),
         child: TextField(
@@ -82,42 +115,78 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
             border: InputBorder.none, 
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
+          // 🌟 當輸入框內容改變時，更新狀態，觸發畫面重新渲染
           onChanged: (value) {
-            print('搜尋內容: $value');
+            setState(() {
+              searchQuery = value;
+            });
           },
         ),
       ),
     );
   }
 
-  // 📁 收藏夾網格
   Widget _buildPhotoGrid(BuildContext context) {
+    // 🌟 核心過濾邏輯：只挑選出符合搜尋條件的相簿
+    final filteredFolderNames = foldersData.keys.where((folderName) {
+      // 1. 檢查「相簿名稱」是否包含關鍵字
+      final matchTitle = folderName.contains(searchQuery);
+      
+      // 2. 檢查「相簿內的單字」是否包含關鍵字
+      final matchVocab = foldersData[folderName]!.any((vocab) => vocab.contains(searchQuery));
+
+      // 只要名稱或裡面的單字其中一個符合，就顯示這個相簿
+      return matchTitle || matchVocab;
+    }).toList();
+
+    // 🌟 判斷是否要顯示「新增按鈕」 (如果有輸入搜尋字詞就不顯示)
+    final bool isSearching = searchQuery.isNotEmpty;
+    final int itemCount = filteredFolderNames.length + (isSearching ? 0 : 1);
+
+    // 🌟 如果搜尋找不到任何結果，顯示提示畫面
+    if (isSearching && filteredFolderNames.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text('找不到相關的收藏夾或單字', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,       // 1排 3 個
+        crossAxisCount: 3,       
         crossAxisSpacing: 16,    
         mainAxisSpacing: 20,     
-        childAspectRatio: 0.8,   // 長方形以容納文字
+        childAspectRatio: 0.8,   
       ),
-      itemCount: folderNames.length + 1, 
+      itemCount: itemCount, 
       itemBuilder: (context, index) {
-        if (index == folderNames.length) {
+        // 如果不是在搜尋狀態，且到了最後一個項目，就顯示新增按鈕
+        if (!isSearching && index == filteredFolderNames.length) {
           return _buildAddFolderButton();
         }
-        return _buildFolderCard(context, folderNames[index]);
+        return _buildFolderCard(context, filteredFolderNames[index]);
       },
     );
   }
 
-  // 📁 單個資料夾卡片
   Widget _buildFolderCard(BuildContext context, String title) {
     return GestureDetector(
       onTap: () {
-        // 🌟 點擊後跳轉到「相簿內容頁」，並把資料夾名稱傳過去
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => AlbumDetailScreen(albumTitle: title)),
+          MaterialPageRoute(
+            builder: (context) => AlbumDetailScreen(
+              albumTitle: title,
+              vocabList: foldersData[title]!, 
+            ),
+          ),
         );
       },
       child: Column(
@@ -136,7 +205,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   color: figmaPrimaryColor.withOpacity(0.1),
-                  child: Icon(Icons.photo_album_rounded, size: 36, color: figmaPrimaryColor), // 相簿圖示
+                  child: Icon(Icons.photo_album_rounded, size: 36, color: figmaPrimaryColor), 
                 ),
               ),
             ),
@@ -154,14 +223,9 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  // ➕ 新增收藏夾按鈕
   Widget _buildAddFolderButton() {
     return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('準備新增收藏夾...')),
-        );
-      },
+      onTap: _showAddFolderDialog, 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

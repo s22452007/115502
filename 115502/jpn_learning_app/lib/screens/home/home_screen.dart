@@ -42,6 +42,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // 把 Email 的 @ 前面切出來當作名字
     final userName = userEmail.split('@')[0];
 
+    // 抓取天數、點數，並判斷是不是訪客
+    final streakDays = context.watch<UserProvider>().streakDays;
+    final jPts = context.watch<UserProvider>().jPts;
+    final isGuest = context.watch<UserProvider>().userId == null;
+
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -108,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildStatusChip(
                   icon: Icons.local_fire_department,
                   iconColor: Colors.deepOrange,
-                  text: '連續5天',
+                  text: isGuest ? '登入挑戰' : '連續$streakDays天',
                   borderColor: Colors.orange.shade200,
                 ),
                 const SizedBox(width: 12),
@@ -122,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _buildStatusChip(
                     icon: Icons.monetization_on,
                     iconColor: Colors.blue,
-                    text: '120 J-Pts',
+                    text: isGuest ? '0 J-Pts' : '$jPts J-Pts',
                     borderColor: Colors.blue.shade200,
                   ),
                 ),

@@ -26,9 +26,18 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 新增設定大頭貼的方法
+  // 設定大頭貼的方法
   void setAvatar(String? avatar) {
     _avatar = avatar;
     notifyListeners();
+  }
+
+  // 登出方法，清空所有資料
+  void logout() {
+    _userId = null;
+    _email = null;
+    _japaneseLevel = ''; 
+    _avatar = null;
+    notifyListeners(); // 通知所有畫面「這個人已經登出了，請更新畫面！」
   }
 }

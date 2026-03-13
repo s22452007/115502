@@ -9,6 +9,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -504,6 +505,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             leading: const Icon(Icons.settings_outlined),
             title: const Text('系統設定', style: TextStyle(fontSize: 16)),
             onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.redAccent),
+            title: const Text(
+              '登出',
+              style: TextStyle(fontSize: 16, color: Colors.redAccent),
+            ),
+            onTap: () {
+              // 1. 先把側邊欄(抽屜)關起來
+              Navigator.pop(context); 
+              
+              // 2. 呼叫我們剛剛寫好的 logout() 清除資料
+              context.read<UserProvider>().logout(); 
+              
+              // 3. 跳轉回登入頁，並且「清空所有的歷史路徑」
+              // 這樣使用者按手機的「返回鍵」才不會又跑回首頁！
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false, 
+              );
+            },
           ),
         ],
       ),

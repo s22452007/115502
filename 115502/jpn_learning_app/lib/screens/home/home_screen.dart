@@ -11,9 +11,11 @@ import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart'; // 🌟 引入新的收藏夾畫面
+import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart'; // 引入新的收藏夾畫面
 
 import 'dart:convert'; // 解碼大頭貼會用到
+
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -569,7 +571,19 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 16, color: Colors.redAccent),
             ),
             onTap: () {
-              Navigator.pop(context);
+              // 1. 先把側邊欄(抽屜)關起來
+              Navigator.pop(context); 
+              
+              // 2. 呼叫我們剛剛寫好的 logout() 清除資料
+              context.read<UserProvider>().logout(); 
+              
+              // 3. 跳轉回登入頁，並且「清空所有的歷史路徑」
+              // 這樣使用者按手機的「返回鍵」才不會又跑回首頁！
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false, 
+              );
             },
           ),
         ],

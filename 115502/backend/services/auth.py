@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
 from models import User, UserAbility, UserAchievement, Achievement
+from datetime import date, timedelta
 
 # 建立 auth 的 Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -34,17 +35,37 @@ def login():
     email = data.get('email')
     password = data.get('password')
 
-    # 去資料庫找這個 Email 的使用者
     user = User.query.filter_by(email=email).first()
 
-    # 檢查帳號是否存在，且「解密後的密碼」是否與輸入的相符
+    # 如果帳號密碼正確
     if user and check_password_hash(user.password_hash, password):
+        
+        # ----- 連續登入計算邏輯開始 -----
+        today = date.today()
+        
+        if user.last_login_date == today:
+            # 狀況 A：今天已經登入過了，天數不變
+            pass 
+        elif user.last_login_date == today - timedelta(days=1):
+            # 狀況 B：昨天有登入，天數 +1
+            user.streak_days += 1
+        else:
+            # 狀況 C：斷掉了，或是第一次登入，重置為 1
+            user.streak_days = 1
+            
+        # 把最後登入日期更新為今天
+        user.last_login_date = today
+        db.session.commit()
+        # ----- 連續登入計算邏輯結束 -----
+
         return jsonify({
             "message": "登入成功！",
             "user_id": user.id,
             "email": user.email,
             "japanese_level": user.japanese_level,
-            "avatar": user.avatar
+            "avatar": user.avatar,
+            "streak_days": user.streak_days, # 把最新的天數傳給前端
+            "j_pts": user.j_pts              # 順便把點數也傳回去
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401

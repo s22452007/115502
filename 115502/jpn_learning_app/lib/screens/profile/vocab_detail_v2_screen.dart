@@ -19,9 +19,17 @@ class VocabDetailV2Screen extends StatelessWidget {
             left: 0,
             right: 0,
             height: 350,
-            child: Container(
-              color: figmaPrimaryColor.withOpacity(0.2),
-              child: Icon(Icons.photo_camera, size: 80, color: figmaPrimaryColor),
+            // 🌟 換成橫式高畫質大圖
+            child: Image.network(
+              'https://picsum.photos/800/600', 
+              fit: BoxFit.cover, // 確保圖片完美覆蓋上方區域
+              errorBuilder: (context, error, stackTrace) {
+                // 🛡️ 防呆機制
+                return Container(
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.broken_image, size: 80, color: Colors.grey),
+                );
+              },
             ),
           ),
 

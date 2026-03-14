@@ -16,9 +16,7 @@ class ScenarioItem {
   });
 }
 
-// ==========================================
-// 🌟 這就是你的「全域單字資料庫」！
-// ==========================================
+// 這就是你的「全域單字資料庫」！
 class FavoritesDataProvider {
   // 把你的資料統整在這裡，要修改、新增只要改這裡！
   static final List<ScenarioItem> allFavorites = [

@@ -58,8 +58,8 @@ class UserProvider extends ChangeNotifier {
     _email = null;
     _japaneseLevel = ''; 
     _avatar = null;
-    _streakDays = 0; // 🌟 登出時歸零
-    _jPts = 0;       // 🌟 登出時歸零
+    _streakDays = 0; // 登出時歸零
+    _jPts = 0;       // 登出時歸零
     notifyListeners(); // 通知所有畫面「這個人已經登出了，請更新畫面！」
   }
 }

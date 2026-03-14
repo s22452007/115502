@@ -6,7 +6,7 @@ class ApiClient {
   // (注意：如果你之後改用 Android 模擬器，這裡要改成 10.0.2.2)
   static const String baseUrl = 'http://127.0.0.1:5000/api';
 
-  // --- 註冊 API ---
+  //  註冊 API 
   static Future<Map<String, dynamic>> register(String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/register');
     try {
@@ -22,7 +22,7 @@ class ApiClient {
     }
   }
 
-  // --- 登入 API ---
+  //  登入 API 
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/login');
     try {
@@ -38,7 +38,7 @@ class ApiClient {
     }
   }
 
-  // --- 重設密碼 API ---
+  //  重設密碼 API 
   static Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
     final url = Uri.parse('$baseUrl/auth/reset_password');
     try {
@@ -57,7 +57,7 @@ class ApiClient {
     }
   }
 
-// --- 新增：直接更新日語程度 API ---
+//  新增：直接更新日語程度 API 
   static Future<Map<String, dynamic>> updateLevel(int userId, String level) async {
     final url = Uri.parse('$baseUrl/auth/update_level');
     try {
@@ -122,7 +122,7 @@ class ApiClient {
     }
   }
 
-  // --- 新增：抓取個人檔案資料 API ---
+  // 抓取個人檔案資料 API
   static Future<Map<String, dynamic>> fetchProfileData(int userId) async {
     final url = Uri.parse('$baseUrl/auth/profile_data/$userId');
     try {

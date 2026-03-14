@@ -9,6 +9,7 @@ class SceneResultScreen extends StatefulWidget {
 
   const SceneResultScreen({
     Key? key,
+    // 預設的假照片
     this.imagePath =
         'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
   }) : super(key: key);
@@ -18,21 +19,29 @@ class SceneResultScreen extends StatefulWidget {
 }
 
 class _SceneResultScreenState extends State<SceneResultScreen> {
-  // ❌ 已經把 _pageController 刪掉了，因為不左右滑了！
+  // 🌟 1. 管理綠幕高度的魔法變數
+  double _curtainHeight = 350.0; // 🌟 一開始的高度 (預設縮起來，露出內容)
+
+  // 🌟 2. 設定綠幕高度的限制 (為了不讓它被拉到爆，或者縮到不見)
+  final double _minCurtainHeight = 50.0; // 🌟 往下滑到底時，要留點綠邊和灰色小把手
+  final double _maxCurtainHeight = 550.0; // 🌟 往上拉到滿時，要能完全蓋住卡片和按鈕
+
   final Color _darkGreen = const Color(0xFF4A7A4D);
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 3. 計算整個內容區域 (卡片 + 按鈕) 的總高度，這將是綠幕可拖拉的極限高度
+    // 這個高度是靜止不動的內容的高度，由卡片和按鈕的設計決定
+    double _totalContentHeight = 600.0; // 🌟 給一個足夠大的固定高度，確保能裝下所有內容
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. 最底層：使用者照片 (現在讓它填滿整個背景)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0, // 讓照片填滿，底部會被綠色抽屜蓋住
+          // ==========================================
+          // 第 1 層：最底層：使用者照片 (填滿整個背景)
+          // ==========================================
+          Positioned.fill(
             child:
                 (kIsWeb ||
                     widget.imagePath.startsWith('http') ||
@@ -41,7 +50,9 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                 : Image.file(File(widget.imagePath), fit: BoxFit.cover),
           ),
 
-          // 2. 返回按鈕
+          // ==========================================
+          // 第 2 層：左上角：返回按鈕
+          // ==========================================
           Positioned(
             top: 50,
             left: 16,
@@ -51,91 +62,128 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
             ),
           ),
 
-          // 3. 前景層：🌟 超酷的可上下滑動抽屜 🌟
-          DraggableScrollableSheet(
-            initialChildSize: 0.45, // 一開始的比例 (佔螢幕 45%)，露出一半以上的照片
-            minChildSize: 0.25, // 往下滑到底的比例 (佔螢幕 25%)，留一點點在下面讓你還能拉上來
-            maxChildSize: 0.85, // 往上拉到最滿的比例 (佔螢幕 85%)
-            builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFBFE1C3),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
-                ),
-                // 🌟 使用 ListView 綁定 scrollController，它才知道什麼時候要拖拉整個綠色區塊
-                child: ListView(
-                  controller: scrollController,
-                  padding: EdgeInsets.zero,
-                  children: [
-                    const SizedBox(height: 12),
-                    // 灰色小把手 (提示可以拖拉)
-                    Center(
-                      child: Container(
-                        width: 48,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 直接放入單字卡，拿掉 PageView 就不會左右滑動了！
-                    _buildVocabCard(),
-
-                    // 底部的 Start Role-Play 按鈕
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 24,
-                        right: 24,
-                        bottom: 40,
-                        top: 16,
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const RoleplayScreen(),
+          // ==========================================
+          // 第 3 層：前景層：🌟 靜止內容 + 可拖拉綠幕 🌟
+          // ==========================================
+          // 🌟 我們將內容和綠幕都放在一個吸附在底部的 Stack 裡
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SizedBox(
+              height: _totalContentHeight, // 🌟 整個底部的區域是靜止不動的，且高度固定
+              child: Stack(
+                children: [
+                  // ------------------------------------------
+                  // 3-A 層：下層：靜止內容 (卡片 + 按鈕)
+                  // ------------------------------------------
+                  // 🌟 這層是靜止不動的內容，綠幕會疊加在它上面
+                  Positioned.fill(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 50), // 🌟 這裡留出空間給灰色小把手
+                        // 白色單字卡片
+                        _buildVocabCard(),
+                        // 底部的 Start Role-Play 按鈕
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: 24,
+                            right: 24,
+                            bottom: 40,
+                            top: 16,
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RoleplayScreen(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
                               ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Start Role-Play',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              child: const Text(
+                                'Start Role-Play',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+
+                  // ------------------------------------------
+                  // 3-B 層：上層：🌟 聰明可拖拉綠幕 🌟
+                  // ------------------------------------------
+                  // 🌟 我們將它疊加在內容上面。當它的高度增加時，它會從底部開始升起，蓋住下面的內容。
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: GestureDetector(
+                      // 🌟 4. 手勢偵測：當手指滑動這個綠幕或灰色把手時...
+                      onVerticalDragUpdate: (DragUpdateDetails details) {
+                        setState(() {
+                          // 🌟 5. 聰明計算法：因為這個綠幕吸附在底部，當高度增加時，它會向上升起。
+                          // 當手指「向上滑」時，這意代表著，使用者想要把綠幕「拉起來」蓋住內容。
+                          // 這時候，手指移動的方向 (details.delta.dy) 是「負值」。
+                          // 為了讓高度「增加」以便向上升起，我們需要「減去」這個移動量。
+                          _curtainHeight -= details.delta.dy;
+
+                          // 🌟 6. 高度限制魔法：使用 clamp 將高度限制在我們預設的範圍內，不會滑爆。
+                          _curtainHeight = _curtainHeight.clamp(
+                            _minCurtainHeight,
+                            _maxCurtainHeight,
+                          );
+                        });
+                      },
+                      child: Container(
+                        height: _curtainHeight, // 🌟 使用魔法變數來控制高度
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFBFE1C3), // 你設計圖的淺綠色
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(30),
+                            topRight: Radius.circular(30),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 12),
+                            // 灰色小把手
+                            Container(
+                              width: 48,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // --- 製造白色單字卡片的模具 (保持原樣，因為原本就修得很完美了) ---
+  // --- 白色單字卡片模具 (保持原樣，因為原本就修得很完美了) ---
   Widget _buildVocabCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

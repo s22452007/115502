@@ -81,6 +81,14 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('登入成功！')),
         );
 
+        // 接住後端傳來的連續天數與點數
+        if (result.containsKey('streak_days')) {
+          context.read<UserProvider>().setStreakDays(result['streak_days']);
+        }
+        if (result.containsKey('j_pts')) {
+          context.read<UserProvider>().setJPts(result['j_pts']);
+        }
+
         // 聰明的判斷：如果後端說他已經測驗過 (有 japanese_level)，就直接去首頁！
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);

@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
-from models import User
+from models import User, UserAbility, UserAchievement, Achievement, UserVocab
+from datetime import date, timedelta
 
 # 建立 auth 的 Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -34,17 +35,37 @@ def login():
     email = data.get('email')
     password = data.get('password')
 
-    # 去資料庫找這個 Email 的使用者
     user = User.query.filter_by(email=email).first()
 
-    # 檢查帳號是否存在，且「解密後的密碼」是否與輸入的相符
+    # 如果帳號密碼正確
     if user and check_password_hash(user.password_hash, password):
+        
+        # ----- 連續登入計算邏輯開始 -----
+        today = date.today()
+        
+        if user.last_login_date == today:
+            # 狀況 A：今天已經登入過了，天數不變
+            pass 
+        elif user.last_login_date == today - timedelta(days=1):
+            # 狀況 B：昨天有登入，天數 +1
+            user.streak_days += 1
+        else:
+            # 狀況 C：斷掉了，或是第一次登入，重置為 1
+            user.streak_days = 1
+            
+        # 把最後登入日期更新為今天
+        user.last_login_date = today
+        db.session.commit()
+        # ----- 連續登入計算邏輯結束 -----
+
         return jsonify({
             "message": "登入成功！",
             "user_id": user.id,
             "email": user.email,
             "japanese_level": user.japanese_level,
-            "avatar": user.avatar
+            "avatar": user.avatar,
+            "streak_days": user.streak_days, # 把最新的天數傳給前端
+            "j_pts": user.j_pts              # 順便把點數也傳回去
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401
@@ -107,3 +128,63 @@ def upload_avatar():
     db.session.commit()
 
     return jsonify({"message": "大頭貼更新成功！", "avatar": avatar_base64}), 200
+
+@auth_bp.route('/profile_data/<int:user_id>', methods=['GET'])
+def get_profile_data(user_id):
+    # 1. 抓取能力值 (雷達圖)
+    ability = UserAbility.query.filter_by(user_id=user_id).first()
+    
+    # 如果這個人還沒有能力值記錄，我們就給他一個預設值 (0.2)
+    ability_data = {
+        "listening": ability.listening if ability else 0.2,
+        "reading": ability.reading if ability else 0.2,
+        "writing": ability.writing if ability else 0.2,
+        "culture": ability.culture if ability else 0.2,
+        "speaking": ability.speaking if ability else 0.2,
+    }
+
+    # 2. 抓取成就徽章
+    # 先抓出系統裡所有的徽章總表
+    all_achievements = Achievement.query.all()
+    # 再抓出這個使用者「已經解鎖」的徽章
+    unlocked_records = UserAchievement.query.filter_by(user_id=user_id).all()
+    unlocked_ids = [record.achievement_id for record in unlocked_records]
+
+    achievements_data = []
+    for ach in all_achievements:
+        achievements_data.append({
+            "id": ach.id,
+            "name": ach.name,
+            "description": ach.description,
+            "is_unlocked": ach.id in unlocked_ids # 判斷是否有解鎖
+        })
+
+    return jsonify({
+        "ability": ability_data,
+        "achievements": achievements_data
+    }), 200
+
+@auth_bp.route('/favorites/<int:user_id>', methods=['GET'])
+def get_user_favorites(user_id):
+    # 1. 去資料庫把這個人所有收藏的單字紀錄抓出來
+    user_vocabs = UserVocab.query.filter_by(user_id=user_id).all()
+    
+    # 2. 用一個字典來幫單字做「資料夾分類」
+    folders = {}
+    for uv in user_vocabs:
+        # 找出這個單字屬於哪個場景
+        scene_name = uv.vocab.scene.name if uv.vocab.scene else "未分類單字"
+        
+        # 如果資料夾還沒建立，就建一個新的
+        if scene_name not in folders:
+            folders[scene_name] = {
+                "name": scene_name,
+                "count": 0
+            }
+        # 該資料夾的單字數量 +1
+        folders[scene_name]["count"] += 1
+
+    # 3. 轉換成陣列回傳給前端
+    result = list(folders.values())
+    
+    return jsonify({"favorites": result}), 200

@@ -1,5 +1,6 @@
 from utils.db import db
 from datetime import datetime
+from datetime import date
 
 # 1. 使用者表 (User)
 class User(db.Model):
@@ -11,6 +12,7 @@ class User(db.Model):
     
     j_pts = db.Column(db.Integer, default=0)         
     streak_days = db.Column(db.Integer, default=1)   
+    last_login_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # 關聯

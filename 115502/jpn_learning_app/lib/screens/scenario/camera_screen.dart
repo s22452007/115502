@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/scene_result_screen.dart';
 
 class CameraScreen extends StatelessWidget {
   const CameraScreen({Key? key}) : super(key: key);
@@ -65,49 +66,41 @@ class CameraScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  // 🖼️ 1. 左邊的相簿按鈕 (把魔法搬來這裡！)
                   IconButton(
                     icon: const Icon(
-                      Icons.photo_library,
+                      Icons.photo_library, // 或者你原本用的相簿圖示
                       color: Colors.white,
                       size: 32,
                     ),
                     onPressed: () async {
-                      try {
-                        final picker = ImagePicker();
-                        final XFile? image = await picker.pickImage(
-                          source: ImageSource.gallery,
+                      // 🌟 這裡加上了 async！
+                      // 1. 召喚相簿挑選器
+                      final ImagePicker picker = ImagePicker();
+                      final XFile? pickedFile = await picker.pickImage(
+                        source: ImageSource.gallery,
+                      );
+
+                      // 2. 如果使用者有選照片（沒按取消）
+                      if (pickedFile != null) {
+                        if (!context.mounted) return;
+
+                        // 3. 帶著照片跳轉到結果頁！
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                SceneResultScreen(imagePath: pickedFile.path),
+                          ),
                         );
-                        if (image != null && context.mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AnalyzingScreen(),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        debugPrint('Error picking image: $e');
                       }
                     },
                   ),
+
+                  // 📷 2. 中間的拍照按鈕 (綠色大圓圈，先讓它回歸單純的按鈕)
                   GestureDetector(
-                    onTap: () async {
-                      try {
-                        final picker = ImagePicker();
-                        final XFile? image = await picker.pickImage(
-                          source: ImageSource.camera,
-                        );
-                        if (image != null && context.mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AnalyzingScreen(),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        debugPrint('Error picking image: $e');
-                      }
+                    onTap: () {
+                      // TODO: 未來這裡可以放真正「喀嚓」拍照的邏輯
                     },
                     child: Container(
                       width: 72,
@@ -119,6 +112,8 @@ class CameraScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  // 🔄 3. 右邊的翻轉鏡頭按鈕 (保留原樣)
                   IconButton(
                     icon: const Icon(
                       Icons.flip_camera_ios,

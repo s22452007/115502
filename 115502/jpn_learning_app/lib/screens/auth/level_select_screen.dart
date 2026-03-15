@@ -112,7 +112,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     return;
                   }
 
-                  // 🌟 關鍵魔法：把數字索引轉換回文字標題 (例如：將 1 轉換成 '入門新手')
+                  // 把數字索引轉換回文字標題 (例如：將 1 轉換成 '入門新手')
                   final String selectedTitle = levels[_selectedIndex!]['title']!;
 
                   ScaffoldMessenger.of(context).showSnackBar(

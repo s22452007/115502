@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
-from models import User, UserAbility, UserAchievement, Achievement
+from models import User, UserAbility, UserAchievement, Achievement, UserVocab
 from datetime import date, timedelta
 
 # 建立 auth 的 Blueprint
@@ -163,3 +163,28 @@ def get_profile_data(user_id):
         "ability": ability_data,
         "achievements": achievements_data
     }), 200
+
+@auth_bp.route('/favorites/<int:user_id>', methods=['GET'])
+def get_user_favorites(user_id):
+    # 1. 去資料庫把這個人所有收藏的單字紀錄抓出來
+    user_vocabs = UserVocab.query.filter_by(user_id=user_id).all()
+    
+    # 2. 用一個字典來幫單字做「資料夾分類」
+    folders = {}
+    for uv in user_vocabs:
+        # 找出這個單字屬於哪個場景
+        scene_name = uv.vocab.scene.name if uv.vocab.scene else "未分類單字"
+        
+        # 如果資料夾還沒建立，就建一個新的
+        if scene_name not in folders:
+            folders[scene_name] = {
+                "name": scene_name,
+                "count": 0
+            }
+        # 該資料夾的單字數量 +1
+        folders[scene_name]["count"] += 1
+
+    # 3. 轉換成陣列回傳給前端
+    result = list(folders.values())
+    
+    return jsonify({"favorites": result}), 200

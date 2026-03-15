@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'album_detail_screen.dart'; // 🌟 引入相簿內容頁
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'album_detail_screen.dart';
 
 class PhotoFolderV2Screen extends StatefulWidget {
   const PhotoFolderV2Screen({Key? key}) : super(key: key);
@@ -9,26 +12,50 @@ class PhotoFolderV2Screen extends StatefulWidget {
 }
 
 class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
-  // ==========================================
-  // 🎨 Figma 設計稿精準色號
-  // ==========================================
   final Color figmaPrimaryColor = const Color(0xFF6AA86B); 
   final Color figmaBgColor = const Color(0xFFF9F9F9);      
   final Color figmaTextColor = const Color(0xFF333333);    
   final Color figmaUnselectedColor = const Color(0xFF9E9E9E); 
 
-  // 📂 假資料：收藏夾的名稱清單
-  final List<String> folderNames = [
-    '拉麵店單字',
-    '車站實用句',
-    '居酒屋會話',
-    '動漫常出',
-    '日常打招呼',
-    '機場必備'
-  ];
+  // 動態資料變數
+  bool _isLoading = true;
+  List<dynamic> _folders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFavorites(); // 畫面載入時去後端抓資料
+  }
+
+  // 從後端抓取資料的方法
+  Future<void> _fetchFavorites() async {
+    final userId = context.read<UserProvider>().userId;
+
+    // 訪客防呆
+    if (userId == null) {
+      setState(() {
+        _isLoading = false;
+        _folders = []; 
+      });
+      return;
+    }
+
+    final result = await ApiClient.fetchUserFavorites(userId);
+    
+    if (result.containsKey('favorites')) {
+      setState(() {
+        _folders = result['favorites'];
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isGuest = context.watch<UserProvider>().userId == null;
+
     return Scaffold(
       backgroundColor: figmaBgColor,
       appBar: AppBar(
@@ -46,19 +73,23 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
       ),
       body: Column(
         children: [
-          // 1. 頂部搜尋欄
+          // 1. 頂部搜尋欄 (保留你的 UI)
           _buildSearchBar(),
           
           // 2. 下方的收藏夾網格
           Expanded(
-            child: _buildPhotoGrid(context),
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: figmaPrimaryColor))
+                : isGuest
+                    ? _buildGuestMessage()
+                    : _buildPhotoGrid(context),
           ),
         ],
       ),
     );
   }
 
-  // 🔍 搜尋欄 UI
+  // 🔍 搜尋欄 UI (完全保留你的版本)
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), 
@@ -90,7 +121,24 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  // 📁 收藏夾網格
+  // 訪客提示
+  Widget _buildGuestMessage() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.lock_outline, size: 64, color: figmaUnselectedColor.withOpacity(0.5)),
+          const SizedBox(height: 16),
+          Text(
+            '登入後即可建立專屬的收藏夾喔！',
+            style: TextStyle(fontSize: 16, color: figmaUnselectedColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 收藏夾網格 (動態計算數量)
   Widget _buildPhotoGrid(BuildContext context) {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
@@ -100,21 +148,25 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         mainAxisSpacing: 20,     
         childAspectRatio: 0.8,   // 長方形以容納文字
       ),
-      itemCount: folderNames.length + 1, 
+      // 總數 = 後端資料夾數量 + 1 (因為最後一個要是新增按鈕)
+      itemCount: _folders.length + 1, 
       itemBuilder: (context, index) {
-        if (index == folderNames.length) {
+        // 如果是最後一個項目，顯示新增按鈕
+        if (index == _folders.length) {
           return _buildAddFolderButton();
         }
-        return _buildFolderCard(context, folderNames[index]);
+        // 否則顯示真實的資料夾
+        final folderName = _folders[index]['name'];
+        return _buildFolderCard(context, folderName);
       },
     );
   }
 
-  // 📁 單個資料夾卡片
+  // 單個資料夾卡片 (保留你的 UI 與點擊跳轉)
   Widget _buildFolderCard(BuildContext context, String title) {
     return GestureDetector(
       onTap: () {
-        // 🌟 點擊後跳轉到「相簿內容頁」，並把資料夾名稱傳過去
+        // 點擊後跳轉到「相簿內容頁」，並把資料夾名稱傳過去
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => AlbumDetailScreen(albumTitle: title)),
@@ -154,7 +206,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  // ➕ 新增收藏夾按鈕
+  // 新增收藏夾按鈕
   Widget _buildAddFolderButton() {
     return GestureDetector(
       onTap: () {

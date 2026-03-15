@@ -137,4 +137,19 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+  // 抓取使用者收藏資料夾 API
+  static Future<Map<String, dynamic>> fetchUserFavorites(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/favorites/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('抓取收藏夾失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

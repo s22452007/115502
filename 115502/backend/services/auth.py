@@ -1,11 +1,23 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
-from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserVocab, UserFolder
+from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder
 from datetime import date, timedelta
+import random
+import string
 
 # 建立 auth 的 Blueprint
 auth_bp = Blueprint('auth', __name__)
+
+# 新增一個小工具：用來產生 8 碼不重複的隨機交友 ID
+def generate_friend_id():
+    characters = string.ascii_uppercase + string.digits # 大寫英文字母 + 數字
+    while True:
+        # 隨機湊出 8 個字
+        new_id = ''.join(random.choice(characters) for _ in range(8))
+        # 檢查資料庫有沒有人已經用過這個 ID，沒有的話才回傳
+        if not User.query.filter_by(friend_id=new_id).first():
+            return new_id
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -22,7 +34,10 @@ def register():
 
     # 將密碼加密後，存入資料庫
     hashed_pw = generate_password_hash(password)
-    new_user = User(email=email, password_hash=hashed_pw)
+    
+    # 在建立新使用者時，給他一組隨機交友 ID
+    new_friend_id = generate_friend_id()
+    new_user = User(email=email, password_hash=hashed_pw, friend_id=new_friend_id)
     
     db.session.add(new_user)
     db.session.commit()
@@ -40,6 +55,11 @@ def login():
     # 如果帳號密碼正確
     if user and check_password_hash(user.password_hash, password):
         
+        # 防呆：如果舊玩家沒有 friend_id，就在登入時幫他補發一個
+        if not user.friend_id:
+            user.friend_id = generate_friend_id()
+            db.session.commit()
+
         # ----- 連續登入計算邏輯開始 -----
         today = date.today()
         
@@ -65,7 +85,8 @@ def login():
             "japanese_level": user.japanese_level,
             "avatar": user.avatar,
             "streak_days": user.streak_days, # 把最新的天數傳給前端
-            "j_pts": user.j_pts              # 順便把點數也傳回去
+            "j_pts": user.j_pts,             # 順便把點數也傳回去
+            "friend_id": user.friend_id      # 把交友 ID 傳回給前端
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401
@@ -176,7 +197,7 @@ def get_user_favorites(user_id):
             folders[scene_name] = {"name": scene_name, "count": 0}
         folders[scene_name]["count"] += 1
 
-    # 2. 🌟 去資料庫抓取使用者「自訂」的資料夾 (就算裡面是 0 個單字也會顯示)
+    # 2. 去資料庫抓取使用者「自訂」的資料夾
     custom_folders = UserFolder.query.filter_by(user_id=user_id).all()
     for cf in custom_folders:
         if cf.name not in folders:
@@ -184,7 +205,6 @@ def get_user_favorites(user_id):
 
     result = list(folders.values())
     return jsonify({"favorites": result}), 200
-
 
 @auth_bp.route('/folders', methods=['POST'])
 def create_folder():

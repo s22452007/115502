@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 // 1. 引入 Provider 和 UserProvider 來抓取大腦記憶
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 
 class AddFriendScreen extends StatefulWidget {
   const AddFriendScreen({Key? key}) : super(key: key);
@@ -38,13 +39,13 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // 🌟 右上角的捷徑：直接跳去加好友！
+          // 🌟 右上角的捷徑：直接跳去好友列表！
           IconButton(
-            icon: Icon(Icons.person_add_outlined, color: _darkGreen, size: 28),
+            icon: Icon(Icons.people_outline, color: _darkGreen, size: 28),
             onPressed: () {
-              Navigator.push(
+              Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const AddFriendScreen()),
+                MaterialPageRoute(builder: (_) => const FriendsListScreen()),
               );
             },
           ),

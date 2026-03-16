@@ -1,6 +1,6 @@
 from app import app
 from utils.db import db
-from models import User, Scene, Vocab, Achievement, UserAbility, UserAchievement, UserScene
+from models import User, Scene, Vocab, Achievement, UserAbility, UserAchievement, UserScene, UserVocab
 from werkzeug.security import generate_password_hash
 
 def seed_data():
@@ -81,6 +81,11 @@ def seed_data():
         vip_scene2 = UserScene(user_id=vip_user.id, scene_id=scene2.id)
         db.session.add_all([vip_scene1, vip_scene2])
 
+        vip_vocab1 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[0].id) # 拉麵
+        vip_vocab2 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[1].id) # 加麵
+        vip_vocab3 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[2].id) # 車票
+        db.session.add_all([vip_vocab1, vip_vocab2, vip_vocab3])
+        
         db.session.commit()
         print("✅ 豪華版資料灌入完成！")
         print(f"👉 測試帳號: {vip_email}")

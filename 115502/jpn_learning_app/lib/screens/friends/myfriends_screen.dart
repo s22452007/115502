@@ -56,13 +56,13 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // 🌟 右上角的捷徑：直接跳去加好友！
+          // 🌟 右上角的捷徑：直接跳去好友列表！
           IconButton(
-            icon: Icon(Icons.person_add_outlined, color: _darkGreen, size: 28),
+            icon: Icon(Icons.people_outline, color: _darkGreen, size: 28),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const AddFriendScreen()),
+                MaterialPageRoute(builder: (_) => const FriendsListScreen()),
               );
             },
           ),

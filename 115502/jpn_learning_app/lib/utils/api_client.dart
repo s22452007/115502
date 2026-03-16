@@ -57,7 +57,7 @@ class ApiClient {
     }
   }
 
-//  新增：直接更新日語程度 API 
+//  直接更新日語程度 API 
   static Future<Map<String, dynamic>> updateLevel(int userId, String level) async {
     final url = Uri.parse('$baseUrl/auth/update_level');
     try {
@@ -134,6 +134,36 @@ class ApiClient {
       }
     } catch (e) {
       print('抓取個人檔案失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+  // 抓取使用者收藏資料夾 API
+  static Future<Map<String, dynamic>> fetchUserFavorites(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/favorites/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('抓取收藏夾失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+  // 建立自訂資料夾 API
+  static Future<Map<String, dynamic>> createFolder(int userId, String folderName) async {
+    final url = Uri.parse('$baseUrl/auth/folders');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'name': folderName}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('建立資料夾失敗: $e');
       return {'error': '網路連線失敗'};
     }
   }

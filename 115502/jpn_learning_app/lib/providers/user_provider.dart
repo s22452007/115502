@@ -5,15 +5,16 @@ class UserProvider extends ChangeNotifier {
   String _japaneseLevel = '';
   String? _email;
   String? _avatar;
-
   // 連續天數與點數
   int _streakDays = 0;
   int _jPts = 0;
+  String? _friendId;
 
   int? get userId => _userId;
   String get japaneseLevel => _japaneseLevel;
   String? get email => _email;
   String? get avatar => _avatar;
+  String? get friendId => _friendId;
 
   // 取得天數與點數
   int get streakDays => _streakDays;
@@ -60,6 +61,13 @@ class UserProvider extends ChangeNotifier {
     _avatar = null;
     _streakDays = 0; // 登出時歸零
     _jPts = 0;       // 登出時歸零
+    _friendId = null; // 登出時清空
     notifyListeners(); // 通知所有畫面「這個人已經登出了，請更新畫面！」
+  }
+
+  // 新增 set 方法
+  void setFriendId(String id) {
+    _friendId = id;
+    notifyListeners();
   }
 }

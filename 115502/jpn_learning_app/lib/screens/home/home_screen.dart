@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart'; // 引入新的收藏夾畫面
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
+import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 
 import 'dart:convert'; // 解碼大頭貼會用到
 
@@ -547,7 +548,18 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.person_add_alt_1_rounded),
+            leading: const Icon(Icons.people_outline),
+            title: const Text('我的好友', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FriendsListScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_add_outlined),
             title: const Text('新增好友', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);

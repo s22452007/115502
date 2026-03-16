@@ -6,8 +6,11 @@ class ApiClient {
   // (注意：如果你之後改用 Android 模擬器，這裡要改成 10.0.2.2)
   static const String baseUrl = 'http://127.0.0.1:5000/api';
 
-  //  註冊 API 
-  static Future<Map<String, dynamic>> register(String email, String password) async {
+  //  註冊 API
+  static Future<Map<String, dynamic>> register(
+    String email,
+    String password,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/register');
     try {
       final response = await http.post(
@@ -22,8 +25,11 @@ class ApiClient {
     }
   }
 
-  //  登入 API 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  //  登入 API
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/login');
     try {
       final response = await http.post(
@@ -38,17 +44,17 @@ class ApiClient {
     }
   }
 
-  //  重設密碼 API 
-  static Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
+  //  重設密碼 API
+  static Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String newPassword,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/reset_password');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email, 
-          'new_password': newPassword
-        }),
+        body: jsonEncode({'email': email, 'new_password': newPassword}),
       );
       return jsonDecode(response.body);
     } catch (e) {
@@ -57,17 +63,17 @@ class ApiClient {
     }
   }
 
-//  新增：直接更新日語程度 API 
-  static Future<Map<String, dynamic>> updateLevel(int userId, String level) async {
+  //  新增：直接更新日語程度 API
+  static Future<Map<String, dynamic>> updateLevel(
+    int userId,
+    String level,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/update_level');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId, 
-          'level': level
-        }),
+        body: jsonEncode({'user_id': userId, 'level': level}),
       );
       return jsonDecode(response.body);
     } catch (e) {
@@ -75,19 +81,19 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
-  
+
   // 傳送測驗分數給後端的 API
-  static Future<Map<String, dynamic>> submitQuizScore(int userId, int score) async {
+  static Future<Map<String, dynamic>> submitQuizScore(
+    int userId,
+    int score,
+  ) async {
     final url = Uri.parse('$baseUrl/quiz/submit');
-    
+
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId,
-          'score': score,
-        }),
+        body: jsonEncode({'user_id': userId, 'score': score}),
       );
 
       if (response.statusCode == 200) {
@@ -104,16 +110,16 @@ class ApiClient {
   }
 
   // 上傳大頭貼
-  static Future<Map<String, dynamic>> uploadAvatar(int userId, String avatarBase64) async {
+  static Future<Map<String, dynamic>> uploadAvatar(
+    int userId,
+    String avatarBase64,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/upload_avatar');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId,
-          'avatar': avatarBase64,
-        }),
+        body: jsonEncode({'user_id': userId, 'avatar': avatarBase64}),
       );
       return jsonDecode(response.body);
     } catch (e) {
@@ -135,6 +141,34 @@ class ApiClient {
     } catch (e) {
       print('抓取個人檔案失敗: $e');
       return {'error': '網路連線失敗'};
+    }
+  }
+
+  // --- 新增：上傳場景照片給 AI 分析 API ---
+  static Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
+    final url = Uri.parse('$baseUrl/scenario/analyze');
+
+    try {
+      // 使用 MultipartRequest 來上傳檔案
+      var request = http.MultipartRequest('POST', url);
+
+      // 將圖片檔案加入請求中
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      // 發送請求
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 400 ||
+          response.statusCode == 500) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '伺服器錯誤代碼: ${response.statusCode}'};
+      }
+    } catch (e) {
+      print('上傳圖片連線失敗: $e');
+      return {'error': '網路連線失敗: $e'};
     }
   }
 }

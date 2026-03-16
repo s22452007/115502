@@ -4,6 +4,7 @@ from flask_cors import CORS
 from utils.db import db
 from services.quiz import quiz_bp
 from services.auth import auth_bp
+from services.scenario import scenario_bp
 
 # 1. 自動抓取 app.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -29,6 +30,7 @@ db.init_app(app)
 # 註冊 API 路由 (這樣剛剛寫的 API 網址就會是 http://127.0.0.1:5000/api/quiz/submit )
 app.register_blueprint(quiz_bp, url_prefix='/api/quiz')
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
+app.register_blueprint(scenario_bp, url_prefix='/api/scenario')
 
 # 啟動時自動建立資料表
 with app.app_context():

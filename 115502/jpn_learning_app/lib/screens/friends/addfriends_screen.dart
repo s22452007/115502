@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// 1. 引入 Provider 和 UserProvider 來抓取大腦記憶
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 class AddFriendScreen extends StatefulWidget {
   const AddFriendScreen({Key? key}) : super(key: key);
@@ -17,6 +20,9 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 2. 從大腦中取出自己的專屬 ID (如果剛註冊還沒載入，就顯示 '尚未產生')
+    final myFriendId = context.watch<UserProvider>().friendId ?? '尚未產生';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), // 淡淡的灰白色背景，讓白卡片更立體
       appBar: AppBar(
@@ -42,8 +48,8 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
               _buildSearchBar(),
               const SizedBox(height: 24),
 
-              // --- 2. 我的專屬 ID 卡片 ---
-              _buildMyIdCard(),
+              // --- 2. 我的專屬 ID 卡片 (把真實 ID 傳進去) ---
+              _buildMyIdCard(myFriendId),
               const SizedBox(height: 32),
 
               // --- 3. 好友邀請 (待確認) ---
@@ -123,8 +129,8 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
     );
   }
 
-  // 💳 我的 ID 卡片模具
-  Widget _buildMyIdCard() {
+  // 💳 我的 ID 卡片模具 (接收變數 myId)
+  Widget _buildMyIdCard(String myId) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -143,11 +149,13 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),
               const SizedBox(height: 4),
+              // 3. 將原本寫死的 JPN-9527 換成動態變數
               Text(
-                'JPN-9527',
+                myId,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 22, // 字稍微放大一點會更有專屬代碼的感覺
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 2.0, // 增加字距讓代碼更好讀
                   color: _darkGreen,
                 ),
               ),

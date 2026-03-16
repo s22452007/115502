@@ -31,7 +31,21 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           '新增好友',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          // 🌟 右上角的捷徑：直接跳去加好友！
+          IconButton(
+            icon: Icon(Icons.person_add_outlined, color: _darkGreen, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddFriendScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
+
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),

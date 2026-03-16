@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'album_detail_screen.dart'; 
+import 'album_detail_screen.dart';
 
 class PhotoFolderV2Screen extends StatefulWidget {
   const PhotoFolderV2Screen({Key? key}) : super(key: key);
@@ -194,7 +194,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => AlbumDetailScreen(albumTitle: title)),
+          MaterialPageRoute(builder: (context) => AlbumDetailScreen(albumTitle: title, vocabList: const [])),
         );
       },
       child: Column(

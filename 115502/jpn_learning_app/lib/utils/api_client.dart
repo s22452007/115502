@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class ApiClient {
   // 因為你是用 Chrome 測試 Flutter，所以可以直接用 127.0.0.1
   // (注意：如果你之後改用 Android 模擬器，這裡要改成 10.0.2.2)
-  static const String baseUrl = 'http://127.0.0.1:5000/api';
+  static const String baseUrl = 'http://10.0.2.2:5000/api';
 
   //  註冊 API
   static Future<Map<String, dynamic>> register(
@@ -143,6 +143,7 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
   // 抓取使用者收藏資料夾 API
   static Future<Map<String, dynamic>> fetchUserFavorites(int userId) async {
     final url = Uri.parse('$baseUrl/auth/favorites/$userId');
@@ -158,8 +159,12 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
   // 建立自訂資料夾 API
-  static Future<Map<String, dynamic>> createFolder(int userId, String folderName) async {
+  static Future<Map<String, dynamic>> createFolder(
+    int userId,
+    String folderName,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/folders');
     try {
       final response = await http.post(
@@ -173,6 +178,7 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
   // --- 新增：上傳場景照片給 AI 分析 API ---
   static Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
     final url = Uri.parse('$baseUrl/scenario/analyze');
@@ -200,5 +206,4 @@ class ApiClient {
       return {'error': '網路連線失敗: $e'};
     }
   }
-
 }

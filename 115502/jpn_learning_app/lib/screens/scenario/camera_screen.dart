@@ -1,12 +1,115 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/scene_result_screen.dart';
+import 'package:jpn_learning_app/main.dart'; // import cameras
 
-class CameraScreen extends StatelessWidget {
+class CameraScreen extends StatefulWidget {
   const CameraScreen({Key? key}) : super(key: key);
+
+  @override
+  State<CameraScreen> createState() => _CameraScreenState();
+}
+
+class _CameraScreenState extends State<CameraScreen>
+    with WidgetsBindingObserver {
+  CameraController? _controller;
+  bool _isCameraInitialized = false;
+  int _currentCameraIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (cameras.isNotEmpty) {
+      _initCamera(cameras[_currentCameraIndex]);
+    }
+  }
+
+  Future<void> _initCamera(CameraDescription cameraDescription) async {
+    final previousController = _controller;
+
+    final CameraController cameraController = CameraController(
+      cameraDescription,
+      ResolutionPreset.high,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
+
+    await previousController?.dispose();
+
+    if (mounted) {
+      setState(() {
+        _controller = cameraController;
+      });
+    }
+
+    try {
+      await cameraController.initialize();
+    } on CameraException catch (e) {
+      debugPrint('Error initializing camera: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _isCameraInitialized = _controller!.value.isInitialized;
+      });
+    }
+  }
+
+  void _flipCamera() {
+    if (cameras.length < 2) return; // 如果只有一個鏡頭就不翻轉
+    _currentCameraIndex = (_currentCameraIndex + 1) % cameras.length;
+    _initCamera(cameras[_currentCameraIndex]);
+  }
+
+  Future<void> _takePicture() async {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return;
+    }
+
+    if (_controller!.value.isTakingPicture) {
+      return;
+    }
+
+    try {
+      final XFile photo = await _controller!.takePicture();
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AnalyzingScreen(imagePath: photo.path),
+        ),
+      );
+    } on CameraException catch (e) {
+      debugPrint('Error occured while taking picture: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final CameraController? cameraController = _controller;
+
+    // App state changed before we got the chance to initialize.
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive) {
+      cameraController.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      _initCamera(cameraController.description);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,15 +117,14 @@ class CameraScreen extends StatelessWidget {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 相機預覽區（模擬）
-          Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage('https://picsum.photos/400/800'),
-                fit: BoxFit.cover,
-              ),
+          // 真正的相機預覽區
+          if (_isCameraInitialized)
+            Positioned.fill(child: CameraPreview(_controller!))
+          else
+            const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
             ),
-          ),
+
           // 返回按鈕
           Positioned(
             top: 48,
@@ -66,7 +168,7 @@ class CameraScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // 🖼️ 1. 左邊的相簿按鈕 (把魔法搬來這裡！)
+                  // 🖼️ 1. 左邊的相簿按鈕
                   IconButton(
                     icon: const Icon(
                       Icons.photo_library, // 或者你原本用的相簿圖示
@@ -74,7 +176,6 @@ class CameraScreen extends StatelessWidget {
                       size: 32,
                     ),
                     onPressed: () async {
-                      // 🌟 這裡加上了 async！
                       // 1. 召喚相簿挑選器
                       final ImagePicker picker = ImagePicker();
                       final XFile? pickedFile = await picker.pickImage(
@@ -85,23 +186,21 @@ class CameraScreen extends StatelessWidget {
                       if (pickedFile != null) {
                         if (!context.mounted) return;
 
-                        // 3. 帶著照片跳轉到結果頁！
+                        // 3. 帶著照片跳轉到辨識頁 (走原本的流程)
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) =>
-                                SceneResultScreen(imagePath: pickedFile.path),
+                                AnalyzingScreen(imagePath: pickedFile.path),
                           ),
                         );
                       }
                     },
                   ),
 
-                  // 📷 2. 中間的拍照按鈕 (綠色大圓圈，先讓它回歸單純的按鈕)
+                  // 📷 2. 中間的拍照按鈕 (綠色大圓圈)
                   GestureDetector(
-                    onTap: () {
-                      // TODO: 未來這裡可以放真正「喀嚓」拍照的邏輯
-                    },
+                    onTap: _takePicture,
                     child: Container(
                       width: 72,
                       height: 72,
@@ -113,14 +212,14 @@ class CameraScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // 🔄 3. 右邊的翻轉鏡頭按鈕 (保留原樣)
+                  // 🔄 3. 右邊的翻轉鏡頭按鈕
                   IconButton(
                     icon: const Icon(
                       Icons.flip_camera_ios,
                       color: Colors.white,
                       size: 32,
                     ),
-                    onPressed: () {},
+                    onPressed: _flipCamera,
                   ),
                 ],
               ),

@@ -206,13 +206,11 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  // 新增收藏夾按鈕
+  // ➕ 替換：新增收藏夾按鈕
   Widget _buildAddFolderButton() {
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('準備新增收藏夾...')),
-        );
+        _showAddFolderDialog(); // 🌟 點擊後彈出對話框
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -238,5 +236,67 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         ],
       ),
     );
+  }
+
+  // 彈出輸入框的對話框
+  void _showAddFolderDialog() {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('新增收藏夾', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: '請輸入資料夾名稱',
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: figmaPrimaryColor, width: 2),
+              ),
+            ),
+            autofocus: true, // 自動彈出鍵盤
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  Navigator.pop(context); // 關閉對話框
+                  await _createNewFolder(name); // 呼叫 API 儲存
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: figmaPrimaryColor),
+              child: const Text('建立', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 處理與後端連線的邏輯
+  Future<void> _createNewFolder(String name) async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    setState(() => _isLoading = true); // 顯示轉圈圈
+
+    final result = await ApiClient.createFolder(userId, name);
+    
+    if (result.containsKey('error')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+        setState(() => _isLoading = false);
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('新增成功！')));
+        _fetchFavorites(); // 重新跟後端要一次資料，畫面就會生出新的資料夾！
+      }
+    }
   }
 }

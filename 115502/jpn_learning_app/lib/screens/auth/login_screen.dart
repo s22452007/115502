@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('friend_id')) {
           context.read<UserProvider>().setFriendId(result['friend_id']);
         }
-        
+
         // 聰明的判斷：如果後端說他已經測驗過 (有 japanese_level)，就直接去首頁！
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
@@ -123,6 +123,10 @@ class _LoginScreenState extends State<LoginScreen> {
         // 註冊成功！存下 user_id
         context.read<UserProvider>().setUserId(result['user_id']);
         context.read<UserProvider>().setEmail(email); // 存入輸入的 Email
+        
+        if (result.containsKey('friend_id')) {
+          context.read<UserProvider>().setFriendId(result['friend_id']);
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('註冊成功！請選擇您的日語程度')),

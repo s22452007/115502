@@ -42,7 +42,11 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({"message": "註冊成功！", "user_id": new_user.id}), 201
+    return jsonify({
+        "message": "註冊成功！", 
+        "user_id": new_user.id,
+        "friend_id": new_friend_id  
+    }), 201
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

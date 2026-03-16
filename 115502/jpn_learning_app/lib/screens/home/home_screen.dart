@@ -547,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.bookmark_border),
+            leading: const Icon(Icons.person_add_alt_1_rounded),
             title: const Text('新增好友', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);

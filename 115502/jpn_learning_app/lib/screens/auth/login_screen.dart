@@ -52,9 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         return;
       }
-    }
-
-    
+    }    
 
     // 顯示 Loading 提示
     ScaffoldMessenger.of(context).showSnackBar(
@@ -66,6 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final result = await ApiClient.login(email, password);
       
       if (!context.mounted) return; // 防呆：確保畫面還在
+
 
       if (result.containsKey('user_id')) {
         // 登入成功！存下 user_id 和 Email
@@ -87,6 +86,10 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         if (result.containsKey('j_pts')) {
           context.read<UserProvider>().setJPts(result['j_pts']);
+        }
+
+        if (result.containsKey('friend_id')) {
+          context.read<UserProvider>().setFriendId(result['friend_id']);
         }
 
         // 聰明的判斷：如果後端說他已經測驗過 (有 japanese_level)，就直接去首頁！
@@ -120,6 +123,10 @@ class _LoginScreenState extends State<LoginScreen> {
         // 註冊成功！存下 user_id
         context.read<UserProvider>().setUserId(result['user_id']);
         context.read<UserProvider>().setEmail(email); // 存入輸入的 Email
+        
+        if (result.containsKey('friend_id')) {
+          context.read<UserProvider>().setFriendId(result['friend_id']);
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('註冊成功！請選擇您的日語程度')),

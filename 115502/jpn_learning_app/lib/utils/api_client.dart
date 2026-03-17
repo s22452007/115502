@@ -179,7 +179,7 @@ class ApiClient {
     }
   }
 
-  // --- 新增：上傳場景照片給 AI 分析 API ---
+  // 上傳場景照片給 AI 分析 API
   static Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
     final url = Uri.parse('$baseUrl/scenario/analyze');
 
@@ -204,6 +204,22 @@ class ApiClient {
     } catch (e) {
       print('上傳圖片連線失敗: $e');
       return {'error': '網路連線失敗: $e'};
+    }
+  }
+
+  // 搜尋好友 API
+  static Future<Map<String, dynamic>> searchFriend(String friendId) async {
+    final url = Uri.parse('$baseUrl/auth/search_friend');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'friend_id': friendId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('搜尋好友失敗: $e');
+      return {'error': '網路連線失敗'};
     }
   }
 }

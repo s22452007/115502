@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart'; // 引入 API 工具
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
+// 🌟 記得加回這個！引入學習小組的頁面
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 class FriendsListScreen extends StatefulWidget {
   const FriendsListScreen({Key? key}) : super(key: key);
@@ -16,8 +18,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   final Color _lightGreen = const Color(0xFFBFE1C3);
 
   bool _isLoading = true;
-  List<dynamic> _allFriends = [];      // 存放從資料庫抓來的所有好友
+  List<dynamic> _allFriends = []; // 存放從資料庫抓來的所有好友
   List<dynamic> _filteredFriends = []; // 存放搜尋列過濾後的好友
+
+  // 🌟 存放被加入「學習小組」的好友名單
+  final List<Map<String, String>> _groupMembers = [];
 
   @override
   void initState() {
@@ -28,8 +33,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   // 去後端抓取真實好友清單
   Future<void> _fetchFriends() async {
     final userId = context.read<UserProvider>().userId;
-    
-    // 如果沒抓到 ID，也要記得關閉轉圈圈
+
     if (userId == null) {
       if (mounted) setState(() => _isLoading = false);
       return;
@@ -37,23 +41,21 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
     try {
       final result = await ApiClient.getFriendsList(userId);
-      
+
       if (mounted) {
         setState(() {
-          // 嚴格檢查 friends 是不是一個 List (陣列)
           if (result.containsKey('friends') && result['friends'] is List) {
             _allFriends = result['friends'];
-            _filteredFriends = _allFriends; 
+            _filteredFriends = _allFriends;
           } else {
             _allFriends = [];
             _filteredFriends = [];
             print('⚠️ 警告：後端傳來的 friends 不是 List 格式或沒有資料！');
           }
-          _isLoading = false; // 成功抓完，關閉轉圈圈
+          _isLoading = false;
         });
       }
     } catch (e) {
-      // 萬一網路斷線或伺服器報錯，絕對不能卡死！
       print('抓取好友發生錯誤: $e');
       if (mounted) {
         setState(() => _isLoading = false);
@@ -67,15 +69,15 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       setState(() => _filteredFriends = _allFriends);
       return;
     }
-    
+
     setState(() {
       _filteredFriends = _allFriends.where((friend) {
-        if (friend is! Map) return false; 
-        
+        if (friend is! Map) return false;
+
         final n = friend['nickname']?.toString() ?? '';
         final fId = friend['friend_id']?.toString() ?? '';
         return n.toLowerCase().contains(keyword.toLowerCase()) ||
-               fId.toLowerCase().contains(keyword.toLowerCase());
+            fId.toLowerCase().contains(keyword.toLowerCase());
       }).toList();
     });
   }
@@ -97,6 +99,19 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         actions: [
+          // 🌟 前往學習小組的按鈕 (帶著我們選好的名單過去)
+          IconButton(
+            icon: Icon(Icons.groups, color: _darkGreen, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StudyGroupScreen(members: _groupMembers),
+                ),
+              );
+            },
+          ),
+          // 新增好友按鈕
           IconButton(
             icon: Icon(Icons.person_add_outlined, color: _darkGreen, size: 28),
             onPressed: () {
@@ -112,23 +127,31 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: _darkGreen))
           : _allFriends.isEmpty
-              ? _buildEmptyState()
-              : Column(
-                  children: [
-                    _buildSearchBar(),
-                    Expanded(
-                      child: _filteredFriends.isEmpty
-                          ? Center(child: Text('找不到符合的好友 🥲', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)))
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: _filteredFriends.length,
-                              itemBuilder: (context, index) {
-                                return _buildFriendCard(_filteredFriends[index]);
-                              },
+          ? _buildEmptyState()
+          : Column(
+              children: [
+                _buildSearchBar(),
+                Expanded(
+                  child: _filteredFriends.isEmpty
+                      ? Center(
+                          child: Text(
+                            '找不到符合的好友 🥲',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 16,
                             ),
-                    ),
-                  ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: _filteredFriends.length,
+                          itemBuilder: (context, index) {
+                            return _buildFriendCard(_filteredFriends[index]);
+                          },
+                        ),
                 ),
+              ],
+            ),
     );
   }
 
@@ -140,7 +163,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: TextField(
@@ -164,15 +191,21 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         color: Colors.red.shade100,
-        child: Text('❌ 資料格式錯誤: $friend', style: const TextStyle(color: Colors.red)),
+        child: Text(
+          '❌ 資料格式錯誤: $friend',
+          style: const TextStyle(color: Colors.red),
+        ),
       );
     }
 
     final nickname = friend['nickname']?.toString() ?? 'Unknown';
     final friendId = friend['friend_id']?.toString() ?? '尚未產生';
     final avatarBase64 = friend['avatar']?.toString();
-    
-    final statusText = '一起開心學日文 📚'; 
+
+    // 🌟 判斷這個好友是否已經被我們加進小組名單裡了
+    bool isAdded = _groupMembers.any((m) => m['friend_id'] == friendId);
+
+    final statusText = '一起開心學日文 📚';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -181,7 +214,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -189,9 +226,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           CircleAvatar(
             radius: 30,
             backgroundColor: Colors.grey.shade200,
-            backgroundImage: avatarBase64 != null 
-                ? null 
-                : const NetworkImage('https://ui-avatars.com/api/?name=F&background=random'),
+            backgroundImage: avatarBase64 != null
+                ? null // TODO: Base64解析保留
+                : const NetworkImage(
+                    'https://ui-avatars.com/api/?name=F&background=random',
+                  ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -200,7 +239,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               children: [
                 Text(
                   nickname,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -209,32 +251,90 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _lightGreen.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     statusText,
-                    style: TextStyle(color: _darkGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: _darkGreen,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.black54),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('準備與 $nickname 聊天！')),
-                );
-              },
-            ),
+
+          // --- 右側的按鈕區 ---
+          Row(
+            children: [
+              // 聊天按鈕
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: Colors.black54,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('準備與 $nickname 聊天！')),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 🌟 加入小組按鈕
+              Container(
+                decoration: BoxDecoration(
+                  color: isAdded ? Colors.red.shade50 : Colors.grey.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    isAdded ? Icons.group_remove : Icons.group_add,
+                    color: isAdded ? Colors.red.shade400 : _darkGreen,
+                    size: 24,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      if (isAdded) {
+                        // 移出小組
+                        _groupMembers.removeWhere(
+                          (m) => m['friend_id'] == friendId,
+                        );
+                      } else {
+                        // 加入小組 (最多5人)
+                        if (_groupMembers.length < 5) {
+                          _groupMembers.add({
+                            'nickname': nickname,
+                            'friend_id': friendId,
+                            'avatar':
+                                avatarBase64 ??
+                                'https://ui-avatars.com/api/?name=F&background=random',
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('小組最多只能有5個人喔！')),
+                          );
+                        }
+                      }
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),

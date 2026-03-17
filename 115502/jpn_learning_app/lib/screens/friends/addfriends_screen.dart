@@ -35,16 +35,34 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
   // 去後端抓取「誰寄邀請給我」
   Future<void> _fetchPendingRequests() async {
     final myUserId = context.read<UserProvider>().userId;
-    if (myUserId == null) return;
+    
+    // 🐛 修正：如果是訪客登入 (沒有 ID)，一定要記得把轉圈圈關掉！
+    if (myUserId == null) {
+      if (mounted) {
+        setState(() {
+          _isLoadingPending = false; 
+        });
+      }
+      return;
+    }
 
-    final result = await ApiClient.getPendingRequests(myUserId);
-    if (mounted) {
-      setState(() {
-        if (result.containsKey('pending_requests')) {
-          _pendingRequests = result['pending_requests'];
-        }
-        _isLoadingPending = false;
-      });
+    try {
+      final result = await ApiClient.getPendingRequests(myUserId);
+      if (mounted) {
+        setState(() {
+          if (result.containsKey('pending_requests')) {
+            _pendingRequests = result['pending_requests'];
+          }
+          _isLoadingPending = false; // 成功後關閉轉圈圈
+        });
+      }
+    } catch (e) {
+      // 萬一網路出錯，也要關閉轉圈圈
+      if (mounted) {
+        setState(() {
+          _isLoadingPending = false;
+        });
+      }
     }
   }
 

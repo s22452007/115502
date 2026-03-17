@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
-from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder
+from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder, FriendRequest, Friendship
 from datetime import date, timedelta
 import random
 import string
@@ -248,3 +248,60 @@ def search_friend():
         "friend_id": user.friend_id,
         "avatar": user.avatar
     }), 200
+
+@auth_bp.route('/friend_request/send', methods=['POST'])
+def send_friend_request():
+    data = request.get_json()
+    sender_id = data.get('sender_id')
+    receiver_id = data.get('receiver_id')
+
+    # 檢查是否已經是好友
+    if Friendship.query.filter_by(user_id=sender_id, friend_id=receiver_id).first():
+         return jsonify({"error": "你們已經是好友了！"}), 400
+
+    # 檢查是否已經發過邀請 (正在等對方同意)
+    if FriendRequest.query.filter_by(sender_id=sender_id, receiver_id=receiver_id, status='pending').first():
+        return jsonify({"error": "已經發送過邀請，請靜候對方同意喔！"}), 400
+
+    new_req = FriendRequest(sender_id=sender_id, receiver_id=receiver_id)
+    db.session.add(new_req)
+    db.session.commit()
+    return jsonify({"message": "邀請已順利送出！"}), 201
+
+@auth_bp.route('/friend_request/pending/<int:user_id>', methods=['GET'])
+def get_pending_requests(user_id):
+    # 抓出「寄給我」且「還沒處理」的邀請
+    requests = FriendRequest.query.filter_by(receiver_id=user_id, status='pending').all()
+    result = []
+    for req in requests:
+        sender = User.query.get(req.sender_id)
+        nickname = sender.email.split('@')[0] if sender else "Unknown"
+        result.append({
+            "request_id": req.id,
+            "sender_id": req.sender_id,
+            "nickname": nickname,
+            "friend_id": sender.friend_id,
+            "avatar": sender.avatar
+        })
+    return jsonify({"pending_requests": result}), 200
+
+@auth_bp.route('/friend_request/respond', methods=['POST'])
+def respond_friend_request():
+    data = request.get_json()
+    request_id = data.get('request_id')
+    action = data.get('action') # 'accept' (接受) 或 'reject' (拒絕)
+
+    req = FriendRequest.query.get(request_id)
+    if not req:
+        return jsonify({"error": "找不到此邀請"}), 404
+
+    req.status = action # 更新狀態
+    
+    if action == 'accept':
+        # 如果接受，就互相加為好友 (建立兩筆紀錄，方便雙向查詢)
+        f1 = Friendship(user_id=req.sender_id, friend_id=req.receiver_id)
+        f2 = Friendship(user_id=req.receiver_id, friend_id=req.sender_id)
+        db.session.add_all([f1, f2])
+
+    db.session.commit()
+    return jsonify({"message": f"已{'接受' if action == 'accept' else '拒絕'}邀請！"}), 200

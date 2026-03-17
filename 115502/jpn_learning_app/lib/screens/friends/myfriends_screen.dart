@@ -25,40 +25,56 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     _fetchFriends(); // 畫面載入時去後端抓真實好友
   }
 
-  // 去後端抓取真實好友清單的魔法
+  // 去後端抓取真實好友清單
   Future<void> _fetchFriends() async {
     final userId = context.read<UserProvider>().userId;
-    if (userId == null) return;
+    if (userId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
-    final result = await ApiClient.getFriendsList(userId);
-    
-    if (mounted) {
-      setState(() {
-        if (result.containsKey('friends')) {
-          _allFriends = result['friends'];
-          _filteredFriends = _allFriends; // 一開始顯示全部
-        }
-        _isLoading = false;
-      });
+    try {
+      final result = await ApiClient.getFriendsList(userId);
+      if (mounted) {
+        setState(() {
+          // 嚴格檢查 friends 是不是一個 List (陣列)
+          if (result.containsKey('friends') && result['friends'] is List) {
+            _allFriends = result['friends'];
+            _filteredFriends = _allFriends; 
+          } else {
+            _allFriends = [];
+            _filteredFriends = [];
+            print('⚠️ 警告：後端傳來的 friends 不是 List 格式！');
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('抓取好友發生錯誤: $e');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   // 本地即時搜尋過濾邏輯
   void _runFilter(String keyword) {
-    List<dynamic> results = [];
     if (keyword.isEmpty) {
-      results = _allFriends;
-    } else {
-      results = _allFriends.where((friend) =>
-          friend['nickname'].toString().toLowerCase().contains(keyword.toLowerCase()) ||
-          friend['friend_id'].toString().toLowerCase().contains(keyword.toLowerCase())
-      ).toList();
+      setState(() => _filteredFriends = _allFriends);
+      return;
     }
+    
     setState(() {
-      _filteredFriends = results;
+      _filteredFriends = _allFriends.where((friend) {
+        // 🛡️ 如果這筆資料根本不是字典 (Map)，直接跳過，絕不當機！
+        if (friend is! Map) return false; 
+        
+        final n = friend['nickname']?.toString() ?? '';
+        final fId = friend['friend_id']?.toString() ?? '';
+        return n.toLowerCase().contains(keyword.toLowerCase()) ||
+               fId.toLowerCase().contains(keyword.toLowerCase());
+      }).toList();
     });
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,7 +92,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // 你的捷徑保留！
           IconButton(
             icon: Icon(Icons.person_add_outlined, color: _darkGreen, size: 28),
             onPressed: () {
@@ -89,17 +104,13 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      // 根據狀態切換畫面：載入中 -> 空狀態 -> 有資料的列表
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: _darkGreen))
           : _allFriends.isEmpty
-              ? _buildEmptyState() // 完全保留你的溫馨空畫面
+              ? _buildEmptyState()
               : Column(
                   children: [
-                    // --- 頂部搜尋列 ---
                     _buildSearchBar(),
-                    
-                    // --- 好友列表 ---
                     Expanded(
                       child: _filteredFriends.isEmpty
                           ? Center(child: Text('找不到符合的好友 🥲', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)))
@@ -116,7 +127,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     );
   }
 
-  // 🔍 搜尋列模具 (為了配合你的 UI 新增的)
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -129,7 +139,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           ],
         ),
         child: TextField(
-          onChanged: (value) => _runFilter(value), // 打字時即時搜尋
+          onChanged: (value) => _runFilter(value),
           decoration: InputDecoration(
             hintText: '搜尋好友暱稱或 ID',
             hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -142,13 +152,21 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     );
   }
 
-  // 🃏 單個好友的質感卡片模具 (接收真實的 dynamic 資料)
+  // 卡片模具
   Widget _buildFriendCard(dynamic friend) {
-    final nickname = friend['nickname'] ?? 'Unknown';
-    final friendId = friend['friend_id'] ?? '';
-    final avatarBase64 = friend['avatar'];
-    
-    // 因為資料庫目前沒有 status 欄位，我們先統一給一句溫馨的話，不破壞你的 UI
+    // 🛡️ 終極防護：如果資料不是 Map，直接在畫面上印出它到底是什麼鬼東西！
+    if (friend == null || friend is! Map) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        color: Colors.red.shade100,
+        child: Text('❌ 資料格式錯誤: $friend', style: const TextStyle(color: Colors.red)),
+      );
+    }
+
+    final nickname = friend['nickname']?.toString() ?? 'Unknown';
+    final friendId = friend['friend_id']?.toString() ?? '尚未產生';
+    final avatarBase64 = friend['avatar']?.toString();
     final statusText = '一起開心學日文 📚'; 
 
     return Container(
@@ -163,57 +181,38 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       ),
       child: Row(
         children: [
-          // 1. 頭像 (動態判斷：如果沒有上傳大頭貼就給隨機圖)
           CircleAvatar(
             radius: 30,
             backgroundColor: Colors.grey.shade200,
             backgroundImage: avatarBase64 != null 
-                ? null // TODO: 未來接 Base64 解析
+                ? null 
                 : const NetworkImage('https://ui-avatars.com/api/?name=F&background=random'),
           ),
           const SizedBox(width: 16),
-          // 2. 中間的好友資訊
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  nickname,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
+                Text(nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 const SizedBox(height: 4),
-                Text(
-                  '@$friendId',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                ),
+                Text('@$friendId', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _lightGreen.withOpacity(0.3),
+                    color: const Color(0xFFBFE1C3).withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(color: _darkGreen, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text(statusText, style: const TextStyle(color: Color(0xFF4A7A4D), fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
           ),
-          // 3. 右側按鈕 
           Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
             child: IconButton(
               icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.black54),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('準備與 $nickname 聊天！')),
-                );
-              },
+              onPressed: () {},
             ),
           ),
         ],
@@ -221,7 +220,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     );
   }
 
-  // 🏜️ 沒好友的時候顯示的溫馨空狀態 (100% 完全保留你的設計)
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -240,7 +238,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(
+              Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const AddFriendScreen()),
               );

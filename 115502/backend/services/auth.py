@@ -225,3 +225,26 @@ def create_folder():
     db.session.commit()
 
     return jsonify({"message": "資料夾建立成功！"}), 201
+
+@auth_bp.route('/search_friend', methods=['POST'])
+def search_friend():
+    data = request.get_json()
+    friend_id = data.get('friend_id')
+
+    if not friend_id:
+        return jsonify({"error": "請輸入對方的專屬 ID"}), 400
+
+    # 去資料庫尋找有沒有這個 ID 的人
+    # (因為我們有設定 friend_id 是唯一的，所以用 filter_by 找第一個就好)
+    user = User.query.filter_by(friend_id=friend_id).first()
+
+    if not user:
+        return jsonify({"error": "找不到此 ID 的用戶 🥲"}), 404
+
+    # 把找到的用戶資料回傳給手機 (因為資料庫目前沒有暱稱，我們先用 email 當作名字)
+    return jsonify({
+        "user_id": user.id,
+        "email": user.email,
+        "friend_id": user.friend_id,
+        "avatar": user.avatar
+    }), 200

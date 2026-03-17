@@ -222,4 +222,31 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // 發送交友邀請 API
+  static Future<Map<String, dynamic>> sendFriendRequest(int senderId, int receiverId) async {
+    final url = Uri.parse('$baseUrl/auth/friend_request/send');
+    try {
+      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'sender_id': senderId, 'receiver_id': receiverId}));
+      return jsonDecode(response.body);
+    } catch (e) { return {'error': '連線失敗'}; }
+  }
+
+  // 讀取待確認的邀請 API
+  static Future<Map<String, dynamic>> getPendingRequests(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/friend_request/pending/$userId');
+    try {
+      final response = await http.get(url);
+      return jsonDecode(response.body);
+    } catch (e) { return {'error': '連線失敗'}; }
+  }
+
+  // 同意或拒絕邀請 API
+  static Future<Map<String, dynamic>> respondFriendRequest(int requestId, String action) async {
+    final url = Uri.parse('$baseUrl/auth/friend_request/respond');
+    try {
+      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'request_id': requestId, 'action': action}));
+      return jsonDecode(response.body);
+    } catch (e) { return {'error': '連線失敗'}; }
+  }
 }

@@ -28,6 +28,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   // 去後端抓取真實好友清單
   Future<void> _fetchFriends() async {
     final userId = context.read<UserProvider>().userId;
+    
+    // 如果沒抓到 ID，也要記得關閉轉圈圈
     if (userId == null) {
       if (mounted) setState(() => _isLoading = false);
       return;
@@ -35,6 +37,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
     try {
       final result = await ApiClient.getFriendsList(userId);
+      
       if (mounted) {
         setState(() {
           // 嚴格檢查 friends 是不是一個 List (陣列)
@@ -44,14 +47,17 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           } else {
             _allFriends = [];
             _filteredFriends = [];
-            print('⚠️ 警告：後端傳來的 friends 不是 List 格式！');
+            print('⚠️ 警告：後端傳來的 friends 不是 List 格式或沒有資料！');
           }
-          _isLoading = false;
+          _isLoading = false; // 成功抓完，關閉轉圈圈
         });
       }
     } catch (e) {
+      // 萬一網路斷線或伺服器報錯，絕對不能卡死！
       print('抓取好友發生錯誤: $e');
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -64,7 +70,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     
     setState(() {
       _filteredFriends = _allFriends.where((friend) {
-        // 🛡️ 如果這筆資料根本不是字典 (Map)，直接跳過，絕不當機！
         if (friend is! Map) return false; 
         
         final n = friend['nickname']?.toString() ?? '';
@@ -74,7 +79,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       }).toList();
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,7 +159,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
   // 卡片模具
   Widget _buildFriendCard(dynamic friend) {
-    // 🛡️ 終極防護：如果資料不是 Map，直接在畫面上印出它到底是什麼鬼東西！
     if (friend == null || friend is! Map) {
       return Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -167,6 +171,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     final nickname = friend['nickname']?.toString() ?? 'Unknown';
     final friendId = friend['friend_id']?.toString() ?? '尚未產生';
     final avatarBase64 = friend['avatar']?.toString();
+    
     final statusText = '一起開心學日文 📚'; 
 
     return Container(
@@ -193,26 +198,42 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text(
+                  nickname,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
                 const SizedBox(height: 4),
-                Text('@$friendId', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                Text(
+                  '@$friendId',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFBFE1C3).withOpacity(0.3),
+                    color: _lightGreen.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(statusText, style: const TextStyle(color: Color(0xFF4A7A4D), fontSize: 12, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(color: _darkGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
           ),
           Container(
-            decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
             child: IconButton(
               icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.black54),
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('準備與 $nickname 聊天！')),
+                );
+              },
             ),
           ),
         ],

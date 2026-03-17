@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart'; // 🌟 補上這行
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -52,7 +53,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // 如果不是訪客，就打電話給後端要資料
     final result = await ApiClient.fetchProfileData(userId);
-    
+    if (!mounted) return;
+
     if (result.containsKey('ability')) {
       setState(() {
         // 按照雷達圖的順序：[Listening, Speaking, Reading, Writing, Culture]
@@ -71,9 +73,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false; // 就算失敗也要把轉圈圈關掉
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('抓取資料失敗，請稍後再試')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
       }
     }
   }
@@ -81,9 +83,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _pickAndUploadImage() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')));
       return;
     }
 
@@ -97,9 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (pickedFile != null) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('圖片上傳中...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
       final result = await ApiClient.uploadAvatar(userId, base64String);
@@ -107,22 +109,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (result.containsKey('avatar')) {
         context.read<UserProvider>().setAvatar(result['avatar']);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('大頭貼更新成功！')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['error'] ?? '上傳失敗')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
       }
     }
   }
 
   // 用來處理點擊「訪客不能用的功能」的提示
   void _handleGuestClick(String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
   }
 
   // 動態產生徽章的輔助函式
@@ -132,9 +134,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildBadge(icon: Icons.lock, label: '請先登入', isUnlocked: false, isGuest: true),
-          _buildBadge(icon: Icons.lock, label: '請先登入', isUnlocked: false, isGuest: true),
-          _buildBadge(icon: Icons.lock, label: '請先登入', isUnlocked: false, isGuest: true),
+          _buildBadge(
+            icon: Icons.lock,
+            label: '請先登入',
+            isUnlocked: false,
+            isGuest: true,
+          ),
+          _buildBadge(
+            icon: Icons.lock,
+            label: '請先登入',
+            isUnlocked: false,
+            isGuest: true,
+          ),
+          _buildBadge(
+            icon: Icons.lock,
+            label: '請先登入',
+            isUnlocked: false,
+            isGuest: true,
+          ),
         ],
       );
     }
@@ -165,7 +182,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
     final userAvatar = context.watch<UserProvider>().avatar;
     final isGuest = context.watch<UserProvider>().userId == null; // 判斷是否為訪客
@@ -187,7 +205,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const CameraScreen()),
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
           },
         ),
@@ -202,199 +220,235 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
 
       // 如果資料還在載入，就顯示轉圈圈；否則顯示畫面
-      body: _isLoading 
-        ? Center(child: CircularProgressIndicator(color: _primaryGreen))
-        : SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ... 大頭貼區塊保持不變 ...
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: _pickAndUploadImage,
-                  child: Stack( 
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: const Color(0xFFC5E1A5),
-                        backgroundImage: userAvatar != null
-                            ? MemoryImage(base64Decode(userAvatar))
-                            : null,
-                        child: userAvatar == null
-                            ? Icon(Icons.person, size: 50, color: _textColor)
-                            : null,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: _primaryGreen,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            isGuest ? 'Lv.?' : 'Lv.3', // 訪客顯示未知等級
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _textColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            isGuest ? '訪客' : userName, // 訪客顯示「訪客」
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: _textColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: isGuest ? 0.0 : 0.3, // 訪客沒進度
-                          backgroundColor: Colors.grey.shade300,
-                          valueColor: AlwaysStoppedAnimation(_primaryGreen),
-                          minHeight: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // 能力雷達圖區塊
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _cardColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: _primaryGreen))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '能力',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor),
-                  ),
-                  const SizedBox(height: 20),
-                  // 如果是訪客，用 Stack 蓋上一層半透明遮罩
-                  Stack(
-                    alignment: Alignment.center,
+                  // ... 大頭貼區塊保持不變 ...
+                  Row(
                     children: [
-                      Center(
-                        child: SizedBox(
-                          width: 200,
-                          height: 200,
-                          child: CustomPaint(
-                            painter: RadarChartPainter(
-                              color: _primaryGreen,
-                              values: _radarValues, // 這裡換成變數了！
+                      GestureDetector(
+                        onTap: _pickAndUploadImage,
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: const Color(0xFFC5E1A5),
+                              backgroundImage: userAvatar != null
+                                  ? MemoryImage(base64Decode(userAvatar))
+                                  : null,
+                              child: userAvatar == null
+                                  ? Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: _textColor,
+                                    )
+                                  : null,
                             ),
-                          ),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: _primaryGreen,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      if (isGuest)
-                        Container(
-                          width: double.infinity,
-                          height: 220,
-                          color: Colors.white.withOpacity(0.7),
-                          child: Center(
-                            child: ElevatedButton(
-                              onPressed: () => _handleGuestClick('能力分析'),
-                              style: ElevatedButton.styleFrom(backgroundColor: _primaryGreen),
-                              child: const Text('登入查看能力分析', style: TextStyle(color: Colors.white)),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  isGuest ? 'Lv.?' : 'Lv.3', // 訪客顯示未知等級
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: _textColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  isGuest ? '訪客' : userName, // 訪客顯示「訪客」
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: _textColor,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
+                            const SizedBox(height: 12),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: LinearProgressIndicator(
+                                value: isGuest ? 0.0 : 0.3, // 訪客沒進度
+                                backgroundColor: Colors.grey.shade300,
+                                valueColor: AlwaysStoppedAnimation(
+                                  _primaryGreen,
+                                ),
+                                minHeight: 12,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-            // 成就區塊
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _cardColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '成就',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor),
-                  ),
-                  const SizedBox(height: 20),
-                  // 動態呼叫產生徽章的方法
-                  Center(child: _buildAchievementsGrid(isGuest)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // 收藏夾區塊
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _cardColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '收藏夾',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      if (isGuest) {
-                        _handleGuestClick('收藏夾');
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => PhotoFolderV2Screen()),
-                        );
-                      }
-                    },
-                    child: Text(
-                      '查看全部 >',
-                      style: TextStyle(color: _primaryGreen, fontWeight: FontWeight.bold, fontSize: 16),
+                  // 能力雷達圖區塊
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '能力',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // 如果是訪客，用 Stack 蓋上一層半透明遮罩
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Center(
+                              child: SizedBox(
+                                width: 200,
+                                height: 200,
+                                child: CustomPaint(
+                                  painter: RadarChartPainter(
+                                    color: _primaryGreen,
+                                    values: _radarValues, // 這裡換成變數了！
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (isGuest)
+                              Container(
+                                width: double.infinity,
+                                height: 220,
+                                color: Colors.white.withOpacity(0.7),
+                                child: Center(
+                                  child: ElevatedButton(
+                                    onPressed: () => _handleGuestClick('能力分析'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _primaryGreen,
+                                    ),
+                                    child: const Text(
+                                      '登入查看能力分析',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // 成就區塊
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '成就',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // 動態呼叫產生徽章的方法
+                        Center(child: _buildAchievementsGrid(isGuest)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 收藏夾區塊
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '收藏夾',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            if (isGuest) {
+                              _handleGuestClick('收藏夾');
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PhotoFolderV2Screen(),
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            '查看全部 >',
+                            style: TextStyle(
+                              color: _primaryGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (i) {
@@ -434,7 +488,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: isUnlocked ? const Color(0xFFC5E1A5) : Colors.grey.shade300,
+            backgroundColor: isUnlocked
+                ? const Color(0xFFC5E1A5)
+                : Colors.grey.shade300,
             child: Icon(
               icon,
               size: 30,
@@ -456,7 +512,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildDrawer(BuildContext context, bool isGuest) {
     final userAvatar = context.watch<UserProvider>().avatar;
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
 
     return Drawer(
@@ -471,12 +528,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             accountEmail: Text(isGuest ? '登入解鎖更多功能！' : userEmail),
             currentAccountPicture: CircleAvatar(
-            backgroundColor: const Color(0xFFC5E1A5), 
-            backgroundImage: userAvatar != null ? MemoryImage(base64Decode(userAvatar)) : null,
-            child: userAvatar == null
-                ? const Icon(Icons.person, size: 50, color: Color(0xFF333333)) 
-                : null,
-          ),
+              backgroundColor: const Color(0xFFC5E1A5),
+              backgroundImage: userAvatar != null
+                  ? MemoryImage(base64Decode(userAvatar))
+                  : null,
+              child: userAvatar == null
+                  ? const Icon(Icons.person, size: 50, color: Color(0xFF333333))
+                  : null,
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.home_outlined),
@@ -494,9 +553,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (isGuest) {
                 _handleGuestClick('我的單字探險');
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('單字探險畫廊即將推出！')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('單字探險畫廊即將推出！')));
               }
             },
           ),
@@ -514,17 +573,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             onTap: () {
               // 1. 先把側邊欄(抽屜)關起來
-              Navigator.pop(context); 
-              
+              Navigator.pop(context);
+
               // 2. 呼叫我們剛剛寫好的 logout() 清除資料
-              context.read<UserProvider>().logout(); 
-              
+              context.read<UserProvider>().logout();
+
               // 3. 跳轉回登入頁，並且「清空所有的歷史路徑」
               // 這樣使用者按手機的「返回鍵」才不會又跑回首頁！
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false, 
+                (route) => false,
               );
             },
           ),

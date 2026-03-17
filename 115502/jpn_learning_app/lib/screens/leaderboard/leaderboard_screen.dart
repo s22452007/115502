@@ -72,7 +72,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const CameraScreen()),
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
           },
         ),

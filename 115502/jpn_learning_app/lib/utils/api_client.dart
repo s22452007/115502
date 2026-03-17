@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class ApiClient {
   // 因為你是用 Chrome 測試 Flutter，所以可以直接用 127.0.0.1
   // (注意：如果你之後改用 Android 模擬器，這裡要改成 10.0.2.2)
-  static const String baseUrl = 'http://10.0.2.2:5000/api';
+  static const String baseUrl = 'http://127.0.0.1:5000/api';
 
   //  註冊 API
   static Future<Map<String, dynamic>> register(

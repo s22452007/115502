@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
+import 'package:flutter/services.dart'; // 控制手機剪貼簿
 
 class AddFriendScreen extends StatefulWidget {
   const AddFriendScreen({Key? key}) : super(key: key);
@@ -164,13 +165,12 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),
               const SizedBox(height: 4),
-              // 3. 將原本寫死的 JPN-9527 換成動態變數
               Text(
                 myId,
                 style: TextStyle(
-                  fontSize: 22, // 字稍微放大一點會更有專屬代碼的感覺
+                  fontSize: 22, 
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 2.0, // 增加字距讓代碼更好讀
+                  letterSpacing: 2.0, 
                   color: _darkGreen,
                 ),
               ),
@@ -178,12 +178,26 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           ),
           Row(
             children: [
+              // 📋 複製按鈕
               IconButton(
                 icon: const Icon(Icons.copy, color: Colors.black54),
-                onPressed: () {
-                  // TODO: 接複製到剪貼簿功能
+                onPressed: () async {
+                  // 將 ID 寫入手機的剪貼簿
+                  await Clipboard.setData(ClipboardData(text: myId));
+                  
+                  // 顯示成功提示給使用者看
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ID 已複製到剪貼簿！📋'),
+                        duration: Duration(seconds: 2), // 顯示兩秒就消失
+                        behavior: SnackBarBehavior.floating, // 讓提示框浮起來比較好看
+                      ),
+                    );
+                  }
                 },
               ),
+              // 📱 QR Code 按鈕
               IconButton(
                 icon: Icon(Icons.qr_code, color: _darkGreen),
                 onPressed: () {

@@ -20,8 +20,6 @@ import 'dart:convert'; // 解碼大頭貼會用到
 
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
-
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -74,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const CameraScreen()),
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
           },
         ),
@@ -126,7 +124,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const BuyPointsScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const BuyPointsScreen(),
+                      ),
                     );
                   },
                   child: _buildStatusChip(

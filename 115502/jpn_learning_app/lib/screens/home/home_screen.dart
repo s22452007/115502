@@ -9,6 +9,7 @@ import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart'; // 引入新的收藏夾畫面
@@ -18,6 +19,8 @@ import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'dart:convert'; // 解碼大頭貼會用到
 
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -123,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const PremiumScreen()),
+                      MaterialPageRoute(builder: (_) => const BuyPointsScreen()),
                     );
                   },
                   child: _buildStatusChip(

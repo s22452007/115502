@@ -249,4 +249,18 @@ class ApiClient {
       return jsonDecode(response.body);
     } catch (e) { return {'error': '連線失敗'}; }
   }
+
+  // 取得好友列表 API
+  static Future<Map<String, dynamic>> getFriendsList(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/friends/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {'error': '請求失敗'};
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

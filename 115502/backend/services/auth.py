@@ -305,3 +305,23 @@ def respond_friend_request():
 
     db.session.commit()
     return jsonify({"message": f"已{'接受' if action == 'accept' else '拒絕'}邀請！"}), 200
+
+@auth_bp.route('/friends/<int:user_id>', methods=['GET'])
+def get_friends_list(user_id):
+    # 從 Friendship 表單抓取所有這個 user 的好友紀錄
+    friendships = Friendship.query.filter_by(user_id=user_id).all()
+    
+    result = []
+    for f in friendships:
+        # 找出好友的詳細資料
+        friend_user = User.query.get(f.friend_id)
+        if friend_user:
+            nickname = friend_user.email.split('@')[0]
+            result.append({
+                "user_id": friend_user.id,
+                "nickname": nickname,
+                "friend_id": friend_user.friend_id,
+                "avatar": friend_user.avatar
+            })
+            
+    return jsonify({"friends": result}), 200

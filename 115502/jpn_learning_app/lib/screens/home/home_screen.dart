@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 🌟 這裡傳遞 1 個 context 進去，對應最下面的模具！
+      // 這裡傳遞 1 個 context 進去，對應最下面的模具！
       drawer: _buildDrawer(context),
 
       appBar: AppBar(
@@ -244,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => PhotoFolderV2Screen(), // 🌟 跳轉到新的 V2 畫面
+                        builder: (_) => PhotoFolderV2Screen(), // 跳轉到新的 V2 畫面
                       ),
                     );
                   },
@@ -493,32 +493,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🌟 這裡有確實加上 (BuildContext context) 接收那 1 個參數！
   Widget _buildDrawer(BuildContext context) {
     final userAvatar = context.watch<UserProvider>().avatar;
-    final userEmail =
-        context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
+    final isGuest = context.watch<UserProvider>().userId == null;
+
+    // 產生自己的專屬預設頭像網址
+    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=random&color=fff';
 
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
+          // 換成帶有白框與專屬頭像的版本
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF6AA86B)),
+            decoration: const BoxDecoration(color: Color.fromARGB(255, 74, 124, 89)),
             accountName: Text(
-              userName,
+              isGuest ? '訪客' : userName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            accountEmail: Text(userEmail),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: const Color(0xFFC5E1A5),
-              backgroundImage: userAvatar != null
-                  ? MemoryImage(base64Decode(userAvatar))
-                  : null,
-              child: userAvatar == null
-                  ? const Icon(Icons.person, size: 50, color: Color(0xFF333333))
-                  : null,
+            accountEmail: Text(isGuest ? '登入解鎖更多功能！' : userEmail),
+            currentAccountPicture: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2), 
+              ),
+              child: CircleAvatar(
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
+                    ? MemoryImage(base64Decode(userAvatar))
+                    : NetworkImage(defaultAvatarUrl) as ImageProvider,
+              ),
             ),
           ),
           ListTile(

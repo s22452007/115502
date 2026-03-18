@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart'; // 引入 API 工具
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
-// 🌟 記得加回這個！引入學習小組的頁面
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
+import 'dart:convert';
 
 class FriendsListScreen extends StatefulWidget {
   const FriendsListScreen({Key? key}) : super(key: key);
@@ -21,7 +21,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   List<dynamic> _allFriends = []; // 存放從資料庫抓來的所有好友
   List<dynamic> _filteredFriends = []; // 存放搜尋列過濾後的好友
 
-  // 🌟 存放被加入「學習小組」的好友名單
+  // 存放被加入「學習小組」的好友名單
   final List<Map<String, String>> _groupMembers = [];
 
   @override
@@ -99,7 +99,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // 🌟 前往學習小組的按鈕 (帶著我們選好的名單過去)
+          // 前往學習小組的按鈕 (帶著我們選好的名單過去)
           IconButton(
             icon: Icon(Icons.groups, color: _darkGreen, size: 28),
             onPressed: () {
@@ -200,12 +200,16 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
     final nickname = friend['nickname']?.toString() ?? 'Unknown';
     final friendId = friend['friend_id']?.toString() ?? '尚未產生';
-    final avatarBase64 = friend['avatar']?.toString();
+    final String? avatarBase64 = friend['avatar']?.toString();
 
-    // 🌟 判斷這個好友是否已經被我們加進小組名單裡了
+    // 判斷這個好友是否已經被我們加進小組名單裡了
     bool isAdded = _groupMembers.any((m) => m['friend_id'] == friendId);
 
     final statusText = '一起開心學日文 📚';
+
+    // 產生每個人的專屬預設頭像網址 (用他的 nickname)
+    // 把名字的空白去掉，避免網址錯誤
+    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=random&color=fff';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -223,14 +227,14 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       ),
       child: Row(
         children: [
+          // 替換這裡的 CircleAvatar
           CircleAvatar(
             radius: 30,
             backgroundColor: Colors.grey.shade200,
-            backgroundImage: avatarBase64 != null
-                ? null // TODO: Base64解析保留
-                : const NetworkImage(
-                    'https://ui-avatars.com/api/?name=F&background=random',
-                  ),
+            // 如果後端有傳真實 Base64 圖片，就顯示真實圖片；否則顯示專屬預設圖
+            backgroundImage: (avatarBase64 != null && avatarBase64.isNotEmpty)
+                ? MemoryImage(base64Decode(avatarBase64)) 
+                : NetworkImage(defaultAvatarUrl) as ImageProvider,
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -295,7 +299,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              // 🌟 加入小組按鈕
+              // 加入小組按鈕
               Container(
                 decoration: BoxDecoration(
                   color: isAdded ? Colors.red.shade50 : Colors.grey.shade100,
@@ -320,9 +324,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                           _groupMembers.add({
                             'nickname': nickname,
                             'friend_id': friendId,
-                            'avatar':
-                                avatarBase64 ??
-                                'https://ui-avatars.com/api/?name=F&background=random',
+                            // 這裡也要改！加入小組時，把真實圖片或專屬預設圖一起帶過去
+                            'avatar': (avatarBase64 != null && avatarBase64.isNotEmpty) 
+                                ? avatarBase64 
+                                : defaultAvatarUrl,
                           });
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(

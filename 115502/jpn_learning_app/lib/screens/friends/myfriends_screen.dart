@@ -184,6 +184,19 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     );
   }
 
+  // 將名字轉換為「永遠固定」的專屬顏色代碼
+  String _getFixedColor(String name) {
+    final List<String> colors = [
+      'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6',
+      '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'
+    ];
+    int hash = 0;
+    for (int i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.codeUnitAt(i)) & 0x7FFFFFFF; // 保證每次算出來數字一樣
+    }
+    return colors[hash % colors.length];
+  }
+
   // 卡片模具
   Widget _buildFriendCard(dynamic friend) {
     if (friend == null || friend is! Map) {
@@ -207,9 +220,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
     final statusText = '一起開心學日文 📚';
 
-    // 產生每個人的專屬預設頭像網址 (用他的 nickname)
-    // 把名字的空白去掉，避免網址錯誤
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=random&color=fff';
+    // 取得專屬固定顏色
+    final String bgColor = _getFixedColor(nickname);
+    // 把網址裡的 random 換成算出來的 $bgColor
+    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=$bgColor&color=fff';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -324,7 +338,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                           _groupMembers.add({
                             'nickname': nickname,
                             'friend_id': friendId,
-                            // 這裡也要改！加入小組時，把真實圖片或專屬預設圖一起帶過去
                             'avatar': (avatarBase64 != null && avatarBase64.isNotEmpty) 
                                 ? avatarBase64 
                                 : defaultAvatarUrl,

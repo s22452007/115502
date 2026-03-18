@@ -500,8 +500,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final isGuest = context.watch<UserProvider>().userId == null;
 
     // 產生自己的專屬預設頭像網址
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=random&color=fff';
+    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
+    int hash = 0;
+    for (int i = 0; i < userName.length; i++) hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
+    final String bgColor = colors[hash % colors.length];
 
+    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,

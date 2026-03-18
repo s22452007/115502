@@ -1,3 +1,4 @@
+import 'credit_card_payment_screen.dart';
 import 'package:flutter/material.dart';
 
 class PointCheckoutScreen extends StatefulWidget {
@@ -70,7 +71,19 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                 ),
               ),
               onPressed: () {
-                _showSuccessDialog();
+                if (selectedPayment == 'card') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CreditCardPaymentScreen(
+                        points: widget.points,
+                        price: widget.price,
+                      ),
+                    ),
+                  );
+                } else {
+                  _showSuccessDialog();
+                }
               },
               child: Text(
                 '確認付款  \$${widget.price}',

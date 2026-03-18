@@ -1,0 +1,38 @@
+[1mdiff --cc 115502/jpn_learning_app/lib/screens/home/home_screen.dart[m
+[1mindex 8a0d06a,5c0efea..0000000[m
+[1m--- a/115502/jpn_learning_app/lib/screens/home/home_screen.dart[m
+[1m+++ b/115502/jpn_learning_app/lib/screens/home/home_screen.dart[m
+[36m@@@ -502,28 -500,13 +502,29 @@@[m [mclass _HomeScreenState extends State<Ho[m
+      final isGuest = context.watch<UserProvider>().userId == null;[m
+  [m
+      // 產生自己的專屬預設頭像網址[m
+[31m -    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];[m
+[32m +    final List<String> colors = [[m
+[32m +      'E57373',[m
+[32m +      'F06292',[m
+[32m +      'BA68C8',[m
+[32m +      '9575CD',[m
+[32m +      '7986CB',[m
+[32m +      '64B5F6',[m
+[32m +      '4DD0E1',[m
+[32m +      '4DB6AC',[m
+[32m +      '81C784',[m
+[32m +      'AED581',[m
+[32m +      'FFB74D',[m
+[32m +      'FF8A65',[m
+[32m +    ];[m
+      int hash = 0;[m
+[31m -    for (int i = 0; i < userName.length; i++) hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;[m
+[32m +    for (int i = 0; i < userName.length; i++) {[m
+[32m +      hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;[m
+[32m +    }[m
+      final String bgColor = colors[hash % colors.length];[m
+  [m
+[31m -    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';[m
+[31m -    [m
+[32m +    final String defaultAvatarUrl =[m
+[32m +        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';[m
+[32m++[m
+      return Drawer([m
+        child: ListView([m
+          padding: EdgeInsets.zero,[m

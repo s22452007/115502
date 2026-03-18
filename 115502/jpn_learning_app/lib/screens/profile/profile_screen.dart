@@ -9,9 +9,8 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/home/home_screen.dart'; 
-import 'package:jpn_learning_app/widgets/app_drawer.dart'; 
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/widgets/app_drawer.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -60,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // 按照雷達圖的順序：[Listening, Speaking, Reading, Writing, Culture]
         _radarValues = [
           result['ability']['listening'].toDouble(),
-          result['ability']['speaking'].toDouble(), 
+          result['ability']['speaking'].toDouble(),
           result['ability']['reading'].toDouble(),
           result['ability']['writing'].toDouble(),
           result['ability']['culture'].toDouble(),
@@ -73,7 +72,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false; // 就算失敗也要把轉圈圈關掉
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
       }
     }
   }
@@ -81,7 +82,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _pickAndUploadImage() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')));
       return;
     }
 
@@ -95,7 +98,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (pickedFile != null) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
       final result = await ApiClient.uploadAvatar(userId, base64String);
@@ -103,16 +108,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (result.containsKey('avatar')) {
         context.read<UserProvider>().setAvatar(result['avatar']);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
       }
     }
   }
 
   // 用來處理點擊「訪客不能用的功能」的提示
   void _handleGuestClick(String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
   }
 
   // 動態產生徽章的輔助函式
@@ -122,9 +133,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildBadge(icon: Icons.lock, label: '請先登入', isUnlocked: false, isGuest: true),
-          _buildBadge(icon: Icons.lock, label: '請先登入', isUnlocked: false, isGuest: true),
-          _buildBadge(icon: Icons.lock, label: '請先登入', isUnlocked: false, isGuest: true),
+          _buildBadge(
+            icon: Icons.lock,
+            label: '請先登入',
+            isUnlocked: false,
+            isGuest: true,
+          ),
+          _buildBadge(
+            icon: Icons.lock,
+            label: '請先登入',
+            isUnlocked: false,
+            isGuest: true,
+          ),
+          _buildBadge(
+            icon: Icons.lock,
+            label: '請先登入',
+            isUnlocked: false,
+            isGuest: true,
+          ),
         ],
       );
     }
@@ -155,18 +181,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
     final userAvatar = context.watch<UserProvider>().avatar;
     final isGuest = context.watch<UserProvider>().userId == null; // 判斷是否為訪客
 
     // 產生自己的專屬預設頭像網址
-    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
+    final List<String> colors = [
+      'E57373',
+      'F06292',
+      'BA68C8',
+      '9575CD',
+      '7986CB',
+      '64B5F6',
+      '4DD0E1',
+      '4DB6AC',
+      '81C784',
+      'AED581',
+      'FFB74D',
+      'FF8A65',
+    ];
     int hash = 0;
-    for (int i = 0; i < userName.length; i++) hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
+    for (int i = 0; i < userName.length; i++)
+      hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
     final String bgColor = colors[hash % colors.length];
 
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
+    final String defaultAvatarUrl =
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
     return Scaffold(
       backgroundColor: _bgColor,
       drawer: const AppDrawer(),
@@ -190,7 +232,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(icon: Icon(Icons.person, color: _primaryGreen), onPressed: () {}),
+          IconButton(
+            icon: Icon(Icons.person, color: _primaryGreen),
+            onPressed: () {},
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -212,17 +257,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 3),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 3)),
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
                                 ],
                               ),
                               child: CircleAvatar(
                                 radius: 40,
                                 backgroundColor: const Color(0xFFC5E1A5),
-                                backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
+                                backgroundImage:
+                                    (userAvatar != null &&
+                                        userAvatar.isNotEmpty)
                                     ? MemoryImage(base64Decode(userAvatar))
-                                    : NetworkImage(defaultAvatarUrl) as ImageProvider,
+                                    : NetworkImage(defaultAvatarUrl)
+                                          as ImageProvider,
                               ),
                             ),
                             Container(
@@ -230,9 +285,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               decoration: BoxDecoration(
                                 color: _primaryGreen,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
                               ),
-                              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 14,
+                                color: Colors.white,
+                              ),
                             ),
                           ],
                         ),
@@ -246,12 +308,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 Text(
                                   isGuest ? 'Lv.?' : 'Lv.3',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _textColor),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: _textColor,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
                                   isGuest ? '訪客' : userName,
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textColor),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: _textColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -261,7 +331,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: LinearProgressIndicator(
                                 value: isGuest ? 0.0 : 0.3, // 訪客沒進度
                                 backgroundColor: Colors.grey.shade300,
-                                valueColor: AlwaysStoppedAnimation(_primaryGreen),
+                                valueColor: AlwaysStoppedAnimation(
+                                  _primaryGreen,
+                                ),
                                 minHeight: 12,
                               ),
                             ),
@@ -276,11 +348,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(color: _cardColor, borderRadius: BorderRadius.circular(20)),
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('能力', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
+                        Text(
+                          '能力',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         Stack(
                           alignment: Alignment.center,
@@ -290,7 +372,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 width: 200,
                                 height: 200,
                                 child: CustomPaint(
-                                  painter: RadarChartPainter(color: _primaryGreen, values: _radarValues),
+                                  painter: RadarChartPainter(
+                                    color: _primaryGreen,
+                                    values: _radarValues,
+                                  ),
                                 ),
                               ),
                             ),
@@ -302,8 +387,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Center(
                                   child: ElevatedButton(
                                     onPressed: () => _handleGuestClick('能力分析'),
-                                    style: ElevatedButton.styleFrom(backgroundColor: _primaryGreen),
-                                    child: const Text('登入查看能力分析', style: TextStyle(color: Colors.white)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _primaryGreen,
+                                    ),
+                                    child: const Text(
+                                      '登入查看能力分析',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -318,11 +408,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(color: _cardColor, borderRadius: BorderRadius.circular(20)),
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('成就', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
+                        Text(
+                          '成就',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         Center(child: _buildAchievementsGrid(isGuest)),
                       ],
@@ -334,20 +434,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(color: _cardColor, borderRadius: BorderRadius.circular(20)),
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('收藏夾', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
+                        Text(
+                          '收藏夾',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
                         TextButton(
                           onPressed: () {
                             if (isGuest) {
                               _handleGuestClick('收藏夾');
                             } else {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => PhotoFolderV2Screen()));
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PhotoFolderV2Screen(),
+                                ),
+                              );
                             }
                           },
-                          child: Text('查看全部 >', style: TextStyle(color: _primaryGreen, fontWeight: FontWeight.bold, fontSize: 16)),
+                          child: Text(
+                            '查看全部 >',
+                            style: TextStyle(
+                              color: _primaryGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -361,7 +483,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         onTap: (i) {
           setState(() => _currentIndex = i);
           if (i == 0) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
           }
           if (i == 2) Navigator.pop(context);
         },
@@ -369,104 +494,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildBadge({required IconData icon, required String label, required bool isUnlocked, required bool isGuest}) {
+  Widget _buildBadge({
+    required IconData icon,
+    required String label,
+    required bool isUnlocked,
+    required bool isGuest,
+  }) {
     return GestureDetector(
       onTap: () {
         if (isGuest) {
           _handleGuestClick('成就解鎖');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isUnlocked ? '你獲得了「$label」徽章！' : '多探索新場景來解鎖此徽章吧！')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isUnlocked ? '你獲得了「$label」徽章！' : '多探索新場景來解鎖此徽章吧！'),
+            ),
+          );
         }
       },
       child: Column(
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: isUnlocked ? const Color(0xFFC5E1A5) : Colors.grey.shade300,
-            child: Icon(icon, size: 30, color: isUnlocked ? _textColor : Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: TextStyle(fontSize: 12, color: isUnlocked ? _textColor : Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context, bool isGuest) {
-    final userAvatar = context.watch<UserProvider>().avatar;
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
-    final userName = userEmail.split('@')[0];
-
-    // 將名字轉換為「永遠固定」的專屬顏色代碼
-    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
-    int hash = 0;
-    for (int i = 0; i < userName.length; i++) {
-      hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
-    }
-    final String bgColor = colors[hash % colors.length];
-
-    // 產生自己的專屬預設頭像網址 (把 random 換成算出來的 $bgColor)
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
-
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: _primaryGreen),
-            accountName: Text(isGuest ? '訪客' : userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            accountEmail: Text(isGuest ? '登入解鎖更多功能！' : userEmail),
-            currentAccountPicture: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2), // 加個白框更有質感
-              ),
-              child: CircleAvatar(
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
-                    ? MemoryImage(base64Decode(userAvatar))
-                    : NetworkImage(defaultAvatarUrl) as ImageProvider,
-              ),
+            backgroundColor: isUnlocked
+                ? const Color(0xFFC5E1A5)
+                : Colors.grey.shade300,
+            child: Icon(
+              icon,
+              size: 30,
+              color: isUnlocked ? _textColor : Colors.white,
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.home_outlined),
-            title: const Text('回首頁', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.bookmark_border),
-            title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-              if (isGuest) {
-                _handleGuestClick('我的單字探險');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('單字探險畫廊即將推出！')));
-              }
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('系統設定', style: TextStyle(fontSize: 16)),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('登出', style: TextStyle(fontSize: 16, color: Colors.redAccent)),
-            onTap: () {
-              Navigator.pop(context);
-              context.read<UserProvider>().logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isUnlocked ? _textColor : Colors.grey,
+            ),
           ),
         ],
       ),
@@ -539,7 +604,7 @@ class RadarChartPainter extends CustomPainter {
 
     final List<String> labels = [
       'Listening',
-      'Speaking', 
+      'Speaking',
       'Reading',
       'Writing',
       'Culture',
@@ -565,5 +630,5 @@ class RadarChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true; 
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

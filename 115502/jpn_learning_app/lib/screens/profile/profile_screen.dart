@@ -213,12 +213,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: _bgColor,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: _cardColor,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: _primaryGreen),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
           ),
         ),
         title: IconButton(

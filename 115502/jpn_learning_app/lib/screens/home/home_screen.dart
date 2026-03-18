@@ -518,12 +518,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     int hash = 0;
     for (int i = 0; i < userName.length; i++) {
-      hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
+      hash = hash * 31 + userName.codeUnitAt(i);
     }
     final String bgColor = colors[hash % colors.length];
 
     final String defaultAvatarUrl =
         'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,

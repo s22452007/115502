@@ -506,6 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final String bgColor = colors[hash % colors.length];
 
     final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
+    
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,

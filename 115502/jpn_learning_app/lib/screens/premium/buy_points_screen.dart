@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 
 class BuyPointsScreen extends StatelessWidget {
-  const BuyPointsScreen({Key? key}) : super(key: key);
+  const BuyPointsScreen({super.key});
 
   static const Color primaryGreen = Color(0xFF8FB98B);
   static const Color darkGreen = Color(0xFF5F8F5B);
@@ -15,12 +15,7 @@ class BuyPointsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final packages = [
-      {
-        'points': '500 Points',
-        'price': '\$50',
-        'desc': '適合輕量使用',
-        'tag': '',
-      },
+      {'points': '500 Points', 'price': '\$50', 'desc': '適合輕量使用', 'tag': ''},
       {
         'points': '1200 Points',
         'price': '\$100',
@@ -65,10 +60,7 @@ class BuyPointsScreen extends StatelessWidget {
               const SizedBox(height: 4),
               const Text(
                 '用 J-Pts 解鎖更多學習互動與分析功能',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: subText,
-                ),
+                style: TextStyle(fontSize: 14, color: subText),
               ),
 
               const SizedBox(height: 18),
@@ -76,7 +68,10 @@ class BuyPointsScreen extends StatelessWidget {
               /// 目前點數
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF7FAF2),
                   borderRadius: BorderRadius.circular(16),
@@ -104,10 +99,7 @@ class BuyPointsScreen extends StatelessWidget {
                         children: [
                           Text(
                             '目前點數',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: subText,
-                            ),
+                            style: TextStyle(fontSize: 13, color: subText),
                           ),
                           SizedBox(height: 2),
                           Text(
@@ -150,9 +142,7 @@ class BuyPointsScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const PremiumScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const PremiumScreen()),
                   );
                 },
                 child: Container(
@@ -376,10 +366,7 @@ class _PointPackageCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       desc,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: subText,
-                      ),
+                      style: const TextStyle(fontSize: 13, color: subText),
                     ),
                   ],
                 ),

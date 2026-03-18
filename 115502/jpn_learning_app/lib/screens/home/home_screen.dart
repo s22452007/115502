@@ -517,8 +517,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'FF8A65',
     ];
     int hash = 0;
-    for (int i = 0; i < userName.length; i++)
+    for (int i = 0; i < userName.length; i++) {
       hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
+    }
     final String bgColor = colors[hash % colors.length];
 
     final String defaultAvatarUrl =

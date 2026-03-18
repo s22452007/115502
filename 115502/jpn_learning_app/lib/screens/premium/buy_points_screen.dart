@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'point_checkout_screen.dart';
 
 class BuyPointsScreen extends StatelessWidget {
-  const BuyPointsScreen({super.key});
+  const BuyPointsScreen({Key? key}) : super(key: key);
 
   static const Color primaryGreen = Color(0xFF8FB98B);
   static const Color darkGreen = Color(0xFF5F8F5B);
@@ -15,7 +16,12 @@ class BuyPointsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final packages = [
-      {'points': '500 Points', 'price': '\$50', 'desc': '適合輕量使用', 'tag': ''},
+      {
+        'points': '500 Points',
+        'price': '\$50',
+        'desc': '適合輕量使用',
+        'tag': '',
+      },
       {
         'points': '1200 Points',
         'price': '\$100',
@@ -60,7 +66,10 @@ class BuyPointsScreen extends StatelessWidget {
               const SizedBox(height: 4),
               const Text(
                 '用 J-Pts 解鎖更多學習互動與分析功能',
-                style: TextStyle(fontSize: 14, color: subText),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: subText,
+                ),
               ),
 
               const SizedBox(height: 18),
@@ -68,10 +77,7 @@ class BuyPointsScreen extends StatelessWidget {
               /// 目前點數
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF7FAF2),
                   borderRadius: BorderRadius.circular(16),
@@ -99,7 +105,10 @@ class BuyPointsScreen extends StatelessWidget {
                         children: [
                           Text(
                             '目前點數',
-                            style: TextStyle(fontSize: 13, color: subText),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: subText,
+                            ),
                           ),
                           SizedBox(height: 2),
                           Text(
@@ -129,7 +138,25 @@ class BuyPointsScreen extends StatelessWidget {
                     desc: pkg['desc']!,
                     tag: pkg['tag']!,
                     onTap: () {
-                      // 這裡之後串金流
+                      final int pointValue =
+                          int.parse(pkg['points']!.split(' ').first);
+                      final int priceValue =
+                          int.parse(pkg['price']!.replaceAll('\$', ''));
+                      final String tagValue = pkg['tag']!;
+                      final String descValue = pkg['desc']!;
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PointCheckoutScreen(
+                            title: pkg['points']!,
+                            points: pointValue,
+                            price: priceValue,
+                            badge: tagValue.isEmpty ? null : tagValue,
+                            subtitle: descValue,
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -142,7 +169,9 @@ class BuyPointsScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const PremiumScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const PremiumScreen(),
+                    ),
                   );
                 },
                 child: Container(
@@ -193,7 +222,7 @@ class BuyPointsScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 16,
                         color: darkGreen,
@@ -224,10 +253,10 @@ class BuyPointsScreen extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.apple, size: 22, color: Colors.black),
+                        Icon(Icons.android, size: 22, color: Colors.green),
                         SizedBox(width: 8),
                         Text(
-                          'Apple Pay',
+                          'Google Play',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -366,7 +395,10 @@ class _PointPackageCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       desc,
-                      style: const TextStyle(fontSize: 13, color: subText),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: subText,
+                      ),
                     ),
                   ],
                 ),

@@ -3,6 +3,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
+import 'package:jpn_learning_app/widgets/app_drawer.dart';
 
 // 🌟 新增了側邊欄會用到的檔案引入
 import 'dart:convert';
@@ -54,7 +55,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       backgroundColor: const Color(0xFFF5F5F2),
 
       // 🌟 1. 裝上側邊欄抽屜！
-      drawer: _buildDrawer(context),
+      drawer: const AppDrawer(),
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,

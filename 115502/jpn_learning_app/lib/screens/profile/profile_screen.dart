@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart'; 
+import 'package:jpn_learning_app/widgets/app_drawer.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -168,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
     return Scaffold(
       backgroundColor: _bgColor,
-      drawer: _buildDrawer(context, isGuest),
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: _cardColor,
         elevation: 0,

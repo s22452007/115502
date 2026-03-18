@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/tutor/ask_question_screen.dart';
+import 'package:jpn_learning_app/widgets/app_drawer.dart';
 
 class TutorHomeScreen extends StatelessWidget {
   const TutorHomeScreen({Key? key}) : super(key: key);
@@ -10,10 +11,16 @@ class TutorHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
-        leading: Icon(Icons.menu, color: Colors.white),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Icon(Icons.camera_alt, color: Colors.white),
         centerTitle: true,
         actions: [Icon(Icons.person_outline, color: Colors.white), const SizedBox(width: 12)],

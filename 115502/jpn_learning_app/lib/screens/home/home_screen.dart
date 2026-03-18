@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/widgets/app_drawer.dart';
 
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
@@ -53,8 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 這裡傳遞 1 個 context 進去，對應最下面的模具！
-      drawer: _buildDrawer(context),
+      // 將抽屜獨立為一個新 Widget
+      drawer: const AppDrawer(),
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,
@@ -495,24 +496,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDrawer(BuildContext context) {
     final userAvatar = context.watch<UserProvider>().avatar;
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
     final isGuest = context.watch<UserProvider>().userId == null;
 
     // 產生自己的專屬預設頭像網址
-    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
+    final List<String> colors = [
+      'E57373',
+      'F06292',
+      'BA68C8',
+      '9575CD',
+      '7986CB',
+      '64B5F6',
+      '4DD0E1',
+      '4DB6AC',
+      '81C784',
+      'AED581',
+      'FFB74D',
+      'FF8A65',
+    ];
     int hash = 0;
-    for (int i = 0; i < userName.length; i++) hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
+    for (int i = 0; i < userName.length; i++)
+      hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
     final String bgColor = colors[hash % colors.length];
 
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
+    final String defaultAvatarUrl =
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           // 換成帶有白框與專屬頭像的版本
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color.fromARGB(255, 74, 124, 89)),
+            decoration: const BoxDecoration(
+              color: Color.fromARGB(255, 74, 124, 89),
+            ),
             accountName: Text(
               isGuest ? '訪客' : userName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -521,7 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
             currentAccountPicture: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2), 
+                border: Border.all(color: Colors.white, width: 2),
               ),
               child: CircleAvatar(
                 backgroundColor: Colors.grey.shade200,

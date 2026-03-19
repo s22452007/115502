@@ -1,5 +1,8 @@
 import 'credit_card_payment_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class PointCheckoutScreen extends StatefulWidget {
   final String title;
@@ -70,7 +73,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                   borderRadius: BorderRadius.circular(28),
                 ),
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (selectedPayment == 'card') {
                   Navigator.push(
                     context,
@@ -82,7 +85,25 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                     ),
                   );
                 } else {
-                  _showSuccessDialog();
+                  // 🌟 Google Play 模擬付款邏輯
+                  final userId = context.read<UserProvider>().userId;
+                  if (userId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入才能購買喔！')));
+                    return;
+                  }
+
+                  // 呼叫 API 購買點數
+                  final result = await ApiClient.buyPoints(userId, widget.points);
+                  
+                  if (!context.mounted) return;
+                  
+                  if (result.containsKey('total_points')) {
+                    // 購買成功！將後端回傳的最新總餘額，更新到大腦裡
+                    context.read<UserProvider>().setJPts(result['total_points']);
+                    _showSuccessDialog(); // 顯示成功彈窗
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '購買失敗')));
+                  }
                 }
               },
               child: Text(

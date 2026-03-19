@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'point_checkout_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 class BuyPointsScreen extends StatelessWidget {
   const BuyPointsScreen({Key? key}) : super(key: key);
@@ -99,21 +101,21 @@ class BuyPointsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             '目前點數',
                             style: TextStyle(
                               fontSize: 13,
                               color: subText,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            '0 J-Pts',
-                            style: TextStyle(
+                            '${context.watch<UserProvider>().jPts} J-Pts',
+                            style: const TextStyle( // 但裡面的 style 不變，所以 style 可以加 const
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: textDark,

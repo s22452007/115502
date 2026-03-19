@@ -263,4 +263,20 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // 💰 購買點數 API
+  static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
+    final url = Uri.parse('$baseUrl/auth/add_points');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'points': points}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('購買點數連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

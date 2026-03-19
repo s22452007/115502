@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class CreditCardPaymentScreen extends StatefulWidget {
   final int points;
@@ -72,8 +75,25 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
                   borderRadius: BorderRadius.circular(28),
                 ),
               ),
-              onPressed: () {
-                _showPaymentSuccessDialog();
+              onPressed: () async {
+                final userId = context.read<UserProvider>().userId;
+                if (userId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入才能購買喔！')));
+                  return;
+                }
+
+                // 呼叫 API 購買點數
+                final result = await ApiClient.buyPoints(userId, widget.points);
+                
+                if (!context.mounted) return;
+
+                if (result.containsKey('total_points')) {
+                  // 購買成功！將最新總餘額更新到大腦裡
+                  context.read<UserProvider>().setJPts(result['total_points']);
+                  _showPaymentSuccessDialog(); // 顯示成功彈窗
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '購買失敗')));
+                }
               },
               child: Text(
                 '確認付款  \$${widget.price}',

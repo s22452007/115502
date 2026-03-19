@@ -78,21 +78,23 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
               onPressed: () async {
                 final userId = context.read<UserProvider>().userId;
                 if (userId == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入才能購買喔！')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('請先登入才能購買喔！')),
+                  );
                   return;
                 }
 
-                // 呼叫 API 購買點數
                 final result = await ApiClient.buyPoints(userId, widget.points);
-                
+
                 if (!context.mounted) return;
 
                 if (result.containsKey('total_points')) {
-                  // 購買成功！將最新總餘額更新到大腦裡
                   context.read<UserProvider>().setJPts(result['total_points']);
-                  _showPaymentSuccessDialog(); // 顯示成功彈窗
+                  _showPaymentSuccessDialog();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '購買失敗')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(result['error'] ?? '購買失敗')),
+                  );
                 }
               },
               child: Text(
@@ -275,6 +277,11 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
       obscureText: obscureText,
       decoration: InputDecoration(
         hintText: hintText,
+        hintStyle: const TextStyle(
+          color: Color(0x73333333), // 半透明提示字
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+        ),
         filled: true,
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(

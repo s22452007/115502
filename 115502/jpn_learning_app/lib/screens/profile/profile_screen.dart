@@ -224,11 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         title: IconButton(
-          icon: const Icon(
-            Icons.camera_alt_outlined,
-            color: Colors.white,
-            size: 28,
-          ),
+          icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
           onPressed: () {
             Navigator.push(
               context,

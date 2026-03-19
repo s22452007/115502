@@ -37,6 +37,6 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    print("🚀 後端伺服器啟動中...")
-    print(f"📁 資料庫已牢牢綁定於: {db_path}") 
+    print("[Startup] 後端伺服器啟動中...")
+    print(f"[Database] 資料庫已牢牢綁定於: {db_path}") 
     app.run(debug=True, port=5000)

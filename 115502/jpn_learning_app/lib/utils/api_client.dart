@@ -1,10 +1,20 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class ApiClient {
-  // 因為你是用 Chrome 測試 Flutter，所以可以直接用 127.0.0.1
-  // (注意：如果你之後改用 Android 模擬器，這裡要改成 10.0.2.2)
-  static const String baseUrl = 'http://127.0.0.1:5000/api';
+  // 動態判斷平台，自動切換對應的本地端 IP
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://127.0.0.1:5000/api';
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:5000/api';
+    } else {
+      return 'http://127.0.0.1:5000/api';
+    }
+  }
 
   //  註冊 API
   static Future<Map<String, dynamic>> register(
@@ -224,12 +234,21 @@ class ApiClient {
   }
 
   // 發送交友邀請 API
-  static Future<Map<String, dynamic>> sendFriendRequest(int senderId, int receiverId) async {
+  static Future<Map<String, dynamic>> sendFriendRequest(
+    int senderId,
+    int receiverId,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/friend_request/send');
     try {
-      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'sender_id': senderId, 'receiver_id': receiverId}));
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'sender_id': senderId, 'receiver_id': receiverId}),
+      );
       return jsonDecode(response.body);
-    } catch (e) { return {'error': '連線失敗'}; }
+    } catch (e) {
+      return {'error': '連線失敗'};
+    }
   }
 
   // 讀取待確認的邀請 API
@@ -238,16 +257,27 @@ class ApiClient {
     try {
       final response = await http.get(url);
       return jsonDecode(response.body);
-    } catch (e) { return {'error': '連線失敗'}; }
+    } catch (e) {
+      return {'error': '連線失敗'};
+    }
   }
 
   // 同意或拒絕邀請 API
-  static Future<Map<String, dynamic>> respondFriendRequest(int requestId, String action) async {
+  static Future<Map<String, dynamic>> respondFriendRequest(
+    int requestId,
+    String action,
+  ) async {
     final url = Uri.parse('$baseUrl/auth/friend_request/respond');
     try {
-      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'request_id': requestId, 'action': action}));
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'request_id': requestId, 'action': action}),
+      );
       return jsonDecode(response.body);
-    } catch (e) { return {'error': '連線失敗'}; }
+    } catch (e) {
+      return {'error': '連線失敗'};
+    }
   }
 
   // 取得好友列表 API

@@ -14,10 +14,6 @@ import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart'; // 引入新的收藏夾畫面
-import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
-import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
-
-import 'dart:convert'; // 解碼大頭貼會用到
 
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
@@ -37,6 +33,59 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color _cardBlue = const Color(0xFF85B8D6);
   final Color _textColor = const Color(0xFF333333);
   final Color _subTextColor = const Color(0xFF888888);
+
+  // --- 新增：訪客專用的鎖定卡片 ---
+  Widget _buildLockedGoalsCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32.0),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100, // 淺灰背景，呈現鎖定的感覺
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.lock_outline, size: 50, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text(
+            '登入解鎖今日學習目標',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 74, 124, 89), // 綠色按鈕
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+            onPressed: () {
+              // 點擊後跳轉到登入頁面
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
+            child: const Text(
+              '前往註冊 / 登入',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,91 +195,109 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _goalGreen,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: _goalGreen.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.track_changes, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        '探索3個新場景',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+
+            // --- 這裡就是根據是否為訪客來切換卡片的地方 ---
+            isGuest
+                ? _buildLockedGoalsCard(context) // 如果是訪客，顯示剛剛寫好的鎖定卡片
+                : Container(
+                    // 如果是會員，顯示原本的目標卡片
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _goalGreen,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _goalGreen.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: 0.66,
-                      backgroundColor: Colors.white.withOpacity(0.3),
-                      valueColor: const AlwaysStoppedAnimation(Colors.white),
-                      minHeight: 8,
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        '進度 : 2/3',
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const CameraScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: _goalGreen,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 0,
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
                           children: [
-                            Text(
-                              '開啟相機',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                            Icon(
+                              Icons.track_changes,
+                              color: Colors.white,
+                              size: 20,
                             ),
-                            Icon(Icons.arrow_forward_outlined, size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              '探索3個新場景',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: 0.66,
+                            backgroundColor: Colors.white.withOpacity(0.3),
+                            valueColor: const AlwaysStoppedAnimation(
+                              Colors.white,
+                            ),
+                            minHeight: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              '進度 : 2/3',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CameraScreen(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _goalGreen,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 0,
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Row(
+                                children: [
+                                  Text(
+                                    '開啟相機',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Icon(Icons.arrow_forward_outlined, size: 16),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
+
+            // --- 判斷結束 ---
             const SizedBox(height: 32),
 
             Row(
@@ -489,168 +556,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(subtitle, style: TextStyle(fontSize: 12, color: _subTextColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    final userAvatar = context.watch<UserProvider>().avatar;
-    final userEmail =
-        context.watch<UserProvider>().email ?? 'guest@example.com';
-    final userName = userEmail.split('@')[0];
-    final isGuest = context.watch<UserProvider>().userId == null;
-
-    // 產生自己的專屬預設頭像網址
-    final List<String> colors = [
-      'E57373',
-      'F06292',
-      'BA68C8',
-      '9575CD',
-      '7986CB',
-      '64B5F6',
-      '4DD0E1',
-      '4DB6AC',
-      '81C784',
-      'AED581',
-      'FFB74D',
-      'FF8A65',
-    ];
-    int hash = 0;
-    for (int i = 0; i < userName.length; i++) {
-      hash = hash * 31 + userName.codeUnitAt(i);
-    }
-    final String bgColor = colors[hash % colors.length];
-
-    final String defaultAvatarUrl =
-        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
-
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          // 換成帶有白框與專屬頭像的版本
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color.fromARGB(255, 74, 124, 89),
-            ),
-            accountName: Text(
-              isGuest ? '訪客' : userName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            accountEmail: Text(isGuest ? '登入解鎖更多功能！' : userEmail),
-            currentAccountPicture: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: CircleAvatar(
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
-                    ? MemoryImage(base64Decode(userAvatar))
-                    : NetworkImage(defaultAvatarUrl) as ImageProvider,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home_outlined),
-            title: const Text('回首頁', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('個人檔案', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.bookmark_border),
-            title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ResultGalleryScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.people_outline),
-            title: const Text('我的好友', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FriendsListScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_add_outlined),
-            title: const Text('新增好友', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddFriendScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.stars, color: Colors.orange),
-            title: const Text(
-              '訂閱與點數',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.orange,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PremiumScreen()),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('系統設定', style: TextStyle(fontSize: 16)),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text(
-              '登出',
-              style: TextStyle(fontSize: 16, color: Colors.redAccent),
-            ),
-            onTap: () {
-              // 1. 先把側邊欄(抽屜)關起來
-              Navigator.pop(context);
-
-              // 2. 呼叫我們剛剛寫好的 logout() 清除資料
-              context.read<UserProvider>().logout();
-
-              // 3. 跳轉回登入頁，並且「清空所有的歷史路徑」
-              // 這樣使用者按手機的「返回鍵」才不會又跑回首頁！
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-          ),
         ],
       ),
     );

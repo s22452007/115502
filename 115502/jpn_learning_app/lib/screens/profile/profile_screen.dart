@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/widgets/app_drawer.dart';
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -397,9 +398,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _primaryGreen,
                                     ),
-                                    child: const Text(
-                                      '登入查看能力分析',
-                                      style: TextStyle(color: Colors.white),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color.fromARGB(
+                                          255,
+                                          74,
+                                          124,
+                                          89,
+                                        ), // 這裡我先用你 App 裡常見的綠色，你可以隨意更改
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8.0,
+                                          ), // 讓按鈕有點圓角
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        // 點擊按鈕後，跳轉到登入頁面
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const LoginScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text(
+                                        '登入查看能力分析',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),

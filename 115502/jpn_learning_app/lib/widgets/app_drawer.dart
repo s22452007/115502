@@ -20,12 +20,23 @@ class AppDrawer extends StatelessWidget {
     final userAvatar = userProvider.avatar;
     final userEmail = userProvider.email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
+    // 這裡判斷是否為訪客
     final isGuest = userProvider.userId == null;
 
     // 產生自己的專屬預設頭像網址
     final List<String> colors = [
-      'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', 
-      '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'
+      'E57373',
+      'F06292',
+      'BA68C8',
+      '9575CD',
+      '7986CB',
+      '64B5F6',
+      '4DD0E1',
+      '4DB6AC',
+      '81C784',
+      'AED581',
+      'FFB74D',
+      'FF8A65',
     ];
     int hash = 0;
     for (int i = 0; i < userName.length; i++) {
@@ -145,20 +156,38 @@ class AppDrawer extends StatelessWidget {
               Navigator.pop(context);
             },
           ),
+          // --- 修改後的 註冊/登入 或 登出 按鈕 ---
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text(
-              '登出',
-              style: TextStyle(fontSize: 16, color: Colors.redAccent),
+            leading: Icon(
+              isGuest ? Icons.login : Icons.logout,
+              color: isGuest ? Colors.blue : Colors.redAccent,
+            ),
+            title: Text(
+              isGuest ? '註冊 / 登入' : '登出',
+              style: TextStyle(
+                fontSize: 16,
+                color: isGuest ? Colors.blue : Colors.redAccent,
+              ),
             ),
             onTap: () {
-              Navigator.pop(context);
-              context.read<UserProvider>().logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
+              Navigator.pop(context); // 先收起側邊欄
+
+              if (isGuest) {
+                // 訪客點擊：直接跳轉到登入畫面
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              } else {
+                // 會員點擊：登出再跳轉到登入畫面
+                context.read<UserProvider>().logout();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
             },
           ),
         ],

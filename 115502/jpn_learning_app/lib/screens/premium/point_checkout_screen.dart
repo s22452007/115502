@@ -85,7 +85,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                     ),
                   );
                 } else {
-                  // 🌟 Google Play 模擬付款邏輯
+                  // 🌟 Google Pay 模擬付款邏輯
                   final userId = context.read<UserProvider>().userId;
                   if (userId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入才能購買喔！')));
@@ -249,8 +249,8 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
           const SizedBox(height: 14),
           _paymentOption(
             value: 'google_play',
-            title: 'Google Play',
-            subtitle: '使用 Google Play 進行付款',
+            title: 'Google Pay',
+            subtitle: '使用 Google Pay 進行付款',
             icon: Icons.android,
           ),
           const SizedBox(height: 12),

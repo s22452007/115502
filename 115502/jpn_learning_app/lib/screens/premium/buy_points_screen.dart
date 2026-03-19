@@ -258,7 +258,7 @@ class BuyPointsScreen extends StatelessWidget {
                         Icon(Icons.android, size: 22, color: Colors.green),
                         SizedBox(width: 8),
                         Text(
-                          'Google Play',
+                          'Google Pay',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

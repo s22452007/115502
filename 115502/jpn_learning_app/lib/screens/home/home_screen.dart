@@ -13,7 +13,7 @@ import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart'; // 引入新的收藏夾畫面
+import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart';
 
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
@@ -34,13 +34,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color _textColor = const Color(0xFF333333);
   final Color _subTextColor = const Color(0xFF888888);
 
-  // --- 新增：訪客專用的鎖定卡片 ---
-  Widget _buildLockedGoalsCard(BuildContext context) {
+  // --- 訪客專用的鎖定卡片元件 ---
+  Widget _buildLockedCard(BuildContext context, String message) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32.0),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100, // 淺灰背景，呈現鎖定的感覺
+        color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16.0),
         border: Border.all(color: Colors.grey.shade300, width: 1),
       ),
@@ -49,9 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const Icon(Icons.lock_outline, size: 50, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text(
-            '登入解鎖今日學習目標',
-            style: TextStyle(
+          Text(
+            message,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black54,
@@ -60,14 +60,13 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 20),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 74, 124, 89), // 綠色按鈕
+              backgroundColor: const Color.fromARGB(255, 74, 124, 89),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
               ),
             ),
             onPressed: () {
-              // 點擊後跳轉到登入頁面
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -89,13 +88,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 從 Provider 抓取使用者的 Email (如果是訪客沒登入，就給個預設值)
     final userEmail =
         context.watch<UserProvider>().email ?? 'guest@example.com';
-    // 把 Email 的 @ 前面切出來當作名字
     final userName = userEmail.split('@')[0];
-
-    // 抓取天數、點數，並判斷是不是訪客
     final streakDays = context.watch<UserProvider>().streakDays;
     final jPts = context.watch<UserProvider>().jPts;
     final isGuest = context.watch<UserProvider>().userId == null;
@@ -103,7 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 將抽屜獨立為一個新 Widget
       drawer: const AppDrawer(),
 
       appBar: AppBar(
@@ -196,108 +190,93 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
 
-            // --- 這裡就是根據是否為訪客來切換卡片的地方 ---
-            isGuest
-                ? _buildLockedGoalsCard(context) // 如果是訪客，顯示剛剛寫好的鎖定卡片
-                : Container(
-                    // 如果是會員，顯示原本的目標卡片
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: _goalGreen,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _goalGreen.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+            // --- 今日學習目標 (保留原樣，不鎖定) ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _goalGreen,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: _goalGreen.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.track_changes, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        '探索3個新場景',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.track_changes,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              '探索3個新場景',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: 0.66,
-                            backgroundColor: Colors.white.withOpacity(0.3),
-                            valueColor: const AlwaysStoppedAnimation(
-                              Colors.white,
-                            ),
-                            minHeight: 8,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              '進度 : 2/3',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const CameraScreen(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: _goalGreen,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 0,
-                                ),
-                                elevation: 0,
-                              ),
-                              child: const Row(
-                                children: [
-                                  Text(
-                                    '開啟相機',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Icon(Icons.arrow_forward_outlined, size: 16),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: 0.66,
+                      backgroundColor: Colors.white.withOpacity(0.3),
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                      minHeight: 8,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '進度 : 2/3',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CameraScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: _goalGreen,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 0,
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          children: [
+                            Text(
+                              '開啟相機',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Icon(Icons.arrow_forward_outlined, size: 16),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
-            // --- 判斷結束 ---
             const SizedBox(height: 32),
 
             Row(
@@ -311,16 +290,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => PhotoFolderV2Screen(), // 跳轉到新的 V2 畫面
-                      ),
+                      MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()),
                     );
                   },
                   child: Text(
                     '查看收藏夾 >',
                     style: TextStyle(
                       fontSize: 14,
-                      color: _goalGreen, // 這裡保留您原本設定的漂亮綠色
+                      color: _goalGreen,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -338,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         MaterialPageRoute(
                           builder: (_) => const RolePlayIntroScreen(
                             imagePath:
-                                'https://images.unsplash.com/photo-1542051812891-60521138a209?q=80&w=800&auto=format&fit=crop', // 一蘭拉麵店的示意圖
+                                'https://images.unsplash.com/photo-1542051812891-60521138a209?q=80&w=800&auto=format&fit=crop',
                           ),
                         ),
                       );
@@ -360,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         MaterialPageRoute(
                           builder: (_) => const RolePlayIntroScreen(
                             imagePath:
-                                'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop', // 新宿車站的示意圖
+                                'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop',
                           ),
                         ),
                       );
@@ -386,6 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
+                    // --- 恢復：直接跳轉去排行榜 ---
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -405,66 +383,73 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.amber.shade100,
-                      child: const Text(
-                        'D',
-                        style: TextStyle(
-                          color: Colors.amber,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
+
+            // --- 學習小組動態：判斷是否為訪客 ---
+            isGuest
+                ? _buildLockedCard(context, '登入查看學習小組動態') // 訪客顯示鎖定卡片
+                : GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StudyGroupScreen(),
                         ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          const Text(
-                            'Din',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.amber.shade100,
+                            child: const Text(
+                              'D',
+                              style: TextStyle(
+                                color: Colors.amber,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Din',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  '獲得了「麵食大師」徽章',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _subTextColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           Text(
-                            '獲得了「麵食大師」徽章',
+                            '10m',
                             style: TextStyle(
-                              fontSize: 13,
-                              color: _subTextColor,
+                              fontSize: 12,
+                              color: Colors.grey.shade400,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Text(
-                      '10m',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+
             const SizedBox(height: 20),
           ],
         ),
@@ -489,8 +474,8 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
       ),
-    ); // 👈 這是關閉 Scaffold 的括號
-  } // 👈 這是關閉 build 方法的括號
+    );
+  }
 
   Widget _buildStatusChip({
     required IconData icon,

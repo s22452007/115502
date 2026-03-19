@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'google_play_purchase_sheet.dart';
 
 class PointCheckoutScreen extends StatefulWidget {
   final String title;
@@ -73,7 +74,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                   borderRadius: BorderRadius.circular(28),
                 ),
               ),
-              onPressed: () async {
+              onPressed: () {
                 if (selectedPayment == 'card') {
                   Navigator.push(
                     context,
@@ -85,25 +86,11 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                     ),
                   );
                 } else {
-                  // 🌟 Google Pay 模擬付款邏輯
-                  final userId = context.read<UserProvider>().userId;
-                  if (userId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入才能購買喔！')));
-                    return;
-                  }
-
-                  // 呼叫 API 購買點數
-                  final result = await ApiClient.buyPoints(userId, widget.points);
-                  
-                  if (!context.mounted) return;
-                  
-                  if (result.containsKey('total_points')) {
-                    // 購買成功！將後端回傳的最新總餘額，更新到大腦裡
-                    context.read<UserProvider>().setJPts(result['total_points']);
-                    _showSuccessDialog(); // 顯示成功彈窗
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '購買失敗')));
-                  }
+                  showGooglePlayPurchaseSheet(
+                    context: context,
+                    points: widget.points,
+                    price: widget.price,
+                  );
                 }
               },
               child: Text(
@@ -283,7 +270,9 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF4F8EE) : Colors.white.withOpacity(0.55),
+          color: isSelected
+              ? const Color(0xFFF4F8EE)
+              : Colors.white.withOpacity(0.55),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? primaryGreen : const Color(0xFFD5DEC8),

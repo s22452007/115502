@@ -325,3 +325,26 @@ def get_friends_list(user_id):
             })
             
     return jsonify({"friends": result}), 200
+
+@auth_bp.route('/add_points', methods=['POST'])
+def add_points():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    points_to_add = data.get('points', 0) # 前端告訴我要加多少點
+
+    if not user_id or points_to_add <= 0:
+        return jsonify({"error": "缺少使用者 ID 或點數數量錯誤"}), 400
+
+    # 去資料庫找這個人
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    # 把他的點數加上去！
+    user.j_pts += points_to_add
+    db.session.commit()
+
+    return jsonify({
+        "message": f"成功儲值 {points_to_add} 點！", 
+        "total_points": user.j_pts # 回傳最新的總餘額給前端
+    }), 200

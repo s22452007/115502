@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -19,10 +20,14 @@ class CreditCardPaymentScreen extends StatefulWidget {
 }
 
 class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController cardNumberController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController expiryController = TextEditingController();
   final TextEditingController cvvController = TextEditingController();
+
+  bool _isSubmitting = false;
 
   static const Color bgColor = Color(0xFFF8F8F8);
   static const Color cardGreen = Color(0xFFEAF0E2);
@@ -39,6 +44,115 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
     expiryController.dispose();
     cvvController.dispose();
     super.dispose();
+  }
+
+  String _cardDigitsOnly(String value) {
+    return value.replaceAll(RegExp(r'\D'), '');
+  }
+
+  String? _validateCardNumber(String? value) {
+    final digits = _cardDigitsOnly(value ?? '');
+
+    if (digits.isEmpty) {
+      return '請輸入卡號';
+    }
+    if (digits.length < 16) {
+      return '卡號未輸入完整';
+    }
+    if (digits.length > 16) {
+      return '卡號格式錯誤';
+    }
+    return null;
+  }
+
+  String? _validateName(String? value) {
+    final text = (value ?? '').trim();
+    if (text.isEmpty) {
+      return '請輸入持卡人姓名';
+    }
+    return null;
+  }
+
+  String? _validateExpiry(String? value) {
+    final text = (value ?? '').trim();
+
+    if (text.isEmpty) {
+      return '請輸入到期日';
+    }
+    if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(text)) {
+      return '請輸入正確格式 MM/YY';
+    }
+
+    final parts = text.split('/');
+    final month = int.tryParse(parts[0]);
+    final yearShort = int.tryParse(parts[1]);
+
+    if (month == null || yearShort == null) {
+      return '到期日格式錯誤';
+    }
+    if (month < 1 || month > 12) {
+      return '月份需介於 01~12';
+    }
+
+    final year = 2000 + yearShort;
+    final now = DateTime.now();
+    final expiryDate = DateTime(year, month + 1, 0);
+
+    if (expiryDate.isBefore(DateTime(now.year, now.month, 1))) {
+      return '卡片已過期';
+    }
+
+    return null;
+  }
+
+  String? _validateCvv(String? value) {
+    final text = (value ?? '').trim();
+
+    if (text.isEmpty) {
+      return '請輸入 CVV';
+    }
+    if (!RegExp(r'^\d{3,4}$').hasMatch(text)) {
+      return 'CVV 格式錯誤';
+    }
+    return null;
+  }
+
+  Future<void> _handleSubmit() async {
+    FocusScope.of(context).unfocus();
+
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) {
+      return;
+    }
+
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請先登入才能購買喔！')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final result = await ApiClient.buyPoints(userId, widget.points);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    if (result.containsKey('total_points')) {
+      context.read<UserProvider>().setJPts(result['total_points']);
+      _showPaymentSuccessDialog();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error'] ?? '購買失敗')),
+      );
+    }
   }
 
   @override
@@ -75,47 +189,39 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
                   borderRadius: BorderRadius.circular(28),
                 ),
               ),
-              onPressed: () async {
-                final userId = context.read<UserProvider>().userId;
-                if (userId == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('請先登入才能購買喔！')),
-                  );
-                  return;
-                }
-
-                final result = await ApiClient.buyPoints(userId, widget.points);
-
-                if (!context.mounted) return;
-
-                if (result.containsKey('total_points')) {
-                  context.read<UserProvider>().setJPts(result['total_points']);
-                  _showPaymentSuccessDialog();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['error'] ?? '購買失敗')),
-                  );
-                }
-              },
-              child: Text(
-                '確認付款  \$${widget.price}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              onPressed: _isSubmitting ? null : _handleSubmit,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      '確認付款  \$${widget.price}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
             ),
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          _buildOrderCard(),
-          const SizedBox(height: 18),
-          _buildCardForm(),
-        ],
+      body: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            _buildOrderCard(),
+            const SizedBox(height: 18),
+            _buildCardForm(),
+          ],
+        ),
       ),
     );
   }
@@ -206,6 +312,12 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
             controller: cardNumberController,
             hintText: '1234 5678 9012 3456',
             keyboardType: TextInputType.number,
+            validator: _validateCardNumber,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(16),
+              CardNumberInputFormatter(),
+            ],
           ),
           const SizedBox(height: 14),
           _buildInputLabel('持卡人姓名'),
@@ -213,6 +325,7 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
           _buildTextField(
             controller: nameController,
             hintText: '請輸入姓名',
+            validator: _validateName,
           ),
           const SizedBox(height: 14),
           Row(
@@ -226,7 +339,13 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
                     _buildTextField(
                       controller: expiryController,
                       hintText: 'MM/YY',
-                      keyboardType: TextInputType.datetime,
+                      keyboardType: TextInputType.number,
+                      validator: _validateExpiry,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                        ExpiryDateInputFormatter(),
+                      ],
                     ),
                   ],
                 ),
@@ -243,6 +362,11 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
                       hintText: '123',
                       keyboardType: TextInputType.number,
                       obscureText: true,
+                      validator: _validateCvv,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                      ],
                     ),
                   ],
                 ),
@@ -270,17 +394,30 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
     required String hintText,
     TextInputType? keyboardType,
     bool obscureText = false,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
+      validator: validator,
+      inputFormatters: inputFormatters,
+      style: const TextStyle(
+        color: deepText,
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+      ),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
-          color: Color(0x73333333), // 半透明提示字
+          color: Color(0x73333333),
           fontSize: 16,
           fontWeight: FontWeight.w400,
+        ),
+        errorStyle: const TextStyle(
+          fontSize: 12,
+          color: Colors.redAccent,
         ),
         filled: true,
         fillColor: Colors.white,
@@ -299,6 +436,14 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: primaryGreen, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.4),
         ),
       ),
     );
@@ -344,6 +489,52 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+class CardNumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < digits.length; i++) {
+      buffer.write(digits[i]);
+      final isNotLast = i != digits.length - 1;
+      if ((i + 1) % 4 == 0 && isNotLast) {
+        buffer.write(' ');
+      }
+    }
+
+    final formatted = buffer.toString();
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class ExpiryDateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    String formatted = digits;
+
+    if (digits.length >= 3) {
+      formatted = '${digits.substring(0, 2)}/${digits.substring(2)}';
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

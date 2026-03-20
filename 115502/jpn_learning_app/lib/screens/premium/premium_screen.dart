@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/screens/premium/premium_trial_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
   const PremiumScreen({Key? key}) : super(key: key);
@@ -76,7 +77,12 @@ class PremiumScreen extends StatelessWidget {
                 actionColor: _lightGreen,
                 showCrown: true,
                 onActionTap: () {
-                  // 這裡之後可以接 Premium 試用流程
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PremiumTrialScreen(),
+                    ),
+                  );
                 },
               ),
             ],

@@ -3,9 +3,13 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/scene_result_screen.dart';
 import 'package:jpn_learning_app/services/ai_service.dart';
 
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+
 // 2-2-2 AI 分析中
 class AnalyzingScreen extends StatefulWidget {
-  final String imagePath; // 新增：接收圖片路徑
+  final String imagePath; // 接收圖片路徑
 
   const AnalyzingScreen({Key? key, required this.imagePath}) : super(key: key);
   @override
@@ -25,8 +29,22 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
       final result = await AiService().analyzeScene(widget.imagePath);
 
       if (mounted && result != null && result['result'] != null) {
-        // 成功後，導向辨識結果頁面，並將結果傳過去 (SceneResultScreen 需要修改來接收資料)
-        // 為了不一次修改太多，這裡先維持原本的導向，我們稍後再處理 SceneResultScreen
+        
+        // 分析成功，把今日進度 +1
+        final userId = context.read<UserProvider>().userId;
+        if (userId != null) {
+          // 不是訪客，才呼叫後端 API 增加進度
+          final progressResult = await ApiClient.incrementDailyScan(userId);
+          
+          if (mounted && progressResult.containsKey('daily_scans')) {
+            // 把後端算好的最新進度 (例如從 0 變 1)，更新到大腦裡！
+            context.read<UserProvider>().setDailyScans(progressResult['daily_scans']);
+          }
+        }
+
+        if (!mounted) return;
+        
+        // 成功後，導向辨識結果頁面
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const SceneResultScreen()),
@@ -71,11 +89,11 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
             Container(
               width: 160,
               height: 160,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.primaryLighter,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.camera_alt, size: 80, color: AppColors.primary),
+              child: const Icon(Icons.camera_alt, size: 80, color: AppColors.primary),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -83,7 +101,7 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
               style: TextStyle(color: Colors.white, fontSize: 16),
             ),
             const SizedBox(height: 16),
-            CircularProgressIndicator(color: AppColors.primary),
+            const CircularProgressIndicator(color: AppColors.primary),
           ],
         ),
       ),

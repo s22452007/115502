@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // 登入成功！存下 user_id 和 Email
         context.read<UserProvider>().setUserId(result['user_id']);
         context.read<UserProvider>().setEmail(email); 
-
+        
         // 如果後端有回傳 avatar (大頭貼)，我們就把它存進大腦裡！
         if (result.containsKey('avatar')) {
           context.read<UserProvider>().setAvatar(result['avatar']);
@@ -80,12 +80,15 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('登入成功！')),
         );
 
-        // 接住後端傳來的連續天數與點數
+        // 接住後端傳來的連續天數、點數與今日進度 (加上 ?? 0 防止舊帳號崩潰)
         if (result.containsKey('streak_days')) {
-          context.read<UserProvider>().setStreakDays(result['streak_days']);
+          context.read<UserProvider>().setStreakDays(result['streak_days'] ?? 1);
         }
         if (result.containsKey('j_pts')) {
-          context.read<UserProvider>().setJPts(result['j_pts']);
+          context.read<UserProvider>().setJPts(result['j_pts'] ?? 0);
+        }
+        if (result.containsKey('daily_scans')) {
+          context.read<UserProvider>().setDailyScans(result['daily_scans'] ?? 0);
         }
 
         if (result.containsKey('friend_id')) {

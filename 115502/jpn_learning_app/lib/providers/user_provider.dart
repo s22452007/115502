@@ -10,6 +10,16 @@ class UserProvider extends ChangeNotifier {
   int _jPts = 0;
   String? _friendId;
 
+  // 存放今日進度
+  int _dailyScans = 0;
+  int get dailyScans => _dailyScans;
+
+  // 設定今日進度的方法
+  void setDailyScans(int scans) {
+    _dailyScans = scans;
+    notifyListeners();
+  }
+
   int? get userId => _userId;
   String get japaneseLevel => _japaneseLevel;
   String? get email => _email;
@@ -62,6 +72,7 @@ class UserProvider extends ChangeNotifier {
     _streakDays = 0; // 登出時歸零
     _jPts = 0;       // 登出時歸零
     _friendId = null; // 登出時清空
+    _dailyScans = 0;
     notifyListeners(); // 通知所有畫面「這個人已經登出了，請更新畫面！」
   }
 

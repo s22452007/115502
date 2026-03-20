@@ -309,4 +309,20 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // 📸 增加今日拍照進度 API
+  static Future<Map<String, dynamic>> incrementDailyScan(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/increment_scan');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('更新進度連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

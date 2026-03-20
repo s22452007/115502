@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
 
-            // --- 恢復：今日學習目標也會判斷是否為訪客 ---
+            // --- 今日學習目標 ---
             isGuest
                 ? _buildLockedCard(context, '登入解鎖今日學習目標') // 訪客顯示鎖定卡片
                 : Container(
@@ -229,10 +229,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
+                        
+                        // 讓進度條動起來！
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: LinearProgressIndicator(
-                            value: 0.66,
+                            // 取大腦裡的 dailyScans 除以 3 算出百分比 (最多 1.0)
+                            value: (context.watch<UserProvider>().dailyScans / 3.0).clamp(0.0, 1.0), 
                             backgroundColor: Colors.white.withOpacity(0.3),
                             valueColor: const AlwaysStoppedAnimation(
                               Colors.white,
@@ -241,12 +244,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              '進度 : 2/3',
-                              style: TextStyle(
+                            // 讓文字變成真實的數字！
+                            Text(
+                              '進度 : ${context.watch<UserProvider>().dailyScans}/3',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
                               ),

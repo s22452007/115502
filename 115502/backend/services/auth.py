@@ -79,8 +79,13 @@ def login():
             
         # 把最後登入日期更新為今天
         user.last_login_date = today
+        
+        # 檢查並重置今日拍照次數 (如果是新的一天，就把次數歸零)
+        if user.last_scan_date != today:
+            user.daily_scans = 0
+            user.last_scan_date = today
+
         db.session.commit()
-        # ----- 連續登入計算邏輯結束 -----
 
         return jsonify({
             "message": "登入成功！",
@@ -90,6 +95,7 @@ def login():
             "avatar": user.avatar,
             "streak_days": user.streak_days, # 把最新的天數傳給前端
             "j_pts": user.j_pts,             # 順便把點數也傳回去
+            "daily_scans": user.daily_scans,
             "friend_id": user.friend_id      # 把交友 ID 傳回給前端
         }), 200
     else:
@@ -347,4 +353,34 @@ def add_points():
     return jsonify({
         "message": f"成功儲值 {points_to_add} 點！", 
         "total_points": user.j_pts # 回傳最新的總餘額給前端
+    }), 200
+
+@auth_bp.route('/increment_scan', methods=['POST'])
+def increment_scan():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    today = date.today()
+    # 防呆：如果是新的一天，先歸零
+    if user.last_scan_date != today:
+        user.daily_scans = 0
+        user.last_scan_date = today
+
+    # 增加次數 (假設每日目標是 3 次)
+    if user.daily_scans < 3:
+        user.daily_scans += 1
+    
+    # 🎁 (選擇性) 如果你想讓使用者達成目標時獲得獎勵，可以解開下面這兩行：
+    # if user.daily_scans == 3:
+    #     user.j_pts += 10 # 達成目標送 10 點！
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "進度更新成功！",
+        "daily_scans": user.daily_scans
     }), 200

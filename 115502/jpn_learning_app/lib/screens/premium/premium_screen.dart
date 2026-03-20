@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
   const PremiumScreen({Key? key}) : super(key: key);
@@ -48,6 +49,15 @@ class PremiumScreen extends StatelessWidget {
                   '基本學習結果',
                 ],
                 actionColor: _lightGreen,
+                onActionTap: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const HomeScreen(),
+                    ),
+                    (route) => false,
+                  );
+                },
               ),
 
               const SizedBox(height: 16),
@@ -65,6 +75,9 @@ class PremiumScreen extends StatelessWidget {
                 ],
                 actionColor: _lightGreen,
                 showCrown: true,
+                onActionTap: () {
+                  // 這裡之後可以接 Premium 試用流程
+                },
               ),
             ],
           ),
@@ -82,6 +95,7 @@ class _PlanCard extends StatelessWidget {
   final List<String> features;
   final Color actionColor;
   final bool showCrown;
+  final VoidCallback? onActionTap;
 
   const _PlanCard({
     required this.title,
@@ -91,6 +105,7 @@ class _PlanCard extends StatelessWidget {
     required this.features,
     required this.actionColor,
     this.showCrown = false,
+    this.onActionTap,
   });
 
   @override
@@ -125,18 +140,25 @@ class _PlanCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: actionColor,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  actionText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: onActionTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: actionColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    actionText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),

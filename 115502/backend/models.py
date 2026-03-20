@@ -16,6 +16,10 @@ class User(db.Model):
     last_login_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # 今日拍照次數與最後拍照日期
+    daily_scans = db.Column(db.Integer, default=0)
+    last_scan_date = db.Column(db.Date, nullable=True)
+
     # 關聯
     collected_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)

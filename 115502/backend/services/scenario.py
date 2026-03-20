@@ -74,3 +74,49 @@ def get_scenario_history():
         'message': '歷史紀錄查詢成功 (目前為空，你可以自行實作這裡的邏輯)',
         'history': []
     }), 200
+
+@scenario_bp.route('/analyze-text', methods=['POST'])
+def analyze_text_scenario():
+    """
+    接收前端傳來的情境主題 (純文字)，交由 AI 生成相關單字與句子。
+    """
+    # 1. 取得前端傳來的 JSON 資料
+    data = request.get_json()
+    
+    # 2. 檢查有沒有 'topic' 這個欄位
+    if not data or 'topic' not in data:
+        return jsonify({'error': '請提供情境主題 (topic)'}), 400
+
+    topic = data['topic'].strip()
+    if not topic:
+        return jsonify({'error': '情境主題不能為空'}), 400
+
+    try:
+        # 3. 呼叫 AI 工具函式 (這裡未來要串接 OpenAI 的 GPT 或 Gemini)
+        # ai_result = utils.ai_helper.generate_scenario_from_text(topic)
+        
+        # --- 以下為假資料 (Mock Data) 供前端串接測試用 ---
+        # 這裡我特別針對 "便利商店" 或隨機主題做了一個假的結果
+        ai_result = {
+            'topic': topic,
+            'vocabs': [
+                {'word': 'いらっしゃいませ', 'kana': 'いらっしゃいませ', 'meaning': '歡迎光臨', 'romaji': 'irasshaimase'},
+                {'word': 'お弁当', 'kana': 'おべんとう', 'meaning': '便當', 'romaji': 'obentou'},
+                {'word': '温める', 'kana': 'あたためる', 'meaning': '加熱', 'romaji': 'atatameru'},
+                {'word': '袋', 'kana': 'ふくろ', 'meaning': '袋子', 'romaji': 'fukuro'}
+            ],
+            'sentences': [
+                {'japanese': 'お弁当温めますか？', 'chinese': '請問便當需要加熱嗎？'},
+                {'japanese': '袋はお持ちですか？', 'chinese': '請問有自備購物袋嗎？'}
+            ]
+        }
+        # --- 假資料結束 ---
+
+        return jsonify({
+            'message': f'文字情境「{topic}」生成成功',
+            'result': ai_result
+        }), 200
+
+    except Exception as e:
+        print(f"生成文字情境時發生錯誤: {e}")
+        return jsonify({'error': f'伺服器內部錯誤: {str(e)}'}), 500

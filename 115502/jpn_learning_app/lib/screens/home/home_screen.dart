@@ -38,38 +38,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- 訪客專用的鎖定卡片元件 ---
   // --- 全新：訪客專用的毛玻璃鎖定元件 ---
-  Widget _buildPremiumLockedOverlay({
-    required Widget child,
-    required String message,
-  }) {
+  // --- 全新：100% 保證變淡的訪客鎖定元件 ---
+  Widget _buildPremiumLockedOverlay({required Widget child, required String message}) {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // 底層：原本的UI (透明度降低，並用 IgnorePointer 防止點擊)
-        Opacity(opacity: 0.35, child: IgnorePointer(child: child)),
-        // 中層：毛玻璃效果
+        // 1. 底層：原本的卡片 (加上 IgnorePointer 防止訪客點擊)
+        IgnorePointer(
+          child: child,
+        ),
+        
+        // 2. 中層：強制鋪上一層半透明「白色遮罩」，保證底圖一定會變淡！
         Positioned.fill(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
-              child: Container(color: Colors.white.withOpacity(0.1)),
+            child: Container(
+              color: Colors.white.withOpacity(0.7), // 0.7代表70%的白色，數字越大越白/越淡
             ),
           ),
         ),
-        // 上層：懸浮標語與登入按鈕
+        
+        // 3. 上層：懸浮標語與登入按鈕
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.75), // 半透明黑底
+            color: Colors.black.withOpacity(0.8), // 半透明黑底
             borderRadius: BorderRadius.circular(30),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -78,37 +73,20 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 8),
               Text(
                 message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: 12),
               InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFF6AA86B), // 主題綠色
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    '去登入',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: const Text('去登入', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -117,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -223,10 +202,11 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
 
             // --- 今日學習目標 ---
-            // --- 今日學習目標 ---
+
+              // --- 今日學習目標 ---
             Builder(
               builder: (context) {
-                // 先把原本的綠色卡片定義成一個變數 (這裡面都是你原本的程式碼，不用動)
+                // 這裡把你原本完整的綠色卡片內容補回來了！
                 final dailyGoalCard = Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -234,27 +214,263 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: _goalGreen,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(
-                        color: _goalGreen.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
+                      BoxShadow(color: _goalGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
                     ],
                   ),
                   child: Column(
-                    // ... (這裡保留你原本綠色卡片裡面的所有東西) ...
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.track_changes, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Text('探索3個新場景', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: (context.watch<UserProvider>().dailyScans / 3.0).clamp(0.0, 1.0),
+                          backgroundColor: Colors.white.withOpacity(0.3),
+                          valueColor: const AlwaysStoppedAnimation(Colors.white),
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('進度 : ${context.watch<UserProvider>().dailyScans}/3', style: const TextStyle(color: Colors.white, fontSize: 14)),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: _goalGreen,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                              elevation: 0,
+                            ),
+                            child: const Row(
+                              children: [
+                                Text('開啟相機', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Icon(Icons.arrow_forward_outlined, size: 16),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 );
 
-                // 判斷：如果是訪客，就套上毛玻璃特效；如果是會員，就正常顯示
                 return isGuest
-                    ? _buildPremiumLockedOverlay(
-                        child: dailyGoalCard,
-                        message: '登入啟用今日目標',
-                      )
+                    ? _buildPremiumLockedOverlay(child: dailyGoalCard, message: '登入啟用今日目標')
                     : dailyGoalCard;
               },
             ),
+
+            const SizedBox(height: 32),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('最近解鎖場景', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()));
+                  },
+                  child: Text('查看收藏夾 >', style: TextStyle(fontSize: 14, color: _goalGreen, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RolePlayIntroScreen(imagePath: 'https://images.unsplash.com/photo-1542051812891-60521138a209?q=80&w=800&auto=format&fit=crop')));
+                    },
+                    child: _buildSceneCard('一蘭拉麵店', '12個新單字', Icons.ramen_dining, _cardRed),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RolePlayIntroScreen(imagePath: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop')));
+                    },
+                    child: _buildSceneCard('新宿車站', '8個新單字', Icons.train, _cardBlue),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('學習小組動態', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen()));
+                  },
+                  child: Text('排行榜 >', style: TextStyle(fontSize: 14, color: _goalGreen, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // --- 學習小組動態 ---
+            Builder(
+              builder: (context) {
+                // 這裡把你原本完整的學習小組卡片內容也補回來了！
+                final studyGroupCard = Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.amber.shade100,
+                        child: const Text('D', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Din', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text('獲得了「麵食大師」徽章', style: TextStyle(fontSize: 13, color: _subTextColor)),
+                          ],
+                        ),
+                      ),
+                      Text('10m', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+                    ],
+                  ),
+                );
+
+                return isGuest
+                    ? _buildPremiumLockedOverlay(child: studyGroupCard, message: '登入查看群組動態')
+                    : GestureDetector(
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()));
+                        },
+                        child: studyGroupCard,
+                      );
+              },
+            ),
+              builder: (context) {
+                // 先把原本的綠色卡片定義成一個變數 (這裡面都是你原本的程式碼，不用動)
+                final dailyGoalCard = Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _goalGreen,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: _goalGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.track_changes,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              '探索3個新場景',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 讓進度條動起來！
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            // 取大腦裡的 dailyScans 除以 3 算出百分比 (最多 1.0)
+                            value:
+                                (context.watch<UserProvider>().dailyScans / 3.0)
+                                    .clamp(0.0, 1.0),
+                            backgroundColor: Colors.white.withOpacity(0.3),
+                            valueColor: const AlwaysStoppedAnimation(
+                              Colors.white,
+                            ),
+                            minHeight: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // 讓文字變成真實的數字！
+                            Text(
+                              '進度 : ${context.watch<UserProvider>().dailyScans}/3',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CameraScreen(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _goalGreen,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 0,
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Row(
+                                children: [
+                                  Text(
+                                    '開啟相機',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Icon(Icons.arrow_forward_outlined, size: 16),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+              },
+
+            const SizedBox(height: 32),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

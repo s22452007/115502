@@ -14,6 +14,7 @@ import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
@@ -229,13 +230,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // 讓進度條動起來！
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: LinearProgressIndicator(
                             // 取大腦裡的 dailyScans 除以 3 算出百分比 (最多 1.0)
-                            value: (context.watch<UserProvider>().dailyScans / 3.0).clamp(0.0, 1.0), 
+                            value:
+                                (context.watch<UserProvider>().dailyScans / 3.0)
+                                    .clamp(0.0, 1.0),
                             backgroundColor: Colors.white.withOpacity(0.3),
                             valueColor: const AlwaysStoppedAnimation(
                               Colors.white,
@@ -244,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -487,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
             );
           }
         },

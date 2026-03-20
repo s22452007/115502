@@ -481,16 +481,26 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (i) {
           setState(() => _currentIndex = i);
+
           if (i == 0) {
+            // 第 1 個按鈕 (相機)
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CameraScreen()),
             );
           }
-          if (i == 3) {
+          if (i == 1) {
+            // 👉 第 2 個按鈕 (放大鏡搜尋)，改成 1 才會生效！
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            );
+          }
+          if (i == 3) {
+            // 第 4 個按鈕 (排行)，幫你把原本的排行榜加回來
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
             );
           }
         },

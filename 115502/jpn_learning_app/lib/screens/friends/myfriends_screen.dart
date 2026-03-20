@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/utils/api_client.dart'; // 引入 API 工具
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'dart:convert';
+import 'package:jpn_learning_app/screens/friends/chat_screen.dart';
 
 class FriendsListScreen extends StatefulWidget {
   const FriendsListScreen({Key? key}) : super(key: key);
@@ -306,8 +307,18 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                     size: 20,
                   ),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('準備與 $nickname 聊天！')),
+                    // 換成跳轉到真實的聊天畫面！
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          friendName: nickname, // 把這個朋友的名字傳過去
+                          // 如果他有真實頭像或是我們算出來的預設頭像，也傳過去
+                          friendAvatarUrl: (avatarBase64 != null && avatarBase64.isNotEmpty) 
+                              ? null // 如果是 Base64 比較複雜，我們這邊先簡單處理，如果需要可以再改
+                              : defaultAvatarUrl, 
+                        ),
+                      ),
                     );
                   },
                 ),

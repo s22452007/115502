@@ -107,7 +107,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => StudyGroupScreen(members: _groupMembers),
+                  builder: (_) => const StudyGroupScreen(),
                 ),
               );
             },

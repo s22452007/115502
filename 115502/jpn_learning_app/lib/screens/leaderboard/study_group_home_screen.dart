@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'invite_group_members_screen.dart';
 
 class StudyGroupHomeScreen extends StatelessWidget {
-  const StudyGroupHomeScreen({Key? key}) : super(key: key);
+  final Map<String, dynamic> groupData; // 接收後端傳來的公會資料
+
+  const StudyGroupHomeScreen({Key? key, required this.groupData}) : super(key: key);
 
   static const Color green = Color(0xFF4E8B4C);
   static const Color lightGreen = Color(0xFFEAF3E3);
@@ -13,16 +15,18 @@ class StudyGroupHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final members = [
-      {'name': '林美伶', 'points': 1200},
-      {'name': '張宏豪', 'points': 950},
-      {'name': '你', 'points': 600},
-      {'name': '陳玟柔', 'points': 250},
-    ];
+    // 1. 從後端資料解包成員名單
+    final String groupName = groupData['group_name'] ?? 'Study Group';
+    final List<dynamic> members = groupData['members'] ?? [];
 
-    const int goal = 5000;
-    const int current = 3000;
-    final double progress = current / goal;
+    // 2. 算出總進度 (大家今日拍照次數的總和)
+    int totalScans = 0;
+    for (var m in members) {
+      totalScans += (m['daily_scans'] as int? ?? 0);
+    }
+
+    final int goal = 15; // 假設公會每日目標是 15 次拍照
+    final double progress = (totalScans / goal).clamp(0.0, 1.0);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -30,9 +34,9 @@ class StudyGroupHomeScreen extends StatelessWidget {
         backgroundColor: green,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'Study Group',
-          style: TextStyle(
+        title: Text(
+          groupName,
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
           ),
@@ -53,11 +57,11 @@ class StudyGroupHomeScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
         children: [
-          _groupInfoCard(),
+          _groupInfoCard(groupName, members), // 🌟 傳入真實資料
           const SizedBox(height: 16),
-          _goalCard(progress: progress, current: current, goal: goal),
+          _goalCard(progress: progress, current: totalScans, goal: goal), // 🌟 傳入真實進度
           const SizedBox(height: 16),
-          _rankingCard(members),
+          _rankingCard(members), // 🌟 傳入名單做排行
           const SizedBox(height: 18),
           Row(
             children: [
@@ -94,7 +98,17 @@ class StudyGroupHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _groupInfoCard() {
+  // --- 更新：接收群組名稱與成員名單 ---
+  Widget _groupInfoCard(String groupName, List<dynamic> members) {
+    // 找誰是組長
+    String hostName = '無';
+    for (var m in members) {
+      if (m['is_host'] == true) {
+        hostName = m['nickname'] ?? '未知';
+        break;
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
@@ -103,9 +117,9 @@ class StudyGroupHomeScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            '日文衝刺小組',
-            style: TextStyle(
+          Text(
+            groupName,
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
               color: textDark,
@@ -114,20 +128,34 @@ class StudyGroupHomeScreen extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              _MemberAvatar(),
-              SizedBox(width: 8),
-              _MemberAvatar(),
-              SizedBox(width: 8),
-              _MemberAvatar(),
-              SizedBox(width: 8),
-              _MemberAvatar(),
-            ],
+            children: List.generate(5, (index) {
+              // 顯示成員頭像，最多 5 個位置
+              if (index < members.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: lightGreen,
+                    child: Icon(Icons.person, color: green),
+                  ),
+                );
+              } else {
+                // 還沒滿 5 人顯示空位
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Colors.grey.shade200,
+                    child: const Icon(Icons.add, color: Colors.grey),
+                  ),
+                );
+              }
+            }),
           ),
           const SizedBox(height: 12),
-          const Text(
-            '成員 4/5 ・ 組長：林美伶',
-            style: TextStyle(
+          Text(
+            '成員 ${members.length}/5 ・ 組長：$hostName',
+            style: const TextStyle(
               fontSize: 14,
               color: subText,
             ),
@@ -137,6 +165,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
     );
   }
 
+  // --- 更新：目標卡片 ---
   Widget _goalCard({
     required double progress,
     required int current,
@@ -152,7 +181,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '本週共同目標',
+            '今日共同目標', 
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -161,7 +190,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            '$current / $goal points',
+            '$current / $goal 次拍照',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -179,9 +208,9 @@ class StudyGroupHomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            '還差 2000 points ・ 截止時間：週日 23:59',
-            style: TextStyle(
+          Text(
+            '還差 ${goal - current > 0 ? goal - current : 0} 次 ・ 截止時間：今日 23:59',
+            style: const TextStyle(
               fontSize: 14,
               color: subText,
             ),
@@ -200,7 +229,16 @@ class StudyGroupHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _rankingCard(List<Map<String, dynamic>> members) {
+  // --- 更新：貢獻排行 ---
+  Widget _rankingCard(List<dynamic> members) {
+    // 幫成員依據拍照進度進行排序
+    final sortedMembers = List<dynamic>.from(members);
+    sortedMembers.sort((a, b) {
+      int scansA = a['daily_scans'] as int? ?? 0;
+      int scansB = b['daily_scans'] as int? ?? 0;
+      return scansB.compareTo(scansA); // 數字大的排前面
+    });
+
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
@@ -211,7 +249,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '本週貢獻排行',
+            '今日貢獻排行', 
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -219,8 +257,11 @@ class StudyGroupHomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          ...List.generate(members.length, (index) {
-            final item = members[index];
+          ...List.generate(sortedMembers.length, (index) {
+            final item = sortedMembers[index];
+            final nickname = item['nickname'] ?? 'Unknown';
+            final scans = item['daily_scans'] ?? 0;
+            
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
@@ -237,9 +278,15 @@ class StudyGroupHomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  const CircleAvatar(
+                    radius: 18,
+                    backgroundColor: lightGreen,
+                    child: Icon(Icons.person, size: 18, color: green),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      item['name'],
+                      nickname,
                       style: const TextStyle(
                         fontSize: 16,
                         color: textDark,
@@ -248,7 +295,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${item['points']} pts',
+                    '$scans 次',
                     style: const TextStyle(
                       fontSize: 15,
                       color: subText,
@@ -289,22 +336,6 @@ class StudyGroupHomeScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MemberAvatar extends StatelessWidget {
-  const _MemberAvatar();
-
-  static const Color lightGreen = Color(0xFFEAF3E3);
-  static const Color green = Color(0xFF4E8B4C);
-
-  @override
-  Widget build(BuildContext context) {
-    return const CircleAvatar(
-      radius: 22,
-      backgroundColor: lightGreen,
-      child: Icon(Icons.person, color: green),
     );
   }
 }

@@ -41,6 +41,10 @@ class ResultGalleryV2Screen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final scenario = scenarios[index];
 
+                final now = DateTime.now();
+                final currentTime =
+                    '${now.year}.${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')}';
+
                 return GestureDetector(
                   onTap: () {
                     showModalBottomSheet(

@@ -266,32 +266,33 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.primary, // 或是你剛剛設定的 AppColors.primary
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
           ),
         ),
-        title: const Text(
-          'JLENS',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+
+        // 1. 中間改回原本的相機 Icon
+        title: IconButton(
+          icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const CameraScreen(),
+              ), // 幫你把原本無效的跳轉修好，直接導向相機頁面
+            );
+          },
         ),
         centerTitle: true,
+
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none,
-              color: Colors.white,
-              size: 28,
-            ),
-            onPressed: () {}, // 未來通知功能
-          ),
+          // 2. 右邊只保留原本的個人檔案 Icon
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.white),
             onPressed: () {

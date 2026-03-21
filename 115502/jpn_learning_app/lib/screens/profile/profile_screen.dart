@@ -14,6 +14,7 @@ import 'package:jpn_learning_app/widgets/app_drawer.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -182,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 👇 1. 新增這個：模擬最近查詢的單字紀錄 (之後可以從後端 API 或本地資料庫抓取)
+  //模擬最近查詢的單字紀錄 (之後可以從後端 API 或本地資料庫抓取)
   final List<Map<String, String>> _recentVocabs = [
     {'meaning': '蘋果', 'kana': 'りんご', 'emoji': '🍎'},
     {'meaning': '火車', 'kana': 'でんしゃ', 'emoji': '🚆'},

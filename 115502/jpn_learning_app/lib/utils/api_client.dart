@@ -325,4 +325,44 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // 🛡️ 建立學習小組 (公會) API
+  static Future<Map<String, dynamic>> createGroup(
+    int hostId,
+    String groupName,
+    List<String> friendIds,
+  ) async {
+    final url = Uri.parse('$baseUrl/auth/group/create');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'host_id': hostId,
+          'name': groupName,
+          'friend_ids': friendIds,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('建立小組失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 🛡️ 抓取我的學習小組 (公會) API
+  static Future<Map<String, dynamic>> getMyGroup(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/group/my_group/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('讀取小組失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

@@ -37,62 +37,97 @@ class ResultGalleryScreen extends StatelessWidget {
                 final scenario = scenarios[index];
 
                 // 🌟 直接在這裡手刻精美卡片，不再依賴外部檔案！
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLighter,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: scenario.image != null
-                            ? Image.asset(scenario.image!, fit: BoxFit.cover)
-                            : const Icon(
-                                Icons.ramen_dining,
-                                color: AppColors.primary,
-                                size: 30,
+                // 🌟 使用 GestureDetector 來保留點擊功能
+                return GestureDetector(
+                  onTap: () {
+                    // 之後這裡可以連動到你的單字詳細頁面！
+                    print('點擊了：${scenario.title}');
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(
+                      16,
+                    ), // 把原本 ListTile 的 padding 移到這裡
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.grey.shade100,
+                      ), // 加上淡淡的邊框增加質感
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03), // 陰影調淡一點更現代
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+
+                    // 🌟 這裡開始是全新的自訂 Row 排版
+                    child: Row(
+                      children: [
+                        // 1. 左側：圖片或 Icon 圓框 (取代原本的方形)
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLighter.withOpacity(0.4),
+                            shape: BoxShape.circle, // 變成完美的圓形
+                          ),
+                          alignment: Alignment.center,
+                          child: scenario.image != null
+                              ? ClipOval(
+                                  // 如果有圖片，把它裁切成圓形
+                                  child: Image.asset(
+                                    scenario.image!,
+                                    fit: BoxFit.cover,
+                                    width: 50,
+                                    height: 50,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.ramen_dining, // 沒有圖片時的預設圖示
+                                  color: AppColors.primary,
+                                ),
+                        ),
+                        const SizedBox(width: 16), // 圓框跟文字的間距
+                        // 2. 中間：標題與副標題
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                scenario.title,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF333333),
+                                ),
                               ),
-                      ),
+                              const SizedBox(height: 4),
+                              // 因為你目前的 scenario 模型可能還沒有 kana(平假名) 等欄位，我們先用引導文字
+                              Text(
+                                '點擊查看詳細單字 >',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // 3. 右側：日期
+                        Text(
+                          scenario.date,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade400,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                    title: Text(
-                      scenario.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        scenario.date,
-                        style: const TextStyle(color: Colors.black54),
-                      ),
-                    ),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                    onTap: () {
-                      // 之後這裡也可以連動到你的單字詳細頁面！
-                    },
                   ),
                 );
               },

@@ -43,7 +43,6 @@ class ResultGalleryV2Screen extends StatelessWidget {
 
                 return GestureDetector(
                   onTap: () {
-                    // 🌟 點擊後從底部滑出該場景的單字列表
                     showModalBottomSheet(
                       context: context,
                       backgroundColor: Colors.white,
@@ -53,7 +52,6 @@ class ResultGalleryV2Screen extends StatelessWidget {
                         ),
                       ),
                       builder: (context) {
-                        // 這裡我們先用假單字陣列模擬，之後可以根據 scenario.title 從資料庫抓對應的單字
                         List<String> vocabList = [];
                         if (scenario.title == '一蘭拉麵店') {
                           vocabList = [
@@ -76,7 +74,7 @@ class ResultGalleryV2Screen extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.all(24.0),
                           child: Column(
-                            mainAxisSize: MainAxisSize.min, // 讓高度隨內容自動調整
+                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
@@ -95,14 +93,12 @@ class ResultGalleryV2Screen extends StatelessWidget {
                                       Icons.close,
                                       color: Colors.grey,
                                     ),
-                                    onPressed: () =>
-                                        Navigator.pop(context), // 點擊叉叉關閉
+                                    onPressed: () => Navigator.pop(context),
                                   ),
                                 ],
                               ),
-                              const Divider(), // 分隔線
+                              const Divider(),
                               const SizedBox(height: 8),
-                              // 動態產生單字列表
                               ...vocabList
                                   .map(
                                     (vocab) => Padding(
@@ -113,7 +109,7 @@ class ResultGalleryV2Screen extends StatelessWidget {
                                         children: [
                                           const Icon(
                                             Icons.check_circle_outline,
-                                            color: AppColors.accentGreen,
+                                            color: AppColors.primary,
                                             size: 20,
                                           ),
                                           const SizedBox(width: 12),
@@ -135,6 +131,81 @@ class ResultGalleryV2Screen extends StatelessWidget {
                       },
                     );
                   },
+                  // 🌟 這裡負責：卡片精美的外觀設計 (剛剛可能不小心刪掉這裡了！)
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLighter.withOpacity(0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: scenario.image != null
+                              ? ClipOval(
+                                  child: Image.asset(
+                                    scenario.image!,
+                                    fit: BoxFit.cover,
+                                    width: 50,
+                                    height: 50,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.ramen_dining,
+                                  color: AppColors.primary,
+                                ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                scenario.title,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF333333),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '點擊查看詳細單字 >',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          scenario.date,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade400,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),

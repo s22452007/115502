@@ -28,11 +28,20 @@ class AppBottomNavBar extends StatelessWidget {
         showSelectedLabels: false,
         showUnselectedLabels: false,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.camera_alt_outlined), label: '相機'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt_outlined),
+            label: '相機',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: '搜尋'),
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '首頁'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), label: '排行'),
-          BottomNavigationBarItem(icon: Icon(Icons.edit_outlined), label: '筆記'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            label: '排行',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: '個人檔案',
+          ),
         ],
       ),
     );

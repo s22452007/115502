@@ -102,3 +102,24 @@ class Friendship(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     friend_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# ==========================================
+# 學習小組 / 公會系統
+# ==========================================
+
+# 1. 學習小組本體 (StudyGroup)
+class StudyGroup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), default="日語學習小隊") # 小組名稱
+    host_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 紀錄誰是「房主/創建者」
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # 關聯：一個小組可以有多個成員
+    members = db.relationship('GroupMember', backref='group', lazy=True, cascade="all, delete-orphan")
+
+# 2. 小組成員名單 (GroupMember)
+class GroupMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('study_group.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)

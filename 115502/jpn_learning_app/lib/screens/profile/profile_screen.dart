@@ -182,6 +182,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // 👇 1. 新增這個：模擬最近查詢的單字紀錄 (之後可以從後端 API 或本地資料庫抓取)
+  final List<Map<String, String>> _recentVocabs = [
+    {'meaning': '蘋果', 'kana': 'りんご', 'emoji': '🍎'},
+    {'meaning': '火車', 'kana': 'でんしゃ', 'emoji': '🚆'},
+    {'meaning': '電腦', 'kana': 'ぱそこん', 'emoji': '💻'},
+    {'meaning': '咖啡', 'kana': 'コーヒー', 'emoji': '☕'},
+    {'meaning': '便當', 'kana': 'おべんとう', 'emoji': '🍱'},
+    {'meaning': '拉麵', 'kana': 'ラーメン', 'emoji': '🍜'},
+    {'meaning': '車票', 'kana': 'きっぷ', 'emoji': '🎫'},
+  ];
+
   @override
   Widget build(BuildContext context) {
     final userEmail =

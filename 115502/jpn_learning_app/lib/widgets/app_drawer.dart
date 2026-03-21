@@ -99,7 +99,7 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.bookmark_border),
-            title: const Text('我的單字探險 (測試中)', style: TextStyle(fontSize: 16)),
+            title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(

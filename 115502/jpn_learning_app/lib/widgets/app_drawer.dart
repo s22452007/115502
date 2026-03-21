@@ -5,11 +5,11 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -99,12 +99,14 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.bookmark_border),
-            title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
+            title: const Text('我的單字探險 (測試中)', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ResultGalleryScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const ResultGalleryV2Screen(),
+                ),
               );
             },
           ),

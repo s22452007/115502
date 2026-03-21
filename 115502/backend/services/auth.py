@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
-from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder, FriendRequest, Friendship
+from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder, FriendRequest, Friendship, StudyGroup, GroupMember
 from datetime import date, timedelta
 import random
 import string

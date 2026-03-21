@@ -200,7 +200,7 @@ class ResultGalleryV2Screen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          scenario.date,
+                          currentTime,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade400,

@@ -12,6 +12,9 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/widgets/app_drawer.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -179,6 +182,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }).toList(),
     );
   }
+
+  //模擬最近查詢的單字紀錄 (之後可以從後端 API 或本地資料庫抓取)
+  final List<Map<String, String>> _recentVocabs = [
+    {'meaning': '蘋果', 'kana': 'りんご', 'emoji': '🍎'},
+    {'meaning': '火車', 'kana': 'でんしゃ', 'emoji': '🚆'},
+    {'meaning': '電腦', 'kana': 'ぱそこん', 'emoji': '💻'},
+    {'meaning': '咖啡', 'kana': 'コーヒー', 'emoji': '☕'},
+    {'meaning': '便當', 'kana': 'おべんとう', 'emoji': '🍱'},
+    {'meaning': '拉麵', 'kana': 'ラーメン', 'emoji': '🍜'},
+    {'meaning': '車票', 'kana': 'きっぷ', 'emoji': '🎫'},
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -519,16 +533,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _currentIndex,
+        currentIndex: 4, // 👈 因為是個人檔案，所以設為 Index 4 (最右邊)
         onTap: (i) {
-          setState(() => _currentIndex = i);
           if (i == 0) {
+            // 點擊相機
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CameraScreen()),
             );
+          } else if (i == 1) {
+            // 點擊放大鏡 (手動搜尋)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            );
+          } else if (i == 2) {
+            // 點擊首頁 (回首頁通常會清空上一頁堆疊)
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          } else if (i == 3) {
+            // 點擊排行榜
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+            );
           }
-          if (i == 2) Navigator.pop(context);
+          // i == 4 是個人檔案本身，不需要動作
         },
       ),
     );

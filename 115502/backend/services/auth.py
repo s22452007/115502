@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
-from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder, FriendRequest, Friendship, StudyGroup, GroupMember
+from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder, FriendRequest, Friendship, StudyGroup, GroupMember, GroupInvite
 from datetime import date, timedelta
 import random
 import string
@@ -452,3 +452,94 @@ def get_my_group(user_id):
         "group_name": group.name,
         "members": member_data
     }), 200
+
+# 建立學習小組 API (不再強迫加入，改為發送邀請)
+@auth_bp.route('/group/create', methods=['POST'])
+def create_group():
+    data = request.get_json()
+    host_id = data.get('host_id')
+    group_name = data.get('name', '日語學習小隊')
+    friend_ids = data.get('friend_ids', []) 
+    
+    if not host_id:
+        return jsonify({"error": "缺少房主 ID"}), 400
+
+    if GroupMember.query.filter_by(user_id=host_id).first():
+        return jsonify({"error": "你已經加入過小組囉！"}), 400
+        
+    # 建立小組
+    new_group = StudyGroup(name=group_name, host_id=host_id)
+    db.session.add(new_group)
+    db.session.flush() 
+    
+    # 把房主自己加入成員名單
+    host_member = GroupMember(group_id=new_group.id, user_id=host_id)
+    db.session.add(host_member)
+    
+    # 不要直接把朋友加進 GroupMember，而是建立 GroupInvite
+    for f_id in friend_ids:
+        friend_user = User.query.filter_by(friend_id=f_id).first()
+        if friend_user:
+            # 確認沒邀請過才發送
+            existing_invite = GroupInvite.query.filter_by(group_id=new_group.id, receiver_id=friend_user.id, status='pending').first()
+            if not existing_invite:
+                new_invite = GroupInvite(group_id=new_group.id, sender_id=host_id, receiver_id=friend_user.id)
+                db.session.add(new_invite)
+            
+    db.session.commit()
+    return jsonify({"message": "小組建立成功，已發送邀請給好友！", "group_id": new_group.id}), 201
+
+
+# 真實的「讀取收到的邀請」 API
+@auth_bp.route('/group/invites/<int:user_id>', methods=['GET'])
+def get_group_invites(user_id):
+    # 找出所有寄給這個人，且狀態是 pending 的邀請
+    invites = GroupInvite.query.filter_by(receiver_id=user_id, status='pending').all()
+    
+    result = []
+    for inv in invites:
+        group = StudyGroup.query.get(inv.group_id)
+        sender = User.query.get(inv.sender_id)
+        if group and sender:
+            result.append({
+                "invite_id": inv.id,
+                "group_id": group.id,
+                "group_name": group.name,
+                "inviter_name": sender.email.split('@')[0] # 取 Email 前半段當暱稱
+            })
+            
+    return jsonify({"invites": result}), 200
+
+
+# 處理邀請 (同意或拒絕) API
+@auth_bp.route('/group/respond_invite', methods=['POST'])
+def respond_group_invite():
+    data = request.get_json()
+    invite_id = data.get('invite_id')
+    action = data.get('action') # 傳入 'accept' 或 'reject'
+    user_id = data.get('user_id')
+
+    invite = GroupInvite.query.get(invite_id)
+    if not invite or invite.receiver_id != user_id:
+        return jsonify({"error": "找不到此邀請"}), 404
+
+    # 更改狀態
+    invite.status = action
+    
+    if action == 'accept':
+        # 檢查小組是不是已經滿 5 人了
+        current_members = GroupMember.query.filter_by(group_id=invite.group_id).count()
+        if current_members >= 5:
+            return jsonify({"error": "這個小組已經客滿了！"}), 400
+            
+        # 檢查自己是不是已經在別的小組了
+        if GroupMember.query.filter_by(user_id=user_id).first():
+            return jsonify({"error": "你已經在其他小組中，無法重複加入！"}), 400
+
+        # 都沒問題，正式寫入小組成員名單！
+        new_member = GroupMember(group_id=invite.group_id, user_id=user_id)
+        db.session.add(new_member)
+
+    db.session.commit()
+    msg = "已成功加入小組！" if action == 'accept' else "已拒絕邀請"
+    return jsonify({"message": msg}), 200

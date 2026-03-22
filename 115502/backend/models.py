@@ -104,9 +104,8 @@ class Friendship(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ==========================================
-# 學習小組 / 公會系統
+# 學習小組 系統
 # ==========================================
-
 # 1. 學習小組本體 (StudyGroup)
 class StudyGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -123,3 +122,12 @@ class GroupMember(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey('study_group.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# 3. 小組邀請表 (GroupInvite)
+class GroupInvite(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('study_group.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 邀請人 (組長)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 被邀請人 (朋友)
+    status = db.Column(db.String(20), default='pending') # 狀態：pending(待處理), accepted(已接受), rejected(已拒絕)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

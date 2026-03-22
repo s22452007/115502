@@ -385,43 +385,6 @@ def increment_scan():
         "daily_scans": user.daily_scans
     }), 200
 
-# 學習小組 API
-@auth_bp.route('/group/create', methods=['POST'])
-def create_group():
-    data = request.get_json()
-    host_id = data.get('host_id')
-    group_name = data.get('name', '日語學習小隊')
-    friend_ids = data.get('friend_ids', []) # 前端傳來的專屬交友 ID 列表，例如 ['A1B2C3', 'X9Y8Z7']
-    
-    if not host_id:
-        return jsonify({"error": "缺少房主 ID"}), 400
-
-    # 檢查這個人是不是已經在別的小組了
-    if GroupMember.query.filter_by(user_id=host_id).first():
-        return jsonify({"error": "你已經加入過小組囉！"}), 400
-        
-    # 1. 建立小組
-    new_group = StudyGroup(name=group_name, host_id=host_id)
-    db.session.add(new_group)
-    db.session.flush() # 先取得 new_group.id (還沒 commit 前先拿到 ID)
-    
-    # 2. 把房主自己加入成員名單
-    host_member = GroupMember(group_id=new_group.id, user_id=host_id)
-    db.session.add(host_member)
-    
-    # 3. 把邀請的朋友加入成員名單
-    for f_id in friend_ids:
-        # 去資料庫找出這個 friend_id 到底是哪個使用者
-        friend_user = User.query.filter_by(friend_id=f_id).first()
-        if friend_user:
-            # 檢查朋友是不是已經在別的群組，沒有的話才加進來
-            if not GroupMember.query.filter_by(user_id=friend_user.id).first():
-                new_member = GroupMember(group_id=new_group.id, user_id=friend_user.id)
-                db.session.add(new_member)
-            
-    db.session.commit()
-    return jsonify({"message": "小組建立成功！", "group_id": new_group.id}), 201
-
 @auth_bp.route('/group/my_group/<int:user_id>', methods=['GET'])
 def get_my_group(user_id):
     # 找自己在哪個小組

@@ -1,26 +1,55 @@
-import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 class AiService {
-  /// 將這張圖片上傳給後端 AI 分析 API
-  /// 成功時回傳 Map，失敗時拋出 Exception 或是回傳 null / error map
+  /// 透過 Google ML Kit 進行本地分析
   Future<Map<String, dynamic>?> analyzeScene(String imagePath) async {
     try {
-      final result = await ApiClient.analyzeImage(imagePath);
-
-      if (result.containsKey('error')) {
-        throw Exception(result['error']);
+      // 網頁版不支援 Google ML Kit 原生套件，採用模擬資料讓開發者可以預覽 UI
+      if (kIsWeb) {
+        print('Web 平台不支援 Google ML Kit，回傳模擬資料預覽 UI...');
+        await Future.delayed(const Duration(seconds: 2)); // 模擬分析時間
+        return {
+          "success": true,
+          "result": {
+            "labels": ["Apple (Web Mock)", "Fruit (Mock)"],
+            "text": "これはウェブ版のテストです (This is a web mock)",
+          },
+        };
       }
 
-      // 回傳 API 分析結果，例如：
-      // {
-      //   "message": "圖片分析成功",
-      //   "file_path": "/static/photos/xxx.png",
-      //   "result": { "vocabs": [...], "sentences": [...] }
-      // }
-      return result;
-    } catch (e) {
+      // Android / iOS 實際執行 ML Kit
+      final inputImage = InputImage.fromFilePath(imagePath);
+
+      // 1. 物件偵測 (Image Labeling)
+      final labeler = ImageLabeler(
+        options: ImageLabelerOptions(confidenceThreshold: 0.6),
+      );
+      final List<ImageLabel> labels = await labeler.processImage(inputImage);
+      await labeler.close();
+
+      // 2. 文字辨識 (輔助)
+      final textRecognizer = TextRecognizer(
+        script: TextRecognitionScript.japanese,
+      );
+      final RecognizedText recognizedText = await textRecognizer.processImage(
+        inputImage,
+      );
+      await textRecognizer.close();
+
+      List<String> detectedObjects = labels.map((l) => l.label).toList();
+      String detectedText = recognizedText.text;
+
+      // 暫時將英文單字回傳，之後可替換為翻譯邏輯
+      return {
+        "success": true,
+        "result": {"labels": detectedObjects, "text": detectedText},
+      };
+    } catch (e, stacktrace) {
       print('AiService 解析失敗: $e');
-      throw Exception('無法連線至 AI 伺服器');
+      print(stacktrace);
+      throw Exception('無法進行 AI 分析 (錯誤: $e)');
     }
   }
 }

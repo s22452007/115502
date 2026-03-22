@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'package:jpn_learning_app/screens/auth/splash_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'firebase_options.dart';
 
 List<CameraDescription> cameras = [];
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 先初始化 Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // 再初始化相機
   try {
     cameras = await availableCameras();
   } on CameraException catch (e) {
@@ -17,10 +26,10 @@ Future<void> main() async {
   }
 
   runApp(
-    // 保留 MultiProvider，讓整個 APP 都能使用狀態管理
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
-      // 將子元件改回你原本命名的 JpnLearningApp
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
       child: const JpnLearningApp(),
     ),
   );
@@ -33,7 +42,7 @@ class JpnLearningApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Snap to Learn',
-      debugShowCheckedModeBanner: false, // 隱藏右上角的 Debug 標籤
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: AppColors.primary,
         scaffoldBackgroundColor: AppColors.background,

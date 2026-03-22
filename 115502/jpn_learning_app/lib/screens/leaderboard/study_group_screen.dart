@@ -141,22 +141,15 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
           ),
           const SizedBox(height: 18),
           _mainButton(
-            text: '建立小組',
-            onTap: () {
-              // TODO: 串接建立群組 API
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('建立群組功能開發中')));
-            },
-          ),
-          const SizedBox(height: 12),
-          _mainButton(
-            text: '邀請好友加入',
+            text: '建立小組並邀請好友', 
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const InviteGroupMembersScreen()),
-              ).then((_) => _loadGroupData());
+              ).then((_) => _loadGroupData()); // 建立/邀請完畢返回時，重新抓取後端資料
             },
           ),
+          
           const SizedBox(height: 22),
           
           // 收到的小組邀請

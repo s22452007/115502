@@ -381,4 +381,28 @@ class ApiClient {
       return {'error': '網路連線失敗', 'invites': []};
     }
   }
+
+  // 🛡️ 回應小組邀請 (同意/拒絕) API
+  static Future<Map<String, dynamic>> respondGroupInvite(
+    int inviteId,
+    String action,
+    int userId,
+  ) async {
+    final url = Uri.parse('$baseUrl/auth/group/respond_invite');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'invite_id': inviteId,
+          'action': action,
+          'user_id': userId,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('回應小組邀請失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

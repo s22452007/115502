@@ -385,6 +385,10 @@ def increment_scan():
         "daily_scans": user.daily_scans
     }), 200
 
+# ==========================================
+# 學習小組 API
+# ==========================================
+
 @auth_bp.route('/group/my_group/<int:user_id>', methods=['GET'])
 def get_my_group(user_id):
     # 找自己在哪個小組
@@ -416,7 +420,7 @@ def get_my_group(user_id):
         "members": member_data
     }), 200
 
-# 建立學習小組 API (不再強迫加入，改為發送邀請)
+# 建立學習小組 API (發送邀請給好友)
 @auth_bp.route('/group/create', methods=['POST'])
 def create_group():
     data = request.get_json()
@@ -439,7 +443,7 @@ def create_group():
     host_member = GroupMember(group_id=new_group.id, user_id=host_id)
     db.session.add(host_member)
     
-    # 不要直接把朋友加進 GroupMember，而是建立 GroupInvite
+    # 發送邀請給好友
     for f_id in friend_ids:
         friend_user = User.query.filter_by(friend_id=f_id).first()
         if friend_user:
@@ -451,7 +455,6 @@ def create_group():
             
     db.session.commit()
     return jsonify({"message": "小組建立成功，已發送邀請給好友！", "group_id": new_group.id}), 201
-
 
 # 真實的「讀取收到的邀請」 API
 @auth_bp.route('/group/invites/<int:user_id>', methods=['GET'])
@@ -472,7 +475,6 @@ def get_group_invites(user_id):
             })
             
     return jsonify({"invites": result}), 200
-
 
 # 處理邀請 (同意或拒絕) API
 @auth_bp.route('/group/respond_invite', methods=['POST'])

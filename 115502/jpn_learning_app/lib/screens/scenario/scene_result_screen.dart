@@ -6,12 +6,14 @@ import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
 class SceneResultScreen extends StatefulWidget {
   final String imagePath;
+  final Map<String, dynamic>? analysisData;
 
   const SceneResultScreen({
     Key? key,
     // 預設的居酒屋照片
     this.imagePath =
         'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    this.analysisData,
   }) : super(key: key);
 
   @override
@@ -158,6 +160,13 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
 
   // --- 白色單字卡片模具 ---
   Widget _buildVocabCard() {
+    List<String> labels = [];
+    if (widget.analysisData != null && widget.analysisData!['labels'] != null) {
+      labels = List<String>.from(widget.analysisData!['labels']);
+    }
+    String mainLabel = labels.isNotEmpty ? labels.first : 'Object';
+    String text = widget.analysisData?['text'] ?? '';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -175,7 +184,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
       child: Column(
         children: [
           const Text(
-            'おかんじょう',
+            'Object Detected',
             style: TextStyle(
               fontSize: 14,
               color: Colors.black54,
@@ -184,7 +193,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'お勘定',
+            mainLabel,
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
@@ -192,42 +201,32 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '結帳',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
+          Text(
+            labels.length > 1
+                ? 'Other labels: ${labels.skip(1).take(3).join(', ')}'
+                : 'No other objects',
+            style: const TextStyle(fontSize: 16, color: Colors.black87),
+            textAlign: TextAlign.center,
+          ),
+          if (text.trim().isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Divider(color: Colors.grey.shade300, thickness: 1),
+            const SizedBox(height: 10),
+            const Text(
+              'Detected Text:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Divider(color: Colors.grey.shade300, thickness: 1),
-          const SizedBox(height: 20),
-          const Text(
-            'すみません、',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+            const SizedBox(height: 4),
+            Text(
+              text,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14),
             ),
-          ),
-          const Text(
-            'Excuse me,',
-            style: TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'お勘定をお願いします。',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const Text(
-            'Can I have the bill please?',
-            style: TextStyle(fontSize: 14, color: Colors.black54),
-          ),
+          ],
         ],
       ),
     );

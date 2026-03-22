@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class GroupInvitesScreen extends StatefulWidget {
   const GroupInvitesScreen({Key? key}) : super(key: key);
@@ -14,20 +17,64 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
   static const Color lightGreen = Color(0xFFEAF3E3);
   static const Color beige = Color(0xFFF6EBC7);
 
-  final List<Map<String, String>> invites = [
-    {
-      'groupName': '日文衝刺小組',
-      'owner': '林美伶',
-      'members': '3/5',
-      'goal': '每週共同達成 5000 points',
-    },
-    {
-      'groupName': '美語學習小組',
-      'owner': '張宏豪',
-      'members': '4/5',
-      'goal': '每日一起完成 AI 對話',
-    },
-  ];
+  bool _isLoading = true;
+  List<dynamic> _invites = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInvites();
+  }
+
+  // 📥 載入真實邀請名單
+  Future<void> _loadInvites() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    setState(() => _isLoading = true);
+    final result = await ApiClient.getGroupInvites(userId);
+
+    if (mounted) {
+      setState(() {
+        if (result.containsKey('invites')) {
+          _invites = result['invites'];
+        }
+        _isLoading = false;
+      });
+    }
+  }
+
+  // 📤 發送同意或拒絕的請求
+  Future<void> _respondToInvite(int inviteId, String action, String groupName) async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    // 顯示載入中的 Snackbar (選擇性)
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('處理中...'), duration: Duration(seconds: 1)),
+    );
+
+    final result = await ApiClient.respondGroupInvite(inviteId, action, userId);
+
+    if (mounted) {
+      if (result.containsKey('error')) {
+        // 如果滿人或發生錯誤
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+      } else {
+        // 成功！
+        final actionText = action == 'accept' ? '已接受' : '已拒絕';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$actionText「$groupName」的邀請')));
+
+        if (action == 'accept') {
+          // 如果是接受，代表已成功加入，直接回到上一頁 (上一頁的 .then 會觸發重新抓取公會資料)
+          Navigator.pop(context);
+        } else {
+          // 如果是拒絕，留在本頁，重新抓取名單 (剛拒絕的邀請會消失)
+          _loadInvites();
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,124 +95,103 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
           ),
         ),
       ),
-      body: invites.isEmpty
-          ? const Center(
-              child: Text(
-                '目前沒有新的小組邀請',
-                style: TextStyle(
-                  fontSize: 17,
-                  color: subText,
-                ),
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
-              itemCount: invites.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = invites[index];
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: beige),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : _invites.isEmpty
+              ? const Center(
+                  child: Text(
+                    '目前沒有新的小組邀請',
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: subText,
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['groupName']!,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: textDark,
-                        ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+                  itemCount: _invites.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final item = _invites[index];
+                    final inviteId = item['invite_id'];
+                    final groupName = item['group_name'] ?? '未知小組';
+                    final inviterName = item['inviter_name'] ?? '未知';
+
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: beige),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '邀請人：${item['owner']}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: subText,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '目前人數：${item['members']}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: subText,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item['goal']!,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: subText,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    AppColors.primary.withOpacity(0.9),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('已接受「${item['groupName']}」邀請'),
-                                  ),
-                                );
-                              },
-                              child: const Text(
-                                '接受',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                          Text(
+                            groupName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: textDark,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: lightGreen,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  invites.removeAt(index);
-                                });
-                              },
-                              child: const Text(
-                                '拒絕',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '邀請人：$inviterName',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: subText,
                             ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary.withOpacity(0.9),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  onPressed: () => _respondToInvite(inviteId, 'accept', groupName),
+                                  child: const Text(
+                                    '接受',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: lightGreen,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  onPressed: () => _respondToInvite(inviteId, 'reject', groupName),
+                                  child: const Text(
+                                    '拒絕',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
     );
   }
 }

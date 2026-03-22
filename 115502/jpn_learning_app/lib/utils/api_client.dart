@@ -365,4 +365,20 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // 🛡️ 抓取收到的「小組邀請」 API
+  static Future<Map<String, dynamic>> getGroupInvites(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/group/invites/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'invites': []}; // 如果失敗，預設回傳空陣列
+      }
+    } catch (e) {
+      print('讀取小組邀請失敗: $e');
+      return {'error': '網路連線失敗', 'invites': []};
+    }
+  }
 }

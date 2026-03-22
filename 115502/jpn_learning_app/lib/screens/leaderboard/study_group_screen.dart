@@ -9,7 +9,7 @@ import 'group_invites_screen.dart';
 import 'study_group_home_screen.dart'; 
 
 class StudyGroupScreen extends StatefulWidget {
-  final bool showAppBar; // 控制是否顯示頂部導覽列（排行榜嵌入時為 false）
+  final bool showAppBar; 
 
   const StudyGroupScreen({
     Key? key, 
@@ -26,6 +26,7 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
 
   bool _isLoading = true;
   Map<String, dynamic>? _groupData;
+  List<dynamic> _invites = []; // 用來存放收到的邀請名單
 
   @override
   void initState() {
@@ -38,12 +39,21 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
     if (userId == null) return;
 
     try {
-      final result = await ApiClient.getMyGroup(userId);
+      // 同時抓取「我的公會」與「我的邀請」
+      final groupResult = await ApiClient.getMyGroup(userId);
+      final invitesResult = await ApiClient.getGroupInvites(userId);
+
       if (mounted) {
         setState(() {
-          if (result['has_group'] == true) {
-            _groupData = result; 
+          if (groupResult['has_group'] == true) {
+            _groupData = groupResult; 
           }
+          
+          // 如果後端有傳回 invites 陣列，就存起來
+          if (invitesResult.containsKey('invites') && invitesResult['invites'] is List) {
+            _invites = invitesResult['invites'];
+          }
+
           _isLoading = false;
         });
       }
@@ -61,7 +71,6 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
       );
     }
 
-    // 查到有群組，前往公會大廳，並傳遞 showAppBar 狀態
     if (_groupData != null) {
       return StudyGroupHomeScreen(
         groupData: _groupData!,
@@ -69,16 +78,11 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
       );
     }
 
-    // 沒有群組，顯示完善的空狀態介面
     return _buildWrapper(child: _buildEmptyGroupView(context));
   }
 
-  // 包裝器：負責判斷需不需要 Scaffold 和 AppBar
   Widget _buildWrapper({required Widget child}) {
-    if (!widget.showAppBar) {
-      // 給排行榜用的，不加 Scaffold，背景直接透明或依賴外層
-      return child; 
-    }
+    if (!widget.showAppBar) return child; 
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F2),
@@ -140,19 +144,20 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
             ),
           ),
           const SizedBox(height: 18),
+          
           _mainButton(
-            text: '建立小組並邀請好友', 
+            text: '建立小組並邀請好友',
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const InviteGroupMembersScreen()),
-              ).then((_) => _loadGroupData()); // 建立/邀請完畢返回時，重新抓取後端資料
+              ).then((_) => _loadGroupData());
             },
           ),
           
           const SizedBox(height: 22),
           
-          // 收到的小組邀請
+          // 收到的小組邀請區塊
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -161,44 +166,10 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const GroupInvitesScreen()),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6EBC7),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Colors.white,
-                    child: Text('1', style: TextStyle(color: Color(0xFF4E8B4C), fontWeight: FontWeight.w800)),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('好友學習小組', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
-                        SizedBox(height: 4),
-                        Text('林美伶邀請你加入', style: TextStyle(fontSize: 14, color: subText)),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, color: AppColors.primary),
-                ],
-              ),
-            ),
-          ),
+          
+          // 這裡根據 _invites 是否為空來決定顯示哪個卡片！
+          _invites.isEmpty ? _buildNoInvitesCard() : _buildHasInvitesCard(),
+
           const SizedBox(height: 18),
 
           // 推薦一起學習的好友
@@ -248,6 +219,74 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  // 沒有邀請時顯示的灰色狀態
+  Widget _buildNoInvitesCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: const Center(
+        child: Text(
+          '目前沒有收到任何邀請喔！',
+          style: TextStyle(
+            fontSize: 15,
+            color: subText,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 有邀請時顯示的黃色按鈕，並顯示收到的邀請數量
+  Widget _buildHasInvitesCard() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GroupInvitesScreen()),
+        ).then((_) => _loadGroupData()); // 去處理完邀請回來後，刷新畫面
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6EBC7),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.white,
+              child: Text(
+                '${_invites.length}', // 顯示真實邀請數量
+                style: const TextStyle(color: Color(0xFF4E8B4C), fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('你有待處理的邀請', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
+                  const SizedBox(height: 4),
+                  Text('點擊查看誰邀請了你進入小組', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+          ],
+        ),
       ),
     );
   }

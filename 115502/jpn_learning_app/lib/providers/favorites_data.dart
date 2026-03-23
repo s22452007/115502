@@ -1,44 +1,106 @@
-// lib/providers/favorites_data.dart
 import 'package:flutter/material.dart';
 
-// --- 先定義一個「場景」的格式 (Data Model) ---
+// 🌟 1. 新增的單字物件結構
+class VocabItem {
+  final String word;
+  final String kana;
+  final String meaning;
+  final String exampleSentence;
+
+  VocabItem({
+    required this.word,
+    required this.kana,
+    required this.meaning,
+    required this.exampleSentence,
+  });
+}
+
+// 🌟 2. 升級版的場景物件結構 (加上了 vocabularyList)
 class ScenarioItem {
   final String title;
   final String date;
-  final String? image; // 圖片是選填的
-  final Map<String, String> vocabulary; // {'日文': '中文'}
+  final String? image;
+  final List<VocabItem> vocabularyList; // 👈 就是少了這個！現在補上了！
 
   ScenarioItem({
     required this.title,
     required this.date,
     this.image,
-    required this.vocabulary,
+    required this.vocabularyList,
   });
 }
 
-// 這就是你的「全域單字資料庫」！
-class FavoritesDataProvider {
-  // 把你的資料統整在這裡，要修改、新增只要改這裡！
+// 🌟 3. 測試用的假資料
+class FavoritesDataProvider extends ChangeNotifier {
   static final List<ScenarioItem> allFavorites = [
-    // 1. 一蘭拉麵店
     ScenarioItem(
       title: '一蘭拉麵店',
       date: '2023.10.27',
-      // 圖片我先註解掉，如果你有圖片可以打開
-      // image: 'images/japan02.bmp',
-      vocabulary: {'ラーメン': '拉麵', 'とんこつ': '豚骨', '替玉': '加麵', 'いらっしゃいませ': '歡迎光臨'},
+      image: 'assets/images/scenarios/ramen.png',
+      vocabularyList: [
+        VocabItem(
+          word: 'ラーメン',
+          kana: 'ラーメン',
+          meaning: '拉麵',
+          exampleSentence: 'このラーメンは美味しいです。',
+        ),
+        VocabItem(
+          word: 'お会計',
+          kana: 'おかいけい',
+          meaning: '結帳',
+          exampleSentence: 'お会計をお願いします。',
+        ),
+        VocabItem(
+          word: 'メニュー',
+          kana: 'メニュー',
+          meaning: '菜單',
+          exampleSentence: 'メニューを見せてください。',
+        ),
+      ],
     ),
-    // 2. 新宿車站
     ScenarioItem(
       title: '新宿車站',
       date: '2023.10.28',
-      vocabulary: {'駅': '車站', '電車': '電車', '乗り換え': '轉乘', 'きっぷ': '車票'},
+      image: 'assets/images/scenarios/station.png',
+      vocabularyList: [
+        VocabItem(
+          word: '駅',
+          kana: 'えき',
+          meaning: '車站',
+          exampleSentence: '新宿駅はどこですか？',
+        ),
+        VocabItem(
+          word: '電車',
+          kana: 'でんしゃ',
+          meaning: '電車',
+          exampleSentence: '電車に乗ります。',
+        ),
+        VocabItem(
+          word: '乗り場',
+          kana: 'のりば',
+          meaning: '乘車處',
+          exampleSentence: 'バスの乗り場はどこですか。',
+        ),
+      ],
     ),
-    // 3. (新增的) 淺草寺
     ScenarioItem(
       title: '淺草寺',
       date: '2023.10.29',
-      vocabulary: {'お寺': '寺廟', 'おみくじ': '籤', '雷門': '雷門'},
+      image: 'assets/images/scenarios/temple.png',
+      vocabularyList: [
+        VocabItem(
+          word: '寺',
+          kana: 'てら',
+          meaning: '寺廟',
+          exampleSentence: '寺でお参りします。',
+        ),
+        VocabItem(
+          word: 'お守り',
+          kana: 'おまもり',
+          meaning: '御守',
+          exampleSentence: 'お守りを買います。',
+        ),
+      ],
     ),
   ];
 }

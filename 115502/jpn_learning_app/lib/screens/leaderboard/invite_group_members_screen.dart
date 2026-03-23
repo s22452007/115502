@@ -226,14 +226,16 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
   }
 
   Widget _buildFriendCard(Map<String, dynamic> friend) {
-    // 🌟 抓出狀態旗標
+    // 狀態旗標
     final bool isMember = friend['is_member'] == true; 
     final bool isInvited = friend['is_invited'] == true; 
-    final bool invitedUiSelected = friend['invited'] == true; // 這是 UI 上的勾選狀態
+    final bool invitedUiSelected = friend['invited'] == true;
 
-    final String avatarBase64 = friend['avatar'] ?? '';
-    final String nickname = friend['name'];
-    final String friendId = friend['id'];
+    final String avatarBase64 = friend['avatar']?.toString() ?? '';
+    final String nickname = friend['name']?.toString() ?? 'Unknown';
+    final String friendId = friend['id']?.toString() ?? '未知ID';
+
+    // 產生大頭貼
     final String bgColor = _getFixedColor(nickname);
     final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=$bgColor&color=fff';
 

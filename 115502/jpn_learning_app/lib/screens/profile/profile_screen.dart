@@ -66,11 +66,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } else {
       setState(() {
-        _isLoading = false; 
+        _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
       }
     }
   }
@@ -78,8 +79,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _pickAndUploadImage() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')));
       return;
     }
 
@@ -93,8 +95,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (pickedFile != null) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
       final result = await ApiClient.uploadAvatar(userId, base64String);
@@ -102,18 +105,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (result.containsKey('avatar')) {
         context.read<UserProvider>().setAvatar(result['avatar']);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
       } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
       }
     }
   }
 
   void _handleGuestClick(String featureName) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
   }
 
   // --- 新版首頁成就區塊 (點擊進入徽章庫) ---
@@ -148,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   '成就徽章',
                   style: TextStyle(
-                    fontSize: 20, 
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: _textColor,
                   ),
@@ -157,7 +163,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Text(
                       '$unlockedCount 個已解鎖',
-                      style: TextStyle(color: _primaryGreen, fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: _primaryGreen,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Icon(Icons.chevron_right, color: _primaryGreen),
                   ],
@@ -170,22 +180,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildMiniBadge(
-                  Icons.ramen_dining, 
-                  '拉麵大師', 
-                  isGuest ? false : userProvider.isBadgeUnlocked('ramen_01')
+                  Icons.ramen_dining,
+                  '拉麵大師',
+                  isGuest ? false : userProvider.isBadgeUnlocked('ramen_01'),
                 ),
                 _buildMiniBadge(
-                  Icons.restaurant, 
-                  '美食導航員', 
-                  isGuest ? false : userProvider.isBadgeUnlocked('food_01')
+                  Icons.restaurant,
+                  '美食導航員',
+                  isGuest ? false : userProvider.isBadgeUnlocked('food_01'),
                 ),
                 _buildMiniBadge(
-                  Icons.menu_book, 
-                  '語法通', 
-                  isGuest ? false : userProvider.isBadgeUnlocked('grammar_01')
+                  Icons.menu_book,
+                  '語法通',
+                  isGuest ? false : userProvider.isBadgeUnlocked('grammar_01'),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -203,7 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: isUnlocked ? const Color(0xFFC5E1A5) : Colors.grey[300],
           ),
           child: Icon(
-            isUnlocked ? icon : Icons.lock, 
+            isUnlocked ? icon : Icons.lock,
             color: isUnlocked ? _primaryGreen : Colors.grey[500],
             size: 28,
           ),
@@ -212,8 +222,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(
           title,
           style: TextStyle(
-            fontSize: 12, 
-            color: isUnlocked ? _textColor : Colors.grey[600]
+            fontSize: 12,
+            color: isUnlocked ? _textColor : Colors.grey[600],
           ),
         ),
       ],
@@ -222,24 +232,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
     final userAvatar = context.watch<UserProvider>().avatar;
     final isGuest = context.watch<UserProvider>().userId == null;
 
     final List<String> colors = [
-      'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6',
-      '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65',
+      'E57373',
+      'F06292',
+      'BA68C8',
+      '9575CD',
+      '7986CB',
+      '64B5F6',
+      '4DD0E1',
+      '4DB6AC',
+      '81C784',
+      'AED581',
+      'FFB74D',
+      'FF8A65',
     ];
+    final String safeName = (userName == null || userName.isEmpty)
+        ? 'Guest'
+        : userName;
+
     int hash = 0;
-    for (int i = 0; i < userName.length; i++) {
-      hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
+    for (int i = 0; i < safeName.length; i++) {
+      hash = (hash * 31 + safeName.codeUnitAt(i)) & 0x7FFFFFFF;
     }
     final String bgColor = colors[hash % colors.length];
 
     final String defaultAvatarUrl =
         'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
-        
+
     return Scaffold(
       backgroundColor: _bgColor,
       drawer: const AppDrawer(),
@@ -305,9 +330,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 radius: 40,
                                 backgroundColor: const Color(0xFFC5E1A5),
                                 backgroundImage:
-                                    (userAvatar != null && userAvatar.isNotEmpty)
+                                    (userAvatar != null &&
+                                        userAvatar.isNotEmpty)
                                     ? MemoryImage(base64Decode(userAvatar))
-                                    : NetworkImage(defaultAvatarUrl) as ImageProvider,
+                                    : NetworkImage(defaultAvatarUrl)
+                                          as ImageProvider,
                               ),
                             ),
                             Container(
@@ -361,7 +388,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: LinearProgressIndicator(
                                 value: isGuest ? 0.0 : 0.3,
                                 backgroundColor: Colors.grey.shade300,
-                                valueColor: AlwaysStoppedAnimation(_primaryGreen),
+                                valueColor: AlwaysStoppedAnimation(
+                                  _primaryGreen,
+                                ),
                                 minHeight: 12,
                               ),
                             ),
@@ -415,13 +444,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Center(
                                   child: ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color.fromARGB(255, 74, 124, 89),
+                                      backgroundColor: const Color.fromARGB(
+                                        255,
+                                        74,
+                                        124,
+                                        89,
+                                      ),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 24,
                                         vertical: 12,
                                       ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderRadius: BorderRadius.circular(
+                                          8.0,
+                                        ),
                                       ),
                                     ),
                                     onPressed: () {
@@ -503,12 +539,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 4, 
+        currentIndex: 4,
         onTap: (i) {
           if (i == 0) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
           } else if (i == 1) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            );
           } else if (i == 2) {
             Navigator.pushAndRemoveUntil(
               context,
@@ -516,7 +558,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               (route) => false,
             );
           } else if (i == 3) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+            );
           }
         },
       ),

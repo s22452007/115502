@@ -38,40 +38,47 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     if (userId == null) return;
 
     try {
-      // 智慧判斷抓取哪一種好友名單
-      // 如果 groupId 為 null，是「建立群組模式」，抓一般好友清單
-      // 如果 groupId 有值，是「邀請模式」，抓包含詳細狀態的好友清單
       final isCreating = widget.groupId == null;
       Map<String, dynamic> result;
 
       if (isCreating) {
-        result = await ApiClient.getFriendsList(userId); // 原本的一般好友清單
+        result = await ApiClient.getFriendsList(userId);
       } else {
-        // 呼叫剛剛新增的 API (詳細狀態)
+        // 呼叫包含詳細狀態的 API
         result = await ApiClient.getFriendsDetailedInvitationStatus(widget.groupId!, userId);
       }
 
-      if (mounted && result.containsKey('friends')) {
+      if (mounted) {
         setState(() {
-          // 將後端資料轉換成我們要的格式
-          _friends = (result['friends'] as List).map((f) {
-            // 如果是邀請模式，後端資料需要包含 'is_member' 和 'is_invited' 旗標
-            // 如果是建立模式，後端沒有提供這些 flag，就預設為 false
-            return {
-              'name': f['nickname'] ?? 'Unknown',
-              'id': f['friend_id'] ?? '',
-              'avatar': f['avatar'] ?? '',
-              'invited': false, // 這是 UI 上的勾選狀態，不是邀請狀態
-              'is_member': f['is_member'] ?? false, // 🌟 核心旗標 1：是否已經是小組成員
-              'is_invited': f['is_invited'] ?? false, // 🌟 核心旗標 2：是否已經發過邀請 (且狀態為 'pending')
-            };
-          }).toList();
-          _isLoading = false;
+          if (result.containsKey('friends')) {
+            // 成功抓到好友名單
+            _friends = (result['friends'] as List).map((f) {
+              return {
+                'name': f['nickname'] ?? 'Unknown',
+                'id': f['friend_id'] ?? '',
+                'avatar': f['avatar'] ?? '',
+                'invited': false,
+                'is_member': f['is_member'] ?? false,
+                'is_invited': f['is_invited'] ?? false, 
+              };
+            }).toList();
+          } else if (result.containsKey('error')) {
+            // 發生錯誤時，在終端機印出來，並顯示在畫面上
+            print('抓取好友 API 回傳錯誤: ${result['error']}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('抓取名單失敗：${result['error']}')),
+            );
+          }
+          
+          // 不管前面是成功還是失敗，最後一定要把轉圈圈關掉！
+          _isLoading = false; 
         });
       }
     } catch (e) {
-      print('抓取好友失敗: $e');
-      if (mounted) setState(() => _isLoading = false);
+      print('抓取好友發生例外錯誤: $e');
+      if (mounted) {
+        setState(() => _isLoading = false); // 例外崩潰時也要關掉
+      }
     }
   }
 

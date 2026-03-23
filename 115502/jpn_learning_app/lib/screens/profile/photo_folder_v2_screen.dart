@@ -400,47 +400,52 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
 }
 
 // ==========================================
-// 🚀 預設相簿的單字列表畫面 (網格排列版)
+// 🚀 預設相簿的單字列表畫面 (網格排列版 - 真實圖片關聯)
 // ==========================================
 class DefaultAlbumScreen extends StatelessWidget {
   const DefaultAlbumScreen({Key? key}) : super(key: key);
 
-  // 這裡保持原本的 5 個基本預設單字資料
+  // 🌟 這裡將原本的 picsum 隨機圖片，替換成了 Unsplash 上真實且對應單字意義的高畫質照片
   final List<Map<String, String>> defaultVocabs = const [
     {
       'kanji': '駅',
       'kana': 'えき',
       'meaning': '車站 (Station)',
       'example': '新宿駅はどこですか？\n(請問新宿車站在哪裡？)',
-      'imageUrl': 'https://picsum.photos/seed/station/800/600',
+      // 日本車站的照片
+      'imageUrl': 'https://images.unsplash.com/photo-1551641506-ee5bf4cb45f1?q=80&w=800&auto=format&fit=crop',
     },
     {
       'kanji': '桜',
       'kana': 'さくら',
       'meaning': '櫻花 (Sakura)',
       'example': '春になると桜が咲きます。\n(一到春天櫻花就會開。)',
-      'imageUrl': 'https://picsum.photos/seed/sakura/800/600',
+      // 盛開櫻花的照片
+      'imageUrl': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop',
     },
     {
       'kanji': '美味しい',
       'kana': 'おいしい',
       'meaning': '好吃的 (Delicious)',
       'example': 'このラーメンはとても美味しいです。\n(這碗拉麵非常美味。)',
-      'imageUrl': 'https://picsum.photos/seed/delicious/800/600',
+      // 美味日本拉麵的照片
+      'imageUrl': 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?q=80&w=800&auto=format&fit=crop',
     },
     {
       'kanji': '友達',
       'kana': 'ともだち',
       'meaning': '朋友 (Friend)',
       'example': '週末は友達と遊びに行きます。\n(週末要和朋友出去玩。)',
-      'imageUrl': 'https://picsum.photos/seed/friends/800/600',
+      // 朋友開心聚會的照片
+      'imageUrl': 'https://images.unsplash.com/photo-1529156069898-49953eb1f55f?q=80&w=800&auto=format&fit=crop',
     },
     {
       'kanji': '挨拶',
       'kana': 'あいさつ',
       'meaning': '打招呼 (Greeting)',
       'example': '元気よく挨拶をしましょう。\n(很有精神地打招呼吧。)',
-      'imageUrl': 'https://picsum.photos/seed/greeting/800/600',
+      // 友善互動/打招呼的照片
+      'imageUrl': 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=800&auto=format&fit=crop',
     },
   ];
 
@@ -461,15 +466,13 @@ class DefaultAlbumScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      // 🌟 將原本的 ListView 換成 GridView
       body: GridView.builder(
         padding: const EdgeInsets.all(16),
-        // 設定網格的 Delegate：這裡使用 FixedCrossAxisCount 來決定一列顯示幾個
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,       // 🌟 一列顯示 3 個 (跟手機相簿類似)
-          crossAxisSpacing: 12,    // 網格間的橫向間距
-          mainAxisSpacing: 16,     // 網格間的縱向間距
-          childAspectRatio: 0.8,   // 網格卡片的長寬比 (稍微高一點以容納文字)
+          crossAxisCount: 3,       
+          crossAxisSpacing: 12,    
+          mainAxisSpacing: 16,     
+          childAspectRatio: 0.8,   
         ),
         itemCount: defaultVocabs.length,
         itemBuilder: (context, index) {
@@ -477,7 +480,6 @@ class DefaultAlbumScreen extends StatelessWidget {
           
           return GestureDetector(
             onTap: () {
-              // 🌟 點擊後跳轉到動態單字卡邏輯
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -491,11 +493,9 @@ class DefaultAlbumScreen extends StatelessWidget {
                 ),
               );
             },
-            // 🌟 重新設計的網格卡片 UI (類似相簿)
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 圖片部分 (網格的主體)
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
@@ -511,9 +511,10 @@ class DefaultAlbumScreen extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
+                      // 這裡的圖片網址已經更新為有關聯的真實圖片
                       child: Image.network(
                         vocab['imageUrl']!,
-                        fit: BoxFit.cover, // 🌟 確保圖片像手機相簿一樣填滿區域
+                        fit: BoxFit.cover, 
                         errorBuilder: (ctx, err, stack) => Container(
                           color: Colors.grey.shade200,
                           child: const Icon(Icons.image, color: Colors.grey, size: 30),
@@ -523,7 +524,6 @@ class DefaultAlbumScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8), 
-                // 只保留漢字單字顯示在圖片下方
                 Text(
                   vocab['kanji']!,
                   textAlign: TextAlign.center,

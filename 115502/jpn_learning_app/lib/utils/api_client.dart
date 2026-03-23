@@ -430,14 +430,14 @@ class ApiClient {
     }
   }
 
-  // 🌟 新增：抓取包含邀請狀態的詳細好友名單 (供現有群組邀請使用)
-  static Future<Map<String, dynamic>> getFriendsDetailedInvitationStatus(int groupId, int userId) async {
+  // 抓取包含邀請狀態的詳細好友名單 (修改為接受 int? groupId)
+  static Future<Map<String, dynamic>> getFriendsDetailedInvitationStatus(int? groupId, int userId) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/group/friends_detailed_status'), // 假設後端 API 路徑
+        Uri.parse('$baseUrl/auth/group/friends_detailed_status'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'group_id': groupId,
+          'group_id': groupId ?? -1, // 如果沒有傳 groupId，給後端 -1
           'user_id': userId,
         }),
       );

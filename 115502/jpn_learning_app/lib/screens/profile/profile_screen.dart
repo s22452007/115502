@@ -252,9 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'FFB74D',
       'FF8A65',
     ];
-    final String safeName = (userName == null || userName.isEmpty)
-        ? 'Guest'
-        : userName;
+    final String safeName = userName.isEmpty ? 'Guest' : userName;
 
     int hash = 0;
     for (int i = 0; i < safeName.length; i++) {

@@ -278,15 +278,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        // 1. 中間改回原本的相機 Icon
+        // 1. 中間點擊圖示切換回首頁
         title: IconButton(
           icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
           onPressed: () {
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (_) => const CameraScreen(),
-              ), // 幫你把原本無效的跳轉修好，直接導向相機頁面
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
           },
         ),

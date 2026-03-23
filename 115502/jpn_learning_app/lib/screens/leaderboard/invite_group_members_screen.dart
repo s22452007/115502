@@ -6,11 +6,13 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'dart:convert'; // 用來解碼 Base64 圖片
 
 class InviteGroupMembersScreen extends StatefulWidget {
-  const InviteGroupMembersScreen({Key? key}) : super(key: key);
+  // 核心關鍵：加入 groupId 參數。有傳值代表是「邀請加入現有群組」，沒傳代表是「建立新群組」
+  final int? groupId; 
+
+  const InviteGroupMembersScreen({Key? key, this.groupId}) : super(key: key);
 
   @override
-  State<InviteGroupMembersScreen> createState() =>
-      _InviteGroupMembersScreenState();
+  State<InviteGroupMembersScreen> createState() => _InviteGroupMembersScreenState();
 }
 
 class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
@@ -30,7 +32,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     _fetchFriends(); // 畫面一開啟，就去抓真實好友名單
   }
 
-  // 🌟 去後端抓取好友名單
+  // 去後端抓取好友名單
   Future<void> _fetchFriends() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
@@ -47,7 +49,6 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
               'id': f['friend_id'] ?? '',
               'avatar': f['avatar'] ?? '',
               'invited': false,
-              'joined': false, // 在這個畫面，大家預設都是還沒加入的
             };
           }).toList();
           _isLoading = false;
@@ -59,43 +60,46 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     }
   }
 
-  // 🌟 按下建立小組按鈕的動作
-  Future<void> _submitCreateGroup(int selectedCount) async {
+  // 智慧判斷要「建立」還是「單純邀請」
+  Future<void> _submitAction(int selectedCount) async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
-    // 找出所有被標記為 'invited' 的好友的專屬 ID
     final selectedFriendIds = _friends
         .where((f) => f['invited'] == true)
         .map((f) => f['id'].toString())
         .toList();
 
-    // 顯示 Loading
+    // 根據模式顯示不同的提示文字
+    final isCreating = widget.groupId == null;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('正在建立小組中...')),
+      SnackBar(content: Text(isCreating ? '正在建立小組中...' : '正在發送邀請...')),
     );
 
-    // 呼叫建立小組 API
-    final result = await ApiClient.createGroup(
-      userId,
-      '日文衝刺小組', // 你可以自訂群組名稱
-      selectedFriendIds,
-    );
+    Map<String, dynamic> result;
+
+    if (isCreating) {
+      // 模式 A：沒有小組，建立新小組
+      result = await ApiClient.createGroup(userId, '日文衝刺小組', selectedFriendIds);
+    } else {
+      // 模式 B：已有小組，發送邀請到現有小組
+      result = await ApiClient.inviteToExistingGroup(widget.groupId!, userId, selectedFriendIds);
+    }
 
     if (mounted) {
-      if (result.containsKey('group_id')) {
-        // 成功建立！關閉邀請畫面，退回到上層 (StudyGroupScreen 會自動偵測到新公會並跳入大廳)
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        Navigator.pop(context); 
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (result.containsKey('error')) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['error'] ?? '建立失敗，請重試')),
-        );
+        // 成功！如果是純邀請，顯示個成功訊息再退回
+        if (!isCreating) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('邀請已順利送出！')));
+        }
+        Navigator.pop(context); 
       }
     }
   }
 
-  // 將名字轉換為固定顏色 (當沒有大頭貼時使用)
   String _getFixedColor(String name) {
     final List<String> colors = [
       'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6',
@@ -111,6 +115,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
   @override
   Widget build(BuildContext context) {
     final selectedCount = _friends.where((e) => e['invited'] == true).length;
+    final isCreating = widget.groupId == null; // 判斷是否為建立模式
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -123,10 +128,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
         centerTitle: true,
         title: const Text(
           '邀請好友加入小組',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -138,20 +140,13 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary.withOpacity(0.9),
                 elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               ),
-              onPressed: selectedCount == 0
-                  ? null
-                  : () => _submitCreateGroup(selectedCount), // 🌟 綁定送出動作
+              onPressed: selectedCount == 0 ? null : () => _submitAction(selectedCount),
               child: Text(
-                '確認建立小組 ($selectedCount 位)',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
+                // 按鈕文字根據模式動態切換
+                isCreating ? '確認建立小組 ($selectedCount 位)' : '發送邀請 ($selectedCount 位)',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -172,31 +167,20 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
               ),
               onChanged: (_) => setState(() {}),
             ),
           ),
-          
           if (_friends.isEmpty)
-            const Expanded(
-              child: Center(
-                child: Text('目前還沒有好友可以邀請喔！', style: TextStyle(color: subText, fontSize: 16)),
-              ),
-            )
+            const Expanded(child: Center(child: Text('目前還沒有好友可以邀請喔！', style: TextStyle(color: subText, fontSize: 16))))
           else
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
                 itemCount: _filteredFriends.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final friend = _filteredFriends[index];
-                  return _buildFriendCard(friend);
-                },
+                itemBuilder: (context, index) => _buildFriendCard(_filteredFriends[index]),
               ),
             ),
         ],
@@ -219,7 +203,6 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     final String avatarBase64 = friend['avatar'] ?? '';
     final String nickname = friend['name'];
     final String friendId = friend['id'];
-
     final String bgColor = _getFixedColor(nickname);
     final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=$bgColor&color=fff';
 
@@ -244,55 +227,24 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  nickname,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: textDark,
-                  ),
-                ),
+                Text(nickname, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textDark)),
                 const SizedBox(height: 4),
-                Text(
-                  '@$friendId',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: subText,
-                  ),
-                ),
+                Text('@$friendId', style: const TextStyle(fontSize: 14, color: subText)),
               ],
             ),
           ),
           if (invited)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: lightGreen,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                backgroundColor: lightGreen, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              onPressed: () {
-                setState(() {
-                  friend['invited'] = false; // 取消邀請
-                });
-              },
-              child: const Text(
-                '已選取',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              onPressed: () => setState(() => friend['invited'] = false),
+              child: const Text('已選取', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
             )
           else
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary.withOpacity(0.9),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                backgroundColor: AppColors.primary.withOpacity(0.9), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () {
                 setState(() {
@@ -301,19 +253,11 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                   if (currentSelected < 4) {
                     friend['invited'] = true;
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('最多只能邀請 4 位好友喔！')),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('最多只能邀請 4 位好友喔！')));
                   }
                 });
               },
-              child: const Text(
-                '邀請',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              child: const Text('邀請', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
             ),
         ],
       ),

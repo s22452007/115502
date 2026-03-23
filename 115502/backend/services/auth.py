@@ -605,3 +605,42 @@ def invite_friends_to_group():
 
     db.session.commit()
     return jsonify({"message": f"成功發送 {invited_count} 個邀請！"}), 200
+
+# 🛡️ 抓取包含邀請狀態的詳細好友名單 API
+@auth_bp.route('/group/friends_detailed_status', methods=['POST'])
+def get_friends_detailed_status():
+    data = request.get_json()
+    group_id = data.get('group_id')
+    user_id = data.get('user_id')
+
+    if not group_id or not user_id:
+        return jsonify({"error": "缺少必要資訊"}), 400
+
+    try:
+        # 1. 抓取使用者的所有好友名單 (請依照你的資料表邏輯調整，這裡是範例)
+        friends_list_data = db.session.query(Friendship).filter(Friendship.user_id == user_id).all()
+
+        detailed_friends = []
+
+        for friend in friends_list_data:
+            f_user = friend.friend_user 
+            f_id = f_user.id  
+
+            # 2. 檢查狀態
+            # a. 檢查是否已經是小組成員
+            is_member = GroupMember.query.filter_by(group_id=group_id, user_id=f_id).first() is not None
+            
+            # b. 檢查是否已經發過邀請 (狀態為 'pending')
+            is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=f_id, status='pending').first() is not None
+            
+            detailed_friends.append({
+                'nickname': f_user.nickname,
+                'friend_id': f_user.friend_id,
+                'avatar': f_user.avatar,
+                'is_member': is_member,  
+                'is_invited': is_invited, 
+            })
+
+        return jsonify({"friends": detailed_friends}), 200
+    except Exception as e:
+        return jsonify({"error": f"後端錯誤: {str(e)}"}), 500

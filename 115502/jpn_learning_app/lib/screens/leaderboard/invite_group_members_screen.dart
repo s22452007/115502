@@ -38,25 +38,47 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     if (userId == null) return;
 
     try {
-      final result = await ApiClient.getFriendsList(userId);
-      
-      if (mounted && result.containsKey('friends')) {
+      final isCreating = widget.groupId == null;
+      Map<String, dynamic> result;
+
+      if (isCreating) {
+        result = await ApiClient.getFriendsList(userId);
+      } else {
+        // 呼叫包含詳細狀態的 API
+        result = await ApiClient.getFriendsDetailedInvitationStatus(widget.groupId!, userId);
+      }
+
+      if (mounted) {
         setState(() {
-          // 將後端資料轉換成我們要的格式，並預設 everyone invited = false
-          _friends = (result['friends'] as List).map((f) {
-            return {
-              'name': f['nickname'] ?? 'Unknown',
-              'id': f['friend_id'] ?? '',
-              'avatar': f['avatar'] ?? '',
-              'invited': false,
-            };
-          }).toList();
-          _isLoading = false;
+          if (result.containsKey('friends')) {
+            // 成功抓到好友名單
+            _friends = (result['friends'] as List).map((f) {
+              return {
+                'name': f['nickname'] ?? 'Unknown',
+                'id': f['friend_id'] ?? '',
+                'avatar': f['avatar'] ?? '',
+                'invited': false,
+                'is_member': f['is_member'] ?? false,
+                'is_invited': f['is_invited'] ?? false, 
+              };
+            }).toList();
+          } else if (result.containsKey('error')) {
+            // 發生錯誤時，在終端機印出來，並顯示在畫面上
+            print('抓取好友 API 回傳錯誤: ${result['error']}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('抓取名單失敗：${result['error']}')),
+            );
+          }
+          
+          // 不管前面是成功還是失敗，最後一定要把轉圈圈關掉！
+          _isLoading = false; 
         });
       }
     } catch (e) {
-      print('抓取好友失敗: $e');
-      if (mounted) setState(() => _isLoading = false);
+      print('抓取好友發生例外錯誤: $e');
+      if (mounted) {
+        setState(() => _isLoading = false); // 例外崩潰時也要關掉
+      }
     }
   }
 
@@ -204,7 +226,11 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
   }
 
   Widget _buildFriendCard(Map<String, dynamic> friend) {
-    final bool invited = friend['invited'] == true;
+    // 🌟 抓出狀態旗標
+    final bool isMember = friend['is_member'] == true; 
+    final bool isInvited = friend['is_invited'] == true; 
+    final bool invitedUiSelected = friend['invited'] == true; // 這是 UI 上的勾選狀態
+
     final String avatarBase64 = friend['avatar'] ?? '';
     final String nickname = friend['name'];
     final String friendId = friend['id'];
@@ -238,11 +264,31 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
               ],
             ),
           ),
-          if (invited)
+          // 1. 如果已經是小組成員，顯示「已加入」並禁用
+          if (isMember)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: lightGreen, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                backgroundColor: Colors.grey.shade300,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
+              onPressed: null, // 禁用，不要讓他們操作
+              child: const Text('已加入', style: TextStyle(color: subText, fontWeight: FontWeight.w700)),
+            )
+          // 2. 如果已經被邀請 (且狀態為 pending)，顯示「已邀請」並禁用 (🌟 解決你的問題)
+          else if (isInvited)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: lightGreen, // 使用淡綠色，不要用亮綠色
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: null, // 禁用，不要讓他們再次邀請
+              child: const Text('已邀請', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+            )
+          // 3. 剩下情況：一般邀請或 UI 勾選
+          else if (invitedUiSelected)
+            ElevatedButton(
               onPressed: () => setState(() => friend['invited'] = false),
               child: const Text('已選取', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
             )

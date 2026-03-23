@@ -102,13 +102,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         actions: [
           // 前往學習小組的按鈕 (帶著我們選好的名單過去)
           IconButton(
-            icon: Icon(Icons.groups, color: _darkGreen, size: 28),
+            icon: Icon(Icons.groups_outlined, color: _darkGreen, size: 28),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const StudyGroupScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
               );
             },
           ),
@@ -188,8 +186,18 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   // 將名字轉換為「永遠固定」的專屬顏色代碼
   String _getFixedColor(String name) {
     final List<String> colors = [
-      'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6',
-      '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'
+      'E57373',
+      'F06292',
+      'BA68C8',
+      '9575CD',
+      '7986CB',
+      '64B5F6',
+      '4DD0E1',
+      '4DB6AC',
+      '81C784',
+      'AED581',
+      'FFB74D',
+      'FF8A65',
     ];
     int hash = 0;
     for (int i = 0; i < name.length; i++) {
@@ -224,7 +232,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     // 取得專屬固定顏色
     final String bgColor = _getFixedColor(nickname);
     // 把網址裡的 random 換成算出來的 $bgColor
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=$bgColor&color=fff';
+    final String defaultAvatarUrl =
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=$bgColor&color=fff';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -248,7 +257,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             backgroundColor: Colors.grey.shade200,
             // 如果後端有傳真實 Base64 圖片，就顯示真實圖片；否則顯示專屬預設圖
             backgroundImage: (avatarBase64 != null && avatarBase64.isNotEmpty)
-                ? MemoryImage(base64Decode(avatarBase64)) 
+                ? MemoryImage(base64Decode(avatarBase64))
                 : NetworkImage(defaultAvatarUrl) as ImageProvider,
           ),
           const SizedBox(width: 16),
@@ -314,9 +323,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                         builder: (_) => ChatScreen(
                           friendName: nickname, // 把這個朋友的名字傳過去
                           // 如果他有真實頭像或是我們算出來的預設頭像，也傳過去
-                          friendAvatarUrl: (avatarBase64 != null && avatarBase64.isNotEmpty) 
+                          friendAvatarUrl:
+                              (avatarBase64 != null && avatarBase64.isNotEmpty)
                               ? null // 如果是 Base64 比較複雜，我們這邊先簡單處理，如果需要可以再改
-                              : defaultAvatarUrl, 
+                              : defaultAvatarUrl,
                         ),
                       ),
                     );
@@ -349,8 +359,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                           _groupMembers.add({
                             'nickname': nickname,
                             'friend_id': friendId,
-                            'avatar': (avatarBase64 != null && avatarBase64.isNotEmpty) 
-                                ? avatarBase64 
+                            'avatar':
+                                (avatarBase64 != null &&
+                                    avatarBase64.isNotEmpty)
+                                ? avatarBase64
                                 : defaultAvatarUrl,
                           });
                         } else {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "287078122278",
+    "project_id": "jpn-learning-app-115502-abddb",
+    "storage_bucket": "jpn-learning-app-115502-abddb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287078122278:android:2e68e38c713779adf6f7e7",
+        "android_client_info": {
+          "package_name": "com.example.jpn_learning_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5xbDFBlVsQ9t56DTWzxO_sNzAj-FxuV4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

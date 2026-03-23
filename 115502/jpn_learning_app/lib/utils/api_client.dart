@@ -452,4 +452,23 @@ class ApiClient {
       return {'error': '無法連線到伺服器'};
     }
   }
+
+  // 🛡️ 退出小組 API
+  static Future<Map<String, dynamic>> leaveGroup(int groupId, int userId) async {
+    final url = Uri.parse('$baseUrl/auth/group/leave'); // 請確認你的後端路由
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'group_id': groupId,
+          'user_id': userId,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('退出小組失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

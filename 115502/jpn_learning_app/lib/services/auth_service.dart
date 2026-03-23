@@ -1,51 +1,52 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
-  static final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  static bool _googleInitialized = false;
 
-  static bool _initialized = false;
-
-  static Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-
-    await _googleSignIn.initialize();
-    _initialized = true;
+  Future<void> _ensureGoogleInitialized() async {
+    if (_googleInitialized) return;
+    await GoogleSignIn.instance.initialize();
+    _googleInitialized = true;
   }
 
-  static Future<UserCredential> signInWithGoogle() async {
-    await _ensureInitialized();
-
+  Future<UserCredential> signInWithGoogle() async {
     if (kIsWeb) {
-      final provider = GoogleAuthProvider();
-      return FirebaseAuth.instance.signInWithPopup(provider);
-    }
+      // Web: 用 Firebase popup
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
 
-    if (!_googleSignIn.supportsAuthenticate()) {
-      throw FirebaseAuthException(
-        code: 'google-sign-in-not-supported',
-        message: '目前平台不支援 Google 登入',
+      // 這兩行可留可不留，只是示範
+      googleProvider.addScope('email');
+      googleProvider.setCustomParameters({
+        'prompt': 'select_account',
+      });
+
+      return await FirebaseAuth.instance.signInWithPopup(googleProvider);
+    } else {
+      // Android / iOS
+      await _ensureGoogleInitialized();
+
+      final GoogleSignInAccount googleUser =
+          await GoogleSignIn.instance.authenticate();
+
+      final GoogleSignInAuthentication googleAuth =
+          googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
       );
+
+      return await FirebaseAuth.instance.signInWithCredential(credential);
     }
-
-    final GoogleSignInAccount googleUser =
-        await _googleSignIn.authenticate();
-
-    final googleAuth = googleUser.authentication;
-
-    final credential = GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-    );
-
-    return FirebaseAuth.instance.signInWithCredential(credential);
   }
 
-  static Future<void> signOut() async {
+  Future<void> signOutGoogle() async {
+    if (!kIsWeb) {
+      await GoogleSignIn.instance.signOut();
+    }
     await FirebaseAuth.instance.signOut();
-
-    try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
   }
 }
+
+

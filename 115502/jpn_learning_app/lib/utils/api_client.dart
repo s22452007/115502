@@ -429,4 +429,27 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // 🌟 新增：抓取包含邀請狀態的詳細好友名單 (供現有群組邀請使用)
+  static Future<Map<String, dynamic>> getFriendsDetailedInvitationStatus(int groupId, int userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/group/friends_detailed_status'), // 假設後端 API 路徑
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'group_id': groupId,
+          'user_id': userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '無法抓取詳細好友狀態 (${response.statusCode})'};
+      }
+    } catch (e) {
+      print('getFriendsDetailedInvitationStatus error: $e');
+      return {'error': '無法連線到伺服器'};
+    }
+  }
 }

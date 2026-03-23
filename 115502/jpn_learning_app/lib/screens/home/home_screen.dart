@@ -520,10 +520,22 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
             );
           }
+          if (i == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
           if (i == 3) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+            );
+          }
+          if (i == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
             );
           }
         },

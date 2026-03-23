@@ -6,7 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:jpn_learning_app/screens/auth/splash_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'firebase_options.dart';
+import 'firebase_options.dart'; //不一定要使用
 
 List<CameraDescription> cameras = [];
 
@@ -14,11 +14,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 先初始化 Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 再初始化相機
+  // 再初始化相機，不一定要使用
   try {
     cameras = await availableCameras();
   } on CameraException catch (e) {
@@ -27,9 +25,7 @@ Future<void> main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
       child: const JpnLearningApp(),
     ),
   );

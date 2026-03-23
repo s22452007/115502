@@ -6,7 +6,6 @@ import 'package:jpn_learning_app/widgets/app_drawer.dart';
 
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart'; // 手動搜尋
-import 'package:jpn_learning_app/screens/scenario/role_play_intro_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
@@ -481,54 +480,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RolePlayIntroScreen(
-                            imagePath:
-                                'https://images.unsplash.com/photo-1542051812891-60521138a209?q=80&w=800&auto=format&fit=crop',
-                          ),
-                        ),
-                      );
-                    },
-                    child: _buildSceneCard(
-                      '一蘭拉麵店',
-                      '12個新單字',
-                      Icons.ramen_dining,
-                      _cardRed,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RolePlayIntroScreen(
-                            imagePath:
-                                'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop',
-                          ),
-                        ),
-                      );
-                    },
-                    child: _buildSceneCard(
-                      '新宿車站',
-                      '8個新單字',
-                      Icons.train,
-                      _cardBlue,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

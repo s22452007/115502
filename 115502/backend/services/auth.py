@@ -639,7 +639,7 @@ def get_friends_detailed_status():
                 'nickname': display_name, 
                 'friend_id': f_user.friend_id,
                 'avatar': f_user.avatar,
-                'has_group': has_group,  # 🌟 回傳 has_group 給前端
+                'has_group': has_group,  # 回傳 has_group 給前端
                 'is_invited': is_invited, 
             })
 
@@ -647,4 +647,37 @@ def get_friends_detailed_status():
 
     except Exception as e:
         print("API 發生錯誤:", str(e)) 
+        return jsonify({"error": f"後端錯誤: {str(e)}"}), 500
+
+# 🛡️ 退出/解散小組 API
+@auth_bp.route('/group/leave', methods=['POST'])
+def leave_group():
+    data = request.get_json()
+    group_id = data.get('group_id')
+    user_id = data.get('user_id')
+
+    if not group_id or not user_id:
+        return jsonify({"error": "缺少必要資訊"}), 400
+
+    group = StudyGroup.query.get(group_id)
+    if not group:
+        return jsonify({"error": "找不到該小組"}), 404
+
+    try:
+        # 判斷是否為組長
+        if group.host_id == user_id:
+            # 是組長：解散整個小組 (因為你有設定 cascade="all, delete-orphan"，這會連帶刪除成員名單)
+            db.session.delete(group)
+            db.session.commit()
+            return jsonify({"message": "身為組長的你退出了，小組已解散！"}), 200
+        else:
+            # 是一般成員：單純刪除他的成員紀錄
+            member = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+            if member:
+                db.session.delete(member)
+                db.session.commit()
+            return jsonify({"message": "已成功退出小組！"}), 200
+            
+    except Exception as e:
+        print("退出小組發生錯誤:", str(e))
         return jsonify({"error": f"後端錯誤: {str(e)}"}), 500

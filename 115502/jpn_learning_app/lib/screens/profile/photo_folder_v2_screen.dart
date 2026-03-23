@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'album_detail_screen.dart';
+// 🌟 引入單字卡畫面，讓預設相簿可以跳轉
+import 'vocab_detail_v2_screen.dart'; 
 
 class PhotoFolderV2Screen extends StatefulWidget {
   const PhotoFolderV2Screen({Key? key}) : super(key: key);
@@ -13,17 +15,23 @@ class PhotoFolderV2Screen extends StatefulWidget {
 
 class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
   // ==========================================
-  // 🎨 Figma 設計稿精準色號
+  // 🎨 Figma 設計稿精準色號 (配合一般相簿風格)
   // ==========================================
-  final Color figmaPrimaryColor = const Color(0xFF6AA86B); 
+  final Color figmaPrimaryColor = const Color(0xFF6AA86B); // J-Lens 品牌綠
   final Color figmaBgColor = const Color(0xFFF9F9F9);      
   final Color figmaTextColor = const Color(0xFF333333);    
   final Color figmaUnselectedColor = const Color(0xFF9E9E9E); 
 
-  // 動態資料變數
   bool _isLoading = true;
-  List<dynamic> _folders = [];         // 存放「所有」資料夾的總表
-  List<dynamic> _filteredFolders = []; // 存放「搜尋結果」的清單
+  List<dynamic> _folders = [];         
+  List<dynamic> _filteredFolders = []; 
+
+  // 🌟 定義預設相簿的資料結構
+  final Map<String, dynamic> defaultFolder = {
+    'id': 'default_01', 
+    'name': '預設相簿 (基礎單字)', 
+    'isDefault': true
+  };
 
   @override
   void initState() {
@@ -31,15 +39,13 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     _fetchFavorites(); 
   }
 
-  // 從後端抓取資料的方法
   Future<void> _fetchFavorites() async {
     final userId = context.read<UserProvider>().userId;
 
+    // 🛡️ 保持專案原邏輯：訪客無法取得資料，會顯示鎖頭畫面
     if (userId == null) {
       setState(() {
         _isLoading = false;
-        _folders = []; 
-        _filteredFolders = []; 
       });
       return;
     }
@@ -48,16 +54,20 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     
     if (result.containsKey('favorites')) {
       setState(() {
-        _folders = result['favorites'];
-        _filteredFolders = _folders; // 剛抓完資料時，顯示全部的資料夾
+        // 🌟 將預設相簿放在陣列的第一個位置
+        _folders = [defaultFolder, ...result['favorites']];
+        _filteredFolders = _folders; 
         _isLoading = false;
       });
     } else {
-      setState(() => _isLoading = false);
+      setState(() {
+        _folders = [defaultFolder]; // 就算抓失敗也保留預設相簿
+        _filteredFolders = _folders;
+        _isLoading = false;
+      });
     }
   }
 
-  // 負責處理搜尋邏輯的魔法函數
   void _runSearch(String enteredKeyword) {
     List<dynamic> results = [];
     if (enteredKeyword.isEmpty) {
@@ -75,6 +85,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
 
   @override
   Widget build(BuildContext context) {
+    // 監聽使用者狀態
     final isGuest = context.watch<UserProvider>().userId == null;
 
     return Scaffold(
@@ -92,21 +103,19 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // 1. 頂部搜尋欄
-          _buildSearchBar(),
-          
-          // 2. 下方的收藏夾網格
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator(color: figmaPrimaryColor))
-                : isGuest
-                    ? _buildGuestMessage()
-                    : _buildPhotoGrid(context),
-          ),
-        ],
-      ),
+      // 🌟 判斷：如果是訪客，顯示鎖頭畫面；否則顯示收藏夾內容
+      body: isGuest 
+          ? _buildGuestLockedView()
+          : Column(
+              children: [
+                _buildSearchBar(),
+                Expanded(
+                  child: _isLoading
+                      ? Center(child: CircularProgressIndicator(color: figmaPrimaryColor))
+                      : _buildPhotoGrid(context),
+                ),
+              ],
+            ),
     );
   }
 
@@ -134,32 +143,14 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
             border: InputBorder.none, 
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
-          // 綁定搜尋函數：每當使用者打字，就會觸發搜尋
           onChanged: (value) => _runSearch(value),
         ),
       ),
     );
   }
 
-  Widget _buildGuestMessage() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.lock_outline, size: 64, color: figmaUnselectedColor.withOpacity(0.5)),
-          const SizedBox(height: 16),
-          Text(
-            '登入後即可建立專屬的收藏夾喔！',
-            style: TextStyle(fontSize: 16, color: figmaUnselectedColor),
-          ),
-        ],
-      ),
-    );
-  }
-
   // 收藏夾網格
   Widget _buildPhotoGrid(BuildContext context) {
-    // 處理搜尋不到結果的狀況
     if (_filteredFolders.isEmpty && _folders.isNotEmpty) {
       return Center(
         child: Text('找不到相關的收藏夾 🥲', style: TextStyle(color: figmaUnselectedColor, fontSize: 16)),
@@ -174,21 +165,68 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         mainAxisSpacing: 20,     
         childAspectRatio: 0.8,   
       ),
-      // 現在總數是根據「搜尋結果(_filteredFolders)」的數量來決定
-      itemCount: _filteredFolders.length + 1, 
+      itemCount: _filteredFolders.length + 1, // +1 是為了最後一個「新增」按鈕
       itemBuilder: (context, index) {
-        // 如果是最後一個項目，顯示新增按鈕
         if (index == _filteredFolders.length) {
           return _buildAddFolderButton();
         }
-        // 顯示搜尋結果裡面的資料夾
-        final folderName = _filteredFolders[index]['name'];
-        return _buildFolderCard(context, folderName);
+        
+        final folder = _filteredFolders[index];
+        // 🌟 判斷是不是預設相簿，給予不同的點擊事件，但外觀保持統一
+        if (folder['isDefault'] == true) {
+          return _buildDefaultFolderCard(context, folder['name']);
+        } else {
+          return _buildFolderCard(context, folder['name']);
+        }
       },
     );
   }
 
-  // 單個資料夾卡片
+  // 🌟 新版預設相簿卡片：外觀大小、顏色已與一般相簿統一，並改用專屬圖示
+  Widget _buildDefaultFolderCard(BuildContext context, String title) {
+    return GestureDetector(
+      onTap: () {
+        // 跳轉到下方定義好的預設單字列表
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const DefaultAlbumScreen()),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  color: figmaPrimaryColor.withOpacity(0.1), // 統一的淺綠色背景
+                  child: Icon(Icons.auto_awesome_rounded, size: 36, color: figmaPrimaryColor), // 專屬圖示，顏色統一
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8), 
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            maxLines: 1, 
+            overflow: TextOverflow.ellipsis, 
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: figmaTextColor), // 標題顏色統一
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 一般資料夾卡片 (保留原本風格)
   Widget _buildFolderCard(BuildContext context, String title) {
     return GestureDetector(
       onTap: () {
@@ -231,7 +269,6 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  // ➕ 新增收藏夾按鈕
   Widget _buildAddFolderButton() {
     return GestureDetector(
       onTap: () {
@@ -263,7 +300,6 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  // 彈出輸入框的對話框
   void _showAddFolderDialog() {
     final TextEditingController controller = TextEditingController();
     showDialog(
@@ -303,7 +339,6 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  // 處理與後端連線的邏輯
   Future<void> _createNewFolder(String name) async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
@@ -323,5 +358,188 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         _fetchFavorites(); 
       }
     }
+  }
+
+  // --- 🛡️ 保留原本專案的訪客鎖頭 UI ---
+  Widget _buildGuestLockedView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.lock_outline_rounded, size: 80, color: figmaUnselectedColor),
+          const SizedBox(height: 24),
+          Text(
+            '登入即可使用收藏夾功能',
+            style: TextStyle(fontSize: 18, color: figmaTextColor, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '保存你學過的重要單字，隨時複習',
+            style: TextStyle(fontSize: 14, color: figmaUnselectedColor),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () {
+              // 導向登入頁面
+              Navigator.pushNamed(context, '/login'); 
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: figmaPrimaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text(
+              '去登入',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 🚀 預設相簿的單字列表畫面 (網格排列版)
+// ==========================================
+class DefaultAlbumScreen extends StatelessWidget {
+  const DefaultAlbumScreen({Key? key}) : super(key: key);
+
+  // 這裡保持原本的 5 個基本預設單字資料
+  final List<Map<String, String>> defaultVocabs = const [
+    {
+      'kanji': '駅',
+      'kana': 'えき',
+      'meaning': '車站 (Station)',
+      'example': '新宿駅はどこですか？\n(請問新宿車站在哪裡？)',
+      'imageUrl': 'https://picsum.photos/seed/station/800/600',
+    },
+    {
+      'kanji': '桜',
+      'kana': 'さくら',
+      'meaning': '櫻花 (Sakura)',
+      'example': '春になると桜が咲きます。\n(一到春天櫻花就會開。)',
+      'imageUrl': 'https://picsum.photos/seed/sakura/800/600',
+    },
+    {
+      'kanji': '美味しい',
+      'kana': 'おいしい',
+      'meaning': '好吃的 (Delicious)',
+      'example': 'このラーメンはとても美味しいです。\n(這碗拉麵非常美味。)',
+      'imageUrl': 'https://picsum.photos/seed/delicious/800/600',
+    },
+    {
+      'kanji': '友達',
+      'kana': 'ともだち',
+      'meaning': '朋友 (Friend)',
+      'example': '週末は友達と遊びに行きます。\n(週末要和朋友出去玩。)',
+      'imageUrl': 'https://picsum.photos/seed/friends/800/600',
+    },
+    {
+      'kanji': '挨拶',
+      'kana': 'あいさつ',
+      'meaning': '打招呼 (Greeting)',
+      'example': '元気よく挨拶をしましょう。\n(很有精神地打招呼吧。)',
+      'imageUrl': 'https://picsum.photos/seed/greeting/800/600',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9F9F9),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          '預設相簿',
+          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+      // 🌟 將原本的 ListView 換成 GridView
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        // 設定網格的 Delegate：這裡使用 FixedCrossAxisCount 來決定一列顯示幾個
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,       // 🌟 一列顯示 3 個 (跟手機相簿類似)
+          crossAxisSpacing: 12,    // 網格間的橫向間距
+          mainAxisSpacing: 16,     // 網格間的縱向間距
+          childAspectRatio: 0.8,   // 網格卡片的長寬比 (稍微高一點以容納文字)
+        ),
+        itemCount: defaultVocabs.length,
+        itemBuilder: (context, index) {
+          final vocab = defaultVocabs[index];
+          
+          return GestureDetector(
+            onTap: () {
+              // 🌟 點擊後跳轉到動態單字卡邏輯
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VocabDetailV2Screen(
+                    kanji: vocab['kanji']!,
+                    kana: vocab['kana']!,
+                    meaning: vocab['meaning']!,
+                    example: vocab['example']!,
+                    imageUrl: vocab['imageUrl']!,
+                  ),
+                ),
+              );
+            },
+            // 🌟 重新設計的網格卡片 UI (類似相簿)
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 圖片部分 (網格的主體)
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05), 
+                          blurRadius: 4,
+                          offset: const Offset(0, 2)
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        vocab['imageUrl']!,
+                        fit: BoxFit.cover, // 🌟 確保圖片像手機相簿一樣填滿區域
+                        errorBuilder: (ctx, err, stack) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.image, color: Colors.grey, size: 30),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8), 
+                // 只保留漢字單字顯示在圖片下方
+                Text(
+                  vocab['kanji']!,
+                  textAlign: TextAlign.center,
+                  maxLines: 1, 
+                  overflow: TextOverflow.ellipsis, 
+                  style: const TextStyle(
+                    fontSize: 14, 
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF333333)
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }

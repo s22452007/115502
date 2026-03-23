@@ -405,4 +405,28 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // 🛡️ 邀請好友加入「現有」小組 API
+  static Future<Map<String, dynamic>> inviteToExistingGroup(
+    int groupId,
+    int senderId,
+    List<String> friendIds,
+  ) async {
+    final url = Uri.parse('$baseUrl/auth/group/invite_friends');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'group_id': groupId,
+          'sender_id': senderId,
+          'friend_ids': friendIds,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('發送邀請失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

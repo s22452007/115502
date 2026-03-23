@@ -14,6 +14,11 @@ class UserProvider extends ChangeNotifier {
   int _dailyScans = 0;
   int get dailyScans => _dailyScans;
 
+  // --- 🏆 徽章系統狀態 ---
+  // 存放已解鎖的徽章 ID (預設先放入兩個作為測試)
+  List<String> _unlockedBadgeIds = ['food_01', 'novice_01'];
+  List<String> get unlockedBadgeIds => _unlockedBadgeIds;
+
   // 設定今日進度的方法
   void setDailyScans(int scans) {
     _dailyScans = scans;
@@ -63,6 +68,33 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 新增 set 方法
+  void setFriendId(String id) {
+    _friendId = id;
+    notifyListeners();
+  }
+
+  // --- 🏆 徽章系統相關方法 ---
+
+  // 從後端取得資料後，整批設定已解鎖徽章
+  void setUnlockedBadges(List<String> badgeIds) {
+    _unlockedBadgeIds = badgeIds;
+    notifyListeners();
+  }
+
+  // 檢查特定徽章是否已解鎖
+  bool isBadgeUnlocked(String badgeId) {
+    return _unlockedBadgeIds.contains(badgeId);
+  }
+
+  // 解鎖單一新徽章
+  void unlockBadge(String badgeId) {
+    if (!_unlockedBadgeIds.contains(badgeId)) {
+      _unlockedBadgeIds.add(badgeId);
+      notifyListeners(); // 通知所有畫面更新徽章狀態
+    }
+  }
+
   // 登出方法，清空所有資料
   void logout() {
     _userId = null;
@@ -73,12 +105,7 @@ class UserProvider extends ChangeNotifier {
     _jPts = 0;       // 登出時歸零
     _friendId = null; // 登出時清空
     _dailyScans = 0;
+    _unlockedBadgeIds = []; // 登出時清空徽章資料
     notifyListeners(); // 通知所有畫面「這個人已經登出了，請更新畫面！」
-  }
-
-  // 新增 set 方法
-  void setFriendId(String id) {
-    _friendId = id;
-    notifyListeners();
   }
 }

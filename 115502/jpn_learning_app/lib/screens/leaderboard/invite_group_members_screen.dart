@@ -38,17 +38,32 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     if (userId == null) return;
 
     try {
-      final result = await ApiClient.getFriendsList(userId);
-      
+      // 智慧判斷抓取哪一種好友名單
+      // 如果 groupId 為 null，是「建立群組模式」，抓一般好友清單
+      // 如果 groupId 有值，是「邀請模式」，抓包含詳細狀態的好友清單
+      final isCreating = widget.groupId == null;
+      Map<String, dynamic> result;
+
+      if (isCreating) {
+        result = await ApiClient.getFriendsList(userId); // 原本的一般好友清單
+      } else {
+        // 呼叫剛剛新增的 API (詳細狀態)
+        result = await ApiClient.getFriendsDetailedInvitationStatus(widget.groupId!, userId);
+      }
+
       if (mounted && result.containsKey('friends')) {
         setState(() {
-          // 將後端資料轉換成我們要的格式，並預設 everyone invited = false
+          // 將後端資料轉換成我們要的格式
           _friends = (result['friends'] as List).map((f) {
+            // 如果是邀請模式，後端資料需要包含 'is_member' 和 'is_invited' 旗標
+            // 如果是建立模式，後端沒有提供這些 flag，就預設為 false
             return {
               'name': f['nickname'] ?? 'Unknown',
               'id': f['friend_id'] ?? '',
               'avatar': f['avatar'] ?? '',
-              'invited': false,
+              'invited': false, // 這是 UI 上的勾選狀態，不是邀請狀態
+              'is_member': f['is_member'] ?? false, // 🌟 核心旗標 1：是否已經是小組成員
+              'is_invited': f['is_invited'] ?? false, // 🌟 核心旗標 2：是否已經發過邀請 (且狀態為 'pending')
             };
           }).toList();
           _isLoading = false;
@@ -204,7 +219,11 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
   }
 
   Widget _buildFriendCard(Map<String, dynamic> friend) {
-    final bool invited = friend['invited'] == true;
+    // 🌟 抓出狀態旗標
+    final bool isMember = friend['is_member'] == true; 
+    final bool isInvited = friend['is_invited'] == true; 
+    final bool invitedUiSelected = friend['invited'] == true; // 這是 UI 上的勾選狀態
+
     final String avatarBase64 = friend['avatar'] ?? '';
     final String nickname = friend['name'];
     final String friendId = friend['id'];
@@ -238,11 +257,31 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
               ],
             ),
           ),
-          if (invited)
+          // 1. 如果已經是小組成員，顯示「已加入」並禁用
+          if (isMember)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: lightGreen, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                backgroundColor: Colors.grey.shade300,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
+              onPressed: null, // 禁用，不要讓他們操作
+              child: const Text('已加入', style: TextStyle(color: subText, fontWeight: FontWeight.w700)),
+            )
+          // 2. 如果已經被邀請 (且狀態為 pending)，顯示「已邀請」並禁用 (🌟 解決你的問題)
+          else if (isInvited)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: lightGreen, // 使用淡綠色，不要用亮綠色
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: null, // 禁用，不要讓他們再次邀請
+              child: const Text('已邀請', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+            )
+          // 3. 剩下情況：一般邀請或 UI 勾選
+          else if (invitedUiSelected)
+            ElevatedButton(
               onPressed: () => setState(() => friend['invited'] = false),
               child: const Text('已選取', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
             )

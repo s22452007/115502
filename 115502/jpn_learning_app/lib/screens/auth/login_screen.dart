@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 
 // 2. 第三方套件
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // 3. 我們自己寫的工具與狀態管理
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/services/auth_service.dart';
 
 // 4. 我們自己寫的畫面 (跳轉用)
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
 
-// 因為需要切換「登入」與「註冊」狀態，還有接收輸入框的文字，所以要改成 StatefulWidget
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -23,21 +24,17 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // 控制「目前是登入還是註冊模式」的開關 (預設為 true = 登入模式)
   bool _isLogin = true;
 
-  // 用來抓取使用者輸入的 Email 和密碼
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController(); // 註冊模式用
+  final _confirmPasswordController = TextEditingController();
 
-  // 執行登入或註冊的主要按鈕邏輯
   Future<void> _submit() async {
-    final email = _emailController.text.trim(); // .trim() 可以清掉多餘空白
+    final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
-    // 1. 防呆檢查
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('請輸入 Email 與密碼喔！')),
@@ -45,33 +42,26 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (!_isLogin) {
-      if (password != confirmPassword) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('兩次輸入的密碼不相同喔！')),
-        );
-        return;
-      }
-    }    
+    if (!_isLogin && password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('兩次輸入的密碼不相同喔！')),
+      );
+      return;
+    }
 
-    // 顯示 Loading 提示
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_isLogin ? '登入中...' : '註冊中...')),
     );
 
     if (_isLogin) {
-      // ---------------- 【登入邏輯】 ----------------
       final result = await ApiClient.login(email, password);
-      
-      if (!context.mounted) return; // 防呆：確保畫面還在
 
+      if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
-        // 登入成功！存下 user_id 和 Email
         context.read<UserProvider>().setUserId(result['user_id']);
-        context.read<UserProvider>().setEmail(email); 
-        
-        // 如果後端有回傳 avatar (大頭貼)，我們就把它存進大腦裡！
+        context.read<UserProvider>().setEmail(email);
+
         if (result.containsKey('avatar')) {
           context.read<UserProvider>().setAvatar(result['avatar']);
         }
@@ -80,7 +70,6 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('登入成功！')),
         );
 
-        // 接住後端傳來的連續天數、點數與今日進度 (加上 ?? 0 防止舊帳號崩潰)
         if (result.containsKey('streak_days')) {
           context.read<UserProvider>().setStreakDays(result['streak_days'] ?? 1);
         }
@@ -90,12 +79,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('daily_scans')) {
           context.read<UserProvider>().setDailyScans(result['daily_scans'] ?? 0);
         }
-
         if (result.containsKey('friend_id')) {
           context.read<UserProvider>().setFriendId(result['friend_id']);
         }
 
-        // 聰明的判斷：如果後端說他已經測驗過 (有 japanese_level)，就直接去首頁！
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
           Navigator.pushReplacement(
@@ -103,45 +90,38 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (_) => const HomeScreen()),
           );
         } else {
-          // 如果沒有程度，代表是舊帳號但沒測驗過，去測驗選擇頁
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
           );
         }
       } else {
-        // 登入失敗 (密碼錯誤或找不到帳號)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result['error'] ?? '登入失敗')),
         );
       }
-
     } else {
-      // ---------------- 【註冊邏輯】 ----------------
       final result = await ApiClient.register(email, password);
-      
+
       if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
-        // 註冊成功！存下 user_id
         context.read<UserProvider>().setUserId(result['user_id']);
-        context.read<UserProvider>().setEmail(email); // 存入輸入的 Email
-        
+        context.read<UserProvider>().setEmail(email);
+
         if (result.containsKey('friend_id')) {
           context.read<UserProvider>().setFriendId(result['friend_id']);
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('註冊成功！請選擇您的日語程度')),
         );
 
-        // 新註冊的人一定沒測驗過，帶他去選擇程度
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
         );
       } else {
-        // 註冊失敗 (可能 Email 被用過了)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result['error'] ?? '註冊失敗')),
         );
@@ -149,9 +129,61 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleLogin() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google 登入中...')),
+      );
+
+      final UserCredential? userCredential =
+          await AuthService().signInWithGoogle();
+
+      if (!context.mounted) return;
+
+      final user = userCredential?.user;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google 登入失敗，未取得使用者資料')),
+        );
+        return;
+      }
+
+      // Google/Firebase uid 是 String，不能直接塞進原本 int 型別的 userId
+      context.read<UserProvider>().setEmail(user.email ?? '');
+
+      if (user.photoURL != null && user.photoURL!.isNotEmpty) {
+        context.read<UserProvider>().setAvatar(user.photoURL!);
+      }
+
+      // 先給預設值，避免後續頁面抓不到資料
+      context.read<UserProvider>().setStreakDays(1);
+      context.read<UserProvider>().setJPts(0);
+      context.read<UserProvider>().setDailyScans(0);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Google 登入成功：${user.displayName ?? user.email ?? "使用者"}',
+          ),
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google 登入失敗：$e')),
+      );
+    }
+  }
+
   @override
   void dispose() {
-    // 記得銷毀控制器，釋放記憶體
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -163,49 +195,50 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
-        // 加上 SingleChildScrollView 讓畫面可以滑動，鍵盤彈出時不會 Overflow
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-              
-              // --- 頂部 Logo 區塊 (依照原本 Container 修改，圖示改為深綠色鎖) ---
+
               Container(
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLighter, // 你的原本專案顏色
+                  color: AppColors.primaryLighter,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
-                  Icons.lock_rounded, 
-                  size: 60, 
-                  color: AppColors.primary // 你的原本專案綠色
-                ), 
+                  Icons.lock_rounded,
+                  size: 60,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 32),
 
-              // --- 標題 (使用你的深綠色) ---
               Text(
-                'JPN Learning ID', 
+                'JPN Learning ID',
                 style: TextStyle(
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 24, 
-                  color: AppColors.textDark
-                )
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
-                _isLogin ? '歡迎使用 JPN Learning App\n請登入您的帳號！' : '歡迎加入 JPN Learning App\n註冊一個新帳號！',
+                _isLogin
+                    ? '歡迎使用 JPN Learning App\n請登入您的帳號！'
+                    : '歡迎加入 JPN Learning App\n註冊一個新帳號！',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: AppColors.textGrey, height: 1.5),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textGrey,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 40),
 
-              // --- 輸入框區塊 (模仿範例樣式，顏色改為綠色) ---
-              // Email
               _buildInputField(
                 controller: _emailController,
                 labelText: 'Email',
@@ -214,7 +247,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Password
               _buildInputField(
                 controller: _passwordController,
                 labelText: 'Password',
@@ -223,7 +255,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Confirm Password (只有註冊模式顯示)
               if (!_isLogin) ...[
                 _buildInputField(
                   controller: _confirmPasswordController,
@@ -234,40 +265,41 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 12),
               ],
 
-              // --- 條件式顯示的連結 (忘記密碼 / 前往登入) ---
               if (_isLogin)
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // 跳轉到忘記密碼畫面
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
                       );
                     },
                     child: const Text(
-                      '忘記密碼？', 
+                      '忘記密碼？',
                       style: TextStyle(
-                        color: AppColors.primary, 
+                        color: AppColors.primary,
                         decoration: TextDecoration.underline,
                       ),
                     ),
                   ),
                 ),
+
               if (!_isLogin)
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
                       setState(() {
-                        _isLogin = true; // 切換到登入模式
+                        _isLogin = true;
                       });
                     },
                     child: const Text(
-                      '已有帳號？前往登入', 
+                      '已有帳號？前往登入',
                       style: TextStyle(
-                        color: AppColors.primary, 
+                        color: AppColors.primary,
                         decoration: TextDecoration.underline,
                       ),
                     ),
@@ -276,39 +308,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 24),
 
-              // --- 登入 / 註冊 主要按鈕 (深綠色) ---
               ElevatedButton(
                 onPressed: _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary, // 你的專案深綠色
+                  backgroundColor: AppColors.primary,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  elevation: 2, // 加上一點陰影符合範例卡片感
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 2,
                 ),
                 child: Text(
                   _isLogin ? '登入' : '註冊',
                   style: const TextStyle(
-                    color: Colors.white, 
-                    fontSize: 16, 
-                    fontWeight: FontWeight.bold
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
 
-              // --- 切換 登入/註冊 模式的文字連結 ---
               if (_isLogin)
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      _isLogin = false; // 切換到註冊模式
+                      _isLogin = false;
                     });
                   },
                   child: const Text(
-                    '還沒有帳號嗎？點此註冊', 
+                    '還沒有帳號嗎？點此註冊',
                     style: TextStyle(
-                      color: AppColors.primary, 
+                      color: AppColors.primary,
                       decoration: TextDecoration.underline,
                     ),
                   ),
@@ -316,60 +348,75 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 32),
 
-              // --- 分隔線 (仿範例樣式) ---
               Row(
                 children: [
-                  Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+                  Expanded(
+                    child: Divider(color: Colors.grey.shade300, thickness: 1),
+                  ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'or', 
-                      style: TextStyle(color: Colors.grey.shade500)
+                      'or',
+                      style: TextStyle(color: Colors.grey.shade500),
                     ),
                   ),
-                  Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+                  Expanded(
+                    child: Divider(color: Colors.grey.shade300, thickness: 1),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
               const Text(
-                '使用以下方式登入', 
-                style: TextStyle(fontSize: 12, color: AppColors.textGrey)
+                '使用以下方式登入',
+                style: TextStyle(fontSize: 12, color: AppColors.textGrey),
               ),
               const SizedBox(height: 24),
 
-              // --- 第三方登入圖示 (仿範例並排樣式，顏色改為你的綠色) ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Google 登入
                   GestureDetector(
-                    onTap: () => print('觸發 Google 登入邏輯'),
+                    onTap: _handleGoogleLogin,
                     child: Column(
                       children: [
                         const Icon(
-                          Icons.g_mobiledata, 
-                          size: 36, 
-                          color: AppColors.primary // 改為你的綠色
+                          Icons.g_mobiledata,
+                          size: 36,
+                          color: AppColors.primary,
                         ),
                         const SizedBox(height: 8),
-                        const Text('使用Google登入', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                        const Text(
+                          '使用Google登入',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 32), // 圖示間距
-
-                  // Apple 登入
+                  const SizedBox(width: 32),
                   GestureDetector(
-                    onTap: () => print('觸發 Apple 登入邏輯'),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Apple 登入功能開發中')),
+                      );
+                    },
                     child: Column(
                       children: [
                         const Icon(
-                          Icons.apple, 
-                          size: 28, 
-                          color: AppColors.primary // 改為你的綠色
+                          Icons.apple,
+                          size: 28,
+                          color: AppColors.primary,
                         ),
                         const SizedBox(height: 8),
-                        const Text('使用Apple登入', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                        const Text(
+                          '使用Apple登入',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -378,20 +425,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 32),
 
-              // --- 訪客登入按鈕 (保留原本代碼邏輯) ---
               TextButton(
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const LevelSelectScreen(),
+                    ),
                   );
                 },
                 child: const Text(
                   '訪客登入 (Continue as Guest)',
                   style: TextStyle(
-                    color: AppColors.textGrey, 
-                    fontSize: 14, 
-                    decoration: TextDecoration.underline
+                    color: AppColors.textGrey,
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
@@ -402,7 +450,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 用來動態生成輸入框的輔助方法
   Widget _buildInputField({
     required TextEditingController controller,
     required String labelText,
@@ -414,11 +461,11 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          labelText, 
+          labelText,
           style: TextStyle(
-            fontWeight: FontWeight.bold, 
-            color: Colors.grey.shade700
-          )
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.shade700,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -427,17 +474,26 @@ class _LoginScreenState extends State<LoginScreen> {
           obscureText: obscureText,
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            hintStyle: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: 14,
+            ),
             filled: true,
-            fillColor: Colors.grey.shade100, // 仿範例的淺灰色背景
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            fillColor: Colors.grey.shade100,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none, // 隱藏外框線
+              borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5), // 聚焦時顯示綠色邊框
+              borderSide: const BorderSide(
+                color: AppColors.primary,
+                width: 1.5,
+              ),
             ),
           ),
         ),

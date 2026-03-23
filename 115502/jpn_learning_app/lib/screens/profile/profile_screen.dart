@@ -260,7 +260,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     for (int i = 0; i < safeName.length; i++) {
       hash = (hash * 31 + safeName.codeUnitAt(i)) & 0x7FFFFFFF;
     }
-    final String bgColor = colors[hash % colors.length];
+    final String bgColor = colors.isNotEmpty
+        ? colors[hash % colors.length]
+        : '000000';
 
     final String defaultAvatarUrl =
         'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';

@@ -508,3 +508,67 @@ def respond_group_invite():
     db.session.commit()
     msg = "已成功加入小組！" if action == 'accept' else "已拒絕邀請"
     return jsonify({"message": msg}), 200
+
+# ==========================================
+# 第三方登入整合 API (Google Login)
+# ==========================================
+@auth_bp.route('/google_login', methods=['POST'])
+def google_login():
+    data = request.get_json()
+    email = data.get('email')
+    
+    # Google 登入通常可以順便拿到大頭貼網址，可以選擇性傳入
+    avatar = data.get('avatar', '')
+
+    if not email:
+        return jsonify({"error": "缺少 Email"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        # 狀況 A：這是一個全新的使用者，自動幫他在資料庫建檔！
+        new_friend_id = generate_friend_id()
+        # 因為是用 Google 登入，不需要輸入密碼，所以隨機塞一個極高強度的假密碼給他
+        dummy_pwd = generate_password_hash("GOOGLE_OAUTH_" + email) 
+        
+        user = User(email=email, password_hash=dummy_pwd, friend_id=new_friend_id, avatar=avatar)
+        db.session.add(user)
+        db.session.commit() # 先 commit 讓 user 產生 id
+    else:
+        # 狀況 B：老用戶，防呆檢查有沒有交友 ID
+        if not user.friend_id:
+            user.friend_id = generate_friend_id()
+        # 如果老用戶沒頭像，但這次 Google 有傳過來，就順便更新
+        if avatar and not user.avatar:
+            user.avatar = avatar
+
+    # ----- 登入天數與任務重置邏輯 (跟一般登入完全一樣) -----
+    today = date.today()
+    
+    if user.last_login_date == today:
+        pass 
+    elif user.last_login_date == today - timedelta(days=1):
+        user.streak_days += 1
+    else:
+        user.streak_days = 1
+        
+    user.last_login_date = today
+    
+    if user.last_scan_date != today:
+        user.daily_scans = 0
+        user.last_scan_date = today
+
+    db.session.commit()
+
+    # 把所有的資料回傳給前端，讓前端的 UserProvider 能夠順利運作！
+    return jsonify({
+        "message": "Google 登入成功！",
+        "user_id": user.id,
+        "email": user.email,
+        "japanese_level": user.japanese_level,
+        "avatar": user.avatar,
+        "streak_days": user.streak_days,
+        "j_pts": user.j_pts,
+        "daily_scans": user.daily_scans,
+        "friend_id": user.friend_id
+    }), 200

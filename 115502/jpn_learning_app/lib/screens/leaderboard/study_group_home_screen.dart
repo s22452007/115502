@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'invite_group_members_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class StudyGroupHomeScreen extends StatelessWidget {
   final Map<String, dynamic> groupData;
@@ -105,10 +108,19 @@ class StudyGroupHomeScreen extends StatelessWidget {
           groupName,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        // 新增退出按鈕在這！
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white),
+            tooltip: '退出小組',
+            onPressed: () => _showLeaveGroupDialog(context, groupData['group_id']),
+          ),
+        ],
       ),
       body: bodyContent,
     );
   }
+
 
   Widget _buildGroupInfoCard(String groupName, List<dynamic> members) {
     String hostName = '無';
@@ -202,6 +214,61 @@ class StudyGroupHomeScreen extends StatelessWidget {
               child: _RankRow(rank: '${index + 1}', name: nickname, points: '$scans 次'),
             );
           }),
+        ],
+      ),
+    );
+  }
+  // ==========================
+  // 🌟 這裡新增：退出小組的彈出對話框邏輯
+  // ==========================
+  void _showLeaveGroupDialog(BuildContext context, dynamic groupId) {
+    if (groupId == null) return;
+    final int validGroupId = groupId as int;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('退出小組', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('確定要退出這個學習小組嗎？\n\n⚠️ 如果你是組長，退出將會直接解散整個小組喔！'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx), // 關閉對話框
+            child: const Text('取消', style: TextStyle(color: subText, fontSize: 16)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade400,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx); // 先關閉對話框
+              
+              final userId = context.read<UserProvider>().userId;
+              if (userId == null) return;
+
+              // 顯示 Loading
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('正在處理中...')));
+
+              // 呼叫退出 API
+              final result = await ApiClient.leaveGroup(validGroupId, userId);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                if (result.containsKey('error')) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+                } else {
+                  // 成功退出
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? '已退出小組')));
+                  
+                  // 退回上一頁 (大廳)，並傳回 true 告訴前一頁需要重整
+                  Navigator.pop(context, true); 
+                }
+              }
+            },
+            child: const Text('確定退出', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );

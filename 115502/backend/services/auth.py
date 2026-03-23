@@ -572,3 +572,36 @@ def google_login():
         "daily_scans": user.daily_scans,
         "friend_id": user.friend_id
     }), 200
+
+# 🛡️ 邀請好友加入「現有」小組 API
+@auth_bp.route('/group/invite_friends', methods=['POST'])
+def invite_friends_to_group():
+    data = request.get_json()
+    group_id = data.get('group_id')
+    sender_id = data.get('sender_id')
+    friend_ids = data.get('friend_ids', [])
+
+    if not group_id or not sender_id:
+        return jsonify({"error": "缺少必要資訊"}), 400
+
+    group = StudyGroup.query.get(group_id)
+    if not group:
+        return jsonify({"error": "找不到該小組"}), 404
+
+    invited_count = 0
+    for f_id in friend_ids:
+        friend_user = User.query.filter_by(friend_id=f_id).first()
+        if friend_user:
+            # 1. 檢查是否已經在小組內
+            is_member = GroupMember.query.filter_by(group_id=group_id, user_id=friend_user.id).first()
+            # 2. 檢查是否已經發過邀請 (且對方還沒按同意或拒絕)
+            is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=friend_user.id, status='pending').first()
+
+            # 如果他不在小組內，且還沒被邀請過，才發送邀請！
+            if not is_member and not is_invited:
+                new_invite = GroupInvite(group_id=group_id, sender_id=sender_id, receiver_id=friend_user.id)
+                db.session.add(new_invite)
+                invited_count += 1
+
+    db.session.commit()
+    return jsonify({"message": f"成功發送 {invited_count} 個邀請！"}), 200

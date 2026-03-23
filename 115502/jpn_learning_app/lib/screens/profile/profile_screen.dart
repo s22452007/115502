@@ -265,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         : '000000';
 
     final String defaultAvatarUrl =
-        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(safeName)}&background=$bgColor&color=fff';
 
     return Scaffold(
       backgroundColor: _bgColor,

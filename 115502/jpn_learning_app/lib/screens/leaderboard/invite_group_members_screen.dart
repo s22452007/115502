@@ -88,12 +88,17 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      
       if (result.containsKey('error')) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
       } else {
-        // 成功！如果是純邀請，顯示個成功訊息再退回
+        // 成功！如果是純邀請，顯示後端真實回傳的 message
         if (!isCreating) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('邀請已順利送出！')));
+          final successMessage = result['message'] ?? '邀請已順利送出！';
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
+        } else {
+          // 如果是建立小組，也可以給個成功提示
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('小組建立成功！')));
         }
         Navigator.pop(context); 
       }

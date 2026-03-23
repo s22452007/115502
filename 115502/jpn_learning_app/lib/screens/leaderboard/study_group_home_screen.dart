@@ -62,7 +62,17 @@ class StudyGroupHomeScreen extends StatelessWidget {
                   height: 54,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const InviteGroupMembersScreen()));
+                      // 1. 從 groupData 中把 group_id 拿出來 (確保轉成整數 int)
+                      // 如果你的後端回傳的 key 叫別的名字 (例如 'id')，請把 'group_id' 換掉
+                      final int? currentGroupId = groupData['group_id'] as int?;
+
+                      // 2. 跳轉時，把 currentGroupId 傳過去 (記得要把原本的 const 拿掉！)
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(
+                          builder: (_) => InviteGroupMembersScreen(groupId: currentGroupId),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryLighter,

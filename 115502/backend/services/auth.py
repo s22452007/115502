@@ -637,9 +637,8 @@ def get_friends_detailed_status():
             
             # 整理回傳資料
             # 因為你的 models.py 裡面的 User 沒有 nickname 欄位
-            # 所以這裡的顯示名稱 (nickname) 我們先用他的學號/公開ID (friend_id) 來代替
-            display_name = f_user.friend_id if f_user.friend_id else "未知好友"
-
+            # 所以這裡的顯示名稱 (nickname) 我們先用他的學號/公開ID (friend_id) 來代替，拿 Email @ 前面的字串當作名字
+            display_name = f_user.email.split('@')[0] if f_user.email else "未知好友"
             detailed_friends.append({
                 'nickname': display_name, 
                 'friend_id': f_user.friend_id,

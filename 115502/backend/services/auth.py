@@ -617,24 +617,31 @@ def get_friends_detailed_status():
         return jsonify({"error": "缺少必要資訊"}), 400
 
     try:
-        # 1. 抓取使用者的所有好友名單 (請依照你的資料表邏輯調整，這裡是範例)
-        friends_list_data = db.session.query(Friendship).filter(Friendship.user_id == user_id).all()
-
+        # 1. 抓取好友關係：尋找 Friendship 表中，user_id 是目前登入者的紀錄
+        friendships = Friendship.query.filter_by(user_id=user_id).all()
+        
         detailed_friends = []
 
-        for friend in friends_list_data:
-            f_user = friend.friend_user 
-            f_id = f_user.id  
+        for fs in friendships:
+            # 透過 fs.friend_id (整數PK) 去 User 表找好友的詳細資料
+            f_user = User.query.get(fs.friend_id)
+            if not f_user:
+                continue
+                
+            # 2. 檢查狀態防呆
+            # a. 檢查對方是否已經是小組成員
+            is_member = GroupMember.query.filter_by(group_id=group_id, user_id=f_user.id).first() is not None
+            
+            # b. 檢查是否已經發過邀請 (且狀態為 'pending')
+            is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=f_user.id, status='pending').first() is not None
+            
+            # 整理回傳資料
+            # 因為你的 models.py 裡面的 User 沒有 nickname 欄位
+            # 所以這裡的顯示名稱 (nickname) 我們先用他的學號/公開ID (friend_id) 來代替
+            display_name = f_user.friend_id if f_user.friend_id else "未知好友"
 
-            # 2. 檢查狀態
-            # a. 檢查是否已經是小組成員
-            is_member = GroupMember.query.filter_by(group_id=group_id, user_id=f_id).first() is not None
-            
-            # b. 檢查是否已經發過邀請 (狀態為 'pending')
-            is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=f_id, status='pending').first() is not None
-            
             detailed_friends.append({
-                'nickname': f_user.nickname,
+                'nickname': display_name, 
                 'friend_id': f_user.friend_id,
                 'avatar': f_user.avatar,
                 'is_member': is_member,  
@@ -642,5 +649,7 @@ def get_friends_detailed_status():
             })
 
         return jsonify({"friends": detailed_friends}), 200
+
     except Exception as e:
+        print("API 發生錯誤:", str(e)) # 錯誤印在終端機方便 Debug
         return jsonify({"error": f"後端錯誤: {str(e)}"}), 500

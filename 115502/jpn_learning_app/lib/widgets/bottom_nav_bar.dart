@@ -35,8 +35,8 @@ class AppBottomNavBar extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.search), label: '搜尋'),
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '首頁'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_outlined),
-            label: '排行',
+            icon: Icon(Icons.groups_outlined),
+            label: '學習小組',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),

@@ -610,45 +610,41 @@ def invite_friends_to_group():
 @auth_bp.route('/group/friends_detailed_status', methods=['POST'])
 def get_friends_detailed_status():
     data = request.get_json()
-    group_id = data.get('group_id')
+    group_id = data.get('group_id') # 可能是真實 ID，也可能是我們前端傳來的 -1
     user_id = data.get('user_id')
 
-    if not group_id or not user_id:
+    if not user_id:
         return jsonify({"error": "缺少必要資訊"}), 400
 
     try:
-        # 1. 抓取好友關係：尋找 Friendship 表中，user_id 是目前登入者的紀錄
         friendships = Friendship.query.filter_by(user_id=user_id).all()
-        
         detailed_friends = []
 
         for fs in friendships:
-            # 透過 fs.friend_id (整數PK) 去 User 表找好友的詳細資料
             f_user = User.query.get(fs.friend_id)
             if not f_user:
                 continue
                 
-            # 2. 檢查狀態防呆
-            # a. 檢查對方是否已經是小組成員
-            is_member = GroupMember.query.filter_by(group_id=group_id, user_id=f_user.id).first() is not None
+            # 只要他在 GroupMember 表裡有紀錄，就代表他「已經有小組了」
+            has_group = GroupMember.query.filter_by(user_id=f_user.id).first() is not None
             
-            # b. 檢查是否已經發過邀請 (且狀態為 'pending')
-            is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=f_user.id, status='pending').first() is not None
+            # 只有在有傳入真實 group_id 的情況下，才需要檢查是否被當前小組邀請中
+            is_invited = False
+            if group_id and group_id != -1:
+                is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=f_user.id, status='pending').first() is not None
             
-            # 整理回傳資料
-            # 因為你的 models.py 裡面的 User 沒有 nickname 欄位
-            # 所以這裡的顯示名稱 (nickname) 我們先用他的學號/公開ID (friend_id) 來代替，拿 Email @ 前面的字串當作名字
             display_name = f_user.email.split('@')[0] if f_user.email else "未知好友"
+
             detailed_friends.append({
                 'nickname': display_name, 
                 'friend_id': f_user.friend_id,
                 'avatar': f_user.avatar,
-                'is_member': is_member,  
+                'has_group': has_group,  # 🌟 回傳 has_group 給前端
                 'is_invited': is_invited, 
             })
 
         return jsonify({"friends": detailed_friends}), 200
 
     except Exception as e:
-        print("API 發生錯誤:", str(e)) # 錯誤印在終端機方便 Debug
+        print("API 發生錯誤:", str(e)) 
         return jsonify({"error": f"後端錯誤: {str(e)}"}), 500

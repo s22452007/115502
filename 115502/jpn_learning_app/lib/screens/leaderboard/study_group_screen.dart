@@ -7,6 +7,8 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'invite_group_members_screen.dart';
 import 'group_invites_screen.dart';
 import 'study_group_home_screen.dart'; 
+import 'package:jpn_learning_app/screens/leaderboard/group_config_screen.dart';
+
 
 class StudyGroupScreen extends StatefulWidget {
   final bool showAppBar; 
@@ -150,7 +152,7 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const InviteGroupMembersScreen()),
+                MaterialPageRoute(builder: (_) => const GroupConfigScreen()),
               ).then((_) => _loadGroupData());
             },
           ),

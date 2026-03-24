@@ -1,22 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 class ApiClient {
   // 動態判斷平台，自動切換對應的本地端 IP
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://127.0.0.1:5000/api';
-    } else if (Platform.isAndroid) {
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:5000/api';
     } else {
       return 'http://127.0.0.1:5000/api';
     }
   }
 
-  //  註冊 API
+  // 註冊 API
   static Future<Map<String, dynamic>> register(
     String email,
     String password,
@@ -35,7 +34,7 @@ class ApiClient {
     }
   }
 
-  //  登入 API
+  // 登入 API
   static Future<Map<String, dynamic>> login(
     String email,
     String password,
@@ -54,7 +53,38 @@ class ApiClient {
     }
   }
 
-  //  重設密碼 API
+  // Google 登入 / 同步會員 API
+  // 後端規格：
+  // POST /api/auth/google_login
+  // body: {"email": "...", "avatar": "...(選填)"}
+  static Future<Map<String, dynamic>> googleLogin(
+    String email, {
+    String? avatar,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/google_login');
+    try {
+      final body = <String, dynamic>{
+        'email': email,
+      };
+
+      if (avatar != null && avatar.isNotEmpty) {
+        body['avatar'] = avatar;
+      }
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('Google 登入同步失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 重設密碼 API
   static Future<Map<String, dynamic>> resetPassword(
     String email,
     String newPassword,
@@ -73,7 +103,7 @@ class ApiClient {
     }
   }
 
-  //  新增：直接更新日語程度 API
+  // 直接更新日語程度 API
   static Future<Map<String, dynamic>> updateLevel(
     int userId,
     String level,
@@ -107,7 +137,6 @@ class ApiClient {
       );
 
       if (response.statusCode == 200) {
-        // 成功的話，把後端回傳的 JSON 解析出來
         return jsonDecode(response.body);
       } else {
         print('後端回傳錯誤代碼: ${response.statusCode}');
@@ -194,13 +223,9 @@ class ApiClient {
     final url = Uri.parse('$baseUrl/scenario/analyze');
 
     try {
-      // 使用 MultipartRequest 來上傳檔案
       var request = http.MultipartRequest('POST', url);
-
-      // 將圖片檔案加入請求中
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
 
-      // 發送請求
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
@@ -294,7 +319,7 @@ class ApiClient {
     }
   }
 
-  // 💰 購買點數 API
+  // 購買點數 API
   static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
     final url = Uri.parse('$baseUrl/auth/add_points');
     try {
@@ -310,7 +335,7 @@ class ApiClient {
     }
   }
 
-  // 📸 增加今日拍照進度 API
+  // 增加今日拍照進度 API
   static Future<Map<String, dynamic>> incrementDailyScan(int userId) async {
     final url = Uri.parse('$baseUrl/auth/increment_scan');
     try {
@@ -326,7 +351,7 @@ class ApiClient {
     }
   }
 
-  // 🛡️ 建立學習小組 (公會) API
+  // 建立學習小組 (公會) API
   static Future<Map<String, dynamic>> createGroup(
     int hostId,
     String groupName,
@@ -350,7 +375,7 @@ class ApiClient {
     }
   }
 
-  // 🛡️ 抓取我的學習小組 (公會) API
+  // 抓取我的學習小組 (公會) API
   static Future<Map<String, dynamic>> getMyGroup(int userId) async {
     final url = Uri.parse('$baseUrl/auth/group/my_group/$userId');
     try {
@@ -366,7 +391,7 @@ class ApiClient {
     }
   }
 
-  // 🛡️ 抓取收到的「小組邀請」 API
+  // 抓取收到的小組邀請 API
   static Future<Map<String, dynamic>> getGroupInvites(int userId) async {
     final url = Uri.parse('$baseUrl/auth/group/invites/$userId');
     try {
@@ -374,7 +399,7 @@ class ApiClient {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        return {'invites': []}; // 如果失敗，預設回傳空陣列
+        return {'invites': []};
       }
     } catch (e) {
       print('讀取小組邀請失敗: $e');
@@ -382,7 +407,7 @@ class ApiClient {
     }
   }
 
-  // 🛡️ 回應小組邀請 (同意/拒絕) API
+  // 回應小組邀請 API
   static Future<Map<String, dynamic>> respondGroupInvite(
     int inviteId,
     String action,
@@ -406,7 +431,7 @@ class ApiClient {
     }
   }
 
-  // 🛡️ 邀請好友加入「現有」小組 API
+  // 邀請好友加入現有小組 API
   static Future<Map<String, dynamic>> inviteToExistingGroup(
     int groupId,
     int senderId,
@@ -430,14 +455,17 @@ class ApiClient {
     }
   }
 
-  // 抓取包含邀請狀態的詳細好友名單 (修改為接受 int? groupId)
-  static Future<Map<String, dynamic>> getFriendsDetailedInvitationStatus(int? groupId, int userId) async {
+  // 抓取包含邀請狀態的詳細好友名單
+  static Future<Map<String, dynamic>> getFriendsDetailedInvitationStatus(
+    int? groupId,
+    int userId,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/group/friends_detailed_status'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'group_id': groupId ?? -1, // 如果沒有傳 groupId，給後端 -1
+          'group_id': groupId ?? -1,
           'user_id': userId,
         }),
       );
@@ -453,9 +481,12 @@ class ApiClient {
     }
   }
 
-  // 🛡️ 退出小組 API
-  static Future<Map<String, dynamic>> leaveGroup(int groupId, int userId) async {
-    final url = Uri.parse('$baseUrl/auth/group/leave'); // 請確認你的後端路由
+  // 退出小組 API
+  static Future<Map<String, dynamic>> leaveGroup(
+    int groupId,
+    int userId,
+  ) async {
+    final url = Uri.parse('$baseUrl/auth/group/leave');
     try {
       final response = await http.post(
         url,

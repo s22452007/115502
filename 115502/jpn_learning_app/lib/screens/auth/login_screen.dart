@@ -543,7 +543,7 @@ class _LoginScreenState extends State<LoginScreen> {
           labelText,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade700,
+            color: const Color.fromARGB(255, 101, 101, 101),
           ),
         ),
         const SizedBox(height: 8),

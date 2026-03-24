@@ -3,6 +3,7 @@ import 'invite_group_members_screen.dart';
 import 'group_invites_screen.dart';
 import 'study_group_home_screen.dart';
 import 'invite_group_members_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/group_config_screen.dart';
 
 class StudyGroupEmptyScreen extends StatelessWidget {
   const StudyGroupEmptyScreen({Key? key}) : super(key: key);
@@ -77,7 +78,7 @@ class StudyGroupEmptyScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const InviteGroupMembersScreen(), // 🌟 改成去勾選好友的畫面
+                    builder: (_) => const GroupConfigScreen(),
                   ), 
                 );
               },

@@ -9,8 +9,18 @@ class InviteGroupMembersScreen extends StatefulWidget {
   // 核心關鍵：加入 groupId 參數。有傳值代表是「邀請加入現有群組」，沒傳代表是「建立新群組」
   final int? groupId; 
 
-  const InviteGroupMembersScreen({Key? key, this.groupId}) : super(key: key);
+  // 用來接收從「設定小組」頁面傳來的資料
+  final String? newGroupName;
+  final String? goalType;
+  final int? goalTarget;
 
+  const InviteGroupMembersScreen({
+    Key? key, 
+    this.groupId,
+    this.newGroupName, 
+    this.goalType,     
+    this.goalTarget,   
+  }) : super(key: key);
   @override
   State<InviteGroupMembersScreen> createState() => _InviteGroupMembersScreenState();
 }

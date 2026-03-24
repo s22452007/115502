@@ -556,7 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+              MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
             );
           }
           if (i == 4) {

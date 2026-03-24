@@ -30,6 +30,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  int _toInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    return int.tryParse(value.toString()) ?? defaultValue;
+  }
+
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -59,10 +65,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
-        context.read<UserProvider>().setUserId(result['user_id']);
+        context.read<UserProvider>().setUserId(_toInt(result['user_id']));
         context.read<UserProvider>().setEmail(email);
 
-        if (result.containsKey('avatar')) {
+        if (result.containsKey('avatar') &&
+            result['avatar'] != null &&
+            result['avatar'].toString().isNotEmpty) {
           context.read<UserProvider>().setAvatar(result['avatar']);
         }
 
@@ -71,20 +79,26 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (result.containsKey('streak_days')) {
-          context.read<UserProvider>().setStreakDays(result['streak_days'] ?? 1);
+          context
+              .read<UserProvider>()
+              .setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
         }
         if (result.containsKey('j_pts')) {
-          context.read<UserProvider>().setJPts(result['j_pts'] ?? 0);
+          context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
         }
         if (result.containsKey('daily_scans')) {
-          context.read<UserProvider>().setDailyScans(result['daily_scans'] ?? 0);
+          context
+              .read<UserProvider>()
+              .setDailyScans(_toInt(result['daily_scans']));
         }
-        if (result.containsKey('friend_id')) {
+        if (result.containsKey('friend_id') && result['friend_id'] != null) {
           context.read<UserProvider>().setFriendId(result['friend_id']);
         }
 
         if (result['japanese_level'] != null) {
-          context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
+          context
+              .read<UserProvider>()
+              .setJapaneseLevel(result['japanese_level']);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -106,10 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
-        context.read<UserProvider>().setUserId(result['user_id']);
+        context.read<UserProvider>().setUserId(_toInt(result['user_id']));
         context.read<UserProvider>().setEmail(email);
 
-        if (result.containsKey('friend_id')) {
+        if (result.containsKey('friend_id') && result['friend_id'] != null) {
           context.read<UserProvider>().setFriendId(result['friend_id']);
         }
 
@@ -135,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
         const SnackBar(content: Text('Google 登入中...')),
       );
 
+      // 1. 先做 Firebase Google 登入
       final UserCredential? userCredential =
           await AuthService().signInWithGoogle();
 
@@ -149,30 +164,94 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Google/Firebase uid 是 String，不能直接塞進原本 int 型別的 userId
-      context.read<UserProvider>().setEmail(user.email ?? '');
+      final email = user.email;
+      final avatar = user.photoURL;
 
-      if (user.photoURL != null && user.photoURL!.isNotEmpty) {
-        context.read<UserProvider>().setAvatar(user.photoURL!);
+      if (email == null || email.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google 帳號未提供 Email')),
+        );
+        return;
       }
 
-      // 先給預設值，避免後續頁面抓不到資料
-      context.read<UserProvider>().setStreakDays(1);
-      context.read<UserProvider>().setJPts(0);
-      context.read<UserProvider>().setDailyScans(0);
+      // 2. Firebase 登入成功後，打你同學的 Flask API
+      final result = await ApiClient.googleLogin(
+        email,
+        avatar: avatar,
+      );
+
+      if (!context.mounted) return;
+
+      if (!result.containsKey('user_id')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')),
+        );
+        return;
+      }
+
+      // 3. 存進 UserProvider（使用你們自己後端的會員資料）
+      context.read<UserProvider>().setUserId(_toInt(result['user_id']));
+      context.read<UserProvider>().setEmail(email);
+
+      if (result.containsKey('friend_id') && result['friend_id'] != null) {
+        context.read<UserProvider>().setFriendId(result['friend_id']);
+      }
+
+      if (result.containsKey('avatar') &&
+          result['avatar'] != null &&
+          result['avatar'].toString().isNotEmpty) {
+        context.read<UserProvider>().setAvatar(result['avatar']);
+      } else if (avatar != null && avatar.isNotEmpty) {
+        context.read<UserProvider>().setAvatar(avatar);
+      }
+
+      if (result.containsKey('streak_days')) {
+        context
+            .read<UserProvider>()
+            .setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
+      } else {
+        context.read<UserProvider>().setStreakDays(1);
+      }
+
+      if (result.containsKey('j_pts')) {
+        context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
+      } else {
+        context.read<UserProvider>().setJPts(0);
+      }
+
+      if (result.containsKey('daily_scans')) {
+        context
+            .read<UserProvider>()
+            .setDailyScans(_toInt(result['daily_scans']));
+      } else {
+        context.read<UserProvider>().setDailyScans(0);
+      }
+
+      if (result.containsKey('japanese_level') &&
+          result['japanese_level'] != null) {
+        context
+            .read<UserProvider>()
+            .setJapaneseLevel(result['japanese_level']);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Google 登入成功：${user.displayName ?? user.email ?? "使用者"}',
-          ),
+          content: Text('Google 登入成功：${user.displayName ?? email}'),
         ),
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
-      );
+      // 4. 導頁：有程度就進首頁，沒有就去選程度
+      if (result['japanese_level'] != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
+        );
+      }
     } catch (e) {
       if (!context.mounted) return;
 

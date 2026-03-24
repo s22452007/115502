@@ -15,8 +15,8 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/widgets/app_drawer.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -560,7 +560,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           } else if (i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+              MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
             );
           }
         },

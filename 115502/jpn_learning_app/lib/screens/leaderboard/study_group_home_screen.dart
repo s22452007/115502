@@ -4,6 +4,7 @@ import 'invite_group_members_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'group_config_screen.dart'; 
 
 class StudyGroupHomeScreen extends StatelessWidget {
   final Map<String, dynamic> groupData;
@@ -71,10 +72,8 @@ class StudyGroupHomeScreen extends StatelessWidget {
 
                       // 2. 跳轉時，把 currentGroupId 傳過去 (記得要把原本的 const 拿掉！)
                       Navigator.push(
-                        context, 
-                        MaterialPageRoute(
-                          builder: (_) => InviteGroupMembersScreen(groupId: currentGroupId),
-                        ),
+                        context,
+                        MaterialPageRoute(builder: (_) => const GroupConfigScreen()),
                       );
                     },
                     style: ElevatedButton.styleFrom(

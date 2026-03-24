@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -9,10 +8,10 @@ class CreditCardPaymentScreen extends StatefulWidget {
   final int price;
 
   const CreditCardPaymentScreen({
-    Key? key,
+    super.key,
     required this.points,
     required this.price,
-  }) : super(key: key);
+  });
 
   @override
   State<CreditCardPaymentScreen> createState() =>
@@ -20,13 +19,6 @@ class CreditCardPaymentScreen extends StatefulWidget {
 }
 
 class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
-  final _formKey = GlobalKey<FormState>();
-
-  final TextEditingController cardNumberController = TextEditingController();
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController expiryController = TextEditingController();
-  final TextEditingController cvvController = TextEditingController();
-
   bool _isSubmitting = false;
 
   static const Color bgColor = Color(0xFFF8F8F8);
@@ -37,94 +29,7 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
   static const Color deepText = Color(0xFF333333);
   static const Color subText = Color(0xFF777777);
 
-  @override
-  void dispose() {
-    cardNumberController.dispose();
-    nameController.dispose();
-    expiryController.dispose();
-    cvvController.dispose();
-    super.dispose();
-  }
-
-  String _cardDigitsOnly(String value) {
-    return value.replaceAll(RegExp(r'\D'), '');
-  }
-
-  String? _validateCardNumber(String? value) {
-    final digits = _cardDigitsOnly(value ?? '');
-
-    if (digits.isEmpty) {
-      return '請輸入卡號';
-    }
-    if (digits.length < 16) {
-      return '卡號未輸入完整';
-    }
-    if (digits.length > 16) {
-      return '卡號格式錯誤';
-    }
-    return null;
-  }
-
-  String? _validateName(String? value) {
-    final text = (value ?? '').trim();
-    if (text.isEmpty) {
-      return '請輸入持卡人姓名';
-    }
-    return null;
-  }
-
-  String? _validateExpiry(String? value) {
-    final text = (value ?? '').trim();
-
-    if (text.isEmpty) {
-      return '請輸入到期日';
-    }
-    if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(text)) {
-      return '請輸入正確格式 MM/YY';
-    }
-
-    final parts = text.split('/');
-    final month = int.tryParse(parts[0]);
-    final yearShort = int.tryParse(parts[1]);
-
-    if (month == null || yearShort == null) {
-      return '到期日格式錯誤';
-    }
-    if (month < 1 || month > 12) {
-      return '月份需介於 01~12';
-    }
-
-    final year = 2000 + yearShort;
-    final now = DateTime.now();
-    final expiryDate = DateTime(year, month + 1, 0);
-
-    if (expiryDate.isBefore(DateTime(now.year, now.month, 1))) {
-      return '卡片已過期';
-    }
-
-    return null;
-  }
-
-  String? _validateCvv(String? value) {
-    final text = (value ?? '').trim();
-
-    if (text.isEmpty) {
-      return '請輸入 CVV';
-    }
-    if (!RegExp(r'^\d{3,4}$').hasMatch(text)) {
-      return 'CVV 格式錯誤';
-    }
-    return null;
-  }
-
   Future<void> _handleSubmit() async {
-    FocusScope.of(context).unfocus();
-
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) {
-      return;
-    }
-
     final userId = context.read<UserProvider>().userId;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -168,7 +73,7 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          '信用卡付款',
+          '安全付款',
           style: TextStyle(
             color: deepText,
             fontWeight: FontWeight.w800,
@@ -200,7 +105,7 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
                       ),
                     )
                   : Text(
-                      '確認付款  \$${widget.price}',
+                      '前往第三方安全付款  \$${widget.price}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -211,17 +116,17 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
           ),
         ),
       ),
-      body: Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            _buildOrderCard(),
-            const SizedBox(height: 18),
-            _buildCardForm(),
-          ],
-        ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          _buildOrderCard(),
+          const SizedBox(height: 18),
+          _buildSecurityCard(),
+          const SizedBox(height: 18),
+          _buildProcessCard(),
+          const SizedBox(height: 18),
+          _buildNoticeCard(),
+        ],
       ),
     );
   }
@@ -255,7 +160,7 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '信用卡付款',
+                  '信用卡 / 簽帳金融卡',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -286,7 +191,7 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
     );
   }
 
-  Widget _buildCardForm() {
+  Widget _buildSecurityCard() {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -294,157 +199,128 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: borderGreen),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '請輸入卡片資訊',
+          Row(
+            children: [
+              Icon(
+                Icons.shield_outlined,
+                color: primaryGreen,
+                size: 24,
+              ),
+              SizedBox(width: 10),
+              Text(
+                '付款安全說明',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: deepText,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14),
+          Text(
+            '付款將由第三方支付平台處理',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
               color: deepText,
             ),
           ),
-          const SizedBox(height: 16),
-          _buildInputLabel('卡號'),
-          const SizedBox(height: 8),
-          _buildTextField(
-            controller: cardNumberController,
-            hintText: '1234 5678 9012 3456',
-            keyboardType: TextInputType.number,
-            validator: _validateCardNumber,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(16),
-              CardNumberInputFormatter(),
-            ],
+          SizedBox(height: 8),
+          Text(
+            '本系統不會儲存您的完整卡片資訊。',
+            style: TextStyle(
+              fontSize: 14,
+              color: subText,
+              height: 1.5,
+            ),
           ),
-          const SizedBox(height: 14),
-          _buildInputLabel('持卡人姓名'),
-          const SizedBox(height: 8),
-          _buildTextField(
-            controller: nameController,
-            hintText: '請輸入姓名',
-            validator: _validateName,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInputLabel('到期日'),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: expiryController,
-                      hintText: 'MM/YY',
-                      keyboardType: TextInputType.number,
-                      validator: _validateExpiry,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(4),
-                        ExpiryDateInputFormatter(),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInputLabel('CVV'),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: cvvController,
-                      hintText: '123',
-                      keyboardType: TextInputType.number,
-                      obscureText: true,
-                      validator: _validateCvv,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(4),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          SizedBox(height: 12),
+          Text(
+            '支援卡別：Visa、MasterCard、JCB',
+            style: TextStyle(
+              fontSize: 14,
+              color: subText,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInputLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: deepText,
+  Widget _buildProcessCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardGreen,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderGreen),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '付款流程',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: deepText,
+            ),
+          ),
+          SizedBox(height: 14),
+          _StepItem(
+            step: '1',
+            text: '點擊下方按鈕，前往第三方安全付款頁面',
+          ),
+          SizedBox(height: 12),
+          _StepItem(
+            step: '2',
+            text: '完成付款驗證後，系統會處理本次交易',
+          ),
+          SizedBox(height: 12),
+          _StepItem(
+            step: '3',
+            text: '付款成功後，J-Pts 會加入你的帳戶',
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hintText,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-    String? Function(String?)? validator,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      validator: validator,
-      inputFormatters: inputFormatters,
-      style: const TextStyle(
-        color: deepText,
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
+  Widget _buildNoticeCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E9),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF0DFB0)),
       ),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(
-          color: Color(0x73333333),
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-        ),
-        errorStyle: const TextStyle(
-          fontSize: 12,
-          color: Colors.redAccent,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: borderGreen),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: borderGreen),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: primaryGreen, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 1.4),
-        ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '提醒',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: deepText,
+            ),
+          ),
+          SizedBox(height: 10),
+          Text(
+            '• 此頁面僅作為安全付款流程說明。\n'
+            '• 若後續正式串接第三方金流，可於按鈕動作中接入付款平台。\n'
+            '• 付款成功後恕不退款，請再次確認購買內容。',
+            style: TextStyle(
+              color: subText,
+              fontSize: 13.5,
+              height: 1.65,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -493,48 +369,49 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
   }
 }
 
-class CardNumberInputFormatter extends TextInputFormatter {
+class _StepItem extends StatelessWidget {
+  final String step;
+  final String text;
+
+  const _StepItem({
+    required this.step,
+    required this.text,
+  });
+
   @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final buffer = StringBuffer();
-
-    for (int i = 0; i < digits.length; i++) {
-      buffer.write(digits[i]);
-      final isNotLast = i != digits.length - 1;
-      if ((i + 1) % 4 == 0 && isNotLast) {
-        buffer.write(' ');
-      }
-    }
-
-    final formatted = buffer.toString();
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
-class ExpiryDateInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    String formatted = digits;
-
-    if (digits.length >= 3) {
-      formatted = '${digits.substring(0, 2)}/${digits.substring(2)}';
-    }
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Color(0xFF8CB383),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            step,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF777777),
+              height: 1.5,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

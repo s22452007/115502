@@ -73,7 +73,9 @@ class StudyGroupHomeScreen extends StatelessWidget {
                       // 2. 跳轉時，把 currentGroupId 傳過去 (記得要把原本的 const 拿掉！)
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const GroupConfigScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => InviteGroupMembersScreen(groupId: currentGroupId), // ✅ 改回邀請朋友的畫面
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(

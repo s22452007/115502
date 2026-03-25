@@ -356,6 +356,8 @@ class ApiClient {
     int hostId,
     String groupName,
     List<String> friendIds,
+    String goalType,     // 接收目標類型
+    int goalTarget,      // 接收目標數值
   ) async {
     final url = Uri.parse('$baseUrl/auth/group/create');
     try {
@@ -366,6 +368,8 @@ class ApiClient {
           'host_id': hostId,
           'name': groupName,
           'friend_ids': friendIds,
+          'goal_type': goalType,     
+          'goal_target': goalTarget,
         }),
       );
       return jsonDecode(response.body);

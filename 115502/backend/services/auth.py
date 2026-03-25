@@ -427,7 +427,9 @@ def create_group():
     host_id = data.get('host_id')
     group_name = data.get('name', '日語學習小隊')
     friend_ids = data.get('friend_ids', []) 
-    
+    goal_type = data.get('goal_type', 'scans')
+    goal_target = data.get('goal_target', 30)
+
     if not host_id:
         return jsonify({"error": "缺少房主 ID"}), 400
 
@@ -435,7 +437,7 @@ def create_group():
         return jsonify({"error": "你已經加入過小組囉！"}), 400
         
     # 建立小組
-    new_group = StudyGroup(name=group_name, host_id=host_id)
+    new_group = StudyGroup(name=group_name, host_id=host_id, goal_type=goal_type, goal_target=goal_target)
     db.session.add(new_group)
     db.session.flush() 
     

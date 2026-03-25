@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'dart:convert'; // 用來解碼 Base64 圖片
+import 'study_group_screen.dart';
 
 class InviteGroupMembersScreen extends StatefulWidget {
   // 核心關鍵：加入 groupId 參數。有傳值代表是「邀請加入現有群組」，沒傳代表是「建立新群組」
@@ -108,13 +109,22 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
       if (result.containsKey('error')) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
       } else {
-        // 成功！如果是純邀請，顯示後端真實回傳的 message
+        // 🌟 成功狀態處理
         if (!isCreating) {
+          // 情況 A：純邀請模式 ➡️ 單純退回上一頁 (大廳)
           final successMessage = result['message'] ?? '邀請已順利送出！';
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
+          Navigator.pop(context); 
         } else {
-          // 如果是建立小組，也可以給個成功提示
+          // 情況 B：建立新小組模式 ➡️ 建立成功，跳轉到小組大廳！
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('小組建立成功！')));
+          
+          // 🌟 終極跳轉法：把目前的邀請頁、設定頁、空狀態頁通通清除，直接重新開啟閘門
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const StudyGroupScreen()), // 重新進閘門
+            (Route<dynamic> route) => route.isFirst, // 把畫面上層清空，只留最底層的 Home
+          );
         }
         Navigator.pop(context); 
       }

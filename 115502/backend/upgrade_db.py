@@ -9,10 +9,10 @@ conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
 try:
-    # 請資料庫幫我們加上這兩個新欄位
-    cursor.execute("ALTER TABLE user ADD COLUMN daily_scans INTEGER DEFAULT 0;")
-    cursor.execute("ALTER TABLE user ADD COLUMN last_scan_date DATE;")
-    print("✅ 太棒了！資料庫升級成功！新欄位已經加入囉！")
+    # 請資料庫幫我們在 study_group 表加上這兩個新欄位，並設定預設值
+    cursor.execute("ALTER TABLE study_group ADD COLUMN goal_type VARCHAR(50) NOT NULL DEFAULT 'scans';")
+    cursor.execute("ALTER TABLE study_group ADD COLUMN goal_target INTEGER NOT NULL DEFAULT 30;")
+    print("✅ 太棒了！資料庫升級成功！小組目標的兩個新欄位已經加入囉！")
 except sqlite3.OperationalError as e:
     print(f"⚠️ 欄位可能已經存在，或是發生小錯誤：{e}")
 

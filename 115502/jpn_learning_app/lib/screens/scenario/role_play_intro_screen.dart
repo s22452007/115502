@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
   // 🌟 魔法變數：這裡用來接收使用者提供的照片！

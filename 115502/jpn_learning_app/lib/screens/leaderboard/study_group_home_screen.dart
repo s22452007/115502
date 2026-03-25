@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'group_config_screen.dart'; 
+import 'study_group_screen.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 class StudyGroupHomeScreen extends StatelessWidget {
   final Map<String, dynamic> groupData;
@@ -103,7 +105,13 @@ class StudyGroupHomeScreen extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (Route<dynamic> route) => false, // false 代表把底下的幽靈畫面全部清掉
+            );
+          },
         ),
         title: Text(
           groupName,
@@ -263,8 +271,18 @@ class StudyGroupHomeScreen extends StatelessWidget {
                   // 成功退出
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? '已退出小組')));
                   
-                  // 退回上一頁 (大廳)，並傳回 true 告訴前一頁需要重整
-                  Navigator.pop(context, true); 
+                  // 🌟 1. 先安全地退回最底層 (首頁)
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  
+                  // 🌟 2. 稍微等 0.15 秒，讓退回動畫跑完，再重新推入小組閘門
+                  Future.delayed(const Duration(milliseconds: 150), () {
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+                      );
+                    }
+                  });
                 }
               }
             },

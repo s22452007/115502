@@ -4,7 +4,12 @@ import 'package:jpn_learning_app/screens/scenario/naturalness_screen.dart';
 
 // 2-2-4 角色扮演
 class RoleplayScreen extends StatefulWidget {
-  const RoleplayScreen({Key? key}) : super(key: key);
+  // 🌟 1. 加一個變數用來接收傳過來的標題
+  final String topicTitle;
+
+  // 🌟 2. 規定跳轉過來時，一定要附帶這個 topicTitle
+  const RoleplayScreen({Key? key, required this.topicTitle}) : super(key: key);
+
   @override
   State<RoleplayScreen> createState() => _RoleplayScreenState();
 }
@@ -23,8 +28,18 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark), onPressed: () => Navigator.pop(context)),
-        title: const Text('Restaurant Scenario', style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Restaurant Scenario',
+          style: TextStyle(
+            color: AppColors.textDark,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -35,26 +50,49 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               itemBuilder: (ctx, i) {
                 final msg = _messages[i];
                 return Align(
-                  alignment: msg['isUser'] ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: msg['isUser']
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (!msg['isUser']) ...[
-                        CircleAvatar(radius: 16, backgroundColor: AppColors.primaryLighter,
-                            child: Icon(Icons.smart_toy, color: AppColors.primary, size: 18)),
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.primaryLighter,
+                          child: Icon(
+                            Icons.smart_toy,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                       ],
                       Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.65,
+                        ),
                         decoration: BoxDecoration(
-                          color: msg['isUser'] ? AppColors.primary : AppColors.primaryLighter,
+                          color: msg['isUser']
+                              ? AppColors.primary
+                              : AppColors.primaryLighter,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(msg['text'],
-                            style: TextStyle(color: msg['isUser'] ? Colors.white : AppColors.textDark, fontSize: 15)),
+                        child: Text(
+                          msg['text'],
+                          style: TextStyle(
+                            color: msg['isUser']
+                                ? Colors.white
+                                : AppColors.textDark,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -70,21 +108,34 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             ),
             child: Row(
               children: [
-                IconButton(icon: Icon(Icons.mic, color: AppColors.primary), onPressed: () {}),
+                IconButton(
+                  icon: Icon(Icons.mic, color: AppColors.primary),
+                  onPressed: () {},
+                ),
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
                       hintText: '輸入日文...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: Icon(Icons.send, color: AppColors.primary),
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NaturalnessScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NaturalnessScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),

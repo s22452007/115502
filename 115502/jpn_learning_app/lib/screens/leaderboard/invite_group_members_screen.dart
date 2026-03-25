@@ -119,12 +119,18 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
           // 情況 B：建立新小組模式 ➡️ 建立成功，跳轉到小組大廳！
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('小組建立成功！')));
           
-          // 🌟 終極跳轉法：把目前的邀請頁、設定頁、空狀態頁通通清除，直接重新開啟閘門
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const StudyGroupScreen()), // 重新進閘門
-            (Route<dynamic> route) => route.isFirst, // 把畫面上層清空，只留最底層的 Home
-          );
+          // 1. 先安全地退回最底層 (首頁)
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          
+          // 2. 稍微等 0.15 秒，讓退回動畫跑完，再順順地推入小組畫面
+          Future.delayed(const Duration(milliseconds: 150), () {
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+              );
+            }
+          });
         }
         Navigator.pop(context); 
       }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
   const ManualSearchScreen({Key? key}) : super(key: key);

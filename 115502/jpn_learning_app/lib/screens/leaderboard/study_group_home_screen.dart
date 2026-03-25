@@ -1,13 +1,21 @@
+// 1. Flutter 核心套件
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
-import 'invite_group_members_screen.dart';
-import 'package:provider/provider.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/utils/api_client.dart';
-import 'group_config_screen.dart'; 
-import 'study_group_screen.dart';
-import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
+// 2. 第三方套件
+import 'package:provider/provider.dart';
+
+// 3. App 畫面 (Screens)
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/group_config_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/invite_group_members_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
+
+// 4. 狀態管理 (Providers)
+import 'package:jpn_learning_app/providers/user_provider.dart';
+
+// 5. 工具與常數 (Utils / Constants)
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 class StudyGroupHomeScreen extends StatelessWidget {
   final Map<String, dynamic> groupData;
   final bool showAppBar; // 控制是否顯示頂部導覽列

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
   const ManualSearchScreen({Key? key}) : super(key: key);
@@ -35,13 +36,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   void _submitScenario() {
     if (_searchController.text.trim().isEmpty) return;
 
-    // 這裡將使用者輸入的文字傳遞給 AnalyzingScreen
-    // 注意：目前你的 AnalyzingScreen 似乎只接收 imagePath，
-    // 未來你可以在 AnalyzingScreen 中新增一個 text/topic 的參數來接收這個值。
+    // 🌟 1. 抓取你輸入或點擊的文字 (例如：🎮 遊戲日常)
+    String selectedTopic = _searchController.text.trim();
+
+    // 🌟 2. 帶著這個文字，直接跳轉到對話頁面 (RoleplayScreen)
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const AnalyzingScreen(imagePath: ''), // 暫時保留你原有的傳參方式
+        builder: (_) => RoleplayScreen(topicTitle: selectedTopic), // 這裡傳遞標題過去
       ),
     );
   }

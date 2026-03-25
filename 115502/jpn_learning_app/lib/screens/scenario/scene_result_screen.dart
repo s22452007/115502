@@ -125,7 +125,8 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const RoleplayScreen(),
+                                  builder: (_) =>
+                                      RoleplayScreen(topicTitle: '情境對話練習'),
                                 ),
                               );
                             },

@@ -112,9 +112,12 @@ class StudyGroup(db.Model):
     name = db.Column(db.String(100), default="日語學習小隊") # 小組名稱
     host_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 紀錄誰是「房主/創建者」
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    goal_type = db.Column(db.String(50), nullable=False, default='scans') 
+    goal_target = db.Column(db.Integer, nullable=False, default=30)       
+
     # 關聯：一個小組可以有多個成員
     members = db.relationship('GroupMember', backref='group', lazy=True, cascade="all, delete-orphan")
+    invites = db.relationship('GroupInvite', backref='group', lazy=True, cascade="all, delete-orphan")
 
 # 2. 小組成員名單 (GroupMember)
 class GroupMember(db.Model):

@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 // 3. App 畫面 (Screens)
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
-import 'package:jpn_learning_app/screens/leaderboard/group_config_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/invite_group_members_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
@@ -16,6 +15,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // 5. 工具與常數 (Utils / Constants)
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+
 class StudyGroupHomeScreen extends StatelessWidget {
   final Map<String, dynamic> groupData;
   final bool showAppBar; // 控制是否顯示頂部導覽列
@@ -32,16 +32,27 @@ class StudyGroupHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String groupName = groupData['group_name'] ?? 'Study Group';
+    final String groupName = groupData['group_name'] ?? '學習小組';
     final List<dynamic> members = groupData['members'] ?? [];
+    
+    // 從後端取得目標設定 (如果沒有就給預設值防呆)
+    final String goalType = groupData['goal_type'] ?? 'scans';
+    final int goalTarget = groupData['goal_target'] ?? 30;
 
-    // 依據你的資料結構，這裡算每日拍照總數當作目標進度
-    int currentPoints = 0;
+    // 動態計算目前的總進度
+    int currentTotal = 0;
     for (var m in members) {
-      currentPoints += (m['daily_scans'] as int? ?? 0); // 假設用 scans 代替 points
+      if (goalType == 'scans') {
+        currentTotal += (m['daily_scans'] as int? ?? 0);
+      } else if (goalType == 'points') {
+        currentTotal += (m['j_pts'] as int? ?? 0);
+      } else if (goalType == 'logins') {
+        currentTotal += (m['streak_days'] as int? ?? 0);
+      }
     }
-    final int goal = 15; // 假設公會目標
-    final double progress = (currentPoints / goal).clamp(0.0, 1.0);
+    
+    // 限制進度條最高只能到 1.0 (100%)
+    final double progress = (currentTotal / goalTarget).clamp(0.0, 1.0);
 
     Widget bodyContent = SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -49,9 +60,11 @@ class StudyGroupHomeScreen extends StatelessWidget {
         children: [
           _buildGroupInfoCard(groupName, members),
           const SizedBox(height: 16),
-          _buildGoalCard(progress: progress, current: currentPoints, goal: goal),
+          // 把動態算好的變數傳進去給目標卡片
+          _buildGoalCard(progress: progress, current: currentTotal, goal: goalTarget, type: goalType),
           const SizedBox(height: 16),
-          _buildRankingCard(members),
+          // 排行榜也根據目標類型來排序！
+          _buildRankingCard(members, goalType),
           const SizedBox(height: 18),
           Row(
             children: [
@@ -60,7 +73,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
                   height: 54,
                   child: ElevatedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已提醒隊友繼續學習')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已提醒隊友繼續學習！')));
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary.withOpacity(0.9),
@@ -76,15 +89,11 @@ class StudyGroupHomeScreen extends StatelessWidget {
                   height: 54,
                   child: ElevatedButton(
                     onPressed: () {
-                      // 1. 從 groupData 中把 group_id 拿出來 (確保轉成整數 int)
-                      // 如果你的後端回傳的 key 叫別的名字 (例如 'id')，請把 'group_id' 換掉
                       final int? currentGroupId = groupData['group_id'] as int?;
-
-                      // 2. 跳轉時，把 currentGroupId 傳過去 (記得要把原本的 const 拿掉！)
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => InviteGroupMembersScreen(groupId: currentGroupId), // ✅ 改回邀請朋友的畫面
+                          builder: (_) => InviteGroupMembersScreen(groupId: currentGroupId), 
                         ),
                       );
                     },
@@ -117,7 +126,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (Route<dynamic> route) => false, // false 代表把底下的幽靈畫面全部清掉
+              (Route<dynamic> route) => false, 
             );
           },
         ),
@@ -125,7 +134,6 @@ class StudyGroupHomeScreen extends StatelessWidget {
           groupName,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        // 新增退出按鈕在這！
         actions: [
           IconButton(
             icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white),
@@ -137,7 +145,6 @@ class StudyGroupHomeScreen extends StatelessWidget {
       body: bodyContent,
     );
   }
-
 
   Widget _buildGroupInfoCard(String groupName, List<dynamic> members) {
     String hostName = '無';
@@ -179,7 +186,12 @@ class StudyGroupHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGoalCard({required double progress, required int current, required int goal}) {
+  // 動態顯示單位與文案
+  Widget _buildGoalCard({required double progress, required int current, required int goal, required String type}) {
+    String unit = '次拍照';
+    if (type == 'points') unit = 'J-Pts';
+    if (type == 'logins') unit = '天登入';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -189,7 +201,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
         children: [
           const Text('本週共同目標', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textDark)),
           const SizedBox(height: 14),
-          Text('$current / $goal 次拍照', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
+          Text('$current / $goal $unit', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -199,7 +211,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Text('還差 ${goal - current > 0 ? goal - current : 0} 次 ・ 截止時間：週日 23:59', style: const TextStyle(fontSize: 14, color: subText)),
+          Text('還差 ${goal - current > 0 ? goal - current : 0} ${unit.replaceAll('拍照', '').replaceAll('登入', '')} ・ 截止時間：週日 23:59', style: const TextStyle(fontSize: 14, color: subText)),
           const SizedBox(height: 10),
           const Text('完成目標後全員可獲得額外獎勵', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textDark)),
         ],
@@ -207,9 +219,22 @@ class StudyGroupHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRankingCard(List<dynamic> members) {
+  // 排行榜動態排序與顯示
+  Widget _buildRankingCard(List<dynamic> members, String type) {
     final sortedMembers = List<dynamic>.from(members);
-    sortedMembers.sort((a, b) => (b['daily_scans'] as int? ?? 0).compareTo(a['daily_scans'] as int? ?? 0));
+    
+    // 根據目前的任務類型來排序
+    sortedMembers.sort((a, b) {
+      int valA = 0, valB = 0;
+      if (type == 'scans') { valA = a['daily_scans'] ?? 0; valB = b['daily_scans'] ?? 0; }
+      else if (type == 'points') { valA = a['j_pts'] ?? 0; valB = b['j_pts'] ?? 0; }
+      else if (type == 'logins') { valA = a['streak_days'] ?? 0; valB = b['streak_days'] ?? 0; }
+      return valB.compareTo(valA);
+    });
+
+    String unit = '次';
+    if (type == 'points') unit = '點';
+    if (type == 'logins') unit = '天';
 
     return Container(
       width: double.infinity,
@@ -225,19 +250,23 @@ class StudyGroupHomeScreen extends StatelessWidget {
           ...List.generate(sortedMembers.length, (index) {
             final item = sortedMembers[index];
             final nickname = item['nickname'] ?? 'Unknown';
-            final scans = item['daily_scans'] ?? 0;
+            
+            // 抓取對應的分數
+            int score = 0;
+            if (type == 'scans') score = item['daily_scans'] ?? 0;
+            if (type == 'points') score = item['j_pts'] ?? 0;
+            if (type == 'logins') score = item['streak_days'] ?? 0;
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _RankRow(rank: '${index + 1}', name: nickname, points: '$scans 次'),
+              child: _RankRow(rank: '${index + 1}', name: nickname, points: '$score $unit'),
             );
           }),
         ],
       ),
     );
   }
-  // ==========================
-  // 🌟 這裡新增：退出小組的彈出對話框邏輯
-  // ==========================
+
   void _showLeaveGroupDialog(BuildContext context, dynamic groupId) {
     if (groupId == null) return;
     final int validGroupId = groupId as int;
@@ -250,7 +279,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
         content: const Text('確定要退出這個學習小組嗎？\n\n⚠️ 如果你是組長，退出將會直接解散整個小組喔！'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx), // 關閉對話框
+            onPressed: () => Navigator.pop(ctx), 
             child: const Text('取消', style: TextStyle(color: subText, fontSize: 16)),
           ),
           ElevatedButton(
@@ -260,15 +289,13 @@ class StudyGroupHomeScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () async {
-              Navigator.pop(ctx); // 先關閉對話框
+              Navigator.pop(ctx); 
               
               final userId = context.read<UserProvider>().userId;
               if (userId == null) return;
 
-              // 顯示 Loading
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('正在處理中...')));
 
-              // 呼叫退出 API
               final result = await ApiClient.leaveGroup(validGroupId, userId);
 
               if (context.mounted) {
@@ -276,13 +303,8 @@ class StudyGroupHomeScreen extends StatelessWidget {
                 if (result.containsKey('error')) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
                 } else {
-                  // 成功退出
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? '已退出小組')));
-                  
-                  // 🌟 1. 先安全地退回最底層 (首頁)
                   Navigator.of(context).popUntil((route) => route.isFirst);
-                  
-                  // 🌟 2. 稍微等 0.15 秒，讓退回動畫跑完，再重新推入小組閘門
                   Future.delayed(const Duration(milliseconds: 150), () {
                     if (context.mounted) {
                       Navigator.push(

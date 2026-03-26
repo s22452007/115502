@@ -184,6 +184,9 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   // 🌟 關鍵在這裡！設定 onPressed 按下去要做什麼
+                  SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
                   onPressed: _searchController.text.trim().isEmpty
                       ? null // 如果沒有輸入文字，按鈕反灰不可點
                       : () {

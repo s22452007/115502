@@ -17,6 +17,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
 
+  @override
+  void initState() {
+    super.initState();
+    // 讓第一句話變成動態的，把選到的主題塞進去！
+    _messages.add({
+      'text': '歡迎來到「${widget.topicTitle}」的情境！我是你的 AI 日語小幫手，請試著用日文開個頭吧！😊',
+      'isUser': false,
+    });
+  }
+
   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) return; // 沒打字不理他

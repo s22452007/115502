@@ -11,8 +11,7 @@ class RolePlayIntroScreen extends StatefulWidget {
     Key? key,
     // 先預設一張超有 Fu 的居酒屋網頁圖片，方便你現在看效果
     // 等你要串接真實資料時，再改成你資料庫的照片即可！
-    this.imagePath =
-        'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    required this.topicTitle,
   }) : super(key: key);
 
   @override

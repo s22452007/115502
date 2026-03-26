@@ -4,12 +4,11 @@ import 'package:jpn_learning_app/screens/scenario/naturalness_screen.dart';
 
 // 2-2-4 角色扮演
 class RoleplayScreen extends StatefulWidget {
-  // 🌟 1. 加一個變數用來接收傳過來的標題
+  // 🌟 1. 新增一個「變數口袋」，準備用來裝上一頁傳來的標題名稱
   final String topicTitle;
 
-  // 🌟 2. 規定跳轉過來時，一定要附帶這個 topicTitle
+  // 🌟 2. 規定進來這個頁面（聊天室）時，一定要附帶傳入這個標題
   const RoleplayScreen({Key? key, required this.topicTitle}) : super(key: key);
-
   @override
   State<RoleplayScreen> createState() => _RoleplayScreenState();
 }
@@ -32,9 +31,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Restaurant Scenario',
-          style: TextStyle(
+        // 🌟 3. 關鍵改動！把原本寫死的 'Restaurant Scenario'，換成這個！
+        // (注意：這裡要把 const 拿掉喔)
+        title: Text(
+          widget.topicTitle,
+          style: const TextStyle(
             color: AppColors.textDark,
             fontSize: 16,
             fontWeight: FontWeight.bold,

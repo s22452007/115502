@@ -232,3 +232,83 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     );
   }
 }
+
+// --- 🌟 製造單字卡片的模具 (現在會接收資料了！) ---
+Widget _buildVocabCard(Map<String, String> vocab) {
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.08),
+          blurRadius: 15,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            vocab['kana']!,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black54,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            vocab['word']!,
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              color: _darkGreen,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            vocab['meaning']!,
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Divider(color: Colors.grey.shade300, thickness: 1),
+          const SizedBox(height: 20),
+          const Text(
+            'すみません、',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const Text(
+            'Excuse me,',
+            style: TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            vocab['ex_jp']!,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          Text(
+            vocab['ex_en']!,
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+        ],
+      ),
+    ),
+  );
+}

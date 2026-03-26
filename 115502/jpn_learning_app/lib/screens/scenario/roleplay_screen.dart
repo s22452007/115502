@@ -138,6 +138,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
+                    onSubmitted: (_) => _sendMessage(),
                     decoration: InputDecoration(
                       hintText: '輸入日文...',
                       border: OutlineInputBorder(

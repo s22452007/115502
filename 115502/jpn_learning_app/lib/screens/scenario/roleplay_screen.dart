@@ -154,12 +154,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: Icon(Icons.send, color: AppColors.primary),
-                  onPressed: () => onPressed: _sendMessage(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NaturalnessScreen(),
-                    ),
-                  ),
+                  onPressed: _sendMessage,
                 ),
               ],
             ),

@@ -30,30 +30,19 @@ def analyze_scene():
             file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
             file.save(file_path)
 
-            # 2. 呼叫 AI 工具函式 (這裡你需要串接 OpenAI 的 GPT-4o 或 Gemini Vision)
-            # 假設 ai_helper.py 裡面有一個 analyze_image_from_path(file_path) 函式
-            # 由於不確定你的 ai_helper.py 內容，這裡先回傳假資料 (Mock Data)
-            # 你可以在這裡替換成真實的 AI 呼叫邏輯：
-            # ai_result = utils.ai_helper.analyze_image_from_path(file_path)
+            # 2. 呼叫 AI 工具函式 (使用更新後的 Google MediaPipe 實作)
+            from utils.ai_helper import analyze_image_from_path
+            ai_result_wrapper = analyze_image_from_path(file_path)
+
+            if not ai_result_wrapper.get("success"):
+                return jsonify({'error': ai_result_wrapper.get("error", "AI 分析失敗")}), 500
             
-            # --- 以下為假資料 (Mock Data) 供前端串接測試用 ---
-            ai_result = {
-                'vocabs': [
-                    {'word': 'パソコン', 'kana': 'ぱそこん', 'meaning': '電腦', 'romaji': 'pasokon'},
-                    {'word': '机', 'kana': 'つくえ', 'meaning': '桌子', 'romaji': 'tsukue'},
-                    {'word': '珈琲', 'kana': 'コーヒー', 'meaning': '咖啡', 'romaji': 'ko-hi-'}
-                ],
-                'sentences': [
-                    {'japanese': '机の上にパソコンがあります。', 'chinese': '桌子上有電腦。'},
-                    {'japanese': '私はコーヒーを飲みながら仕事をします。', 'chinese': '我一邊喝咖啡一邊工作。'}
-                ]
-            }
-            # --- 假資料結束 ---
+            ai_data = ai_result_wrapper.get("result", {"labels": ["Unknown"], "text": ""})
 
             return jsonify({
                 'message': '圖片分析成功',
                 'file_path': f'/static/photos/{unique_filename}', # 回傳相對路徑
-                'result': ai_result
+                'result': ai_data
             }), 200
 
         except Exception as e:

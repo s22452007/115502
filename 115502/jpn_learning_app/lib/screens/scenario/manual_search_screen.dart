@@ -190,15 +190,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                   onPressed: _searchController.text.trim().isEmpty
                       ? null // 如果沒有輸入文字，按鈕反灰不可點
                       : () {
-                          // 1. 抓取你輸入的文字 (例如：一蘭拉麵)
+                          /// 🌟 1. 抓取你輸入的文字 (例如：🍜 一蘭拉麵)
                           String selectedTopic = _searchController.text.trim();
 
-                          // 2. 帶著這個主題，跳轉到你的聊天畫面 (RoleplayScreen)！
+                          // 🌟 2. 搭建直達鐵軌！直接跳轉到聊天畫面，並傳遞標題名稱
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  RoleplayScreen(topicTitle: selectedTopic),
+                              builder: (context) => RoleplayScreen(topicTitle: selectedTopic), 
                             ),
                           );
                         },

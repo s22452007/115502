@@ -5,7 +5,7 @@ import 'package:jpn_learning_app/screens/scenario/naturalness_screen.dart';
 // 2-2-4 角色扮演
 class RoleplayScreen extends StatefulWidget {
   // 🌟 1. 新增一個「變數口袋」，準備用來裝上一頁傳來的標題名稱
-  final String topicTitle; 
+  final String topicTitle;
 
   // 🌟 2. 規定進來這個頁面（聊天室）時，一定要附帶傳入這個標題
   const RoleplayScreen({Key? key, required this.topicTitle}) : super(key: key);
@@ -27,10 +27,20 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
+          onPressed: () => Navigator.pop(context),
+        ),
         // 🌟 3. 關鍵改動！把原本寫死的 'Restaurant Scenario'，換成這個！
         // (注意：這裡要把 const 拿掉喔)
-        title: Text(widget.topicTitle, style: const TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(
+          widget.topicTitle,
+          style: const TextStyle(
+            color: AppColors.textDark,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -41,33 +51,56 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               itemBuilder: (ctx, i) {
                 final msg = _messages[i];
                 return Align(
-                  alignment: msg['isUser'] ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: msg['isUser']
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (!msg['isUser']) ...[
-                        CircleAvatar(radius: 16, backgroundColor: AppColors.primaryLighter,
-                            child: Icon(Icons.smart_toy, color: AppColors.primary, size: 18)),
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.primaryLighter,
+                          child: Icon(
+                            Icons.smart_toy,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                       ],
                       Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.65,
+                        ),
                         decoration: BoxDecoration(
-                          color: msg['isUser'] ? AppColors.primary : AppColors.primaryLighter,
+                          color: msg['isUser']
+                              ? AppColors.primary
+                              : AppColors.primaryLighter,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(msg['text'],
-                            style: TextStyle(color: msg['isUser'] ? Colors.white : AppColors.textDark, fontSize: 15)),
+                        child: Text(
+                          msg['text'],
+                          style: TextStyle(
+                            color: msg['isUser']
+                                ? Colors.white
+                                : AppColors.textDark,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 );
               },
             ),
-          ),,
+          ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(

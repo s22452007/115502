@@ -149,7 +149,7 @@ class _GooglePlayPurchaseSheetState extends State<_GooglePlayPurchaseSheet> {
                     Icon(Icons.android, color: green, size: 24),
                     SizedBox(width: 8),
                     Text(
-                      'Google Play',
+                      'Google Pay',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,

@@ -97,7 +97,18 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
 
     if (isCreating) {
       // 模式 A：沒有小組，建立新小組
-      result = await ApiClient.createGroup(userId, '日文衝刺小組', selectedFriendIds);
+      // 使用從上一頁傳來的真實資料，如果沒有就給預設值防呆
+      final finalGroupName = widget.newGroupName ?? '日語學習小隊';
+      final finalGoalType = widget.goalType ?? 'scans';
+      final finalGoalTarget = widget.goalTarget ?? 30;
+
+      result = await ApiClient.createGroup(
+        userId, 
+        finalGroupName, 
+        selectedFriendIds,
+        finalGoalType,     
+        finalGoalTarget,  
+      );
     } else {
       // 模式 B：已有小組，發送邀請到現有小組
       result = await ApiClient.inviteToExistingGroup(widget.groupId!, userId, selectedFriendIds);

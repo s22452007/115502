@@ -39,7 +39,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
         return '前往安全付款  \$${widget.price}';
       case 'google_play':
       default:
-        return '前往 Google Play  \$${widget.price}';
+        return '前往 Google Pay  \$${widget.price}';
     }
   }
 
@@ -253,9 +253,9 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
           ),
           const SizedBox(height: 12),
           _paymentOption(
-            value: 'google_play',
-            title: 'Google Play',
-            subtitle: '由 Google Play 安全處理付款',
+            value: 'google_pay',
+            title: 'Google Pay',
+            subtitle: '由 Google Pay 安全處理付款',
             icon: Icons.android,
           ),
           const SizedBox(height: 16),

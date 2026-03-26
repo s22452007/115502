@@ -409,7 +409,9 @@ def get_my_group(user_id):
                 "user_id": u.id,
                 "nickname": u.email.split('@')[0],
                 "avatar": u.avatar,
-                "daily_scans": u.daily_scans, # 🌟 核心功能：讓大家互相看到對方的今日進度！
+                "daily_scans": u.daily_scans, # 拍照進度
+                "j_pts": u.j_pts,             # 點數進度
+                "streak_days": u.streak_days, # 登入進度
                 "is_host": u.id == group.host_id
             })
             
@@ -417,6 +419,8 @@ def get_my_group(user_id):
         "has_group": True,
         "group_id": group.id,
         "group_name": group.name,
+        "goal_type": group.goal_type,     # 把設定的目標類型傳給前端
+        "goal_target": group.goal_target, # 把設定的目標次數傳給前端
         "members": member_data
     }), 200
 

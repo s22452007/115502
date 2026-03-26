@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/system_settings_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -20,6 +21,7 @@ class AppDrawer extends StatelessWidget {
     final userAvatar = userProvider.avatar;
     final userEmail = userProvider.email ?? 'guest@example.com';
     final userName = userEmail.split('@')[0];
+
     // 這裡判斷是否為訪客
     final isGuest = userProvider.userId == null;
 
@@ -38,10 +40,12 @@ class AppDrawer extends StatelessWidget {
       'FFB74D',
       'FF8A65',
     ];
+
     int hash = 0;
     for (int i = 0; i < userName.length; i++) {
       hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
     }
+
     final String bgColor = colors[hash % colors.length];
 
     final String defaultAvatarUrl =
@@ -58,7 +62,10 @@ class AppDrawer extends StatelessWidget {
             ),
             accountName: Text(
               isGuest ? '訪客' : userName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             accountEmail: Text(isGuest ? '登入解鎖更多功能！' : userEmail),
             currentAccountPicture: Container(
@@ -74,6 +81,7 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
           ),
+
           ListTile(
             leading: const Icon(Icons.home_outlined),
             title: const Text('回首頁', style: TextStyle(fontSize: 16)),
@@ -86,6 +94,7 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
+
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('個人檔案', style: TextStyle(fontSize: 16)),
@@ -97,6 +106,7 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
+
           ListTile(
             leading: const Icon(Icons.bookmark_border),
             title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
@@ -110,6 +120,7 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
+
           ListTile(
             leading: const Icon(Icons.people_outline),
             title: const Text('我的好友', style: TextStyle(fontSize: 16)),
@@ -121,6 +132,7 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
+
           ListTile(
             leading: const Icon(Icons.person_add_outlined),
             title: const Text('新增好友', style: TextStyle(fontSize: 16)),
@@ -132,6 +144,7 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
+
           ListTile(
             leading: const Icon(Icons.stars, color: Colors.orange),
             title: const Text(
@@ -150,14 +163,25 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
+
           const Divider(),
+
           ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: const Text('系統設定', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);
+              Future.delayed(Duration.zero, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SystemSettingsScreen(),
+                  ),
+                );
+              });
             },
           ),
+
           // --- 修改後的 註冊/登入 或 登出 按鈕 ---
           ListTile(
             leading: Icon(

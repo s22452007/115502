@@ -193,7 +193,8 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => RoleplayScreen(topicTitle: selectedTopic), 
+                              builder: (context) =>
+                                  RoleplayScreen(topicTitle: selectedTopic),
                             ),
                           );
                         },
@@ -218,6 +219,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                   ),
                 ),
               ),
+            ],
           ),
         ),
       ),

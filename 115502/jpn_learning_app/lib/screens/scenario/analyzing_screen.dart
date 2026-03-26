@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/scene_result_screen.dart';
-import 'package:jpn_learning_app/services/ai_service.dart';
 
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
@@ -25,10 +24,13 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
 
   Future<void> _startAnalysis() async {
     try {
-      // 呼叫 AI 服務分析圖片
-      final result = await AiService().analyzeScene(widget.imagePath);
+      // 將原本使用的圖像分析 AI 註解起來：
+      // final result = await AiService().analyzeScene(widget.imagePath);
 
-      if (mounted && result != null && result['result'] != null) {
+      // 改為使用後端 API (由後端的 Google MediaPipe 接手分析)
+      final result = await ApiClient.analyzeImage(widget.imagePath);
+
+      if (mounted && result.containsKey('result') && result['result'] != null) {
         // 分析成功，把今日進度 +1
         final userId = context.read<UserProvider>().userId;
         if (userId != null) {
@@ -56,7 +58,8 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
           ),
         );
       } else {
-        _showErrorDialog('分析失敗，請重試');
+        String errorMsg = result['error'] ?? '分析失敗，請重試';
+        _showErrorDialog(errorMsg);
       }
     } catch (e) {
       if (mounted) {

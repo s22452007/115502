@@ -20,6 +20,28 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     {'text': 'はい、かしこまりました。', 'isUser': false},
   ];
 
+  void _sendMessage() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return; // 沒打字不理他
+
+    setState(() {
+      // 1. 把你打的字，變成綠色氣泡加進對話裡
+      _messages.add({'text': text, 'isUser': true});
+    });
+
+    // 2. 清空輸入框
+    _controller.clear();
+
+    // 3. 模擬 AI 在 1 秒後回覆
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _messages.add({'text': 'これはテストの返信です！(這是一句假的AI回覆)', 'isUser': false});
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -230,7 +230,7 @@ class PremiumTrialScreen extends StatelessWidget {
                 Icon(Icons.play_arrow_rounded, color: Colors.green, size: 24),
                 SizedBox(width: 8),
                 Text(
-                  'Google Play',
+                  'Google Pay',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,

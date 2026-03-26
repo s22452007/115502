@@ -63,9 +63,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/auth/google_login');
     try {
-      final body = <String, dynamic>{
-        'email': email,
-      };
+      final body = <String, dynamic>{'email': email};
 
       if (avatar != null && avatar.isNotEmpty) {
         body['avatar'] = avatar;
@@ -224,7 +222,24 @@ class ApiClient {
 
     try {
       var request = http.MultipartRequest('POST', url);
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      if (kIsWeb) {
+        // Web 平台的 imagePath 通常是 blob: URL，我們需要先抓取它的 bytes
+        final imageResponse = await http.get(Uri.parse(imagePath));
+        final bytes = imageResponse.bodyBytes;
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            bytes,
+            filename: 'web_image.jpg',
+          ),
+        );
+      } else {
+        // Android/iOS 可以直接使用實體檔案路徑
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imagePath),
+        );
+      }
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -356,8 +371,8 @@ class ApiClient {
     int hostId,
     String groupName,
     List<String> friendIds,
-    String goalType,     // 接收目標類型
-    int goalTarget,      // 接收目標數值
+    String goalType, // 接收目標類型
+    int goalTarget, // 接收目標數值
   ) async {
     final url = Uri.parse('$baseUrl/auth/group/create');
     try {
@@ -368,7 +383,7 @@ class ApiClient {
           'host_id': hostId,
           'name': groupName,
           'friend_ids': friendIds,
-          'goal_type': goalType,     
+          'goal_type': goalType,
           'goal_target': goalTarget,
         }),
       );
@@ -468,10 +483,7 @@ class ApiClient {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/group/friends_detailed_status'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'group_id': groupId ?? -1,
-          'user_id': userId,
-        }),
+        body: jsonEncode({'group_id': groupId ?? -1, 'user_id': userId}),
       );
 
       if (response.statusCode == 200) {
@@ -495,10 +507,7 @@ class ApiClient {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'group_id': groupId,
-          'user_id': userId,
-        }),
+        body: jsonEncode({'group_id': groupId, 'user_id': userId}),
       );
       return jsonDecode(response.body);
     } catch (e) {

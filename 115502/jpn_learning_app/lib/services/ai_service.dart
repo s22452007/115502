@@ -1,10 +1,13 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+// 將之前使用的圖像分析AI註解起來
+// 將之前使用的圖像分析AI註解起來
+// import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+// import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 class AiService {
-  /// 透過 Google ML Kit 進行本地分析
+  /// 透過 Google ML Kit 進行本地分析 (已註解停用，改由後端 MediaPipe 處理)
   Future<Map<String, dynamic>?> analyzeScene(String imagePath) async {
+    return null;
+    /*
     try {
       // 網頁版不支援 Google ML Kit 原生套件，採用模擬資料讓開發者可以預覽 UI
       if (kIsWeb) {
@@ -51,5 +54,6 @@ class AiService {
       print(stacktrace);
       throw Exception('無法進行 AI 分析 (錯誤: $e)');
     }
+    */
   }
 }

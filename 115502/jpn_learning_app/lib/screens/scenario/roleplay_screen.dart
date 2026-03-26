@@ -15,10 +15,7 @@ class RoleplayScreen extends StatefulWidget {
 
 class _RoleplayScreenState extends State<RoleplayScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [
-    {'text': 'すみません、これをください', 'isUser': true},
-    {'text': 'はい、かしこまりました。', 'isUser': false},
-  ];
+  final List<Map<String, dynamic>> _messages = [];
 
   void _sendMessage() {
     final text = _controller.text.trim();

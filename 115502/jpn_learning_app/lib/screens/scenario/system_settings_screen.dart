@@ -13,13 +13,27 @@ class SystemSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: primaryGreen,
+        elevation: 0,
+        centerTitle: true,
+        toolbarHeight: 64,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          '系統設定',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 children: [
                   _buildMenuCard(
@@ -36,7 +50,7 @@ class SystemSettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   _buildMenuCard(
                     context: context,
                     icon: Icons.verified_user_outlined,
@@ -54,54 +68,8 @@ class SystemSettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      height: 90,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: primaryGreen,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () => Navigator.pop(context),
-            child: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-          const Expanded(
-            child: Center(
-              child: Text(
-                '系統設定',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 40),
-        ],
       ),
     );
   }
@@ -115,21 +83,21 @@ class SystemSettingsScreen extends StatelessWidget {
   }) {
     return Material(
       color: cardColor,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Container(
-          height: 140,
-          padding: const EdgeInsets.symmetric(horizontal: 22),
+          height: 88,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: borderColor),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x0D000000),
-                blurRadius: 8,
-                offset: Offset(0, 3),
+                color: Color(0x08000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
               ),
             ],
           ),
@@ -138,15 +106,15 @@ class SystemSettingsScreen extends StatelessWidget {
               Icon(
                 icon,
                 color: iconColor,
-                size: 42,
+                size: 30,
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   title,
                   style: const TextStyle(
                     color: textColor,
-                    fontSize: 28,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -154,7 +122,7 @@ class SystemSettingsScreen extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 color: Color(0xFFB0B0B0),
-                size: 42,
+                size: 28,
               ),
             ],
           ),
@@ -191,51 +159,60 @@ class _NotificationSettingsScreenState
         backgroundColor: primaryGreen,
         elevation: 0,
         centerTitle: true,
+        toolbarHeight: 64,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           '通知提醒',
           style: TextStyle(
             color: Colors.white,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildSwitchTile(
-            title: '每日學習提醒',
-            subtitle: '每天固定時間提醒你開始學習',
-            value: dailyReminder,
-            onChanged: (value) {
-              setState(() => dailyReminder = value);
-            },
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              children: [
+                _buildSwitchTile(
+                  title: '每日學習提醒',
+                  subtitle: '每天固定時間提醒你開始學習',
+                  value: dailyReminder,
+                  onChanged: (value) {
+                    setState(() => dailyReminder = value);
+                  },
+                ),
+                _buildSwitchTile(
+                  title: '單字複習提醒',
+                  subtitle: '提醒你完成今天的單字複習',
+                  value: reviewReminder,
+                  onChanged: (value) {
+                    setState(() => reviewReminder = value);
+                  },
+                ),
+                _buildSwitchTile(
+                  title: '連續登入提醒',
+                  subtitle: '提醒你維持連續學習紀錄',
+                  value: streakReminder,
+                  onChanged: (value) {
+                    setState(() => streakReminder = value);
+                  },
+                ),
+                _buildSwitchTile(
+                  title: '好友互動通知',
+                  subtitle: '例如好友新增、互動或排行榜變動',
+                  value: friendNotification,
+                  onChanged: (value) {
+                    setState(() => friendNotification = value);
+                  },
+                ),
+              ],
+            ),
           ),
-          _buildSwitchTile(
-            title: '單字複習提醒',
-            subtitle: '提醒你完成今天的單字複習',
-            value: reviewReminder,
-            onChanged: (value) {
-              setState(() => reviewReminder = value);
-            },
-          ),
-          _buildSwitchTile(
-            title: '連續登入提醒',
-            subtitle: '提醒你維持連續學習紀錄',
-            value: streakReminder,
-            onChanged: (value) {
-              setState(() => streakReminder = value);
-            },
-          ),
-          _buildSwitchTile(
-            title: '好友互動通知',
-            subtitle: '例如好友新增、互動或排行榜變動',
-            value: friendNotification,
-            onChanged: (value) {
-              setState(() => friendNotification = value);
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -247,30 +224,37 @@ class _NotificationSettingsScreenState
     required ValueChanged<bool> onChanged,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE7E7E7)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x07000000),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: SwitchListTile(
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         title: Text(
           title,
           style: const TextStyle(
             color: textColor,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
+          padding: const EdgeInsets.only(top: 3),
           child: Text(
             subtitle,
             style: const TextStyle(
               color: Color(0xFF8A8A8A),
-              fontSize: 13,
+              fontSize: 12,
             ),
           ),
         ),
@@ -297,52 +281,61 @@ class AccountSecurityScreen extends StatelessWidget {
         backgroundColor: primaryGreen,
         elevation: 0,
         centerTitle: true,
+        toolbarHeight: 64,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           '帳號與安全',
           style: TextStyle(
             color: Colors.white,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildActionTile(
-            icon: Icons.person_outline_rounded,
-            title: '個人資料',
-            subtitle: '查看與編輯你的基本資料',
-            onTap: () {},
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              children: [
+                _buildActionTile(
+                  icon: Icons.person_outline_rounded,
+                  title: '個人資料',
+                  subtitle: '查看與編輯你的基本資料',
+                  onTap: () {},
+                ),
+                _buildActionTile(
+                  icon: Icons.lock_outline_rounded,
+                  title: '修改密碼',
+                  subtitle: '更新帳號登入密碼',
+                  onTap: () {},
+                ),
+                _buildActionTile(
+                  icon: Icons.link_rounded,
+                  title: '綁定 Google',
+                  subtitle: '將帳號與 Google 登入綁定',
+                  onTap: () {},
+                ),
+                _buildActionTile(
+                  icon: Icons.devices_other_rounded,
+                  title: '登出其他裝置',
+                  subtitle: '將其他裝置上的登入狀態移除',
+                  onTap: () {},
+                ),
+                _buildActionTile(
+                  icon: Icons.delete_outline_rounded,
+                  title: '刪除帳號',
+                  subtitle: '永久刪除帳號與學習資料',
+                  titleColor: Colors.redAccent,
+                  onTap: () {
+                    _showDeleteDialog(context);
+                  },
+                ),
+              ],
+            ),
           ),
-          _buildActionTile(
-            icon: Icons.lock_outline_rounded,
-            title: '修改密碼',
-            subtitle: '更新帳號登入密碼',
-            onTap: () {},
-          ),
-          _buildActionTile(
-            icon: Icons.link_rounded,
-            title: '綁定 Google',
-            subtitle: '將帳號與 Google 登入綁定',
-            onTap: () {},
-          ),
-          _buildActionTile(
-            icon: Icons.devices_other_rounded,
-            title: '登出其他裝置',
-            subtitle: '將其他裝置上的登入狀態移除',
-            onTap: () {},
-          ),
-          _buildActionTile(
-            icon: Icons.delete_outline_rounded,
-            title: '刪除帳號',
-            subtitle: '永久刪除帳號與學習資料',
-            titleColor: Colors.redAccent,
-            onTap: () {
-              _showDeleteDialog(context);
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -355,38 +348,45 @@ class AccountSecurityScreen extends StatelessWidget {
     Color titleColor = textColor,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE7E7E7)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x07000000),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: ListTile(
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: Icon(icon, color: primaryGreen, size: 28),
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        leading: Icon(icon, color: primaryGreen, size: 24),
         title: Text(
           title,
           style: TextStyle(
             color: titleColor,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
+          padding: const EdgeInsets.only(top: 3),
           child: Text(
             subtitle,
             style: const TextStyle(
               color: Color(0xFF8A8A8A),
-              fontSize: 13,
+              fontSize: 12,
             ),
           ),
         ),
         trailing: const Icon(
           Icons.chevron_right_rounded,
           color: Color(0xFFB0B0B0),
-          size: 30,
+          size: 26,
         ),
         onTap: onTap,
       ),

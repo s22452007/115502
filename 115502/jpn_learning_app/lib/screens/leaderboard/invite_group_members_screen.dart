@@ -175,7 +175,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
         ),
         centerTitle: true,
         title: const Text(
-          '邀請好友加入小組',
+          '邀請好友加入小組(2/2)',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
         ),
       ),

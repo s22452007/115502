@@ -180,11 +180,6 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                 ..._pendingRequests.map((req) => _buildPendingRequestCard(req)).toList(),
 
               const SizedBox(height: 32),
-
-              // 推薦學習夥伴 (保持靜態示範)
-              const Text('推薦學習夥伴', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-              const SizedBox(height: 12),
-              _buildSuggestedFriendCard('佐藤學長', 'sato_senpai', 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'),
             ],
           ),
         ),
@@ -367,48 +362,6 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // 🤝 推薦好友模具 (靜態示範用)
-  Widget _buildSuggestedFriendCard(String name, String id, String avatarUrl) {
-    bool isSent = false;
-    return StatefulBuilder(
-      builder: (context, setCardState) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(radius: 24, backgroundImage: NetworkImage(avatarUrl)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('@$id', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-                  ],
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () => setCardState(() => isSent = !isSent),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isSent ? Colors.grey.shade200 : _lightGreen.withOpacity(0.5),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-                child: Text(isSent ? '已送出' : '加好友', style: TextStyle(color: isSent ? Colors.grey.shade600 : _darkGreen, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-      }
     );
   }
 }

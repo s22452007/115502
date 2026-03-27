@@ -312,12 +312,6 @@ class AccountSecurityScreen extends StatelessWidget {
                   onTap: () {},
                 ),
                 _buildActionTile(
-                  icon: Icons.link_rounded,
-                  title: '綁定 Google',
-                  subtitle: '將帳號與 Google 登入綁定',
-                  onTap: () {},
-                ),
-                _buildActionTile(
                   icon: Icons.devices_other_rounded,
                   title: '登出其他裝置',
                   subtitle: '將其他裝置上的登入狀態移除',

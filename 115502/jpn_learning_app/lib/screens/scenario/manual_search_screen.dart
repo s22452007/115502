@@ -185,9 +185,21 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                 child: ElevatedButton(
                   onPressed: _searchController.text.trim().isEmpty
                       ? null // 如果沒有輸入文字，按鈕反灰不可點
-                      : _submitScenario,
+                      : () {
+                          // 1. 抓取你輸入的文字 (例如：🍜 一蘭拉麵)
+                          String selectedTopic = _searchController.text.trim();
+
+                          // 2. 搭建直達鐵軌！直接跳轉到聊天畫面，並傳遞標題名稱
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RoleplayScreen(topicTitle: selectedTopic),
+                            ),
+                          );
+                        },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6AA86B), // 使用主題綠色
+                    backgroundColor: const Color(0xFF6AA86B),
                     disabledBackgroundColor: Colors.grey.shade300,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

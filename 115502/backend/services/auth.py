@@ -80,6 +80,11 @@ def login():
         # 把最後登入日期更新為今天
         user.last_login_date = today
         
+        # 如果他有加入小組，就把小組的登入貢獻 +1
+        member_record = GroupMember.query.filter_by(user_id=user.id).first()
+        if member_record:
+            member_record.group_logins += 1
+
         # 檢查並重置今日拍照次數 (如果是新的一天，就把次數歸零)
         if user.last_scan_date != today:
             user.daily_scans = 0
@@ -350,6 +355,11 @@ def add_points():
     user.j_pts += points_to_add
     db.session.commit()
 
+    # 增加小組的點數貢獻
+    member_record = GroupMember.query.filter_by(user_id=user_id).first()
+    if member_record:
+        member_record.group_points += points_to_add
+
     return jsonify({
         "message": f"成功儲值 {points_to_add} 點！", 
         "total_points": user.j_pts # 回傳最新的總餘額給前端
@@ -374,10 +384,11 @@ def increment_scan():
     if user.daily_scans < 3:
         user.daily_scans += 1
     
-    # 🎁 (選擇性) 如果你想讓使用者達成目標時獲得獎勵，可以解開下面這兩行：
-    # if user.daily_scans == 3:
-    #     user.j_pts += 10 # 達成目標送 10 點！
-
+    # 增加小組的拍照貢獻
+    member_record = GroupMember.query.filter_by(user_id=user_id).first()
+    if member_record:
+        member_record.group_scans += 1
+    
     db.session.commit()
 
     return jsonify({
@@ -409,9 +420,10 @@ def get_my_group(user_id):
                 "user_id": u.id,
                 "nickname": u.email.split('@')[0],
                 "avatar": u.avatar,
-                "daily_scans": u.daily_scans, # 拍照進度
-                "j_pts": u.j_pts,             # 點數進度
-                "streak_days": u.streak_days, # 登入進度
+                # 我們不再抓 u.daily_scans，而是抓 m.group_scans (小組專屬紀錄)
+                "daily_scans": m.group_scans, 
+                "j_pts": m.group_points,             
+                "streak_days": m.group_logins, 
                 "is_host": u.id == group.host_id
             })
             

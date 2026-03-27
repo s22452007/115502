@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
+// import 'package:jpn_learning_app/utils/constants.dart'; // 如果沒用到可以先註解掉
 
 class RolePlayIntroScreen extends StatefulWidget {
-  // 🌟 魔法變數：這裡用來接收使用者提供的照片！
-  // 未來在上一頁導航過來時，只要把照片路徑傳給它就行了
-  final String imagePath;
+  final String topicTitle; // 🌟 用來接收上一頁傳來的主題
 
   const RolePlayIntroScreen({
     Key? key,
-    // 先預設一張超有 Fu 的居酒屋網頁圖片，方便你現在看效果
-    // 等你要串接真實資料時，再改成你資料庫的照片即可！
-    this.imagePath =
-        'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    required this.topicTitle, // 規定進來一定要帶這個參數
   }) : super(key: key);
 
   @override
@@ -20,11 +15,77 @@ class RolePlayIntroScreen extends StatefulWidget {
 }
 
 class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
-  // 🌟 讓旁邊卡片「露出來」的魔法控制器！(viewportFraction: 0.75)
   final PageController _pageController = PageController(viewportFraction: 0.78);
-
-  // 這是深綠色的主色調
   final Color _darkGreen = const Color(0xFF4A7A4D);
+
+  // 🌟 新增的「情境小資料庫」(模擬未來 AI)
+  Map<String, dynamic> _getTopicData() {
+    String topic = widget.topicTitle;
+
+    if (topic.contains('拉麵')) {
+      return {
+        'image':
+            'https://images.unsplash.com/photo-1552611052-33e04de081de?q=80&w=800&auto=format&fit=crop',
+        'vocabs': [
+          {
+            'kana': 'ラーメン',
+            'word': '拉麵',
+            'meaning': '拉麵',
+            'ex_jp': 'ラーメンを一つください。',
+            'ex_en': 'One ramen, please.',
+          },
+          {
+            'kana': 'おかいけい',
+            'word': 'お会計',
+            'meaning': '結帳',
+            'ex_jp': 'お会計をお願いします。',
+            'ex_en': 'Can I have the bill please?',
+          },
+        ],
+      };
+    } else if (topic.contains('遊戲')) {
+      return {
+        'image':
+            'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=800&auto=format&fit=crop',
+        'vocabs': [
+          {
+            'kana': 'コントローラー',
+            'word': '手把',
+            'meaning': '遊戲手把',
+            'ex_jp': 'コントローラーが壊れました。',
+            'ex_en': 'The controller is broken.',
+          },
+          {
+            'kana': 'クリア',
+            'word': '破關',
+            'meaning': '遊戲通關',
+            'ex_jp': 'やっとゲームをクリアした！',
+            'ex_en': 'Finally cleared the game!',
+          },
+        ],
+      };
+    }
+    return {
+      'image':
+          'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?q=80&w=800&auto=format&fit=crop',
+      'vocabs': [
+        {
+          'kana': 'おすすめ',
+          'word': 'お勧め',
+          'meaning': '推薦',
+          'ex_jp': 'おすすめは何ですか？',
+          'ex_en': 'What do you recommend?',
+        },
+        {
+          'kana': 'おかんじょう',
+          'word': 'お勘定',
+          'meaning': '結帳',
+          'ex_jp': 'お勘定をお願いします。',
+          'ex_en': 'Can I have the bill please?',
+        },
+      ],
+    };
+  }
 
   @override
   void dispose() {
@@ -34,47 +95,46 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 在這裡呼叫函數，抓取對應的資料
+    final topicData = _getTopicData();
+    final String currentImage = topicData['image'];
+    final List<Map<String, String>> currentVocabs =
+        List<Map<String, String>>.from(topicData['vocabs']);
+
     return Scaffold(
-      backgroundColor: Colors.black, // 避免圖片載入前閃白光
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ==========================================
-          // 1. 最底層：使用者提供的照片 (填滿上半部)
-          // ==========================================
+          // 1. 最底層：動態照片
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            // 讓照片高度佔據螢幕的 55%，確保被綠色底板蓋住時還有足夠空間
             height: MediaQuery.of(context).size.height * 0.55,
-            child: Image.network(widget.imagePath, fit: BoxFit.cover),
+            child: Image.network(
+              currentImage,
+              fit: BoxFit.cover,
+            ), // 🌟 換成 currentImage
           ),
 
-          // ==========================================
           // 2. 左上角：返回按鈕
-          // ==========================================
           Positioned(
-            top: 50, // 避開手機頂部的瀏海或狀態列
+            top: 50,
             left: 16,
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () {
-                Navigator.pop(context); // 點擊返回上一頁
-              },
+              onPressed: () => Navigator.pop(context),
             ),
           ),
 
-          // ==========================================
-          // 3. 前景層：綠色底板 + 滑動卡片 + 開始按鈕
-          // ==========================================
+          // 3. 前景層
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              // 綠色底板佔據螢幕下方 60%
               height: MediaQuery.of(context).size.height * 0.6,
               width: double.infinity,
               decoration: const BoxDecoration(
-                color: Color(0xFFBFE1C3), // 你設計圖的淺綠色
+                color: Color(0xFFBFE1C3),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -83,7 +143,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  // --- 灰色小把手 (Drag Handle) ---
+                  // 把手
                   Container(
                     width: 48,
                     height: 5,
@@ -92,20 +152,33 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                  // --- 中間的白色左右滑動卡片群 ---
+                  // 🌟 顯示從上一頁傳來的主題名稱
+                  Text(
+                    widget.topicTitle,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: _darkGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 中間的白色單字卡
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
-                      itemCount: 3, // 假設有 3 張卡片
+                      itemCount: currentVocabs.length, // 🌟 根據單字數量決定有幾張卡
                       itemBuilder: (context, index) {
-                        return _buildVocabCard();
+                        return _buildVocabCard(
+                          currentVocabs[index],
+                        ); // 🌟 傳資料給模具
                       },
                     ),
                   ),
 
-                  // --- 底部的 Start Role-Play 按鈕 ---
+                  // 底部按鈕
                   Padding(
                     padding: const EdgeInsets.only(
                       left: 24,
@@ -118,8 +191,14 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                       height: 54,
                       child: ElevatedButton(
                         onPressed: () {
-                          // TODO: 這裡放入點擊開始角色扮演的邏輯
-                          print('開始角色扮演！');
+                          // 🌟 按下後繼續傳遞標題給聊天室
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RoleplayScreen(topicTitle: widget.topicTitle),
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _darkGreen,
@@ -148,10 +227,9 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     );
   }
 
-  // --- 製造白色單字卡片的模具 ---
-  Widget _buildVocabCard() {
+  // 🌟 將模具收進類別裡面，並讓它接收資料
+  Widget _buildVocabCard(Map<String, String> vocab) {
     return Container(
-      // margin 讓卡片之間有空隙，且不會貼到畫面邊緣
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -160,7 +238,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
             blurRadius: 15,
-            offset: const Offset(0, 8), // 產生懸浮陰影
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -169,11 +247,9 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 💡 順帶一提小知識：「お勘定」的平假名應該是「おかんじょう (o-kan-jou)」。
-            // 「おんせん」是溫泉的意思喔！我幫你把發音修正了 😉
-            const Text(
-              'おかんじょう',
-              style: TextStyle(
+            Text(
+              vocab['kana']!,
+              style: const TextStyle(
                 fontSize: 14,
                 color: Colors.black54,
                 fontWeight: FontWeight.bold,
@@ -181,7 +257,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'お勘定',
+              vocab['word']!,
               style: TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
@@ -189,19 +265,17 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              '結帳',
-              style: TextStyle(
+            Text(
+              vocab['meaning']!,
+              style: const TextStyle(
                 fontSize: 18,
                 color: Colors.black87,
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 20),
             Divider(color: Colors.grey.shade300, thickness: 1),
             const SizedBox(height: 20),
-
             const Text(
               'すみません、',
               style: TextStyle(
@@ -215,21 +289,21 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               style: TextStyle(fontSize: 14, color: Colors.black54),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'お勘定をお願いします。',
-              style: TextStyle(
+            Text(
+              vocab['ex_jp']!,
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
-            const Text(
-              'Can I have the bill please?',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+            Text(
+              vocab['ex_en']!,
+              style: const TextStyle(fontSize: 14, color: Colors.black54),
             ),
           ],
         ),
       ),
     );
   }
-}
+} // ⬅️ 這是 _RolePlayIntroScreenState 類別結束的大括號

@@ -126,6 +126,11 @@ class GroupMember(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # 專屬這個小組的貢獻紀錄
+    group_scans = db.Column(db.Integer, default=0)  # 加入小組後的拍照次數
+    group_points = db.Column(db.Integer, default=0) # 加入小組後的獲得點數
+    group_logins = db.Column(db.Integer, default=0) # 加入小組後的登入天數
+
 # 3. 小組邀請表 (GroupInvite)
 class GroupInvite(db.Model):
     id = db.Column(db.Integer, primary_key=True)

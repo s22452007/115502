@@ -172,53 +172,6 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
           _invites.isEmpty ? _buildNoInvitesCard() : _buildHasInvitesCard(),
 
           const SizedBox(height: 18),
-
-          // 推薦一起學習的好友
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '推薦一起學習的好友',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textDark),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppColors.primaryLighter,
-                  child: Icon(Icons.person, color: AppColors.primary),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('佐藤學長', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: textDark)),
-                      SizedBox(height: 2),
-                      Text('@sato_senpai', style: TextStyle(fontSize: 14, color: subText)),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF3E3),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text('邀請加入', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
         ],
       ),
     );

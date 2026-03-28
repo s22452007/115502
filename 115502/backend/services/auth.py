@@ -5,6 +5,7 @@ from models import User, UserAbility, UserAchievement, Achievement, UserVocab, U
 from datetime import date, timedelta
 import random
 import string
+import re
 
 # 建立 auth 的 Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -699,3 +700,50 @@ def leave_group():
     except Exception as e:
         print("退出小組發生錯誤:", str(e))
         return jsonify({"error": f"後端錯誤: {str(e)}"}), 500
+
+@auth_bp.route('/check_username', methods=['POST'])
+def check_username():
+    data = request.get_json()
+    username = (data.get('username') or '').strip()
+
+    if not username:
+        return jsonify({"error": "請輸入暱稱"}), 400
+    if len(username) < 2 or len(username) > 20:
+        return jsonify({"error": "暱稱需為 2～20 個字元"}), 400
+    if not re.match(r'^[\u4e00-\u9fffA-Za-z0-9_]+$', username):
+        return jsonify({"error": "暱稱只能包含中文、英文、數字或底線"}), 400
+
+    taken = User.query.filter(db.func.lower(User.username) == username.lower()).first()
+    if taken:
+        return jsonify({"available": False, "error": "此暱稱已被使用"}), 200
+
+    return jsonify({"available": True}), 200
+
+
+@auth_bp.route('/update_username', methods=['POST'])
+def update_username():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    username = (data.get('username') or '').strip()
+
+    if not user_id or not username:
+        return jsonify({"error": "缺少必要資訊"}), 400
+    if len(username) < 2 or len(username) > 20:
+        return jsonify({"error": "暱稱需為 2～20 個字元"}), 400
+    if not re.match(r'^[\u4e00-\u9fffA-Za-z0-9_]+$', username):
+        return jsonify({"error": "暱稱只能包含中文、英文、數字或底線"}), 400
+
+    taken = User.query.filter(
+        db.func.lower(User.username) == username.lower(),
+        User.id != user_id
+    ).first()
+    if taken:
+        return jsonify({"error": "此暱稱已被使用"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+
+    user.username = username
+    db.session.commit()
+    return jsonify({"message": "暱稱更新成功", "username": username}), 200

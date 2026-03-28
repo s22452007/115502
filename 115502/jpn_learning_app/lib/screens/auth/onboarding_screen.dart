@@ -23,20 +23,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         actions: [
           // 右上角 Skip 鍵：按下直接跳到登入頁
           TextButton(
+            // 加入這段 style：稍微縮減 TextButton 預設自帶的內邊距，並將觸控範圍縮到最小
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             onPressed: () {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: const Text(
-                'Skip',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
+            // 這裡直接放 Text 即可，不要包 Padding
+            child: const Text(
+              'Skip',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ),
+          // 重點在這裡：在按鈕後面加上 SizedBox 來推開與右邊界的距離 (這塊空間不會有觸控效果)
+          const SizedBox(width: 16.0),
         ],
       ),
       body: SafeArea(

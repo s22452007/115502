@@ -7,6 +7,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False) # 儲存「加密後」的密碼
+    username = db.Column(db.String(30), unique=True, nullable=True)
     friend_id = db.Column(db.String(20), unique=True, nullable=True)
     japanese_level = db.Column(db.String(50), nullable=True)  # 儲存日語程度
     avatar = db.Column(db.Text, nullable=True)  # 用來存圖片的 Base64 字串

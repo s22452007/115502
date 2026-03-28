@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/profile/change_password_screen.dart';
+import 'package:jpn_learning_app/screens/profile/personal_info_screen.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
   const SystemSettingsScreen({super.key});
@@ -313,7 +314,14 @@ class AccountSecurityScreen extends StatelessWidget {
                   icon: Icons.person_outline_rounded,
                   title: '個人資料',
                   subtitle: '查看與編輯你的基本資料',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PersonalInfoScreen(),
+                      ),
+                    );
+                  },
                 ),
                 if (showChangePassword)
                   _buildActionTile(

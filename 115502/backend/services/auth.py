@@ -102,7 +102,8 @@ def login():
             "streak_days": user.streak_days, # 把最新的天數傳給前端
             "j_pts": user.j_pts,             # 順便把點數也傳回去
             "daily_scans": user.daily_scans,
-            "friend_id": user.friend_id      # 把交友 ID 傳回給前端
+            "friend_id": user.friend_id,
+            "username": user.username
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401
@@ -705,6 +706,7 @@ def leave_group():
 def check_username():
     data = request.get_json()
     username = (data.get('username') or '').strip()
+    current_user_id = data.get('user_id')
 
     if not username:
         return jsonify({"error": "請輸入暱稱"}), 400
@@ -713,7 +715,10 @@ def check_username():
     if not re.match(r'^[\u4e00-\u9fffA-Za-z0-9_]+$', username):
         return jsonify({"error": "暱稱只能包含中文、英文、數字或底線"}), 400
 
-    taken = User.query.filter(db.func.lower(User.username) == username.lower()).first()
+    query = User.query.filter(db.func.lower(User.username) == username.lower())
+    if current_user_id:
+        query = query.filter(User.id != current_user_id)
+    taken = query.first()
     if taken:
         return jsonify({"available": False, "error": "此暱稱已被使用"}), 200
 

@@ -497,6 +497,39 @@ class ApiClient {
     }
   }
 
+  // 檢查暱稱是否可用 API
+  static Future<Map<String, dynamic>> checkUsername(String username) async {
+    final url = Uri.parse('$baseUrl/auth/check_username');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 更新暱稱 API
+  static Future<Map<String, dynamic>> updateUsername(
+    int userId,
+    String username,
+  ) async {
+    final url = Uri.parse('$baseUrl/auth/update_username');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'username': username}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 退出小組 API
   static Future<Map<String, dynamic>> leaveGroup(
     int groupId,

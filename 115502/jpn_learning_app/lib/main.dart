@@ -7,6 +7,7 @@ import 'package:flutter/gestures.dart'; // 🌟 加上這行
 import 'package:jpn_learning_app/screens/auth/splash_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
 import 'firebase_options.dart'; //不一定要使用
 
 List<CameraDescription> cameras = [];
@@ -16,6 +17,8 @@ Future<void> main() async {
 
   // 先初始化 Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  await NotificationService.init();
 
   // 再初始化相機，不一定要使用
   try {

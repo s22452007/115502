@@ -4,6 +4,7 @@ class UserProvider extends ChangeNotifier {
   int? _userId;
   String _japaneseLevel = '';
   String? _email;
+  String? _username;
   String? _avatar;
   // 連續天數與點數
   int _streakDays = 0;
@@ -28,6 +29,7 @@ class UserProvider extends ChangeNotifier {
   int? get userId => _userId;
   String get japaneseLevel => _japaneseLevel;
   String? get email => _email;
+  String? get username => _username;
   String? get avatar => _avatar;
   String? get friendId => _friendId;
 
@@ -47,6 +49,11 @@ class UserProvider extends ChangeNotifier {
 
   void setEmail(String email) {
     _email = email;
+    notifyListeners();
+  }
+
+  void setUsername(String? username) {
+    _username = username;
     notifyListeners();
   }
 
@@ -99,7 +106,8 @@ class UserProvider extends ChangeNotifier {
   void logout() {
     _userId = null;
     _email = null;
-    _japaneseLevel = ''; 
+    _username = null;
+    _japaneseLevel = '';
     _avatar = null;
     _streakDays = 0; // 登出時歸零
     _jPts = 0;       // 登出時歸零

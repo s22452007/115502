@@ -20,7 +20,7 @@ class AppDrawer extends StatelessWidget {
     final userProvider = context.watch<UserProvider>();
     final userAvatar = userProvider.avatar;
     final userEmail = userProvider.email ?? 'guest@example.com';
-    final userName = userEmail.split('@')[0];
+    final userName = userProvider.username ?? userEmail.split('@')[0];
 
     // 這裡判斷是否為訪客
     final isGuest = userProvider.userId == null;

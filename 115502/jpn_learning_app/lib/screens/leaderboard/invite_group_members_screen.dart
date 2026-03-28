@@ -1,10 +1,21 @@
+// 1. Dart 原生套件
+import 'dart:convert';
+
+// 2. Flutter 核心套件
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
+
+// 3. 第三方套件
 import 'package:provider/provider.dart';
+
+// 4. 狀態管理 (Providers)
 import 'package:jpn_learning_app/providers/user_provider.dart';
+
+// 5. 工具與常數 (Utils / Constants)
 import 'package:jpn_learning_app/utils/api_client.dart';
-import 'dart:convert'; // 用來解碼 Base64 圖片
-import 'study_group_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
+
+// 6. App 畫面 (Screens)
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 class InviteGroupMembersScreen extends StatefulWidget {
   // 核心關鍵：加入 groupId 參數。有傳值代表是「邀請加入現有群組」，沒傳代表是「建立新群組」

@@ -94,6 +94,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('friend_id') && result['friend_id'] != null) {
           context.read<UserProvider>().setFriendId(result['friend_id']);
         }
+        if (result.containsKey('username') && result['username'] != null) {
+          context.read<UserProvider>().setUsername(result['username']);
+        }
 
         if (result['japanese_level'] != null) {
           context
@@ -125,6 +128,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (result.containsKey('friend_id') && result['friend_id'] != null) {
           context.read<UserProvider>().setFriendId(result['friend_id']);
+        }
+        if (result.containsKey('username') && result['username'] != null) {
+          context.read<UserProvider>().setUsername(result['username']);
         }
 
         ScaffoldMessenger.of(context).showSnackBar(

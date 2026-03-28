@@ -23,7 +23,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   @override
   void initState() {
     super.initState();
-    _displayName = FirebaseAuth.instance.currentUser?.displayName;
+    final userProvider = context.read<UserProvider>();
+    _displayName = userProvider.username ??
+        FirebaseAuth.instance.currentUser?.displayName;
   }
 
   Future<void> _editNickname() async {
@@ -60,8 +62,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   setDialogState(() => errorText = '請輸入暱稱');
                   return;
                 }
-                // 先呼叫後端檢查唯一性
-                final check = await ApiClient.checkUsername(name);
+                // 先呼叫後端檢查唯一性（排除自己）
+                final myId = context.read<UserProvider>().userId;
+                final check = await ApiClient.checkUsername(name, userId: myId);
                 if (check['error'] != null) {
                   setDialogState(() => errorText = check['error']);
                   return;
@@ -94,6 +97,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
     await FirebaseAuth.instance.currentUser?.updateDisplayName(result);
     if (!mounted) return;
+    context.read<UserProvider>().setUsername(result);
     setState(() => _displayName = result);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('暱稱已更新')),

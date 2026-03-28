@@ -258,7 +258,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final userEmail =
         context.watch<UserProvider>().email ?? 'guest@example.com';
-    final userName = userEmail.split('@')[0];
+    final userName = context.watch<UserProvider>().username ??
+        userEmail.split('@')[0];
     final streakDays = context.watch<UserProvider>().streakDays;
     final jPts = context.watch<UserProvider>().jPts;
     final isGuest = context.watch<UserProvider>().userId == null;

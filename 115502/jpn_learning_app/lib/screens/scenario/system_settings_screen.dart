@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/profile/change_password_screen.dart';
 import 'package:jpn_learning_app/screens/profile/personal_info_screen.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
   const SystemSettingsScreen({super.key});
@@ -155,6 +156,32 @@ class _NotificationSettingsScreenState
   static const Color textColor = Color(0xFF3E3E3E);
 
   @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final s = await NotificationService.loadSettings();
+    if (!mounted) return;
+    setState(() {
+      dailyReminder = s['daily']!;
+      reviewReminder = s['review']!;
+      streakReminder = s['streak']!;
+      friendNotification = s['friend']!;
+    });
+  }
+
+  Future<void> _save() async {
+    await NotificationService.saveSettings(
+      daily: dailyReminder,
+      review: reviewReminder,
+      streak: streakReminder,
+      friend: friendNotification,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
@@ -182,26 +209,29 @@ class _NotificationSettingsScreenState
               children: [
                 _buildSwitchTile(
                   title: '每日學習提醒',
-                  subtitle: '每天固定時間提醒你開始學習',
+                  subtitle: '每天早上 8:00 提醒你開始學習',
                   value: dailyReminder,
                   onChanged: (value) {
                     setState(() => dailyReminder = value);
+                    _save();
                   },
                 ),
                 _buildSwitchTile(
                   title: '單字複習提醒',
-                  subtitle: '提醒你完成今天的單字複習',
+                  subtitle: '每天晚上 7:00 提醒你複習單字',
                   value: reviewReminder,
                   onChanged: (value) {
                     setState(() => reviewReminder = value);
+                    _save();
                   },
                 ),
                 _buildSwitchTile(
                   title: '連續登入提醒',
-                  subtitle: '提醒你維持連續學習紀錄',
+                  subtitle: '每天晚上 9:00 提醒你維持連續紀錄',
                   value: streakReminder,
                   onChanged: (value) {
                     setState(() => streakReminder = value);
+                    _save();
                   },
                 ),
                 _buildSwitchTile(
@@ -210,6 +240,7 @@ class _NotificationSettingsScreenState
                   value: friendNotification,
                   onChanged: (value) {
                     setState(() => friendNotification = value);
+                    _save();
                   },
                 ),
               ],

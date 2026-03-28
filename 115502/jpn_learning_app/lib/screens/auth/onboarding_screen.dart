@@ -25,13 +25,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           TextButton(
             onPressed: () {
               Navigator.pushReplacement(
-                  context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
             },
-            child: const Text(
-              'Skip',
-              style: TextStyle(color: Colors.grey, fontSize: 16),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: const Text(
+                'Skip',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
             ),
-          )
+          ),
         ],
       ),
       body: SafeArea(
@@ -51,18 +56,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     icon: Icons.camera_alt,
                     title: 'snap to learn',
                   ),
-                  _buildPageContent(
-                    icon: Icons.menu_book,
-                    title: '輕鬆學習日文',
-                  ),
-                  _buildPageContent(
-                    icon: Icons.translate,
-                    title: '馬上開始你的旅程',
-                  ),
+                  _buildPageContent(icon: Icons.menu_book, title: '輕鬆學習日文'),
+                  _buildPageContent(icon: Icons.translate, title: '馬上開始你的旅程'),
                 ],
               ),
             ),
-            
+
             // 底部狀態點點 (Indicators)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -74,18 +73,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 8.0,
                   decoration: BoxDecoration(
                     // 使用你原本設定的 AppColors
-                    color: _currentPage == index ? AppColors.primary : AppColors.primaryLighter,
+                    color: _currentPage == index
+                        ? AppColors.primary
+                        : AppColors.primaryLighter,
                     borderRadius: BorderRadius.circular(4.0),
                   ),
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // 底部主按鈕
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 20.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32.0,
+                vertical: 20.0,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -106,7 +110,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     } else {
                       // 如果是最後一頁，跳轉到登入頁
                       Navigator.pushReplacement(
-                          context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
                     }
                   },
                   child: Text(
@@ -135,11 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             color: AppColors.primaryLighter,
             borderRadius: BorderRadius.circular(32),
           ),
-          child: Icon(
-            icon,
-            size: 80,
-            color: AppColors.primary,
-          ),
+          child: Icon(icon, size: 80, color: AppColors.primary),
         ),
         const SizedBox(height: 24),
         Text(

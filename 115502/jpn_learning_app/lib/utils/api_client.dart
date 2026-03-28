@@ -498,13 +498,18 @@ class ApiClient {
   }
 
   // 檢查暱稱是否可用 API
-  static Future<Map<String, dynamic>> checkUsername(String username) async {
+  static Future<Map<String, dynamic>> checkUsername(
+    String username, {
+    int? userId,
+  }) async {
     final url = Uri.parse('$baseUrl/auth/check_username');
     try {
+      final body = <String, dynamic>{'username': username};
+      if (userId != null) body['user_id'] = userId;
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username}),
+        body: jsonEncode(body),
       );
       return jsonDecode(response.body);
     } catch (e) {

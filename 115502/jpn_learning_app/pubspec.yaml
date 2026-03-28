@@ -44,7 +44,6 @@ dependencies:
   firebase_auth: ^6.2.0
   google_sign_in: ^7.2.0
   flutter_local_notifications: ^18.0.1
-  flutter_timezone: ^2.1.0
   shared_preferences: ^2.3.5
   timezone: ^0.9.4
 

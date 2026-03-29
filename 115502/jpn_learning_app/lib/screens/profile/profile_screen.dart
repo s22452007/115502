@@ -333,7 +333,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 backgroundImage:
                                     (userAvatar != null &&
                                         userAvatar.isNotEmpty)
-                                    ? MemoryImage(base64Decode(userAvatar))
+                                    ? (userAvatar.startsWith('http')
+                                        ? NetworkImage(userAvatar)
+                                        : MemoryImage(base64Decode(userAvatar)) as ImageProvider)
                                     : NetworkImage(defaultAvatarUrl)
                                           as ImageProvider,
                               ),

@@ -188,5 +188,6 @@ def google_login():
         "streak_days": user.streak_days,
         "j_pts": user.j_pts,
         "daily_scans": user.daily_scans,
-        "friend_id": user.friend_id
+        "friend_id": user.friend_id,
+        "username": user.username
     }), 200

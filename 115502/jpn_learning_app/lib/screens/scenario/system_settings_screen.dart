@@ -1,5 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/change_password_screen.dart';
 import 'package:jpn_learning_app/screens/profile/personal_info_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
@@ -449,19 +453,49 @@ class AccountSecurityScreen extends StatelessWidget {
   void _showDeleteDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('刪除帳號'),
-          content: const Text('你確定要刪除帳號嗎？此操作無法復原。'),
+          content: const Text('你確定要刪除帳號嗎？所有學習資料將永久刪除，此操作無法復原。'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('取消'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // TODO: 在這裡串接刪除帳號 API
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                final userId = context.read<UserProvider>().userId;
+                if (userId == null) return;
+
+                // 呼叫後端刪除
+                final res = await ApiClient.deleteAccount(userId);
+
+                // 刪除 Firebase 帳號
+                try {
+                  await FirebaseAuth.instance.currentUser?.delete();
+                } catch (_) {
+                  // 即使 Firebase 刪除失敗也繼續登出
+                }
+
+                if (!context.mounted) return;
+
+                if (res['error'] != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(res['error'])),
+                  );
+                  return;
+                }
+
+                // 清空本地狀態並回到登入頁
+                context.read<UserProvider>().logout();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('帳號已刪除')),
+                );
               },
               child: const Text(
                 '確認刪除',

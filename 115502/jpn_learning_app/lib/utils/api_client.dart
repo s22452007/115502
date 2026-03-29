@@ -535,6 +535,21 @@ class ApiClient {
     }
   }
 
+  // 刪除帳號 API
+  static Future<Map<String, dynamic>> deleteAccount(int userId) async {
+    final url = Uri.parse('$baseUrl/auth/delete_account');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 退出小組 API
   static Future<Map<String, dynamic>> leaveGroup(
     int groupId,

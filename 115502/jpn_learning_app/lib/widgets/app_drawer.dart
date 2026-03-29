@@ -76,7 +76,9 @@ class AppDrawer extends StatelessWidget {
               child: CircleAvatar(
                 backgroundColor: Colors.grey.shade200,
                 backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
-                    ? MemoryImage(base64Decode(userAvatar))
+                    ? (userAvatar.startsWith('http')
+                        ? NetworkImage(userAvatar)
+                        : MemoryImage(base64Decode(userAvatar)) as ImageProvider)
                     : NetworkImage(defaultAvatarUrl) as ImageProvider,
               ),
             ),

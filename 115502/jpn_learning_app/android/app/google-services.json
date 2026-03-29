@@ -12,7 +12,20 @@
           "package_name": "com.example.jpn_learning_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "287078122278-efnf4f8ibc73aceoe2uv7tc76tti8mpk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.jpn_learning_app",
+            "certificate_hash": "8cd17a12bc7a00d73666b25d8a61473c181b50cd"
+          }
+        },
+        {
+          "client_id": "287078122278-cg12o15ki1762dsntie91mdphvrerf71.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA5xbDFBlVsQ9t56DTWzxO_sNzAj-FxuV4"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "287078122278-cg12o15ki1762dsntie91mdphvrerf71.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "287078122278-fidijn2fvdijih1gmm9r67dikj1528md.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.jpnLearningAppNew"
+              }
+            }
+          ]
         }
       }
     }

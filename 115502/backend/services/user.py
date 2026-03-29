@@ -14,7 +14,6 @@ user_bp = Blueprint('user', __name__)
 # ==========================================
 # [個人設定與數據]
 # ==========================================
-
 # 更新日語等級
 @user_bp.route('/update_level', methods=['POST'])
 def update_level():
@@ -207,7 +206,6 @@ def increment_scan():
 # ==========================================
 # [好友系統]
 # ==========================================
-
 # 搜尋好友
 @user_bp.route('/search_friend', methods=['POST'])
 def search_friend():

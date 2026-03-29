@@ -5,9 +5,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   static bool _googleInitialized = false;
 
+  static const _webClientId =
+      '287078122278-cg12o15ki1762dsntie91mdphvrerf71.apps.googleusercontent.com';
+
   Future<void> _ensureGoogleInitialized() async {
     if (_googleInitialized) return;
-    await GoogleSignIn.instance.initialize();
+    await GoogleSignIn.instance.initialize(
+      serverClientId: _webClientId,
+    );
     _googleInitialized = true;
   }
 

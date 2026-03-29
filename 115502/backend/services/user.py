@@ -4,6 +4,7 @@ from datetime import date
 from flask import Blueprint, request, jsonify
 
 from utils.db import db
+from utils.group_helper import add_group_progress_and_check_reward
 from models import (
     User, UserAbility, UserAchievement, UserVocab, UserFolder, 
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup
@@ -211,6 +212,9 @@ def add_points():
     if member_record:
         member_record.group_points += points_to_add
 
+    # 幫小組的點數任務進度加上他剛賺到的點數 (points_to_add)
+    add_group_progress_and_check_reward(user_id=user_id, action_type="points", amount=points_to_add)
+
     return jsonify({
         "message": f"成功儲值 {points_to_add} 點！", 
         "total_points": user.j_pts # 回傳最新的總餘額給前端
@@ -242,6 +246,9 @@ def increment_scan():
         member_record.group_scans += 1
     
     db.session.commit()
+
+    # 把這次拍照的進度算給小組，並檢查要不要發獎勵！
+    add_group_progress_and_check_reward(user_id=user_id, action_type="scans", amount=1)
 
     return jsonify({
         "message": "進度更新成功！",

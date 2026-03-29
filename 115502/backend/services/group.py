@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 
 from utils.db import db
-from models import User, StudyGroup, GroupMember, GroupInvite
+from models import User, StudyGroup, GroupMember, GroupInvite, Friendship
 
 group_bp = Blueprint('group', __name__)
 

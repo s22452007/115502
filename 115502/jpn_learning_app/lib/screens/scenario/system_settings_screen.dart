@@ -5,7 +5,6 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/profile/change_password_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
@@ -377,8 +376,6 @@ class AccountSecurityScreen extends StatelessWidget {
                   },
                 ),
               ],
-                );
-              },
             ),
           ),
         ),

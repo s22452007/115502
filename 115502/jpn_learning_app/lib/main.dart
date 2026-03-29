@@ -61,6 +61,18 @@ class JpnLearningApp extends StatelessWidget {
           PointerDeviceKind.trackpad,
         },
       ),
+      builder: (context, child) {
+        final isLoggedIn = context.watch<UserProvider>().userId != null;
+        final fontScale = isLoggedIn
+            ? context.watch<FontSizeProvider>().scale
+            : 1.0;
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(fontScale),
+          ),
+          child: child!,
+        );
+      },
       home: const SplashScreen(),
     );
   }

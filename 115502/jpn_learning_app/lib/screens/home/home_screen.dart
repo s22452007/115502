@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/album_detail_screen.dart';
@@ -262,8 +263,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final streakDays = context.watch<UserProvider>().streakDays;
     final jPts = context.watch<UserProvider>().jPts;
     final isGuest = context.watch<UserProvider>().userId == null;
+    final fontScale = context.watch<FontSizeProvider>().scale;
 
-    return Scaffold(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(fontScale),
+      ),
+      child: Scaffold(
       backgroundColor: Colors.white,
       drawer: const AppDrawer(),
       appBar: AppBar(
@@ -564,6 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
       ),
+    ),
     );
   }
 

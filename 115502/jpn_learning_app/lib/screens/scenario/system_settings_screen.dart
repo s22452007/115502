@@ -6,7 +6,6 @@ import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/change_password_screen.dart';
-import 'package:jpn_learning_app/screens/profile/personal_info_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
@@ -376,19 +375,6 @@ class AccountSecurityScreen extends StatelessWidget {
                 return ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               children: [
-                _buildActionTile(
-                  icon: Icons.person_outline_rounded,
-                  title: '個人資料',
-                  subtitle: '查看與編輯你的基本資料',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const PersonalInfoScreen(),
-                      ),
-                    );
-                  },
-                ),
                 if (showChangePassword)
                   _buildActionTile(
                     icon: Icons.lock_outline_rounded,

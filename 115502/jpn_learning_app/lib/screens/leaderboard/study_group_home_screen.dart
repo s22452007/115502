@@ -285,6 +285,12 @@ class StudyGroupHomeScreen extends StatelessWidget {
                               if (result.containsKey('error')) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
                               } else {
+                                // 🎉 領獎成功！
+                                final userProvider = context.read<UserProvider>();
+                                userProvider.setJPts(userProvider.jPts + rewardPoints);
+
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? '成功領取獎勵！')));
+                                
                                 // 關閉對話框，並回到沒有小組的首頁
                                 Navigator.of(ctx).pop(); 
                                 Navigator.of(context).pop(); 

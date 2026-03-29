@@ -1,11 +1,20 @@
-from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from utils.db import db
-from models import User, UserAbility, UserAchievement, Achievement, UserVocab, UserFolder, FriendRequest, Friendship, StudyGroup, GroupMember, GroupInvite
-from datetime import date, timedelta
+# 1. Python 內建標準庫
+import re
 import random
 import string
-import re
+from datetime import date, timedelta
+
+# 2. 第三方套件 (Third-Party)
+from flask import Blueprint, request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# 3. 本地端模組 (Local)
+from utils.db import db
+from models import (
+    User, UserAbility, UserAchievement, Achievement, 
+    UserVocab, UserFolder, FriendRequest, Friendship, 
+    StudyGroup, GroupMember, GroupInvite
+)
 
 # 建立 auth 的 Blueprint
 auth_bp = Blueprint('auth', __name__)

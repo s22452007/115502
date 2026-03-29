@@ -115,6 +115,10 @@ class StudyGroup(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     goal_type = db.Column(db.String(50), nullable=False, default='scans') 
     goal_target = db.Column(db.Integer, nullable=False, default=30)       
+    # === 獎勵機制專用 ===
+    current_progress = db.Column(db.Integer, default=0) # 小組當前總進度
+    reward_points = db.Column(db.Integer, default=50)   # 達標後，有貢獻的成員每人可獲得的點數 (j_pts)
+    is_reward_claimed = db.Column(db.Boolean, default=False) # 本次目標是否已經發放過獎勵 (防重複發放)
 
     # 關聯：一個小組可以有多個成員
     members = db.relationship('GroupMember', backref='group', lazy=True, cascade="all, delete-orphan")

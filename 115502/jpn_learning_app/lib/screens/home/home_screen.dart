@@ -415,80 +415,78 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 130 * MediaQuery.textScalerOf(context).scale(1),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                // 直接使用我們剛剛做好的統一資料庫，並限制最多顯示 5 個最近的
-                itemCount: FavoritesDataProvider.allFavorites.take(5).length,
-                itemBuilder: (context, index) {
-                  final scenario = FavoritesDataProvider.allFavorites[index];
-
-                  return GestureDetector(
-                    onTap: () {
-                      // 🌟 統一點擊功能：點擊後直接跳轉到「可伸縮單字列表」頁面！
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              AlbumDetailScreen(scenario: scenario),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: List.generate(
+                    FavoritesDataProvider.allFavorites.take(5).length,
+                    (index) {
+                      final scenario = FavoritesDataProvider.allFavorites[index];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  AlbumDetailScreen(scenario: scenario),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 160,
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: index % 2 == 0
+                                ? const Color(0xFFEBE8F2)
+                                : const Color(0xFFEAF4F6),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: index % 2 == 0
+                                      ? const Color(0xFF8B6B9E)
+                                      : const Color(0xFF7FAFD0),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.train,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                scenario.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF333333),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${scenario.date} • ${scenario.vocabularyList.length}個單字',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
-                    child: Container(
-                      width: 160, // 卡片寬度
-                      margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: index % 2 == 0
-                            ? const Color(0xFFEBE8F2) // 偶數卡片用淡紫色
-                            : const Color(0xFFEAF4F6), // 奇數卡片用淡藍色
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 左上角的 Icon 圓角方塊
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: index % 2 == 0
-                                  ? const Color(0xFF8B6B9E)
-                                  : const Color(0xFF7FAFD0),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.train, // 這裡之後可以根據場景動態換 Icon
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const Spacer(),
-                          // 場景標題 (例如：新宿車站)
-                          Text(
-                            scenario.title,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF333333),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          // 🌟 加入時間與動態單字數量
-                          Text(
-                            '${scenario.date} • ${scenario.vocabularyList.length}個單字',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
 

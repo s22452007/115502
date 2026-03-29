@@ -373,12 +373,6 @@ class AccountSecurityScreen extends StatelessWidget {
                     },
                   ),
                 _buildActionTile(
-                  icon: Icons.devices_other_rounded,
-                  title: '登出其他裝置',
-                  subtitle: '將其他裝置上的登入狀態移除',
-                  onTap: () {},
-                ),
-                _buildActionTile(
                   icon: Icons.delete_outline_rounded,
                   title: '刪除帳號',
                   subtitle: '永久刪除帳號與學習資料',

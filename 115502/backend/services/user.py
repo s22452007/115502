@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
 from models import (
-    User, UserAbility, UserAchievement, UserVocab, UserFolder,
+    User, UserAbility, UserAchievement, UserVocab, UserFolder, UserScene,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
     Feedback
 )
@@ -156,17 +156,27 @@ def delete_account():
 # 抓取雷達圖與徽章
 @user_bp.route('/profile_data/<int:user_id>', methods=['GET'])
 def get_profile_data(user_id):
-    # 1. 抓取能力值 (雷達圖)
-    ability = UserAbility.query.filter_by(user_id=user_id).first()
-    
-    # 如果這個人還沒有能力值記錄，我們就給他一個預設值 (0.2)
+    user = User.query.get(user_id)
+
+    # 動態計算能力值
+    vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
+    scene_count = UserScene.query.filter_by(user_id=user_id).count()
+    folder_count = UserFolder.query.filter_by(user_id=user_id).count()
+    streak = user.streak_days if user else 0
+    pts = user.j_pts if user else 0
+
     ability_data = {
-        "listening": ability.listening if ability else 0.2,
-        "reading": ability.reading if ability else 0.2,
-        "writing": ability.writing if ability else 0.2,
-        "culture": ability.culture if ability else 0.2,
-        "speaking": ability.speaking if ability else 0.2,
+        "reading": min(vocab_count / 50, 1.0),
+        "culture": min(scene_count / 5, 1.0),
+        "speaking": min(streak / 30, 1.0),
+        "listening": min(pts / 500, 1.0),
+        "writing": min(folder_count / 10, 1.0),
     }
+
+    # 確保最低值為 0.05（讓雷達圖不會完全空白）
+    for key in ability_data:
+        if ability_data[key] < 0.05:
+            ability_data[key] = 0.05
 
     # 2. 抓取成就徽章
     # 先抓出系統裡所有的徽章總表

@@ -56,10 +56,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(_isLogin ? '登入中...' : '註冊中...')));
-
     if (_isLogin) {
       final result = await ApiClient.login(email, password);
 
@@ -113,6 +109,15 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
           );
         }
+      } else if (result['error'] == 'not_registered') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('此 Email 尚未註冊，請先註冊帳號')),
+        );
+        setState(() {
+          _isLogin = false;
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+        });
       } else {
         ScaffoldMessenger.of(
           context,

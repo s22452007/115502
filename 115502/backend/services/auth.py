@@ -55,9 +55,12 @@ def login():
 
     user = User.query.filter_by(email=email).first()
 
+    if not user:
+        return jsonify({"error": "not_registered"}), 401
+
     # 如果帳號密碼正確
-    if user and check_password_hash(user.password_hash, password):
-        
+    if check_password_hash(user.password_hash, password):
+
         # 防呆：如果舊玩家沒有 friend_id，就在登入時幫他補發一個
         if not user.friend_id:
             user.friend_id = generate_friend_id()

@@ -8,7 +8,6 @@ import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/change_password_screen.dart';
 import 'package:jpn_learning_app/screens/profile/personal_info_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
   const SystemSettingsScreen({super.key});
@@ -733,6 +732,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     super.dispose();
   }
 
+  bool _isSending = false;
+
   Future<void> _sendFeedback() async {
     final content = _contentController.text.trim();
     if (content.isEmpty) {
@@ -742,20 +743,28 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       return;
     }
 
+    setState(() => _isSending = true);
+
     final userProvider = context.read<UserProvider>();
-    final email = userProvider.email ?? '未登入';
-
-    final subject = Uri.encodeComponent('[$_selectedType] JPN Learning App 意見回饋');
-    final body = Uri.encodeComponent('回饋類型：$_selectedType\n使用者：$email\n\n$content');
-    final uri = Uri.parse('mailto:your-team-email@gmail.com?subject=$subject&body=$body');
-
-    try {
-      await launchUrl(uri);
-    } catch (_) {}
+    final res = await ApiClient.submitFeedback(
+      userId: userProvider.userId,
+      email: userProvider.email,
+      feedbackType: _selectedType,
+      content: content,
+    );
 
     if (!mounted) return;
+    setState(() => _isSending = false);
+
+    if (res['error'] != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['error'])),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('感謝你的回饋！')),
+      const SnackBar(content: Text('感謝你的回饋！我們會盡快處理')),
     );
     Navigator.pop(context);
   }
@@ -847,7 +856,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _sendFeedback,
+                      onPressed: _isSending ? null : _sendFeedback,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryGreen,
                         shape: RoundedRectangleBorder(

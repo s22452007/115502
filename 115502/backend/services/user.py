@@ -6,8 +6,9 @@ from flask import Blueprint, request, jsonify
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
 from models import (
-    User, UserAbility, UserAchievement, UserVocab, UserFolder, 
-    Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup
+    User, UserAbility, UserAchievement, UserVocab, UserFolder,
+    Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
+    Feedback
 )
 
 user_bp = Blueprint('user', __name__)
@@ -362,3 +363,30 @@ def get_friends_list(user_id):
             })
             
     return jsonify({"friends": result}), 200
+
+# ==========================================
+# 意見回饋
+# ==========================================
+@user_bp.route('/feedback', methods=['POST'])
+def submit_feedback():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    email = data.get('email', '')
+    feedback_type = data.get('feedback_type', '')
+    content = data.get('content', '').strip()
+
+    if not content:
+        return jsonify({"error": "請輸入回饋內容"}), 400
+    if not feedback_type:
+        return jsonify({"error": "請選擇回饋類型"}), 400
+
+    new_feedback = Feedback(
+        user_id=user_id,
+        email=email,
+        feedback_type=feedback_type,
+        content=content,
+    )
+    db.session.add(new_feedback)
+    db.session.commit()
+
+    return jsonify({"message": "感謝你的回饋！我們會盡快處理"}), 200

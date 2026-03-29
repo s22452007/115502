@@ -586,4 +586,20 @@ class ApiClient {
       return {'error': '網路連線失敗: $e'};
     }
   }
+
+  // 領取小組獎勵 API
+  static Future<Map<String, dynamic>> claimReward(int groupId, int userId) async {
+    final url = Uri.parse('$baseUrl/group/claim_reward');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'group_id': groupId, 'user_id': userId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('領獎失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

@@ -537,7 +537,7 @@ class ApiClient {
 
   // 刪除帳號 API
   static Future<Map<String, dynamic>> deleteAccount(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/delete_account');
+    final url = Uri.parse('$baseUrl/user/delete_account');
     try {
       final response = await http.post(
         url,

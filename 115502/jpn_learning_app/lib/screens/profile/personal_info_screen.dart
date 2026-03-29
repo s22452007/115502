@@ -24,8 +24,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   void initState() {
     super.initState();
     final userProvider = context.read<UserProvider>();
-    _displayName = userProvider.username ??
-        FirebaseAuth.instance.currentUser?.displayName;
+    _displayName = userProvider.username;
   }
 
   Future<void> _editNickname() async {

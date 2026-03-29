@@ -456,7 +456,53 @@ class AccountSecurityScreen extends StatelessWidget {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('刪除帳號'),
-          content: const Text('你確定要刪除帳號嗎？所有學習資料將永久刪除，此操作無法復原。'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '確定要刪除帳號嗎？',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              Text('刪除後以下資料將永久消失，無法復原：'),
+              SizedBox(height: 8),
+              Text('• 所有學習紀錄與能力值'),
+              Text('• 收藏的單字與資料夾'),
+              Text('• 成就徽章'),
+              Text('• 好友關係與學習小組'),
+              Text('• 個人資料與大頭貼'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                // 二次確認
+                _showFinalConfirmDialog(context);
+              },
+              child: const Text(
+                '我要刪除',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFinalConfirmDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('最後確認'),
+          content: const Text('此操作無法復原，確定要永久刪除帳號嗎？'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -468,15 +514,11 @@ class AccountSecurityScreen extends StatelessWidget {
                 final userId = context.read<UserProvider>().userId;
                 if (userId == null) return;
 
-                // 呼叫後端刪除
                 final res = await ApiClient.deleteAccount(userId);
 
-                // 刪除 Firebase 帳號
                 try {
                   await FirebaseAuth.instance.currentUser?.delete();
-                } catch (_) {
-                  // 即使 Firebase 刪除失敗也繼續登出
-                }
+                } catch (_) {}
 
                 if (!context.mounted) return;
 
@@ -487,19 +529,18 @@ class AccountSecurityScreen extends StatelessWidget {
                   return;
                 }
 
-                // 清空本地狀態並回到登入頁
                 context.read<UserProvider>().logout();
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('帳號已刪除')),
+                  const SnackBar(content: Text('帳號已刪除，所有資料已清除')),
                 );
               },
               child: const Text(
                 '確認刪除',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
               ),
             ),
           ],

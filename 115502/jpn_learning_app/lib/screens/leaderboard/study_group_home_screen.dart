@@ -39,6 +39,9 @@ class StudyGroupHomeScreen extends StatelessWidget {
     final String goalType = groupData['goal_type'] ?? 'scans';
     final int goalTarget = groupData['goal_target'] ?? 30;
 
+    final int rewardPoints = groupData['reward_points'] ?? 50;
+    final int groupId = groupData['group_id'] ?? 0;
+
     // 動態計算目前的總進度
     int currentTotal = 0;
     for (var m in members) {
@@ -60,12 +63,23 @@ class StudyGroupHomeScreen extends StatelessWidget {
         children: [
           _buildGroupInfoCard(groupName, members),
           const SizedBox(height: 16),
-          // 把動態算好的變數傳進去給目標卡片
-          _buildGoalCard(progress: progress, current: currentTotal, goal: goalTarget, type: goalType),
+          
+          // 把動態算好的變數傳進去給目標卡片 (加了 context 才能跳視窗) 👇
+          _buildGoalCard(
+            context,
+            progress: progress, 
+            current: currentTotal, 
+            goal: goalTarget, 
+            type: goalType,
+            rewardPoints: rewardPoints,
+            groupId: groupId,
+          ),
+          
           const SizedBox(height: 16),
           // 排行榜也根據目標類型來排序！
           _buildRankingCard(members, goalType),
           const SizedBox(height: 18),
+          
           Row(
             children: [
               Expanded(
@@ -187,33 +201,96 @@ class StudyGroupHomeScreen extends StatelessWidget {
   }
 
   // 動態顯示單位與文案
-  Widget _buildGoalCard({required double progress, required int current, required int goal, required String type}) {
+  Widget _buildGoalCard(BuildContext context, {required double progress, required int current, required int goal, required String type, required int rewardPoints, required int groupId}) {
     String unit = '次拍照';
     if (type == 'points') unit = 'J-Pts';
     if (type == 'logins') unit = '天登入';
 
+    // 判斷是否達標
+    bool isGoalReached = current >= goal;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        // 如果達標，背景變成亮金黃色慶祝！
+        color: isGoalReached ? Colors.amber.shade100 : cardColor, 
+        borderRadius: BorderRadius.circular(20)
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('本週共同目標', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textDark)),
-          const SizedBox(height: 14),
-          Text('$current / $goal $unit', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: progress, minHeight: 16, backgroundColor: Colors.white,
-              valueColor: AlwaysStoppedAnimation(AppColors.primary),
-            ),
+          Text(
+            isGoalReached ? "🏆 小組任務大成功！" : "🎯 本週共同目標", 
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textDark)
           ),
-          const SizedBox(height: 12),
-          Text('還差 ${goal - current > 0 ? goal - current : 0} ${unit.replaceAll('拍照', '').replaceAll('登入', '')} ・ 截止時間：週日 23:59', style: const TextStyle(fontSize: 14, color: subText)),
-          const SizedBox(height: 10),
-          const Text('完成目標後全員可獲得額外獎勵', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textDark)),
+          const SizedBox(height: 14),
+          
+          // ==== 狀態 A：還沒達標，顯示進度條 ====
+          if (!isGoalReached) ...[
+            Text('$current / $goal $unit', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: progress, minHeight: 16, backgroundColor: Colors.white,
+                valueColor: AlwaysStoppedAnimation(AppColors.primary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('還差 ${goal - current} ${unit.replaceAll('拍照', '').replaceAll('登入', '')} ・ 截止時間：週日 23:59', style: const TextStyle(fontSize: 14, color: subText)),
+            const SizedBox(height: 10),
+            const Text('完成目標後全員可獲得額外獎勵', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textDark)),
+          ],
+
+          // ==== 狀態 B：達標了，顯示領獎按鈕！ ====
+          if (isGoalReached) ...[
+            const Text('太棒了！你們已經達成目標！', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.card_giftcard, size: 24),
+                label: Text("領取 $rewardPoints 點並結業！", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber.shade600, // 金色按鈕
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onPressed: () async {
+                  // 1. 跳出恭喜獲得獎勵的視窗
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false, // 點旁邊不能關掉
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: const Text("🎉 恭喜達標！", style: TextStyle(fontWeight: FontWeight.bold)),
+                      content: Text("你們小組超棒的！系統已將 $rewardPoints 點發送至你的錢包！\n\n領取後將退出小組，準備迎接下一個挑戰吧！", style: const TextStyle(fontSize: 16, height: 1.5)),
+                      actions: [
+                        TextButton(
+                          child: const Text("太棒了！", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          onPressed: () async {
+                            // 2. 取得 userId
+                            final userId = context.read<UserProvider>().userId;
+                            if (userId == null) return;
+                            
+                            // 3. 呼叫退出小組的 API
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('領取中...')));
+                            await ApiClient.leaveGroup(groupId, userId);
+                            
+                            // 4. 關閉視窗，並回到沒有小組的首頁
+                            Navigator.of(ctx).pop(); // 關掉 Dialog
+                            Navigator.of(context).pop(); // 離開這個畫面
+                          },
+                        )
+                      ],
+                    ),
+                  );
+                },
+              ),
+            )
+          ],
         ],
       ),
     );

@@ -116,6 +116,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _editNickname(String currentName) async {
+    final userId = context.read<UserProvider>().userId;
+    final controller = TextEditingController(text: context.read<UserProvider>().username ?? '');
+    String? errorText;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('修改暱稱'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: '中文或英文，2～20 字',
+              border: const OutlineInputBorder(),
+              errorText: errorText,
+            ),
+            onChanged: (_) {
+              if (errorText != null) setDialogState(() => errorText = null);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) {
+                  setDialogState(() => errorText = '請輸入暱稱');
+                  return;
+                }
+                final check = await ApiClient.checkUsername(name, userId: userId);
+                if (check['error'] != null) {
+                  setDialogState(() => errorText = check['error']);
+                  return;
+                }
+                if (check['available'] == false) {
+                  setDialogState(() => errorText = '此暱稱已被使用');
+                  return;
+                }
+                if (ctx.mounted) Navigator.pop(ctx, name);
+              },
+              child: Text('確認', style: TextStyle(color: _primaryGreen)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == null || result.isEmpty || userId == null) return;
+
+    final res = await ApiClient.updateUsername(userId, result);
+    if (!mounted) return;
+
+    if (res['error'] != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['error'])),
+      );
+      return;
+    }
+
+    context.read<UserProvider>().setUsername(result);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('暱稱已更新')),
+    );
+  }
+
   void _handleGuestClick(String featureName) {
     ScaffoldMessenger.of(
       context,
@@ -364,26 +434,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  isGuest ? 'Lv.?' : 'Lv.3',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: _textColor,
+                            GestureDetector(
+                              onTap: isGuest ? null : () => _editNickname(userName),
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      isGuest ? '訪客' : userName,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: _textColor,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  isGuest ? '訪客' : userName,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: _textColor,
-                                  ),
-                                ),
-                              ],
+                                  if (!isGuest) ...[
+                                    const SizedBox(width: 6),
+                                    Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade500),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              isGuest
+                                  ? '登入解鎖更多功能'
+                                  : context.watch<UserProvider>().japaneseLevel.isNotEmpty
+                                      ? context.watch<UserProvider>().japaneseLevel
+                                      : '尚未設定等級',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             ClipRRect(

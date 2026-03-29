@@ -244,3 +244,40 @@ def leave_group():
     except Exception as e:
         print("退出小組發生錯誤:", str(e))
         return jsonify({"error": f"後端錯誤: {str(e)}"}), 500
+
+# 專屬領獎 API
+@group_bp.route('/claim_reward', methods=['POST'])
+def claim_reward():
+    data = request.get_json()
+    group_id = data.get('group_id')
+    user_id = data.get('user_id')
+
+    group = StudyGroup.query.get(group_id)
+    member = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+
+    if not group or not member:
+        return jsonify({"error": "找不到小組或你已不在小組中"}), 404
+
+    if group.current_progress < group.goal_target:
+        return jsonify({"error": "任務尚未達成，無法領獎"}), 400
+
+    try:
+        # 1. 發放點數給這個使用者！(按下去的這一刻才真的加錢)
+        user = User.query.get(user_id)
+        user.j_pts += group.reward_points
+
+        # 2. 領完獎後，將他從小組名單中安全移除 (不會連帶刪除群組)
+        db.session.delete(member)
+        db.session.commit()
+
+        # 3. 檢查小組是不是空了？如果大家都領完退出了，才把整個小組徹底刪除
+        remaining_members = GroupMember.query.filter_by(group_id=group_id).count()
+        if remaining_members == 0:
+            db.session.delete(group)
+            db.session.commit()
+
+        return jsonify({"message": f"成功領取 {group.reward_points} 點！"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"後端錯誤: {str(e)}"}), 500

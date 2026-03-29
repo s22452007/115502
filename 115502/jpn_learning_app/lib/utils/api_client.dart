@@ -106,7 +106,7 @@ class ApiClient {
     int userId,
     String level,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/update_level');
+    final url = Uri.parse('$baseUrl/user/update_level');
     try {
       final response = await http.post(
         url,
@@ -151,7 +151,7 @@ class ApiClient {
     int userId,
     String avatarBase64,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/upload_avatar');
+    final url = Uri.parse('$baseUrl/user/upload_avatar');
     try {
       final response = await http.post(
         url,
@@ -167,7 +167,7 @@ class ApiClient {
 
   // 抓取個人檔案資料 API
   static Future<Map<String, dynamic>> fetchProfileData(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/profile_data/$userId');
+    final url = Uri.parse('$baseUrl/user/profile_data/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -183,7 +183,7 @@ class ApiClient {
 
   // 抓取使用者收藏資料夾 API
   static Future<Map<String, dynamic>> fetchUserFavorites(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/favorites/$userId');
+    final url = Uri.parse('$baseUrl/vocab/favorites/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -202,7 +202,7 @@ class ApiClient {
     int userId,
     String folderName,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/folders');
+    final url = Uri.parse('$baseUrl/vocab/folders');
     try {
       final response = await http.post(
         url,
@@ -259,7 +259,7 @@ class ApiClient {
 
   // 搜尋好友 API
   static Future<Map<String, dynamic>> searchFriend(String friendId) async {
-    final url = Uri.parse('$baseUrl/auth/search_friend');
+    final url = Uri.parse('$baseUrl/user/search_friend');
     try {
       final response = await http.post(
         url,
@@ -278,7 +278,7 @@ class ApiClient {
     int senderId,
     int receiverId,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/friend_request/send');
+    final url = Uri.parse('$baseUrl/user/friend_request/send');
     try {
       final response = await http.post(
         url,
@@ -293,7 +293,7 @@ class ApiClient {
 
   // 讀取待確認的邀請 API
   static Future<Map<String, dynamic>> getPendingRequests(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/friend_request/pending/$userId');
+    final url = Uri.parse('$baseUrl/user/friend_request/pending/$userId');
     try {
       final response = await http.get(url);
       return jsonDecode(response.body);
@@ -307,7 +307,7 @@ class ApiClient {
     int requestId,
     String action,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/friend_request/respond');
+    final url = Uri.parse('$baseUrl/user/friend_request/respond');
     try {
       final response = await http.post(
         url,
@@ -322,7 +322,7 @@ class ApiClient {
 
   // 取得好友列表 API
   static Future<Map<String, dynamic>> getFriendsList(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/friends/$userId');
+    final url = Uri.parse('$baseUrl/user/friends/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -336,7 +336,7 @@ class ApiClient {
 
   // 購買點數 API
   static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
-    final url = Uri.parse('$baseUrl/auth/add_points');
+    final url = Uri.parse('$baseUrl/user/add_points');
     try {
       final response = await http.post(
         url,
@@ -352,7 +352,7 @@ class ApiClient {
 
   // 增加今日拍照進度 API
   static Future<Map<String, dynamic>> incrementDailyScan(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/increment_scan');
+    final url = Uri.parse('$baseUrl/user/increment_scan');
     try {
       final response = await http.post(
         url,
@@ -374,7 +374,7 @@ class ApiClient {
     String goalType, // 接收目標類型
     int goalTarget, // 接收目標數值
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/create');
+    final url = Uri.parse('$baseUrl/group/group/create');
     try {
       final response = await http.post(
         url,
@@ -396,7 +396,7 @@ class ApiClient {
 
   // 抓取我的學習小組 (公會) API
   static Future<Map<String, dynamic>> getMyGroup(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/group/my_group/$userId');
+    final url = Uri.parse('$baseUrl/group/group/my_group/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -412,7 +412,7 @@ class ApiClient {
 
   // 抓取收到的小組邀請 API
   static Future<Map<String, dynamic>> getGroupInvites(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/group/invites/$userId');
+    final url = Uri.parse('$baseUrl/group/group/invites/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -432,7 +432,7 @@ class ApiClient {
     String action,
     int userId,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/respond_invite');
+    final url = Uri.parse('$baseUrl/group/group/respond_invite');
     try {
       final response = await http.post(
         url,
@@ -456,7 +456,7 @@ class ApiClient {
     int senderId,
     List<String> friendIds,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/invite_friends');
+    final url = Uri.parse('$baseUrl/group/group/invite_friends');
     try {
       final response = await http.post(
         url,
@@ -481,7 +481,7 @@ class ApiClient {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/group/friends_detailed_status'),
+        Uri.parse('$baseUrl/group/group/friends_detailed_status'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'group_id': groupId ?? -1, 'user_id': userId}),
       );
@@ -502,7 +502,7 @@ class ApiClient {
     String username, {
     int? userId,
   }) async {
-    final url = Uri.parse('$baseUrl/auth/check_username');
+    final url = Uri.parse('$baseUrl/user/check_username');
     try {
       final body = <String, dynamic>{'username': username};
       if (userId != null) body['user_id'] = userId;
@@ -522,7 +522,7 @@ class ApiClient {
     int userId,
     String username,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/update_username');
+    final url = Uri.parse('$baseUrl/user/update_username');
     try {
       final response = await http.post(
         url,
@@ -555,7 +555,7 @@ class ApiClient {
     int groupId,
     int userId,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/leave');
+    final url = Uri.parse('$baseUrl/group/group/leave');
     try {
       final response = await http.post(
         url,

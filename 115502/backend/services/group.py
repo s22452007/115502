@@ -39,6 +39,9 @@ def get_my_group(user_id):
         "group_name": group.name,
         "goal_type": group.goal_type,     # 把設定的目標類型傳給前端
         "goal_target": group.goal_target, # 把設定的目標次數傳給前端
+        "current_progress": group.current_progress, 
+        "reward_points": group.reward_points,       
+        "is_reward_claimed": group.is_reward_claimed,
         "members": member_data
     }), 200
 

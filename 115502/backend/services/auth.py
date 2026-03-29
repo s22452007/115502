@@ -753,3 +753,48 @@ def update_username():
     user.username = username
     db.session.commit()
     return jsonify({"message": "暱稱更新成功", "username": username}), 200
+
+
+@auth_bp.route('/delete_account', methods=['POST'])
+def delete_account():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+
+    try:
+        # 刪除相關資料
+        UserAbility.query.filter_by(user_id=user_id).delete()
+        UserAchievement.query.filter_by(user_id=user_id).delete()
+        UserVocab.query.filter_by(user_id=user_id).delete()
+        UserFolder.query.filter_by(user_id=user_id).delete()
+        FriendRequest.query.filter(
+            (FriendRequest.sender_id == user_id) | (FriendRequest.receiver_id == user_id)
+        ).delete(synchronize_session=False)
+        Friendship.query.filter(
+            (Friendship.user_id == user_id) | (Friendship.friend_id == user_id)
+        ).delete(synchronize_session=False)
+
+        # 處理小組：如果是組長就解散，否則退出
+        hosted_groups = StudyGroup.query.filter_by(host_id=user_id).all()
+        for group in hosted_groups:
+            GroupInvite.query.filter_by(group_id=group.id).delete()
+            GroupMember.query.filter_by(group_id=group.id).delete()
+            db.session.delete(group)
+
+        GroupMember.query.filter_by(user_id=user_id).delete()
+        GroupInvite.query.filter_by(receiver_id=user_id).delete()
+        GroupInvite.query.filter_by(sender_id=user_id).delete()
+
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"message": "帳號已刪除"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"刪除失敗：{str(e)}"}), 500

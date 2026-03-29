@@ -85,12 +85,12 @@ backend/
 |       |__ <photos>                        # 使用者上傳的場景照片
 |
 |__ <services>
-|       |__ auth.py                         # 登入、註冊、JWT驗證
-|       |__ user.py                         # 使用者資料、等級、成就、雷達圖
+|       |__ auth.py                         # 登入、註冊、Google登入、重設密碼
+|       |__ user.py                         # 個人資料、好友系統、點數與進度更新
 |       |__ scenario.py                     # AI場景辨識、場景紀錄
 |       |__ roleplay.py                     # AI角色扮演、自然度評分
-|       |__ vocabulary.py                   # 單字收藏、查詢
-|       |__ leaderboard.py                  # 排行榜、學習小組
+|       |__ vocabulary.py                   # 單字收藏、自訂資料夾
+|       |__ group.py.py                     # 學習小組
 |       |__ tutor.py                        # 提問、FAQ、家教回覆
 |       |__ quiz.py                         # 新手測驗、程度判定
 |       |__ __init__.py
@@ -99,6 +99,7 @@ backend/
 |       |__ db.py                           # 資料庫連線
 |       |__ jwt_helper.py                   # JWT產生與驗證
 |       |__ ai_helper.py                    # OpenAI/Gemini API封裝
+|       |__ auth_helper.py                  # 放產生 friend_id 的小工具
 |       |__ __init__.py
 |
 |__ app.py                                  # 主程式，註冊所有Blueprint

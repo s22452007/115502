@@ -9,7 +9,7 @@ class FontSizeProvider extends ChangeNotifier {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    _scale = prefs.getDouble(_key) ?? 1.0;
+    _scale = (prefs.getDouble(_key) ?? 1.0).clamp(0.85, 1.3);
     notifyListeners();
   }
 

@@ -44,6 +44,8 @@ class JpnLearningApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fontScale = context.watch<FontSizeProvider>().scale;
+
     return MaterialApp(
       title: 'Snap to Learn',
       debugShowCheckedModeBanner: false,
@@ -61,6 +63,14 @@ class JpnLearningApp extends StatelessWidget {
           PointerDeviceKind.trackpad,
         },
       ),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(fontScale),
+          ),
+          child: child!,
+        );
+      },
       home: const SplashScreen(),
     );
   }

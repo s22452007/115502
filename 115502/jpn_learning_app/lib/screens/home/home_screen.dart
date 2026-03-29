@@ -403,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 130, // 設定橫向卡片的高度
+              height: 130 * MediaQuery.textScalerOf(context).scale(1),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 // 直接使用我們剛剛做好的統一資料庫，並限制最多顯示 5 個最近的

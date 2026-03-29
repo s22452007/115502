@@ -592,7 +592,7 @@ class FontSizeSettingsScreen extends StatelessWidget {
     final scale = fontProvider.scale;
 
     String label;
-    if (scale <= 0.85) {
+    if (scale <= 0.9) {
       label = '小';
     } else if (scale <= 1.0) {
       label = '標準';
@@ -677,9 +677,9 @@ class FontSizeSettingsScreen extends StatelessWidget {
                   ),
                   Slider(
                     value: scale,
-                    min: 0.8,
+                    min: 0.85,
                     max: 1.3,
-                    divisions: 5,
+                    divisions: 3,
                     activeColor: primaryGreen,
                     onChanged: (value) {
                       fontProvider.setScale(value);

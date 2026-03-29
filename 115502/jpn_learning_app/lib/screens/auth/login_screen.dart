@@ -252,7 +252,9 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('=== Google 登入錯誤: $e ===');
+      debugPrint('$stackTrace');
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(

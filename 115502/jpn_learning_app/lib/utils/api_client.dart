@@ -15,6 +15,10 @@ class ApiClient {
     }
   }
 
+  // ==========================================
+  // 🔐 登入與註冊相關
+  // ==========================================
+
   // 註冊 API
   static Future<Map<String, dynamic>> register(
     String email,
@@ -54,9 +58,6 @@ class ApiClient {
   }
 
   // Google 登入 / 同步會員 API
-  // 後端規格：
-  // POST /api/auth/google_login
-  // body: {"email": "...", "avatar": "...(選填)"}
   static Future<Map<String, dynamic>> googleLogin(
     String email, {
     String? avatar,
@@ -101,12 +102,16 @@ class ApiClient {
     }
   }
 
+  // ==========================================
+  // 👤 使用者個人資料與設定相關
+  // ==========================================
+
   // 直接更新日語程度 API
   static Future<Map<String, dynamic>> updateLevel(
     int userId,
     String level,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/update_level');
+    final url = Uri.parse('$baseUrl/user/update_level');
     try {
       final response = await http.post(
         url,
@@ -120,38 +125,12 @@ class ApiClient {
     }
   }
 
-  // 傳送測驗分數給後端的 API
-  static Future<Map<String, dynamic>> submitQuizScore(
-    int userId,
-    int score,
-  ) async {
-    final url = Uri.parse('$baseUrl/quiz/submit');
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'score': score}),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        print('後端回傳錯誤代碼: ${response.statusCode}');
-        return {'error': '請求失敗'};
-      }
-    } catch (e) {
-      print('連線失敗: $e');
-      return {'error': e.toString()};
-    }
-  }
-
   // 上傳大頭貼
   static Future<Map<String, dynamic>> uploadAvatar(
     int userId,
     String avatarBase64,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/upload_avatar');
+    final url = Uri.parse('$baseUrl/user/upload_avatar');
     try {
       final response = await http.post(
         url,
@@ -167,7 +146,7 @@ class ApiClient {
 
   // 抓取個人檔案資料 API
   static Future<Map<String, dynamic>> fetchProfileData(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/profile_data/$userId');
+    final url = Uri.parse('$baseUrl/user/profile_data/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -181,85 +160,98 @@ class ApiClient {
     }
   }
 
-  // 抓取使用者收藏資料夾 API
-  static Future<Map<String, dynamic>> fetchUserFavorites(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/favorites/$userId');
+  // 檢查暱稱是否可用 API
+  static Future<Map<String, dynamic>> checkUsername(
+    String username, {
+    int? userId,
+  }) async {
+    final url = Uri.parse('$baseUrl/user/check_username');
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        return {'error': '請求失敗'};
-      }
+      final body = <String, dynamic>{'username': username};
+      if (userId != null) body['user_id'] = userId;
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      return jsonDecode(response.body);
     } catch (e) {
-      print('抓取收藏夾失敗: $e');
       return {'error': '網路連線失敗'};
     }
   }
 
-  // 建立自訂資料夾 API
-  static Future<Map<String, dynamic>> createFolder(
+  // 更新暱稱 API
+  static Future<Map<String, dynamic>> updateUsername(
     int userId,
-    String folderName,
+    String username,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/folders');
+    final url = Uri.parse('$baseUrl/user/update_username');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'name': folderName}),
+        body: jsonEncode({'user_id': userId, 'username': username}),
       );
       return jsonDecode(response.body);
     } catch (e) {
-      print('建立資料夾失敗: $e');
       return {'error': '網路連線失敗'};
     }
   }
 
-  // 上傳場景照片給 AI 分析 API
-  static Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
-    final url = Uri.parse('$baseUrl/scenario/analyze');
-
+  // 刪除帳號 API
+  static Future<Map<String, dynamic>> deleteAccount(int userId) async {
+    final url = Uri.parse('$baseUrl/user/delete_account'); 
     try {
-      var request = http.MultipartRequest('POST', url);
-
-      if (kIsWeb) {
-        // Web 平台的 imagePath 通常是 blob: URL，我們需要先抓取它的 bytes
-        final imageResponse = await http.get(Uri.parse(imagePath));
-        final bytes = imageResponse.bodyBytes;
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'image',
-            bytes,
-            filename: 'web_image.jpg',
-          ),
-        );
-      } else {
-        // Android/iOS 可以直接使用實體檔案路徑
-        request.files.add(
-          await http.MultipartFile.fromPath('image', imagePath),
-        );
-      }
-
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 ||
-          response.statusCode == 400 ||
-          response.statusCode == 500) {
-        return jsonDecode(response.body);
-      } else {
-        return {'error': '伺服器錯誤代碼: ${response.statusCode}'};
-      }
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body);
     } catch (e) {
-      print('上傳圖片連線失敗: $e');
-      return {'error': '網路連線失敗: $e'};
+      return {'error': '網路連線失敗'};
     }
   }
 
+  // 購買/增加點數 API
+  static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
+    final url = Uri.parse('$baseUrl/user/add_points');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'points': points}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('購買點數連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 增加今日拍照進度 API
+  static Future<Map<String, dynamic>> incrementDailyScan(int userId) async {
+    final url = Uri.parse('$baseUrl/user/increment_scan');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('更新進度連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // ==========================================
+  // 🤝 好友系統相關
+  // ==========================================
+
   // 搜尋好友 API
   static Future<Map<String, dynamic>> searchFriend(String friendId) async {
-    final url = Uri.parse('$baseUrl/auth/search_friend');
+    final url = Uri.parse('$baseUrl/user/search_friend');
     try {
       final response = await http.post(
         url,
@@ -278,7 +270,7 @@ class ApiClient {
     int senderId,
     int receiverId,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/friend_request/send');
+    final url = Uri.parse('$baseUrl/user/friend_request/send');
     try {
       final response = await http.post(
         url,
@@ -293,7 +285,7 @@ class ApiClient {
 
   // 讀取待確認的邀請 API
   static Future<Map<String, dynamic>> getPendingRequests(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/friend_request/pending/$userId');
+    final url = Uri.parse('$baseUrl/user/friend_request/pending/$userId');
     try {
       final response = await http.get(url);
       return jsonDecode(response.body);
@@ -307,7 +299,7 @@ class ApiClient {
     int requestId,
     String action,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/friend_request/respond');
+    final url = Uri.parse('$baseUrl/user/friend_request/respond');
     try {
       final response = await http.post(
         url,
@@ -322,7 +314,7 @@ class ApiClient {
 
   // 取得好友列表 API
   static Future<Map<String, dynamic>> getFriendsList(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/friends/$userId');
+    final url = Uri.parse('$baseUrl/user/friends/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -334,47 +326,19 @@ class ApiClient {
     }
   }
 
-  // 購買點數 API
-  static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
-    final url = Uri.parse('$baseUrl/auth/add_points');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'points': points}),
-      );
-      return jsonDecode(response.body);
-    } catch (e) {
-      print('購買點數連線失敗: $e');
-      return {'error': '網路連線失敗'};
-    }
-  }
+  // ==========================================
+  // 🛡️ 學習小組 (公會) 系統相關 
+  // ==========================================
 
-  // 增加今日拍照進度 API
-  static Future<Map<String, dynamic>> incrementDailyScan(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/increment_scan');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId}),
-      );
-      return jsonDecode(response.body);
-    } catch (e) {
-      print('更新進度連線失敗: $e');
-      return {'error': '網路連線失敗'};
-    }
-  }
-
-  // 建立學習小組 (公會) API
+  // 建立學習小組 API
   static Future<Map<String, dynamic>> createGroup(
     int hostId,
     String groupName,
     List<String> friendIds,
-    String goalType, // 接收目標類型
-    int goalTarget, // 接收目標數值
+    String goalType,
+    int goalTarget,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/create');
+    final url = Uri.parse('$baseUrl/group/create');
     try {
       final response = await http.post(
         url,
@@ -394,9 +358,9 @@ class ApiClient {
     }
   }
 
-  // 抓取我的學習小組 (公會) API
+  // 抓取我的學習小組 API
   static Future<Map<String, dynamic>> getMyGroup(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/group/my_group/$userId');
+    final url = Uri.parse('$baseUrl/group/my_group/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -412,7 +376,7 @@ class ApiClient {
 
   // 抓取收到的小組邀請 API
   static Future<Map<String, dynamic>> getGroupInvites(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/group/invites/$userId');
+    final url = Uri.parse('$baseUrl/group/invites/$userId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -432,7 +396,7 @@ class ApiClient {
     String action,
     int userId,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/respond_invite');
+    final url = Uri.parse('$baseUrl/group/respond_invite');
     try {
       final response = await http.post(
         url,
@@ -456,7 +420,7 @@ class ApiClient {
     int senderId,
     List<String> friendIds,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/invite_friends');
+    final url = Uri.parse('$baseUrl/group/invite_friends');
     try {
       final response = await http.post(
         url,
@@ -474,14 +438,15 @@ class ApiClient {
     }
   }
 
-  // 抓取包含邀請狀態的詳細好友名單
+  // 抓取包含邀請狀態的詳細好友名單 API
   static Future<Map<String, dynamic>> getFriendsDetailedInvitationStatus(
     int? groupId,
     int userId,
   ) async {
+    final url = Uri.parse('$baseUrl/group/friends_detailed_status');
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/group/friends_detailed_status'),
+        url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'group_id': groupId ?? -1, 'user_id': userId}),
       );
@@ -497,65 +462,12 @@ class ApiClient {
     }
   }
 
-  // 檢查暱稱是否可用 API
-  static Future<Map<String, dynamic>> checkUsername(
-    String username, {
-    int? userId,
-  }) async {
-    final url = Uri.parse('$baseUrl/auth/check_username');
-    try {
-      final body = <String, dynamic>{'username': username};
-      if (userId != null) body['user_id'] = userId;
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      );
-      return jsonDecode(response.body);
-    } catch (e) {
-      return {'error': '網路連線失敗'};
-    }
-  }
-
-  // 更新暱稱 API
-  static Future<Map<String, dynamic>> updateUsername(
-    int userId,
-    String username,
-  ) async {
-    final url = Uri.parse('$baseUrl/auth/update_username');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'username': username}),
-      );
-      return jsonDecode(response.body);
-    } catch (e) {
-      return {'error': '網路連線失敗'};
-    }
-  }
-
-  // 刪除帳號 API
-  static Future<Map<String, dynamic>> deleteAccount(int userId) async {
-    final url = Uri.parse('$baseUrl/auth/delete_account');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId}),
-      );
-      return jsonDecode(response.body);
-    } catch (e) {
-      return {'error': '網路連線失敗'};
-    }
-  }
-
-  // 退出小組 API
+  // 退出/解散小組 API
   static Future<Map<String, dynamic>> leaveGroup(
     int groupId,
     int userId,
   ) async {
-    final url = Uri.parse('$baseUrl/auth/group/leave');
+    final url = Uri.parse('$baseUrl/group/leave');
     try {
       final response = await http.post(
         url,
@@ -566,6 +478,112 @@ class ApiClient {
     } catch (e) {
       print('退出小組失敗: $e');
       return {'error': '網路連線失敗'};
+    }
+  }
+
+  // ==========================================
+  // 📚 單字本與收藏夾相關
+  // ==========================================
+
+  // 抓取使用者收藏資料夾 API
+  static Future<Map<String, dynamic>> fetchUserFavorites(int userId) async {
+    final url = Uri.parse('$baseUrl/vocab/favorites/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('抓取收藏夾失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 建立自訂資料夾 API
+  static Future<Map<String, dynamic>> createFolder(
+    int userId,
+    String folderName,
+  ) async {
+    final url = Uri.parse('$baseUrl/vocab/folders');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'name': folderName}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('建立資料夾失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // ==========================================
+  // 🤖 其他 AI 與測驗功能
+  // ==========================================
+
+  // 傳送測驗分數給後端的 API
+  static Future<Map<String, dynamic>> submitQuizScore(
+    int userId,
+    int score,
+  ) async {
+    final url = Uri.parse('$baseUrl/quiz/submit'); 
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'score': score}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('後端回傳錯誤代碼: ${response.statusCode}');
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('連線失敗: $e');
+      return {'error': e.toString()};
+    }
+  }
+
+  // 上傳場景照片給 AI 分析 API
+  static Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
+    final url = Uri.parse('$baseUrl/scenario/analyze');
+    try {
+      var request = http.MultipartRequest('POST', url);
+
+      if (kIsWeb) {
+        final imageResponse = await http.get(Uri.parse(imagePath));
+        final bytes = imageResponse.bodyBytes;
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            bytes,
+            filename: 'web_image.jpg',
+          ),
+        );
+      } else {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imagePath),
+        );
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 400 ||
+          response.statusCode == 500) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '伺服器錯誤代碼: ${response.statusCode}'};
+      }
+    } catch (e) {
+      print('上傳圖片連線失敗: $e');
+      return {'error': '網路連線失敗: $e'};
     }
   }
 }

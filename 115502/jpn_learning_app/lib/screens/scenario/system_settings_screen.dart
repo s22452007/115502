@@ -364,31 +364,9 @@ class AccountSecurityScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: (context, snapshot) {
-                final user = snapshot.data;
-                final isGoogleOnly = user != null &&
-                    user.providerData.isNotEmpty &&
-                    user.providerData.every((p) => p.providerId == 'google.com');
-                final showChangePassword = user != null && !isGoogleOnly;
-                return ListView(
+            child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               children: [
-                if (showChangePassword)
-                  _buildActionTile(
-                    icon: Icons.lock_outline_rounded,
-                    title: '修改密碼',
-                    subtitle: '更新帳號登入密碼',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ChangePasswordScreen(),
-                        ),
-                      );
-                    },
-                  ),
                 _buildActionTile(
                   icon: Icons.delete_outline_rounded,
                   title: '刪除帳號',

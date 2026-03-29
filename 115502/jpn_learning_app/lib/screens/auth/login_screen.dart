@@ -73,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('登入成功！')));
+        ).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
 
         if (result.containsKey('streak_days')) {
           context.read<UserProvider>().setStreakDays(
@@ -242,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google 登入成功：${user.displayName ?? email}')),
+        SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')),
       );
 
       // 4. 導頁：有程度就進首頁，沒有就去選程度

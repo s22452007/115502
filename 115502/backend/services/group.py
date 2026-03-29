@@ -6,7 +6,7 @@ from models import User, StudyGroup, GroupMember, GroupInvite
 group_bp = Blueprint('group', __name__)
 
 # 取得我的小組資料
-@group_bp.route('/group/my_group/<int:user_id>', methods=['GET'])
+@group_bp.route('/my_group/<int:user_id>', methods=['GET'])
 def get_my_group(user_id):
     # 找自己在哪個小組
     member_record = GroupMember.query.filter_by(user_id=user_id).first()
@@ -43,7 +43,7 @@ def get_my_group(user_id):
     }), 200
 
 # 創建小組
-@group_bp.route('/group/create', methods=['POST'])
+@group_bp.route('/create', methods=['POST'])
 def create_group():
     data = request.get_json()
     host_id = data.get('host_id')
@@ -81,7 +81,7 @@ def create_group():
     return jsonify({"message": "小組建立成功，已發送邀請給好友！", "group_id": new_group.id}), 201
 
 # 取得小組邀請
-@group_bp.route('/group/invites/<int:user_id>', methods=['GET'])
+@group_bp.route('/invites/<int:user_id>', methods=['GET'])
 def get_group_invites(user_id):
     # 找出所有寄給這個人，且狀態是 pending 的邀請
     invites = GroupInvite.query.filter_by(receiver_id=user_id, status='pending').all()
@@ -101,7 +101,7 @@ def get_group_invites(user_id):
     return jsonify({"invites": result}), 200
 
 # 回覆小組邀請
-@group_bp.route('/group/respond_invite', methods=['POST'])
+@group_bp.route('/respond_invite', methods=['POST'])
 def respond_group_invite():
     data = request.get_json()
     invite_id = data.get('invite_id')
@@ -134,7 +134,7 @@ def respond_group_invite():
     return jsonify({"message": msg}), 200
 
 # 邀請好友進現有小組
-@group_bp.route('/group/invite_friends', methods=['POST'])
+@group_bp.route('/invite_friends', methods=['POST'])
 def invite_friends_to_group():
     data = request.get_json()
     group_id = data.get('group_id')
@@ -167,7 +167,7 @@ def invite_friends_to_group():
     return jsonify({"message": f"成功發送 {invited_count} 個邀請！"}), 200
 
 # 取得好友是否已加入小組的狀態
-@group_bp.route('/group/friends_detailed_status', methods=['POST'])
+@group_bp.route('/friends_detailed_status', methods=['POST'])
 def get_friends_detailed_status():
     data = request.get_json()
     group_id = data.get('group_id') # 可能是真實 ID，也可能是我們前端傳來的 -1
@@ -210,7 +210,7 @@ def get_friends_detailed_status():
         return jsonify({"error": f"後端錯誤: {str(e)}"}), 500
 
 # 退出/解散小組
-@group_bp.route('/group/leave', methods=['POST'])
+@group_bp.route('/leave', methods=['POST'])
 def leave_group():
     data = request.get_json()
     group_id = data.get('group_id')

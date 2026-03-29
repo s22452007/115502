@@ -213,6 +213,31 @@ class ApiClient {
     }
   }
 
+  // 送出意見回饋 API
+  static Future<Map<String, dynamic>> submitFeedback({
+    int? userId,
+    String? email,
+    required String feedbackType,
+    required String content,
+  }) async {
+    final url = Uri.parse('$baseUrl/user/feedback');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'email': email,
+          'feedback_type': feedbackType,
+          'content': content,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 購買/增加點數 API
   static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
     final url = Uri.parse('$baseUrl/user/add_points');

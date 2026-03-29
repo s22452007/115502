@@ -271,20 +271,28 @@ class StudyGroupHomeScreen extends StatelessWidget {
                         TextButton(
                           child: const Text("太棒了！", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           onPressed: () async {
-                            // 2. 取得 userId
                             final userId = context.read<UserProvider>().userId;
                             if (userId == null) return;
                             
-                            // 3. 呼叫退出小組的 API
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('領取中...')));
-                            await ApiClient.leaveGroup(groupId, userId);
+                            // 改成呼叫剛剛寫的領獎 API！
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('發送點數中...')));
+                            final result = await ApiClient.claimReward(groupId, userId);
                             
-                            // 4. 關閉視窗，並回到沒有小組的首頁
-                            Navigator.of(ctx).pop(); // 關掉 Dialog
-                            Navigator.of(context).pop(); // 離開這個畫面
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            
+                            // 確保畫面還在，再執行關閉視窗的動作
+                            if (context.mounted) {
+                              if (result.containsKey('error')) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+                              } else {
+                                // 關閉對話框，並回到沒有小組的首頁
+                                Navigator.of(ctx).pop(); 
+                                Navigator.of(context).pop(); 
+                              }
+                            }
                           },
                         )
-                      ],
+                      ]
                     ),
                   );
                 },

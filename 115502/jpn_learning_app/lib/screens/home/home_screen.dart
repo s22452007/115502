@@ -7,7 +7,6 @@ import 'package:jpn_learning_app/widgets/app_drawer.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart'; // 手動搜尋
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
-import 'package:jpn_learning_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:provider/provider.dart';
@@ -480,32 +479,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '學習小組動態',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const LeaderboardScreen(),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    '排行榜 >',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _goalGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
+            const Text(
+              '學習小組動態',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 

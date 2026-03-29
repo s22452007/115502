@@ -160,7 +160,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     radius: 48,
                     backgroundColor: const Color(0xFFC5E1A5),
                     backgroundImage: (avatar != null && avatar.isNotEmpty)
-                        ? MemoryImage(base64Decode(avatar))
+                        ? (avatar.startsWith('http')
+                            ? NetworkImage(avatar)
+                            : MemoryImage(base64Decode(avatar)) as ImageProvider)
                         : NetworkImage(defaultAvatarUrl) as ImageProvider,
                   ),
                 ),

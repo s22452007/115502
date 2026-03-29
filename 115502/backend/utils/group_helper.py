@@ -27,12 +27,5 @@ def add_group_progress_and_check_reward(user_id, action_type, amount=1):
             # 把領獎開關鎖起來，避免未來重複發錢
             group.is_reward_claimed = True 
             
-            # 撈出名單，人人有獎！
-            all_members = GroupMember.query.filter_by(group_id=group.id).all()
-            for m in all_members:
-                user_to_reward = User.query.get(m.user_id)
-                if user_to_reward:
-                    user_to_reward.j_pts += group.reward_points
-
         # 統一存檔
         db.session.commit()

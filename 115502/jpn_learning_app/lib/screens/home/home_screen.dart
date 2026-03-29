@@ -33,6 +33,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color _textColor = const Color(0xFF333333);
   final Color _subTextColor = const Color(0xFF888888);
 
+  // 根據當前時間回傳對應的問候語
+  String _getGreeting() {
+    final hour = DateTime.now().hour; // 取得現在是幾點 (0~23)
+    
+    if (hour >= 5 && hour < 12) {
+      return '早安';   // 早上 5 點到中午 12 點前
+    } else if (hour >= 12 && hour < 18) {
+      return '午安';   // 中午 12 點到傍晚 6 點前
+    } else {
+      return '晚安';   // 傍晚 6 點到隔天早上 5 點前
+    }
+  }
+
   // 🌟 全新升級：帶有毛玻璃與懸浮按鈕的解鎖遮罩
   Widget _buildPremiumLockedOverlay({
     required Widget child,
@@ -316,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '早安，$userName!',
+              '${_getGreeting()}，$userName!', // 動態呼叫問候語
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

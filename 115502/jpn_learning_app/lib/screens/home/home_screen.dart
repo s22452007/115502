@@ -276,13 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final streakDays = context.watch<UserProvider>().streakDays;
     final jPts = context.watch<UserProvider>().jPts;
     final isGuest = context.watch<UserProvider>().userId == null;
-    final fontScale = context.watch<FontSizeProvider>().scale;
-
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: TextScaler.linear(fontScale),
-      ),
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
       drawer: const AppDrawer(),
       appBar: AppBar(
@@ -583,7 +577,6 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
       ),
-    ),
     );
   }
 

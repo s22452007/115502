@@ -2,11 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/change_password_screen.dart';
 import 'package:jpn_learning_app/screens/profile/personal_info_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
   const SystemSettingsScreen({super.key});
@@ -69,6 +71,36 @@ class SystemSettingsScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const AccountSecurityScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _buildMenuCard(
+                    context: context,
+                    icon: Icons.text_fields_rounded,
+                    iconColor: const Color(0xFF6B9BD2),
+                    title: '字體大小',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FontSizeSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _buildMenuCard(
+                    context: context,
+                    icon: Icons.feedback_outlined,
+                    iconColor: const Color(0xFFD28B6B),
+                    title: '意見回饋',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FeedbackScreen(),
                         ),
                       );
                     },
@@ -540,6 +572,304 @@ class AccountSecurityScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// ==========================================
+// 字體大小設定
+// ==========================================
+class FontSizeSettingsScreen extends StatelessWidget {
+  const FontSizeSettingsScreen({super.key});
+
+  static const Color bgColor = Color(0xFFF3F4EF);
+  static const Color primaryGreen = Color(0xFF5C8663);
+  static const Color textColor = Color(0xFF3E3E3E);
+
+  @override
+  Widget build(BuildContext context) {
+    final fontProvider = context.watch<FontSizeProvider>();
+    final scale = fontProvider.scale;
+
+    String label;
+    if (scale <= 0.85) {
+      label = '小';
+    } else if (scale <= 1.0) {
+      label = '標準';
+    } else if (scale <= 1.15) {
+      label = '大';
+    } else {
+      label = '特大';
+    }
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: primaryGreen,
+        elevation: 0,
+        centerTitle: true,
+        toolbarHeight: 64,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          '字體大小',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE7E7E7)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '預覽效果',
+                          style: TextStyle(
+                            fontSize: 14 * scale,
+                            color: const Color(0xFF8A8A8A),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'こんにちは！日本語を勉強しましょう',
+                          style: TextStyle(
+                            fontSize: 18 * scale,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '你好！一起來學日文吧',
+                          style: TextStyle(
+                            fontSize: 15 * scale,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('A', style: TextStyle(fontSize: 14, color: textColor)),
+                      Text('目前：$label', style: const TextStyle(fontSize: 14, color: textColor)),
+                      const Text('A', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor)),
+                    ],
+                  ),
+                  Slider(
+                    value: scale,
+                    min: 0.8,
+                    max: 1.3,
+                    divisions: 5,
+                    activeColor: primaryGreen,
+                    onChanged: (value) {
+                      fontProvider.setScale(value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        fontProvider.setScale(1.0);
+                      },
+                      child: const Text(
+                        '恢復預設',
+                        style: TextStyle(color: primaryGreen),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 意見回饋
+// ==========================================
+class FeedbackScreen extends StatefulWidget {
+  const FeedbackScreen({super.key});
+
+  @override
+  State<FeedbackScreen> createState() => _FeedbackScreenState();
+}
+
+class _FeedbackScreenState extends State<FeedbackScreen> {
+  static const Color bgColor = Color(0xFFF3F4EF);
+  static const Color primaryGreen = Color(0xFF5C8663);
+  static const Color textColor = Color(0xFF3E3E3E);
+
+  String _selectedType = '功能建議';
+  final _contentController = TextEditingController();
+
+  final _types = ['功能建議', 'Bug 回報', '使用體驗', '其他'];
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendFeedback() async {
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請輸入回饋內容')),
+      );
+      return;
+    }
+
+    final userProvider = context.read<UserProvider>();
+    final email = userProvider.email ?? '未登入';
+
+    final subject = Uri.encodeComponent('[$_selectedType] JPN Learning App 意見回饋');
+    final body = Uri.encodeComponent('回饋類型：$_selectedType\n使用者：$email\n\n$content');
+    final uri = Uri.parse('mailto:your-team-email@gmail.com?subject=$subject&body=$body');
+
+    try {
+      await launchUrl(uri);
+    } catch (_) {}
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('感謝你的回饋！')),
+    );
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: primaryGreen,
+        elevation: 0,
+        centerTitle: true,
+        toolbarHeight: 64,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          '意見回饋',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '回饋類型',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10,
+                    children: _types.map((type) {
+                      final isSelected = type == _selectedType;
+                      return ChoiceChip(
+                        label: Text(type),
+                        selected: isSelected,
+                        selectedColor: primaryGreen.withOpacity(0.2),
+                        labelStyle: TextStyle(
+                          color: isSelected ? primaryGreen : textColor,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        onSelected: (_) {
+                          setState(() => _selectedType = type);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    '回饋內容',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE7E7E7)),
+                    ),
+                    child: TextField(
+                      controller: _contentController,
+                      maxLines: 8,
+                      decoration: const InputDecoration(
+                        hintText: '請描述你的建議或遇到的問題...',
+                        hintStyle: TextStyle(color: Color(0xFFB0B0B0)),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _sendFeedback,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        '送出回饋',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

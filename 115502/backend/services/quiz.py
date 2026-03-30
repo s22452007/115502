@@ -14,13 +14,13 @@ def submit_quiz():
         return jsonify({"error": "缺少分數或使用者 ID"}), 400
 
     if score >= 80:
-        level_name = '中級對話(N3以上)'
+        level_name = '高級對話(N3以上)'
     elif score >= 60:
-        level_name = '初級應用(N5、N4)'
+        level_name = '中級應用(N4)'
     elif score >= 40:
-        level_name = '入門新手'
+        level_name = '初級應用(N5)'
     else:
-        level_name = '超級新手'
+        level_name = '入門新手'
 
     user = User.query.get(user_id)
     if not user:

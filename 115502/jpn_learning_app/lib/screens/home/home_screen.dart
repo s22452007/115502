@@ -16,6 +16,7 @@ import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/album_detail_screen.dart';
 import 'package:jpn_learning_app/providers/favorites_data.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -32,6 +33,36 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color _cardBlue = const Color(0xFF85B8D6);
   final Color _textColor = const Color(0xFF333333);
   final Color _subTextColor = const Color(0xFF888888);
+
+  // 一進首頁就自動檢查好友邀請
+  @override
+  void initState() {
+    super.initState();
+    // 確保畫面第一幀準備好後，再去跟後端問資料
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingFriendRequests();
+    });
+  }
+
+  Future<void> _checkPendingFriendRequests() async {
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId;
+
+    if (userId == null) return; // 如果是訪客就不用查了
+
+    try {
+      final result = await ApiClient.getPendingRequests(userId);
+      // 假設後端的邀請陣列叫做 'pending_requests'，或是如果是別的名字請改成對應的 key
+      if (result.containsKey('pending_requests') && result['pending_requests'] is List) {
+        final List requests = result['pending_requests'];
+        // 算出有幾個人邀請，並存入管家 (Provider)
+        userProvider.setPendingFriendRequests(requests.length);
+      }
+    } catch (e) {
+      print('檢查好友邀請失敗: $e');
+    }
+  }
+  // ==========================================
 
   // 根據當前時間回傳對應的問候語
   String _getGreeting() {

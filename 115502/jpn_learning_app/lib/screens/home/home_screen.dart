@@ -53,7 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final result = await ApiClient.getPendingRequests(userId);
       // 假設後端的邀請陣列叫做 'pending_requests'，或是如果是別的名字請改成對應的 key
-      if (result.containsKey('pending_requests') && result['pending_requests'] is List) {
+      if (result.containsKey('pending_requests') &&
+          result['pending_requests'] is List) {
         final List requests = result['pending_requests'];
         // 算出有幾個人邀請，並存入管家 (Provider)
         userProvider.setPendingFriendRequests(requests.length);
@@ -67,13 +68,13 @@ class _HomeScreenState extends State<HomeScreen> {
   // 根據當前時間回傳對應的問候語
   String _getGreeting() {
     final hour = DateTime.now().hour; // 取得現在是幾點 (0~23)
-    
+
     if (hour >= 5 && hour < 12) {
-      return '早安';   // 早上 5 點到中午 12 點前
+      return '早安'; // 早上 5 點到中午 12 點前
     } else if (hour >= 12 && hour < 18) {
-      return '午安';   // 中午 12 點到傍晚 6 點前
+      return '午安'; // 中午 12 點到傍晚 6 點前
     } else {
-      return '晚安';   // 傍晚 6 點到隔天早上 5 點前
+      return '晚安'; // 傍晚 6 點到隔天早上 5 點前
     }
   }
 
@@ -302,8 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final userEmail =
         context.watch<UserProvider>().email ?? 'guest@example.com';
-    final userName = context.watch<UserProvider>().username ??
-        userEmail.split('@')[0];
+    final userName =
+        context.watch<UserProvider>().username ?? userEmail.split('@')[0];
     final streakDays = context.watch<UserProvider>().streakDays;
     final jPts = context.watch<UserProvider>().jPts;
     final isGuest = context.watch<UserProvider>().userId == null;
@@ -434,14 +435,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()),
                     );
                   },
-                  child: Text(
-                    '查看收藏夾 >',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _goalGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  //child: Text(
+                  //   '查看收藏夾 >',
+                  //   style: TextStyle(
+                  //     fontSize: 14,
+                  //     color: _goalGreen,
+                  //     fontWeight: FontWeight.bold,
+                  //   ),
+                  // ),
                 ),
               ],
             ),
@@ -454,7 +455,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: List.generate(
                     FavoritesDataProvider.allFavorites.take(5).length,
                     (index) {
-                      final scenario = FavoritesDataProvider.allFavorites[index];
+                      final scenario =
+                          FavoritesDataProvider.allFavorites[index];
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(

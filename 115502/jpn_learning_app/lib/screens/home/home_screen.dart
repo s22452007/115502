@@ -436,13 +436,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   child: Text(
-                     '查看收藏夾 >',
-                   style: TextStyle(
+                    '查看收藏夾 >',
+                    style: TextStyle(
                       fontSize: 14,
                       color: _goalGreen,
-                       fontWeight: FontWeight.bold,
-                  //   ),
-                  // ),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),

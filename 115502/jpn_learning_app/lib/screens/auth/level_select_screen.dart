@@ -25,10 +25,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
   int? _selectedIndex;
 
   final List<Map<String, String>> levels = [
-    {'title': '超級新手', 'desc': '什麼都不會，就想學日文'},
-    {'title': '入門新手', 'desc': '會五十音，能進行非常簡單的自我介紹、問候'},
-    {'title': '初級應用(N5、N4)', 'desc': '能理解基本生活對話，在餐廳、超商進行簡單溝通'},
-    {'title': '中級對話(N3以上)', 'desc': '能大致聽懂日常日語對話，表達自己的想法'},
+    {'title': '入門新手', 'desc': '會五十音，能進行非常簡單的自我介紹與日常問候'},
+    {'title': '初級應用(N5)', 'desc': '能理解基本生活短句，可在餐廳、超商進行簡單的基礎溝通'},
+    {'title': '中級應用(N4)', 'desc': '能聽懂放慢的日常會話，可表達自身意圖並與人進行基礎交流'},
+    {'title': '高級對話(N3以上)', 'desc': '能大致聽懂自然語速的日常對話，並能順暢表達自己的想法與意見'},
   ];
 
   @override

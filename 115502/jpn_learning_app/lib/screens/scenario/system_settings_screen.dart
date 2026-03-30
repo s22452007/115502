@@ -684,8 +684,17 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   String _selectedType = '功能建議';
   final _contentController = TextEditingController();
-
   final _types = ['功能建議', 'Bug 回報', '使用體驗', '其他'];
+
+  bool _isSending = false;
+  List<Map<String, dynamic>> _feedbacks = [];
+  bool _isLoadingHistory = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
 
   @override
   void dispose() {
@@ -693,7 +702,21 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     super.dispose();
   }
 
-  bool _isSending = false;
+  Future<void> _loadHistory() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) {
+      setState(() => _isLoadingHistory = false);
+      return;
+    }
+    final res = await ApiClient.getFeedbacks(userId);
+    if (!mounted) return;
+    setState(() {
+      _isLoadingHistory = false;
+      if (res.containsKey('feedbacks')) {
+        _feedbacks = List<Map<String, dynamic>>.from(res['feedbacks']);
+      }
+    });
+  }
 
   Future<void> _sendFeedback() async {
     final content = _contentController.text.trim();
@@ -724,10 +747,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       return;
     }
 
+    _contentController.clear();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('感謝你的回饋！我們會盡快處理')),
     );
-    Navigator.pop(context);
+    _loadHistory();
   }
 
   @override
@@ -758,6 +782,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 送出新回饋區
                   const Text(
                     '回饋類型',
                     style: TextStyle(
@@ -803,7 +828,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     ),
                     child: TextField(
                       controller: _contentController,
-                      maxLines: 8,
+                      maxLines: 5,
                       decoration: const InputDecoration(
                         hintText: '請描述你的建議或遇到的問題...',
                         hintStyle: TextStyle(color: Color(0xFFB0B0B0)),
@@ -812,7 +837,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -834,11 +859,155 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       ),
                     ),
                   ),
+
+                  // 歷史回饋區
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '我的回饋紀錄',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (_isLoadingHistory)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_feedbacks.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          '還沒有回饋紀錄',
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._feedbacks.map((fb) => _buildFeedbackCard(fb)),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeedbackCard(Map<String, dynamic> fb) {
+    final hasReply = fb['reply'] != null && fb['reply'].toString().isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE7E7E7)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x07000000),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 標籤 + 時間
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  fb['feedback_type'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: primaryGreen,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                fb['created_at'] ?? '',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 使用者的回饋內容
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.person_outline, size: 18, color: Color(0xFF8A8A8A)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  fb['content'] ?? '',
+                  style: const TextStyle(fontSize: 14, color: textColor),
+                ),
+              ),
+            ],
+          ),
+
+          // 官方回覆
+          if (hasReply) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F7F1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.support_agent, size: 16, color: primaryGreen),
+                      const SizedBox(width: 6),
+                      const Text(
+                        '官方回覆',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: primaryGreen,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        fb['replied_at'] ?? '',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    fb['reply'],
+                    style: const TextStyle(fontSize: 14, color: textColor),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text(
+              '等待回覆中...',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ],
       ),
     );
   }

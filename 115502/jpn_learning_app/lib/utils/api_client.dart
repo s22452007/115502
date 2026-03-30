@@ -238,6 +238,20 @@ class ApiClient {
     }
   }
 
+  // 查詢歷史回饋 API
+  static Future<Map<String, dynamic>> getFeedbacks(int userId) async {
+    final url = Uri.parse('$baseUrl/user/feedback/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {'error': '請求失敗'};
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 購買/增加點數 API
   static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
     final url = Uri.parse('$baseUrl/user/add_points');

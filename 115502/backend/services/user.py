@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, datetime
 
 from flask import Blueprint, request, jsonify
 
@@ -400,3 +400,40 @@ def submit_feedback():
     db.session.commit()
 
     return jsonify({"message": "感謝你的回饋！我們會盡快處理"}), 200
+
+
+# 查詢使用者的歷史回饋
+@user_bp.route('/feedback/<int:user_id>', methods=['GET'])
+def get_feedbacks(user_id):
+    feedbacks = Feedback.query.filter_by(user_id=user_id).order_by(Feedback.created_at.desc()).all()
+    result = []
+    for fb in feedbacks:
+        result.append({
+            "id": fb.id,
+            "feedback_type": fb.feedback_type,
+            "content": fb.content,
+            "reply": fb.reply,
+            "replied_at": fb.replied_at.strftime('%Y-%m-%d %H:%M') if fb.replied_at else None,
+            "created_at": fb.created_at.strftime('%Y-%m-%d %H:%M'),
+        })
+    return jsonify({"feedbacks": result}), 200
+
+
+# 管理員回覆回饋
+@user_bp.route('/feedback/reply', methods=['POST'])
+def reply_feedback():
+    data = request.get_json()
+    feedback_id = data.get('feedback_id')
+    reply = (data.get('reply') or '').strip()
+
+    if not feedback_id or not reply:
+        return jsonify({"error": "缺少必要資訊"}), 400
+
+    fb = Feedback.query.get(feedback_id)
+    if not fb:
+        return jsonify({"error": "找不到該回饋"}), 404
+
+    fb.reply = reply
+    fb.replied_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"message": "回覆成功"}), 200

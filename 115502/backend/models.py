@@ -152,4 +152,6 @@ class Feedback(db.Model):
     email = db.Column(db.String(120), nullable=True)
     feedback_type = db.Column(db.String(50), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    reply = db.Column(db.Text, nullable=True)
+    replied_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

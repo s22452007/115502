@@ -15,6 +15,18 @@ class UserProvider extends ChangeNotifier {
   int _dailyScans = 0;
   int get dailyScans => _dailyScans;
 
+  // 存放待確認的好友邀請數量
+  int _pendingFriendRequests = 0;
+  
+  // 讓外面可以讀取這個數量
+  int get pendingFriendRequests => _pendingFriendRequests;
+
+  // 設定數量的方法 (當後端告訴我們有新邀請時呼叫)
+  void setPendingFriendRequests(int count) {
+    _pendingFriendRequests = count;
+    notifyListeners();
+  }
+
   // --- 🏆 徽章系統狀態 ---
   // 存放已解鎖的徽章 ID (預設先放入兩個作為測試)
   List<String> _unlockedBadgeIds = ['food_01', 'novice_01'];
@@ -114,6 +126,7 @@ class UserProvider extends ChangeNotifier {
     _friendId = null; // 登出時清空
     _dailyScans = 0;
     _unlockedBadgeIds = []; // 登出時清空徽章資料
+    _pendingFriendRequests = 0;
     notifyListeners(); // 通知所有畫面「這個人已經登出了，請更新畫面！」
   }
 }

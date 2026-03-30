@@ -39,7 +39,7 @@ app.register_blueprint(scenario_bp, url_prefix='/api/scenario')
 app.register_blueprint(user_bp, url_prefix='/api/user')     # 個人資料、好友用這個
 app.register_blueprint(group_bp, url_prefix='/api/group')   # 學習小組用這個
 app.register_blueprint(vocab_bp, url_prefix='/api/vocab')   # 單字本用這個
-app.register_blueprint(tutor_bp, url_prefix='/api/tutor')   
+app.register_blueprint(tutor_bp, url_prefix='/api/tutor')   # AI家教用這個
 
 # 啟動時自動建立資料表
 with app.app_context():

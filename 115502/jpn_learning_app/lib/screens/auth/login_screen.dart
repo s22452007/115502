@@ -283,6 +283,18 @@ class _LoginScreenState extends State<LoginScreen> {
     child: Container(
       // ⭐ 3. 就是加在這裡！四周都往內縮 20 像素的距離
       margin: const EdgeInsets.all(20.0),
+      // 4. 設定這張卡片的外觀（白色、圓角、陰影）
+      decoration: BoxDecoration(
+        color: AppColors.white, // 卡片本身是白色
+        borderRadius: BorderRadius.circular(32), // 圓角設定
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.08), 
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
         children: [
           // 上半部：插圖與表單區塊 (加上 Expanded 以便將底部固定)
           Expanded(

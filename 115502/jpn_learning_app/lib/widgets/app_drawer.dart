@@ -22,6 +22,9 @@ class AppDrawer extends StatelessWidget {
     final userEmail = userProvider.email ?? 'guest@example.com';
     final userName = userProvider.username ?? userEmail.split('@')[0];
 
+    // 待確認的好友數量
+    final int pendingRequests = userProvider.pendingFriendRequests;
+
     // 這裡判斷是否為訪客
     final isGuest = userProvider.userId == null;
 
@@ -138,6 +141,24 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.person_add_outlined),
             title: const Text('新增好友', style: TextStyle(fontSize: 16)),
+            // 如果數量大於 0 就畫出紅圈數字，否則顯示 null (隱藏)
+            trailing: pendingRequests > 0
+                ? Container(
+                    padding: const EdgeInsets.all(6), // 控制紅點內部的空間
+                    decoration: const BoxDecoration(
+                      color: Colors.redAccent, // 經典的通知紅
+                      shape: BoxShape.circle,  // 圓形
+                    ),
+                    child: Text(
+                      '$pendingRequests',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                : null,
             onTap: () {
               Navigator.pop(context);
               Navigator.push(

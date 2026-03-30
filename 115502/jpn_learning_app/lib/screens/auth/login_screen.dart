@@ -241,6 +241,10 @@ class _LoginScreenState extends State<LoginScreen> {
         context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
       }
 
+      if (result.containsKey('username') && result['username'] != null) {
+        context.read<UserProvider>().setUsername(result['username']);
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')),
       );

@@ -275,7 +275,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
-    
+    return Scaffold(
+      // 1. 把最底層背景改成淺灰藍色
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: SafeArea(
         children: [
           // 上半部：插圖與表單區塊 (加上 Expanded 以便將底部固定)
           Expanded(

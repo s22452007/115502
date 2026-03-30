@@ -11,6 +11,31 @@ class AskQuestionScreen extends StatefulWidget {
 class _AskQuestionScreenState extends State<AskQuestionScreen> {
   // 1. 加入 TextEditingController 來獲取使用者輸入
   final TextEditingController _questionController = TextEditingController();
+
+@override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
+  }
+
+  void _submitQuestion() {
+    final question = _questionController.text.trim();
+    if (question.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請輸入您的問題喔！')),
+      );
+      return;
+    }
+
+    // 2. 將問題透過 Navigator 傳遞給解答頁面
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TutorAnswerScreen(question: question),
+      ),
+    );
+  }
+
 class _AskQuestionScreenState extends State<AskQuestionScreen> {
   @override
   Widget build(BuildContext context) {

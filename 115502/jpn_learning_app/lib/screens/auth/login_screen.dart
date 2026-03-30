@@ -56,6 +56,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(_isLogin ? '登入中...' : '註冊中...')));
+
     if (_isLogin) {
       final result = await ApiClient.login(email, password);
 
@@ -73,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
+        ).showSnackBar(const SnackBar(content: Text('登入成功！')));
 
         if (result.containsKey('streak_days')) {
           context.read<UserProvider>().setStreakDays(
@@ -109,15 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
           );
         }
-      } else if (result['error'] == 'not_registered') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('此 Email 尚未註冊，請先註冊帳號')),
-        );
-        setState(() {
-          _isLogin = false;
-          _passwordController.clear();
-          _confirmPasswordController.clear();
-        });
       } else {
         ScaffoldMessenger.of(
           context,
@@ -242,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')),
+        SnackBar(content: Text('Google 登入成功：${user.displayName ?? email}')),
       );
 
       // 4. 導頁：有程度就進首頁，沒有就去選程度
@@ -257,9 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
         );
       }
-    } catch (e, stackTrace) {
-      debugPrint('=== Google 登入錯誤: $e ===');
-      debugPrint('$stackTrace');
+    } catch (e) {
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(
@@ -282,9 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      body: Column(
+    
         children: [
           // 上半部：插圖與表單區塊 (加上 Expanded 以便將底部固定)
           Expanded(

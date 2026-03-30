@@ -279,6 +279,8 @@ class _LoginScreenState extends State<LoginScreen> {
       // 1. 把最底層背景改成淺灰藍色
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
+        // 2. 在這裡多加一層 Container 來當作「卡片」
+    child: Container(
         children: [
           // 上半部：插圖與表單區塊 (加上 Expanded 以便將底部固定)
           Expanded(

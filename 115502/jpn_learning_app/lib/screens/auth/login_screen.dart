@@ -295,6 +295,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias, // 確保內容不會凸出圓角
+      child: Column(
         children: [
           // 上半部：插圖與表單區塊 (加上 Expanded 以便將底部固定)
           Expanded(

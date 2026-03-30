@@ -8,11 +8,12 @@ class AskQuestionScreen extends StatefulWidget {
   @override
   State<AskQuestionScreen> createState() => _AskQuestionScreenState();
 }
+
 class _AskQuestionScreenState extends State<AskQuestionScreen> {
   // 1. 加入 TextEditingController 來獲取使用者輸入
   final TextEditingController _questionController = TextEditingController();
 
-@override
+  @override
   void dispose() {
     _questionController.dispose();
     super.dispose();
@@ -21,22 +22,19 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
   void _submitQuestion() {
     final question = _questionController.text.trim();
     if (question.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請輸入您的問題喔！')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('請輸入您的問題喔！')));
       return;
     }
 
     // 2. 將問題透過 Navigator 傳遞給解答頁面
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => TutorAnswerScreen(question: question),
-      ),
+      MaterialPageRoute(builder: (_) => TutorAnswerScreen(question: question)),
     );
   }
 
-class _AskQuestionScreenState extends State<AskQuestionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,14 +75,14 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         '選擇：',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const Text(
+                      Text(
                         'Izakaya\nOrdering -Today,\n12:30PM',
                         style: TextStyle(
                           fontSize: 13,
@@ -104,25 +102,25 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: TextField(
+                controller: _questionController, // 綁定 Controller
                 maxLines: null,
                 expands: true,
+                textAlignVertical: TextAlignVertical.top, // 讓文字從上方開始輸入
                 decoration: InputDecoration(
+                  hintText: '請輸入您想問的日文問題...',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary),
+                    borderSide: const BorderSide(color: AppColors.primary),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TutorAnswerScreen()),
-              ),
+              onPressed: _submitQuestion, // 呼叫提交方法
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 minimumSize: const Size(double.infinity, 52),

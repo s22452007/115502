@@ -7,7 +7,7 @@ import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
-import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
+import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/system_settings_screen.dart';
@@ -182,7 +182,7 @@ class AppDrawer extends StatelessWidget {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const BuyPointsScreen()),
+                MaterialPageRoute(builder: (_) => const PremiumScreen()),
               );
             },
           ),

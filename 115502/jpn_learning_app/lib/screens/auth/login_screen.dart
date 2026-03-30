@@ -270,82 +270,67 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ============== 全新打造的現代化 UI ==============
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      // 1. 把最底層背景改成淺灰藍色
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF5F7FA), // 淺灰藍色背景
       body: SafeArea(
-        // 2. 在這裡多加一層 Container 來當作「卡片」
-    child: Container(
-      // ⭐ 3. 就是加在這裡！四周都往內縮 20 像素的距離
-      margin: const EdgeInsets.all(20.0),
-      // 4. 設定這張卡片的外觀（白色、圓角、陰影）
-      decoration: BoxDecoration(
-        color: AppColors.white, // 卡片本身是白色
-        borderRadius: BorderRadius.circular(32), // 圓角設定
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.08), 
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+        child: Container(
+          margin: const EdgeInsets.all(20.0), // 卡片與螢幕邊緣的距離
+          decoration: BoxDecoration(
+            color: AppColors.white, // 卡片本身的白色
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias, // 確保內容不會凸出圓角
-      child: Column(
-        children: [
-          // 上半部：插圖與表單區塊 (加上 Expanded 以便將底部固定)
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // 1. 頂部大型插圖區域
-                  Container(
-                    height: screenHeight * 0.35,
-                    width: double.infinity,
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.menu_book_rounded, // 改用書本圖示，更有學習感
-                              size: 80,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            "JPN Learning ID",
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+          clipBehavior: Clip.antiAlias,
+          // 這裡使用 Column 包裹 Expanded，確保內容過長時可以滑動，不會再出現黃黑條紋！
+          child: Column(
+            children: [
+              // 上半部：插圖與表單區塊 (會自動填滿剩餘空間並可滑動)
+              Expanded(
+                child: SingleChildScrollView(
+                  // 加大內邊距，讓最上方的書本圖示不會貼在圓角邊緣
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 32.0,
                   ),
+                  child: Column(
+                    children: [
+                      // 1. 頂部插圖
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.menu_book_rounded,
+                          size: 80,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "JPN Learning ID",
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
 
-                  // 2. 表單區域
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                      // 2. 表單區域
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
                           _isLogin ? 'Let\'s get started' : 'Create Account',
                           style: const TextStyle(
                             fontSize: 28,
@@ -353,8 +338,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: AppColors.textDark,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
                           _isLogin
                               ? 'Login to your account'
                               : 'Sign up to start learning',
@@ -363,231 +351,212 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: AppColors.textGrey,
                           ),
                         ),
-                        const SizedBox(height: 32),
+                      ),
+                      const SizedBox(height: 32),
 
-                        // 輸入框 Email
-                        _buildInputField(
-                          controller: _emailController,
-                          hintText: 'Email',
-                          icon: Icons.email_outlined,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
+                      // 輸入框 Email
+                      _buildInputField(
+                        controller: _emailController,
+                        hintText: 'Email',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // 輸入框 Password
+                      _buildInputField(
+                        controller: _passwordController,
+                        hintText: 'Password',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: true,
+                      ),
+
+                      // 註冊時的確認密碼
+                      if (!_isLogin) ...[
                         const SizedBox(height: 20),
-
-                        // 輸入框 Password
                         _buildInputField(
-                          controller: _passwordController,
-                          hintText: 'Password',
-                          icon: Icons.lock_outline_rounded,
+                          controller: _confirmPasswordController,
+                          hintText: 'Confirm Password',
+                          icon: Icons.lock_reset_rounded,
                           obscureText: true,
                         ),
+                      ],
 
-                        // 註冊時的確認密碼
-                        if (!_isLogin) ...[
-                          const SizedBox(height: 20),
-                          _buildInputField(
-                            controller: _confirmPasswordController,
-                            hintText: 'Confirm Password',
-                            icon: Icons.lock_reset_rounded,
-                            obscureText: true,
-                          ),
-                        ],
-
-                        // 忘記密碼 (只有登入時顯示)
-                        if (_isLogin)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const ForgotPasswordScreen(),
-                                  ),
-                                );
-                              },
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.only(
-                                  top: 8,
-                                  bottom: 8,
-                                ),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: const Text(
-                                'Forgot Password?',
-                                style: TextStyle(color: AppColors.textGrey),
-                              ),
-                            ),
-                          )
-                        else
-                          const SizedBox(height: 20), // 為了註冊排版加點空白
-
-                        const SizedBox(height: 24),
-
-                        // 登入/註冊主按鈕
-                        GestureDetector(
-                          onTap: _submit,
-                          child: Container(
-                            width: double.infinity,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                _isLogin ? 'LOGIN' : 'SIGN UP',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // OR 分隔線
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Divider(color: Colors.grey.shade300),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Text(
-                                'Or continue with',
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(color: Colors.grey.shade300),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // 第三方登入按鈕區域 (改為圓形質感設計)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildSocialButton(
-                              icon: Icons.g_mobiledata,
-                              iconSize: 36,
-                              onTap: _handleGoogleLogin,
-                            ),
-                            const SizedBox(width: 24),
-                            _buildSocialButton(
-                              icon: Icons.apple,
-                              iconSize: 28,
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Apple 登入功能開發中'),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // 訪客登入
-                        Center(
+                      // 忘記密碼 (只有登入時顯示)
+                      if (_isLogin)
+                        Align(
+                          alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              Navigator.pushReplacement(
+                              Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const LevelSelectScreen(),
+                                  builder: (_) => const ForgotPasswordScreen(),
                                 ),
                               );
                             },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.only(top: 8, bottom: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             child: const Text(
-                              'Continue as Guest',
-                              style: TextStyle(
-                                color: AppColors.textGrey,
-                                fontSize: 14,
-                                decoration: TextDecoration.underline,
+                              'Forgot Password?',
+                              style: TextStyle(color: AppColors.textGrey),
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox(height: 20),
+
+                      const SizedBox(height: 24),
+
+                      // 登入/註冊主按鈕
+                      GestureDetector(
+                        onTap: _submit,
+                        child: Container(
+                          width: double.infinity,
+                          height: 55,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              _isLogin ? 'LOGIN' : 'SIGN UP',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                      ),
+                      const SizedBox(height: 32),
 
-          // 下半部：固定的切換註冊/登入區塊 (仿照您的參考圖)
-          Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: 24.0,
-              horizontal: 16.0,
-            ),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                      // OR 分隔線
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: Colors.grey.shade300)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Or continue with',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: Colors.grey.shade300)),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // 第三方登入按鈕區域
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildSocialButton(
+                            icon: Icons.g_mobiledata,
+                            iconSize: 36,
+                            onTap: _handleGoogleLogin,
+                          ),
+                          const SizedBox(width: 24),
+                          _buildSocialButton(
+                            icon: Icons.apple,
+                            iconSize: 28,
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Apple 登入功能開發中')),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // 訪客登入
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LevelSelectScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Continue as Guest',
+                          style: TextStyle(
+                            color: AppColors.textGrey,
+                            fontSize: 14,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _isLogin
-                      ? 'Don\'t have an account? '
-                      : 'Already have an account? ',
-                  style: const TextStyle(
-                    color: AppColors.textGrey,
-                    fontSize: 16,
+
+              // 下半部：固定的切換註冊/登入區塊 (固定在底部不會被滑動吃掉)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20.0),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.withOpacity(0.1)),
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {
-                    // 切換狀態，原本是在這裡導航，現在直接用同一個畫面切換
-                    setState(() {
-                      _isLogin = !_isLogin;
-                      // 切換時可以順便清空密碼
-                      _passwordController.clear();
-                      _confirmPasswordController.clear();
-                    });
-                  },
-                  child: Text(
-                    _isLogin ? 'Sign up' : 'Log in',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _isLogin
+                          ? 'Don\'t have an account? '
+                          : 'Already have an account? ',
+                      style: const TextStyle(
+                        color: AppColors.textGrey,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isLogin = !_isLogin;
+                          _passwordController.clear();
+                          _confirmPasswordController.clear();
+                        });
+                      },
+                      child: Text(
+                        _isLogin ? 'Sign up' : 'Log in',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  )
-}
+    );
+  }
 
   // ============== 輔助 UI 元件 ==============
 

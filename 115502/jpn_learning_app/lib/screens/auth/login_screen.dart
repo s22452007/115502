@@ -281,6 +281,8 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         // 2. 在這裡多加一層 Container 來當作「卡片」
     child: Container(
+      // ⭐ 3. 就是加在這裡！四周都往內縮 20 像素的距離
+      margin: const EdgeInsets.all(20.0),
         children: [
           // 上半部：插圖與表單區塊 (加上 Expanded 以便將底部固定)
           Expanded(

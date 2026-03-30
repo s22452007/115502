@@ -289,6 +289,7 @@ def search_friend():
     return jsonify({
         "user_id": user.id,
         "email": user.email,
+        "nickname": user.username or user.email.split('@')[0],
         "friend_id": user.friend_id,
         "avatar": user.avatar
     }), 200
@@ -321,7 +322,7 @@ def get_pending_requests(user_id):
     result = []
     for req in requests:
         sender = User.query.get(req.sender_id)
-        nickname = sender.email.split('@')[0] if sender else "Unknown"
+        nickname = (sender.username or sender.email.split('@')[0]) if sender else "Unknown"
         result.append({
             "request_id": req.id,
             "sender_id": req.sender_id,
@@ -364,7 +365,7 @@ def get_friends_list(user_id):
         # 找出好友的詳細資料
         friend_user = User.query.get(f.friend_id)
         if friend_user:
-            nickname = friend_user.email.split('@')[0]
+            nickname = friend_user.username or friend_user.email.split('@')[0]
             result.append({
                 "user_id": friend_user.id,
                 "nickname": nickname,

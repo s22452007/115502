@@ -585,8 +585,9 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  )
+}
 
   // ============== 輔助 UI 元件 ==============
 

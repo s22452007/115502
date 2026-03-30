@@ -284,7 +284,9 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
             radius: 26,
             backgroundColor: Colors.grey.shade200,
             backgroundImage: (avatarBase64.isNotEmpty)
-                ? MemoryImage(base64Decode(avatarBase64)) 
+                ? (avatarBase64.startsWith('http')
+                    ? NetworkImage(avatarBase64)
+                    : MemoryImage(base64Decode(avatarBase64)) as ImageProvider)
                 : NetworkImage(defaultAvatarUrl) as ImageProvider,
           ),
           const SizedBox(width: 12),

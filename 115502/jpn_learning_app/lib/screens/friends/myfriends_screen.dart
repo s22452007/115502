@@ -257,7 +257,9 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             backgroundColor: Colors.grey.shade200,
             // 如果後端有傳真實 Base64 圖片，就顯示真實圖片；否則顯示專屬預設圖
             backgroundImage: (avatarBase64 != null && avatarBase64.isNotEmpty)
-                ? MemoryImage(base64Decode(avatarBase64))
+                ? (avatarBase64.startsWith('http')
+                    ? NetworkImage(avatarBase64)
+                    : MemoryImage(base64Decode(avatarBase64)) as ImageProvider)
                 : NetworkImage(defaultAvatarUrl) as ImageProvider,
           ),
           const SizedBox(width: 16),

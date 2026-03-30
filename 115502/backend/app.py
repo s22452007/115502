@@ -10,6 +10,7 @@ from services.scenario import scenario_bp
 from services.user import user_bp
 from services.group import group_bp
 from services.vocabulary import vocab_bp
+from services.tutor import tutor_bp
 
 # 自動抓取 app.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))

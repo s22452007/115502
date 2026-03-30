@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_trial_screen.dart';
+import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
   const PremiumScreen({Key? key}) : super(key: key);
@@ -59,6 +60,52 @@ class PremiumScreen extends StatelessWidget {
                     (route) => false,
                   );
                 },
+              ),
+
+              const SizedBox(height: 16),
+
+              // 購買點數入口
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BuyPointsScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE0C85C)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.monetization_on_outlined, color: Color(0xFFC6A700), size: 28),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '購買 J-Pts 點數',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _textDark),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              '用點數解鎖更多學習功能',
+                              style: TextStyle(fontSize: 13, color: Color(0xFF7A7A7A)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Color(0xFFC6A700)),
+                    ],
+                  ),
+                ),
               ),
 
               const SizedBox(height: 16),

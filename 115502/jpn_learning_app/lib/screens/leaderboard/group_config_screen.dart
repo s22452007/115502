@@ -21,6 +21,18 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   final Color _subTextColor = const Color(0xFF888888);
   final Color _cardColor = const Color(0xFFF9F9F9);
 
+  //  根據選擇的目標，動態回傳難度數值跟單位
+  Map<String, dynamic> _getDifficultyConfig() {
+    if (_selectedTaskType == 'points') {
+      return {'unit': '點', 'easy': 500, 'normal': 1000, 'hard': 2000};
+    } else if (_selectedTaskType == 'logins') {
+      return {'unit': '天', 'easy': 15, 'normal': 25, 'hard': 35};
+    } else {
+      // 預設 scans (探索新場景)
+      return {'unit': '次', 'easy': 15, 'normal': 30, 'hard': 50};
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -36,12 +48,11 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
       return;
     }
 
-    // 🌟 跳轉到原有的邀請畫面，並把設定好的資料傳過去
+    //  跳轉到原有的邀請畫面，並把設定好的資料傳過去
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => InviteGroupMembersScreen(
-          // ⚠️ 注意：這裡會報錯，因為我們等一下還沒去 InviteGroupMembersScreen 新增接收這些參數的程式碼
           newGroupName: groupName,
           goalType: _selectedTaskType,
           goalTarget: _selectedTarget,
@@ -52,6 +63,13 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 在畫面的最開始，先抓出當前應該顯示的難度設定
+    final config = _getDifficultyConfig();
+    final String unit = config['unit'];
+    final int easyVal = config['easy'];
+    final int normalVal = config['normal'];
+    final int hardVal = config['hard'];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -118,16 +136,17 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             ),
             const SizedBox(height: 32),
 
-            // --- 區塊 3：固定目標難度 ---
+            // --- 區塊 3：動態目標難度 ---
             Text('🔥 目標難度 (以滿編 5 人計算)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textColor)),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _buildDifficultyButton('輕鬆', 15, Colors.green.shade400)),
+                // 把動態算出的數值跟單位傳給按鈕
+                Expanded(child: _buildDifficultyButton('輕鬆', easyVal, unit, Colors.green.shade400)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildDifficultyButton('標準', 30, Colors.orange.shade400)),
+                Expanded(child: _buildDifficultyButton('標準', normalVal, unit, Colors.orange.shade400)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildDifficultyButton('爆肝', 50, Colors.red.shade400)),
+                Expanded(child: _buildDifficultyButton('爆肝', hardVal, unit, Colors.red.shade400)),
               ],
             ),
             const SizedBox(height: 40),
@@ -161,7 +180,14 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   Widget _buildTaskTypeOption({required IconData icon, required String title, required String subtitle, required String value}) {
     final isSelected = _selectedTaskType == value;
     return GestureDetector(
-      onTap: () => setState(() => _selectedTaskType = value),
+      onTap: () {
+        setState(() {
+          _selectedTaskType = value; // 切換目標
+          
+          final newConfig = _getDifficultyConfig();
+          _selectedTarget = newConfig['normal']; 
+        });
+      },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -193,8 +219,8 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
     );
   }
 
-  // 建立難度的按鈕
-  Widget _buildDifficultyButton(String label, int value, Color color) {
+  // 🌟 升級版按鈕：接收 unit (單位)
+  Widget _buildDifficultyButton(String label, int value, String unit, Color color) {
     final isSelected = _selectedTarget == value;
     return GestureDetector(
       onTap: () => setState(() => _selectedTarget = value),
@@ -209,7 +235,8 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
           children: [
             Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isSelected ? Colors.white : _textColor)),
             const SizedBox(height: 4),
-            Text('$value 次', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : _subTextColor)),
+            // 🌟 這裡把 $value 和 $unit 拼在一起顯示！
+            Text('$value $unit', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : _subTextColor)),
           ],
         ),
       ),

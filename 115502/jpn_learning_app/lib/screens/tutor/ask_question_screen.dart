@@ -8,7 +8,9 @@ class AskQuestionScreen extends StatefulWidget {
   @override
   State<AskQuestionScreen> createState() => _AskQuestionScreenState();
 }
-
+class _AskQuestionScreenState extends State<AskQuestionScreen> {
+  // 1. 加入 TextEditingController 來獲取使用者輸入
+  final TextEditingController _questionController = TextEditingController();
 class _AskQuestionScreenState extends State<AskQuestionScreen> {
   @override
   Widget build(BuildContext context) {

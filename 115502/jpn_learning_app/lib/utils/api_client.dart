@@ -200,7 +200,7 @@ class ApiClient {
 
   // 刪除帳號 API
   static Future<Map<String, dynamic>> deleteAccount(int userId) async {
-    final url = Uri.parse('$baseUrl/user/delete_account'); 
+    final url = Uri.parse('$baseUrl/user/delete_account');
     try {
       final response = await http.post(
         url,
@@ -366,7 +366,7 @@ class ApiClient {
   }
 
   // ==========================================
-  // 🛡️ 學習小組 (公會) 系統相關 
+  // 🛡️ 學習小組 (公會) 系統相關
   // ==========================================
 
   // 建立學習小組 API
@@ -568,7 +568,7 @@ class ApiClient {
     int userId,
     int score,
   ) async {
-    final url = Uri.parse('$baseUrl/quiz/submit'); 
+    final url = Uri.parse('$baseUrl/quiz/submit');
     try {
       final response = await http.post(
         url,
@@ -627,7 +627,10 @@ class ApiClient {
   }
 
   // 領取小組獎勵 API
-  static Future<Map<String, dynamic>> claimReward(int groupId, int userId) async {
+  static Future<Map<String, dynamic>> claimReward(
+    int groupId,
+    int userId,
+  ) async {
     final url = Uri.parse('$baseUrl/group/claim_reward');
     try {
       final response = await http.post(
@@ -638,6 +641,27 @@ class ApiClient {
       return jsonDecode(response.body);
     } catch (e) {
       print('領獎失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // --- AI 家教問答 API ---
+  static Future<Map<String, dynamic>> askTutorQuestion(String question) async {
+    final url = Uri.parse('$baseUrl/tutor/ask'); // 假設您的 Flask 後端路由是這個
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'question': question}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '後端錯誤: ${response.statusCode}'};
+      }
+    } catch (e) {
+      print('AI 家教問答連線失敗: $e');
       return {'error': '網路連線失敗'};
     }
   }

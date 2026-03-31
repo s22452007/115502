@@ -32,17 +32,17 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 2; // 預設停留在首頁
 
+  // 顏色定義
   final Color _goalGreen = const Color(0xFF6AA86B);
-  final Color _cardRed = const Color.fromARGB(255, 133, 109, 160);
-  final Color _cardBlue = const Color(0xFF85B8D6);
   final Color _textColor = const Color(0xFF333333);
   final Color _subTextColor = const Color(0xFF888888);
 
-  // 一進首頁就自動檢查好友邀請
+  // ==========================================
+  // 生命週期與初始化
+  // ==========================================
   @override
   void initState() {
     super.initState();
-    // 確保畫面第一幀準備好後，再去跟後端問資料
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPendingFriendRequests();
     });
@@ -51,16 +51,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkPendingFriendRequests() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
-
-    if (userId == null) return; // 如果是訪客就不用查了
+    if (userId == null) return;
 
     try {
       final result = await ApiClient.getPendingRequests(userId);
-      // 假設後端的邀請陣列叫做 'pending_requests'，或是如果是別的名字請改成對應的 key
-      if (result.containsKey('pending_requests') &&
-          result['pending_requests'] is List) {
+      if (result.containsKey('pending_requests') && result['pending_requests'] is List) {
         final List requests = result['pending_requests'];
-        // 算出有幾個人邀請，並存入管家 (Provider)
         userProvider.setPendingFriendRequests(requests.length);
       }
     } catch (e) {

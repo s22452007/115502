@@ -3,10 +3,16 @@ import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'point_checkout_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
-class BuyPointsScreen extends StatelessWidget {
+class BuyPointsScreen extends StatefulWidget {
   const BuyPointsScreen({Key? key}) : super(key: key);
 
+  @override
+  State<BuyPointsScreen> createState() => _BuyPointsScreenState();
+}
+
+class _BuyPointsScreenState extends State<BuyPointsScreen> {
   static const Color primaryGreen = Color(0xFF8FB98B);
   static const Color darkGreen = Color(0xFF5F8F5B);
   static const Color lightGreen = Color(0xFFE8F0DD);
@@ -14,6 +20,31 @@ class BuyPointsScreen extends StatelessWidget {
   static const Color textDark = Color(0xFF333333);
   static const Color subText = Color(0xFF7A7A7A);
   static const Color gold = Color(0xFFF0B84B);
+
+  List<Map<String, dynamic>> _transactions = [];
+  bool _isLoadingTxn = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) {
+      setState(() => _isLoadingTxn = false);
+      return;
+    }
+    final res = await ApiClient.getTransactions(userId);
+    if (!mounted) return;
+    setState(() {
+      _isLoadingTxn = false;
+      if (res.containsKey('transactions')) {
+        _transactions = List<Map<String, dynamic>>.from(res['transactions']);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -287,6 +318,97 @@ class BuyPointsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+
+              const SizedBox(height: 28),
+
+              // 交易紀錄
+              const Text(
+                '交易紀錄',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              if (_isLoadingTxn)
+                const Center(child: CircularProgressIndicator())
+              else if (_transactions.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7FAF2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderGreen),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '尚無交易紀錄',
+                      style: TextStyle(color: subText, fontSize: 14),
+                    ),
+                  ),
+                )
+              else
+                ..._transactions.map((txn) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7FAF2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderGreen),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: lightGreen,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.monetization_on_outlined,
+                          color: darkGreen,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '+${txn['points']} J-Pts',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${txn['payment_method']} • ${txn['created_at']}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: subText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '\$${txn['price']}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
             ],
           ),
         ),

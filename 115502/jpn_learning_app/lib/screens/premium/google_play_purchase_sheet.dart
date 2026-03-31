@@ -58,7 +58,11 @@ class _GooglePlayPurchaseSheetState extends State<_GooglePlayPurchaseSheet> {
       return;
     }
 
-    final result = await ApiClient.buyPoints(userId, widget.points);
+    final result = await ApiClient.buyPoints(
+      userId, widget.points,
+      price: widget.price,
+      paymentMethod: 'Google Pay',
+    );
 
     if (!mounted) return;
 

@@ -8,7 +8,7 @@ from utils.group_helper import add_group_progress_and_check_reward
 from models import (
     User, UserAbility, UserAchievement, UserVocab, UserFolder, UserScene,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
-    Feedback
+    Feedback, PointTransaction
 )
 
 user_bp = Blueprint('user', __name__)
@@ -204,32 +204,54 @@ def get_profile_data(user_id):
 def add_points():
     data = request.get_json()
     user_id = data.get('user_id')
-    points_to_add = data.get('points', 0) # 前端告訴我要加多少點
+    points_to_add = data.get('points', 0)
+    price = data.get('price', 0)
+    payment_method = data.get('payment_method', 'unknown')
 
     if not user_id or points_to_add <= 0:
         return jsonify({"error": "缺少使用者 ID 或點數數量錯誤"}), 400
 
-    # 去資料庫找這個人
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "找不到此使用者"}), 404
 
-    # 把他的點數加上去！
     user.j_pts += points_to_add
+
+    # 存交易紀錄
+    transaction = PointTransaction(
+        user_id=user_id,
+        points=points_to_add,
+        price=price,
+        payment_method=payment_method,
+    )
+    db.session.add(transaction)
     db.session.commit()
 
-    # 增加小組的點數貢獻
     member_record = GroupMember.query.filter_by(user_id=user_id).first()
     if member_record:
         member_record.group_points += points_to_add
 
-    # 幫小組的點數任務進度加上他剛賺到的點數 (points_to_add)
     add_group_progress_and_check_reward(user_id=user_id, action_type="points", amount=points_to_add)
 
     return jsonify({
-        "message": f"成功儲值 {points_to_add} 點！", 
-        "total_points": user.j_pts # 回傳最新的總餘額給前端
+        "message": f"成功儲值 {points_to_add} 點！",
+        "total_points": user.j_pts
     }), 200
+
+
+# 查詢交易紀錄
+@user_bp.route('/transactions/<int:user_id>', methods=['GET'])
+def get_transactions(user_id):
+    txns = PointTransaction.query.filter_by(user_id=user_id).order_by(PointTransaction.created_at.desc()).all()
+    result = []
+    for t in txns:
+        result.append({
+            "points": t.points,
+            "price": t.price,
+            "payment_method": t.payment_method,
+            "created_at": t.created_at.strftime('%Y-%m-%d %H:%M'),
+        })
+    return jsonify({"transactions": result}), 200
 
 # 增加拍照次數
 @user_bp.route('/increment_scan', methods=['POST'])

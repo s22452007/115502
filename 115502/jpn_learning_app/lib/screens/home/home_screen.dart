@@ -17,6 +17,7 @@ import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/album_detail_screen.dart';
 import 'package:jpn_learning_app/providers/favorites_data.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -428,22 +429,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   '最近解鎖場景',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                // GestureDetector(
-                //   onTap: () {
-                //     Navigator.push(
-                //       context,
-                //       MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()),
-                //     );
-                //   },
-                //   child: Text(
-                //     '查看收藏夾 >',
-                //     style: TextStyle(
-                //       fontSize: 14,
-                //       color: _goalGreen,
-                //       fontWeight: FontWeight.bold,
-                //     ),
-                //   ),
-                // ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ResultGalleryV2Screen()),
+                    );
+                  },
+                  child: Text(
+                    '我的單字探險 >',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: _goalGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),

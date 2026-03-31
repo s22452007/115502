@@ -155,3 +155,12 @@ class Feedback(db.Model):
     reply = db.Column(db.Text, nullable=True)
     replied_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# 點數交易紀錄表 (PointTransaction)
+class PointTransaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    points = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Integer, nullable=False)
+    payment_method = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

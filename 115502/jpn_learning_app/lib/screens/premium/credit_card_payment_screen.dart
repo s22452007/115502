@@ -42,7 +42,11 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
       _isSubmitting = true;
     });
 
-    final result = await ApiClient.buyPoints(userId, widget.points);
+    final result = await ApiClient.buyPoints(
+      userId, widget.points,
+      price: widget.price,
+      paymentMethod: '信用卡',
+    );
 
     if (!mounted) return;
 

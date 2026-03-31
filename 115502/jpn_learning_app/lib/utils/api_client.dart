@@ -253,17 +253,40 @@ class ApiClient {
   }
 
   // 購買/增加點數 API
-  static Future<Map<String, dynamic>> buyPoints(int userId, int points) async {
+  static Future<Map<String, dynamic>> buyPoints(
+    int userId,
+    int points, {
+    int price = 0,
+    String paymentMethod = 'unknown',
+  }) async {
     final url = Uri.parse('$baseUrl/user/add_points');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'points': points}),
+        body: jsonEncode({
+          'user_id': userId,
+          'points': points,
+          'price': price,
+          'payment_method': paymentMethod,
+        }),
       );
       return jsonDecode(response.body);
     } catch (e) {
-      print('購買點數連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 查詢交易紀錄 API
+  static Future<Map<String, dynamic>> getTransactions(int userId) async {
+    final url = Uri.parse('$baseUrl/user/transactions/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {'error': '請求失敗'};
+    } catch (e) {
       return {'error': '網路連線失敗'};
     }
   }

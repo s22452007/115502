@@ -335,7 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          _isLogin ? 'Let\'s get started' : 'Create Account',
+                          _isLogin ? '歡迎回來' : '建立新帳號',
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
@@ -348,8 +348,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           _isLogin
-                              ? 'Login to your account'
-                              : 'Sign up to start learning',
+                              ? '登入您的帳號'
+                              : '註冊以開始學習',
                           style: const TextStyle(
                             fontSize: 16,
                             color: AppColors.textGrey,
@@ -361,7 +361,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // 輸入框 Email
                       _buildInputField(
                         controller: _emailController,
-                        hintText: 'Email',
+                        hintText: '電子郵件',
                         icon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
                       ),
@@ -370,7 +370,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // 輸入框 Password
                       _buildInputField(
                         controller: _passwordController,
-                        hintText: 'Password',
+                        hintText: '密碼',
                         icon: Icons.lock_outline_rounded,
                         obscureText: true,
                       ),
@@ -380,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 20),
                         _buildInputField(
                           controller: _confirmPasswordController,
-                          hintText: 'Confirm Password',
+                          hintText: '確認密碼',
                           icon: Icons.lock_reset_rounded,
                           obscureText: true,
                         ),
@@ -405,7 +405,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: const Text(
-                              'Forgot Password?',
+                              '忘記密碼？',
                               style: TextStyle(color: AppColors.textGrey),
                             ),
                           ),
@@ -434,7 +434,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              _isLogin ? 'LOGIN' : 'SIGN UP',
+                              _isLogin ? '登入' : '註冊',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -454,7 +454,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
-                              'Or continue with',
+                              '或使用以下方式登入',
                               style: TextStyle(
                                 color: Colors.grey.shade500,
                                 fontSize: 12,
@@ -500,7 +500,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                         child: const Text(
-                          'Continue as Guest',
+                          '以訪客身分繼續',
                           style: TextStyle(
                             color: AppColors.textGrey,
                             fontSize: 14,
@@ -528,8 +528,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       _isLogin
-                          ? 'Don\'t have an account? '
-                          : 'Already have an account? ',
+                          ? '還沒有帳號嗎？ '
+                          : '已經有帳號了嗎？ ',
                       style: const TextStyle(
                         color: AppColors.textGrey,
                         fontSize: 16,
@@ -544,7 +544,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         });
                       },
                       child: Text(
-                        _isLogin ? 'Sign up' : 'Log in',
+                        _isLogin ? '註冊' : '登入',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 16,

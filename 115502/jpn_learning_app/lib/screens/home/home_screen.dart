@@ -63,38 +63,106 @@ class _HomeScreenState extends State<HomeScreen> {
       print('檢查好友邀請失敗: $e');
     }
   }
+
   // ==========================================
-
-  // 根據當前時間回傳對應的問候語
+  // 輔助函式
+  // ==========================================
   String _getGreeting() {
-    final hour = DateTime.now().hour; // 取得現在是幾點 (0~23)
-
-    if (hour >= 5 && hour < 12) {
-      return '早安'; // 早上 5 點到中午 12 點前
-    } else if (hour >= 12 && hour < 18) {
-      return '午安'; // 中午 12 點到傍晚 6 點前
-    } else {
-      return '晚安'; // 傍晚 6 點到隔天早上 5 點前
-    }
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) return '早安';
+    if (hour >= 12 && hour < 18) return '午安';
+    return '晚安';
   }
 
-  // 🌟 全新升級：帶有毛玻璃與懸浮按鈕的解鎖遮罩
-  Widget _buildPremiumLockedOverlay({
-    required Widget child,
-    required String message,
-  }) {
+  // 從底部彈出單字清單的函式 (首頁輕量複習專用)
+  void _showVocabularyBottomSheet(BuildContext context, dynamic scenario) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // 允許內容自訂高度
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24, left: 24, right: 24, top: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // 高度根據內容自動縮放
+            children: [
+              // 頂部視覺小橫條
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 標題與關閉按鈕
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${scenario.title} 的單字',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              // 單字列表 (限制最高只能佔螢幕一半，超過可滑動)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: scenario.vocabularyList.length,
+                  itemBuilder: (context, index) {
+                    final vocab = scenario.vocabularyList[index];
+                    
+                    // ⚠️ 注意：如果你的單字資料結構不同，請把下面的 .word 和 .translation 換成你實際的變數寫法！
+                    // 例如如果它是 Map，可能會寫成 vocab['word']
+                    final String wordText = vocab.word ?? '未知單字';
+                    final String translationText = vocab.translation ?? '未知中文';
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline, color: Color(0xFF6AA86B)), // 綠色勾勾
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              '$wordText ($translationText)', 
+                              style: TextStyle(fontSize: 16, color: _textColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ==========================================
+  // UI 區塊構建
+  // ==========================================
+  Widget _buildPremiumLockedOverlay({required Widget child, required String message}) {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // 底層：原本的UI (透明度降低，並防止點擊)
-        Opacity(
-          opacity: 0.35, // 讓底下的卡片變淡
-          child: IgnorePointer(
-            // 防止訪客點擊底下的功能
-            child: child,
-          ),
-        ),
-        // 中層：一點點毛玻璃效果
+        Opacity(opacity: 0.35, child: IgnorePointer(child: child)),
         Positioned.fill(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -104,58 +172,26 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        // 上層：懸浮標語與登入按鈕
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.75), // 帶有質感的半透明黑底
+            color: Colors.black.withOpacity(0.75),
             borderRadius: BorderRadius.circular(30),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.lock_person, color: Colors.white, size: 18),
               const SizedBox(width: 8),
-              Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(message, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
               const SizedBox(width: 12),
               InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _goalGreen, // 使用你主題的綠色
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    '去登入',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(color: _goalGreen, borderRadius: BorderRadius.circular(20)),
+                  child: const Text('去登入', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -165,7 +201,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 將「今日目標」原本的綠色卡片抽出來成為獨立方法
   Widget _buildDailyGoalCard(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -173,13 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: _goalGreen,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: _goalGreen.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: _goalGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,24 +217,14 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Icon(Icons.track_changes, color: Colors.white, size: 20),
               SizedBox(width: 8),
-              Text(
-                '探索3個新場景',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('探索3個新場景', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
-              value: (context.watch<UserProvider>().dailyScans / 3.0).clamp(
-                0.0,
-                1.0,
-              ),
+              value: (context.watch<UserProvider>().dailyScans / 3.0).clamp(0.0, 1.0),
               backgroundColor: Colors.white.withOpacity(0.3),
               valueColor: const AlwaysStoppedAnimation(Colors.white),
               minHeight: 8,
@@ -215,27 +234,14 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '進度 : ${context.watch<UserProvider>().dailyScans}/3',
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
+              Text('進度 : ${context.watch<UserProvider>().dailyScans}/3', style: const TextStyle(color: Colors.white, fontSize: 14)),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CameraScreen()),
-                  );
-                },
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: _goalGreen,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 0,
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   elevation: 0,
                 ),
                 child: const Row(
@@ -252,99 +258,79 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 將「學習小組」原本的白底卡片抽出來成為獨立方法
   Widget _buildStudyGroupCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
             backgroundColor: Colors.amber.shade100,
-            child: const Text(
-              'D',
-              style: TextStyle(
-                color: Colors.amber,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
+            child: const Text('D', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Din',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Text(
-                  '獲得了「麵食大師」徽章',
-                  style: TextStyle(fontSize: 13, color: _subTextColor),
-                ),
+                const Text('Din', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('獲得了「麵食大師」徽章', style: TextStyle(fontSize: 13, color: _subTextColor)),
               ],
             ),
           ),
-          Text(
-            '10m',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-          ),
+          Text('10m', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
         ],
       ),
     );
   }
 
+  Widget _buildStatusChip({required IconData icon, required Color iconColor, required String text, required Color borderColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(border: Border.all(color: borderColor), borderRadius: BorderRadius.circular(20), color: Colors.white),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 18),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(color: iconColor, fontWeight: FontWeight.bold, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // 主畫面 Build
+  // ==========================================
   @override
   Widget build(BuildContext context) {
-    final userEmail =
-        context.watch<UserProvider>().email ?? 'guest@example.com';
-    final userName =
-        context.watch<UserProvider>().username ?? userEmail.split('@')[0];
+    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName = context.watch<UserProvider>().username ?? userEmail.split('@')[0];
     final streakDays = context.watch<UserProvider>().streakDays;
     final jPts = context.watch<UserProvider>().jPts;
     final isGuest = context.watch<UserProvider>().userId == null;
+
     return Scaffold(
       backgroundColor: Colors.white,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: AppColors.primary, // 或是你剛剛設定的 AppColors.primary
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-
-        // 1. 中間點擊圖示切換回首頁
         title: IconButton(
           icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          },
+          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
         ),
         centerTitle: true,
-
         actions: [
-          // 2. 右邊只保留原本的個人檔案 Icon
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
           ),
           const SizedBox(width: 8),
         ],
@@ -354,21 +340,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${_getGreeting()}，$userName!', // 動態呼叫問候語
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: _textColor,
-              ),
-            ),
+            Text('${_getGreeting()}，$userName!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _textColor)),
             const SizedBox(height: 4),
-            Text(
-              '今天也是學習日語的好日子',
-              style: TextStyle(fontSize: 14, color: _subTextColor),
-            ),
+            Text('今天也是學習日語的好日子', style: TextStyle(fontSize: 14, color: _subTextColor)),
             const SizedBox(height: 16),
-
             Row(
               children: [
                 _buildStatusChip(
@@ -380,19 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 12),
                 GestureDetector(
                   onTap: () {
-                    if (!isGuest) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const BuyPointsScreen(),
-                        ),
-                      );
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    }
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => isGuest ? const LoginScreen() : const BuyPointsScreen()));
                   },
                   child: _buildStatusChip(
                     icon: Icons.monetization_on,
@@ -404,45 +367,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 32),
-
-            const Text(
-              '今日學習目標',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            const Text('今日學習目標', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-
-            // 🎯 今日學習目標區塊：套用全新遮罩
             isGuest
-                ? _buildPremiumLockedOverlay(
-                    child: _buildDailyGoalCard(context),
-                    message: '登入啟用今日目標',
-                  )
+                ? _buildPremiumLockedOverlay(child: _buildDailyGoalCard(context), message: '登入啟用今日目標')
                 : _buildDailyGoalCard(context),
-
             const SizedBox(height: 32),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '最近解鎖場景',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('最近解鎖場景', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => ResultGalleryV2Screen()),
-                    );
-                  },
-                  child: Text(
-                    '我的單字探險 >',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _goalGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
+                  child: Text('我的單字探險 >', style: TextStyle(fontSize: 14, color: _goalGreen, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -455,26 +392,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: List.generate(
                     FavoritesDataProvider.allFavorites.take(5).length,
                     (index) {
-                      final scenario =
-                          FavoritesDataProvider.allFavorites[index];
+                      final scenario = FavoritesDataProvider.allFavorites[index];
                       return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  AlbumDetailScreen(scenario: scenario),
-                            ),
-                          );
-                        },
+                        // 點擊後從下方彈出輕量級單字清單，不再跳轉到詳細相簿！
+                        onTap: () => _showVocabularyBottomSheet(context, scenario),
                         child: Container(
                           width: 160,
                           margin: const EdgeInsets.only(right: 12),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: index % 2 == 0
-                                ? const Color(0xFFEBE8F2)
-                                : const Color(0xFFEAF4F6),
+                            color: index % 2 == 0 ? const Color(0xFFEBE8F2) : const Color(0xFFEAF4F6),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Column(
@@ -483,35 +410,22 @@ class _HomeScreenState extends State<HomeScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: index % 2 == 0
-                                      ? const Color(0xFF8B6B9E)
-                                      : const Color(0xFF7FAFD0),
+                                  color: index % 2 == 0 ? const Color(0xFF8B6B9E) : const Color(0xFF7FAFD0),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(
-                                  Icons.train,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
+                                child: const Icon(Icons.train, color: Colors.white, size: 24),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 scenario.title,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF333333),
-                                ),
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '${scenario.date} • ${scenario.vocabularyList.length}個單字',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
                               ),
                             ],
                           ),
@@ -522,51 +436,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
-
             GestureDetector(
-              onTap: isGuest
-                  ? null
-                  : () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const StudyGroupScreen(),
-                        ),
-                      );
-                    },
+              onTap: isGuest ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    '學習小組動態',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('學習小組動態', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   Icon(Icons.chevron_right, color: Colors.grey.shade600),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-
-            // 👥 學習小組區塊：套用全新遮罩
             isGuest
-                ? _buildPremiumLockedOverlay(
-                    child: _buildStudyGroupCard(context),
-                    message: '登入查看群組動態',
-                  )
+                ? _buildPremiumLockedOverlay(child: _buildStudyGroupCard(context), message: '登入查看群組動態')
                 : GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const StudyGroupScreen(),
-                        ),
-                      );
-                    },
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),
                     child: _buildStudyGroupCard(context),
                   ),
-
             const SizedBox(height: 20),
           ],
         ),
@@ -575,107 +462,12 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (i) {
           setState(() => _currentIndex = i);
-          if (i == 0) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CameraScreen()),
-            );
-          }
-          if (i == 1) {
-            // 這是你剛剛做好的手動搜尋！
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
-            );
-          }
-          if (i == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          }
-          if (i == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
-            );
-          }
-          if (i == 4) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            );
-          }
+          if (i == 0) Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
+          if (i == 1) Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
+          if (i == 2) Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+          if (i == 3) Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()));
+          if (i == 4) Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
         },
-      ),
-    );
-  }
-
-  Widget _buildStatusChip({
-    required IconData icon,
-    required Color iconColor,
-    required String text,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        border: Border.all(color: borderColor),
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor, size: 18),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              color: iconColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSceneCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color bgColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: _textColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(subtitle, style: TextStyle(fontSize: 12, color: _subTextColor)),
-        ],
       ),
     );
   }

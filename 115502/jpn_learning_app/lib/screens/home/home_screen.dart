@@ -17,6 +17,7 @@ import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/profile/album_detail_screen.dart';
 import 'package:jpn_learning_app/providers/favorites_data.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);

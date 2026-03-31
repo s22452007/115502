@@ -9,7 +9,7 @@ tutor_bp = Blueprint('tutor', __name__)
 # (注意：請將下方字串換成您申請到的 API Key)
 # 未來專題上線時，建議把它移到 .env 環境變數檔案中會更安全喔！
 # ==========================================
-GEMINI_API_KEY = "AIzaSyBHQKB3xbHDrnUUtlDu6GdfVUBEkjGq0CY" 
+GEMINI_API_KEY = "GEMINI_API_KEY"
 genai.configure(api_key=GEMINI_API_KEY)
 
 # 2. 初始化 Gemini 模型 (使用目前最快且免費額度高的 flash 模型)

@@ -125,10 +125,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemBuilder: (context, index) {
                     final vocab = scenario.vocabularyList[index];
                     
-                    // ⚠️ 注意：如果你的單字資料結構不同，請把下面的 .word 和 .translation 換成你實際的變數寫法！
-                    // 例如如果它是 Map，可能會寫成 vocab['word']
-                    final String wordText = vocab.word ?? '未知單字';
-                    final String translationText = vocab.translation ?? '未知中文';
+                    final String wordText = vocab.word;
+                    final String translationText = vocab.meaning;
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12.0),

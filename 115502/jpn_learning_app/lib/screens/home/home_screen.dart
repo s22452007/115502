@@ -1,22 +1,25 @@
-import 'dart:ui'; // 🔽 新增這個：為了實作高級的毛玻璃 (Blur) 效果
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// 1. 工具與 Provider
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/providers/font_size_provider.dart';
+import 'package:jpn_learning_app/providers/favorites_data.dart';
+
+// 2. 共用元件
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/app_drawer.dart';
 
+// 3. 畫面 Screens
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart'; // 手動搜尋
+import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
-import 'package:provider/provider.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/providers/font_size_provider.dart';
-import 'package:jpn_learning_app/screens/profile/photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/profile/album_detail_screen.dart';
-import 'package:jpn_learning_app/providers/favorites_data.dart';
-import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 
 class HomeScreen extends StatefulWidget {

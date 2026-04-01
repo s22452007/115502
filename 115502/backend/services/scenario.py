@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from models import UserScene, Scene
 import os
 import uuid
 
@@ -109,3 +110,34 @@ def analyze_text_scenario():
     except Exception as e:
         print(f"生成文字情境時發生錯誤: {e}")
         return jsonify({'error': f'伺服器內部錯誤: {str(e)}'}), 500
+
+@scenario_bp.route('/unlocked/<int:user_id>', methods=['GET'])
+def get_unlocked_scenes(user_id):
+    """
+    取得使用者已解鎖的場景列表
+    支援 Query Parameter: ?limit=3 (首頁用)
+    """
+    limit = request.args.get('limit', type=int)
+    
+    # 依照解鎖時間倒序排列
+    query = UserScene.query.filter_by(user_id=user_id).order_by(UserScene.unlocked_at.desc())
+    
+    if limit:
+        user_scenes = query.limit(limit).all()
+    else:
+        user_scenes = query.all()
+
+    results = []
+    for us in user_scenes:
+        scene = us.scene
+        if scene: # 防呆，確保場景存在
+            vocab_count = len(scene.vocabs)
+            results.append({
+                "scene_id": scene.id,
+                "scene_name": scene.name,
+                "icon_name": scene.icon_name,
+                "unlocked_at": us.unlocked_at.strftime('%Y.%m.%d'),
+                "vocab_count": vocab_count
+            })
+            
+    return jsonify({"scenes": results}), 200

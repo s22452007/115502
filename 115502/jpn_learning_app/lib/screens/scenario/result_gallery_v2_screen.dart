@@ -5,7 +5,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/favorites_data.dart';
 
 // 2. 匯入你要跳轉的相簿詳細頁面
-import 'package:jpn_learning_app/screens/profile/album_detail_screen.dart'; 
+import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
 
 class ResultGalleryV2Screen extends StatelessWidget {
   const ResultGalleryV2Screen({Key? key}) : super(key: key);
@@ -50,7 +50,7 @@ class ResultGalleryV2Screen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AlbumDetailScreen(scenario: scenario),
+                        builder: (context) => ScenarioDetailScreen(scenario: scenario),
                       ),
                     );
                   },

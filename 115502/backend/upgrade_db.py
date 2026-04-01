@@ -48,6 +48,15 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ study_group 欄位可能已存在：{e}")
 
+# ==========================================
+# 4. 升級 user_vocab (收藏夾資料夾功能)
+# ==========================================
+try:
+    cursor.execute("ALTER TABLE user_vocab ADD COLUMN folder_id INTEGER;")
+    print("✅ user_vocab.folder_id 欄位加入成功")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user_vocab.folder_id 可能已存在：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from utils.db import db
+from flask import request
 
 # 匯入各個模組的 Blueprint
 from services.quiz import quiz_bp

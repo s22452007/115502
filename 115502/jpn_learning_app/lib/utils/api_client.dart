@@ -676,6 +676,32 @@ class ApiClient {
     }
   }
 
+  static Future<List<dynamic>> getUnlockedScenes(int userId, {int limit = 3}) async {
+    final url = Uri.parse('$baseUrl/api/scenario/unlocked/$userId?limit=$limit');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['scenes']; 
+    } else {
+      throw Exception('無法載入解鎖場景');
+    }
+  }
+
+  // 注意這裡的 userId 也是 int
+  static Future<List<dynamic>> getSceneVocabs(int sceneId, int userId) async {
+    // 呼叫： /api/vocab/scene/<scene_id>?user_id=<user_id>
+    final url = Uri.parse('$baseUrl/api/vocab/scene/$sceneId?user_id=$userId');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['vocabs']; 
+    } else {
+      throw Exception('無法載入單字清單');
+    }
+  }
+
   // ==========================================
   // 🤖 其他 AI 與測驗功能
   // ==========================================

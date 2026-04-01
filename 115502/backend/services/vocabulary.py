@@ -1,31 +1,66 @@
 from flask import Blueprint, request, jsonify
 
 from utils.db import db
-from models import UserVocab, UserFolder
+from models import UserVocab, UserFolder, Vocab
 
 vocab_bp = Blueprint('vocab', __name__)
 
-# 取得單字本資料夾
+# 取得使用者所有資料夾（含預設 + 自訂）+ 各資料夾單字數
 @vocab_bp.route('/favorites/<int:user_id>', methods=['GET'])
 def get_user_favorites(user_id):
-    user_vocabs = UserVocab.query.filter_by(user_id=user_id).all()
-    folders = {}
+    # 預設資料夾（folder_id 為 null 的單字）
+    default_count = UserVocab.query.filter_by(user_id=user_id, folder_id=None).count()
+    result = [{
+        "id": None,
+        "name": "預設相簿",
+        "is_default": True,
+        "count": default_count,
+    }]
 
-    # 1. 抓取系統單字自動生成的資料夾
-    for uv in user_vocabs:
-        scene_name = uv.vocab.scene.name if uv.vocab.scene else "未分類單字"
-        if scene_name not in folders:
-            folders[scene_name] = {"name": scene_name, "count": 0}
-        folders[scene_name]["count"] += 1
-
-    # 2. 去資料庫抓取使用者「自訂」的資料夾
+    # 自訂資料夾
     custom_folders = UserFolder.query.filter_by(user_id=user_id).all()
     for cf in custom_folders:
-        if cf.name not in folders:
-            folders[cf.name] = {"name": cf.name, "count": 0}
+        count = UserVocab.query.filter_by(user_id=user_id, folder_id=cf.id).count()
+        result.append({
+            "id": cf.id,
+            "name": cf.name,
+            "is_default": False,
+            "count": count,
+        })
 
-    result = list(folders.values())
     return jsonify({"favorites": result}), 200
+
+
+# 取得某個資料夾裡的單字列表
+@vocab_bp.route('/folder_vocabs', methods=['POST'])
+def get_folder_vocabs():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    folder_id = data.get('folder_id')  # None = 預設資料夾
+
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    if folder_id is None:
+        user_vocabs = UserVocab.query.filter_by(user_id=user_id, folder_id=None).all()
+    else:
+        user_vocabs = UserVocab.query.filter_by(user_id=user_id, folder_id=folder_id).all()
+
+    result = []
+    for uv in user_vocabs:
+        v = uv.vocab
+        result.append({
+            "user_vocab_id": uv.id,
+            "vocab_id": v.id,
+            "word": v.word,
+            "kana": v.kana,
+            "meaning": v.meaning,
+            "scene": v.scene.name if v.scene else "未分類",
+            "folder_id": uv.folder_id,
+        })
+
+    return jsonify({"vocabs": result}), 200
+
 
 # 建立自訂資料夾
 @vocab_bp.route('/folders', methods=['POST'])
@@ -37,9 +72,96 @@ def create_folder():
     if not user_id or not name:
         return jsonify({"error": "缺少必要資料"}), 400
 
-    # 把自訂資料夾存進資料庫
     new_folder = UserFolder(user_id=user_id, name=name)
     db.session.add(new_folder)
     db.session.commit()
 
-    return jsonify({"message": "資料夾建立成功！"}), 201
+    return jsonify({
+        "message": "資料夾建立成功！",
+        "folder_id": new_folder.id,
+        "name": new_folder.name,
+    }), 201
+
+
+# 移動單字到指定資料夾
+@vocab_bp.route('/move_vocab', methods=['POST'])
+def move_vocab():
+    data = request.get_json()
+    user_vocab_id = data.get('user_vocab_id')
+    target_folder_id = data.get('target_folder_id')  # None = 移回預設
+
+    if not user_vocab_id:
+        return jsonify({"error": "缺少 user_vocab_id"}), 400
+
+    uv = UserVocab.query.get(user_vocab_id)
+    if not uv:
+        return jsonify({"error": "找不到該收藏紀錄"}), 404
+
+    uv.folder_id = target_folder_id
+    db.session.commit()
+
+    return jsonify({"message": "移動成功"}), 200
+
+
+# 收藏單字（可指定資料夾）
+@vocab_bp.route('/collect', methods=['POST'])
+def collect_vocab():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    vocab_id = data.get('vocab_id')
+    folder_id = data.get('folder_id')  # 可選，None = 預設
+
+    if not user_id or not vocab_id:
+        return jsonify({"error": "缺少必要資料"}), 400
+
+    # 檢查是否已收藏
+    existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
+    if existing:
+        return jsonify({"error": "已經收藏過囉！"}), 400
+
+    uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id)
+    db.session.add(uv)
+    db.session.commit()
+
+    return jsonify({"message": "收藏成功！", "user_vocab_id": uv.id}), 201
+
+
+# 刪除資料夾（裡面的單字移回預設）
+@vocab_bp.route('/delete_folder', methods=['POST'])
+def delete_folder():
+    data = request.get_json()
+    folder_id = data.get('folder_id')
+
+    if not folder_id:
+        return jsonify({"error": "缺少 folder_id"}), 400
+
+    folder = UserFolder.query.get(folder_id)
+    if not folder:
+        return jsonify({"error": "找不到該資料夾"}), 404
+
+    # 把裡面的單字移回預設
+    UserVocab.query.filter_by(folder_id=folder_id).update({"folder_id": None})
+    db.session.delete(folder)
+    db.session.commit()
+
+    return jsonify({"message": "資料夾已刪除，單字已移回預設相簿"}), 200
+
+
+# 重新命名資料夾
+@vocab_bp.route('/rename_folder', methods=['POST'])
+def rename_folder():
+    data = request.get_json()
+    folder_id = data.get('folder_id')
+    name = (data.get('name') or '').strip()
+
+    if not folder_id or not name:
+        return jsonify({"error": "缺少必要資料"}), 400
+
+    folder = UserFolder.query.get(folder_id)
+    if not folder:
+        return jsonify({"error": "找不到該資料夾"}), 404
+
+    folder.name = name
+    db.session.commit()
+
+    return jsonify({"message": "重新命名成功"}), 200

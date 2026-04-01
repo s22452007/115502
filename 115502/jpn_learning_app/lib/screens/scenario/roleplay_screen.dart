@@ -61,6 +61,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       } else {
         print('後端發生錯誤，狀態碼：${response.statusCode}');
       }
+    } catch (e) {
+      print('發送請求時發生錯誤: $e');
+    }
   }
 
   @override

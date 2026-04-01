@@ -52,3 +52,21 @@ if __name__ == '__main__':
 
     # 加上 host='0.0.0.0' 代表允許區域網路內的所有設備連線
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+# 幫你的廚房開一個叫做 /api/chat 的新窗口，並允許 POST 傳送資料
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    # 1. 接收從 Flutter 傳過來的日文訊息
+    user_message = request.form.get('message', '')
+    
+    print(f"收到來自 App 的訊息：{user_message}") # 印在終端機讓你檢查
+
+    # 2. 這裡之後可以把你寫好的 Gemini 程式碼放進來
+    # response = model.generate_content(user_message)
+    # ai_reply = response.text
+    
+    # 3. 我們先寫死一句話，測試「前後端有沒有成功通訊」
+    ai_reply = f"Python 後端收到你的「{user_message}」囉！Gemini 準備中..."
+    
+    # 4. 把字串回傳給 Flutter 畫面
+    return ai_reply

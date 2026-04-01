@@ -82,18 +82,33 @@ class ScenarioDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            ...scenario.vocabularyList.map((vocab) => _buildVocabCard(vocab)).toList(),
+            // 這裡改呼叫下方獨立出來的 Stateful 單字卡元件
+            ...scenario.vocabularyList.map((vocab) => _VocabCardWidget(vocab: vocab)).toList(),
             const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
+}
 
-  // ==========================================
-  // 單一單字卡片的精美設計
-  // ==========================================
-  Widget _buildVocabCard(VocabItem vocab) {
+// ==========================================
+// 會記住按讚狀態的獨立單字卡元件 (StatefulWidget)
+// ==========================================
+class _VocabCardWidget extends StatefulWidget {
+  final VocabItem vocab;
+
+  const _VocabCardWidget({Key? key, required this.vocab}) : super(key: key);
+
+  @override
+  State<_VocabCardWidget> createState() => _VocabCardWidgetState();
+}
+
+class _VocabCardWidgetState extends State<_VocabCardWidget> {
+  bool _isStarred = false; // 預設未收藏 (灰色)
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(24),
@@ -111,6 +126,7 @@ class ScenarioDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 上半部：日文、假名、星星
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,12 +136,12 @@ class ScenarioDetailScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      vocab.kana,
+                      widget.vocab.kana,
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      vocab.word,
+                      widget.vocab.word,
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -135,13 +151,40 @@ class ScenarioDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.star, color: Colors.amber, size: 36),
+              
+              // 讓星星可以點擊切換顏色與狀態！
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isStarred = !_isStarred; // 狀態反轉
+                  });
+                  
+                  // 顯示提示訊息 (SnackBar)
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(_isStarred ? '已加入收藏單字本！⭐' : '已取消收藏'),
+                      duration: const Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                },
+                child: Icon(
+                  _isStarred ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: _isStarred ? Colors.amber : Colors.grey.shade300,
+                  size: 40,
+                ),
+              ),
             ],
           ),
+          
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16.0),
             child: Divider(color: Color(0xFFEEEEEE), thickness: 1.5),
           ),
+          
+          // 下半部：詞彙說明與例句
           const Text(
             '詞彙說明',
             style: TextStyle(
@@ -152,10 +195,12 @@ class ScenarioDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            vocab.meaning,
+            widget.vocab.meaning,
             style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 16),
+          
+          // 例句區塊
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -170,7 +215,7 @@ class ScenarioDetailScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    vocab.exampleSentence,
+                    widget.vocab.exampleSentence,
                     style: const TextStyle(
                       fontSize: 16,
                       color: Color(0xFF444444),

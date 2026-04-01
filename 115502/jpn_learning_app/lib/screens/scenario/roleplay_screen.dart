@@ -38,15 +38,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     // 2. 清空輸入框
     _controller.clear();
-
-    // 3. 模擬 AI 在 1 秒後回覆
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _messages.add({'text': 'これはテストの返信です！(這是一句假的AI回覆)', 'isUser': false});
-        });
-      }
-    });
   }
 
   @override

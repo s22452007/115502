@@ -6,8 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/providers/font_size_provider.dart';
-import 'package:jpn_learning_app/providers/favorites_data.dart';
+// import 'package:jpn_learning_app/providers/favorites_data.dart'; // [已移除] 不再需要假資料
 
 // 2. 共用元件
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
@@ -38,14 +37,42 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color _subTextColor = const Color(0xFF888888);
 
   // ==========================================
-  // 生命週期與初始化
+  // 1. 狀態變數與生命週期
   // ==========================================
+  List<dynamic> _recentScenes = [];
+  bool _isLoadingScenes = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPendingFriendRequests();
+      _fetchRecentScenes(); // 畫面載入時呼叫抓取場景
     });
+  }
+
+  // ==========================================
+  // 2. API 資料抓取
+  // ==========================================
+  Future<void> _fetchRecentScenes() async {
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId;
+    
+    if (userId == null) {
+      setState(() => _isLoadingScenes = false);
+      return;
+    }
+
+    try {
+      final scenes = await ApiClient.getUnlockedScenes(userId, limit: 3);
+      setState(() {
+        _recentScenes = scenes;
+        _isLoadingScenes = false;
+      });
+    } catch (e) {
+      debugPrint('載入最近解鎖場景失敗: $e');
+      setState(() => _isLoadingScenes = false);
+    }
   }
 
   Future<void> _checkPendingFriendRequests() async {
@@ -60,12 +87,12 @@ class _HomeScreenState extends State<HomeScreen> {
         userProvider.setPendingFriendRequests(requests.length);
       }
     } catch (e) {
-      print('檢查好友邀請失敗: $e');
+      debugPrint('檢查好友邀請失敗: $e');
     }
   }
 
   // ==========================================
-  // 輔助函式
+  // 3. 輔助函式與彈出視窗
   // ==========================================
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -74,11 +101,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return '晚安';
   }
 
-  // 從底部彈出單字清單的函式 (首頁輕量複習專用)
-  void _showVocabularyBottomSheet(BuildContext context, dynamic scenario) {
+void _showVocabularyBottomSheet(BuildContext context, dynamic scene) {
+    final userId = context.read<UserProvider>().userId;
+    
+    // 如果尚未登入 (userId 為 null)，直接提示並擋下，避免報錯
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請先登入才能查看單字解鎖進度喔！')),
+      );
+      return; 
+    }
+    
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // 允許內容自訂高度
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -87,61 +123,68 @@ class _HomeScreenState extends State<HomeScreen> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 24, left: 24, right: 24, top: 12),
           child: Column(
-            mainAxisSize: MainAxisSize.min, // 高度根據內容自動縮放
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // 頂部視覺小橫條
               Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                width: 40, height: 5,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
               ),
               const SizedBox(height: 16),
-              // 標題與關閉按鈕
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${scenario.title} 的單字',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                  Text('${scene['scene_name']} 的單字', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: () => Navigator.pop(context)),
                 ],
               ),
               const Divider(),
-              // 單字列表 (限制最高只能佔螢幕一半，超過可滑動)
+              // 動態載入單字清單
               ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.5,
-                ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: scenario.vocabularyList.length,
-                  itemBuilder: (context, index) {
-                    final vocab = scenario.vocabularyList[index];
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
+                child: FutureBuilder<List<dynamic>>(
+                  future: ApiClient.getSceneVocabs(scene['scene_id'], userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                    }
+                    if (snapshot.hasError) {
+                      return const Center(child: Text("載入單字失敗"));
+                    }
                     
-                    final String wordText = vocab.word;
-                    final String translationText = vocab.meaning;
+                    final vocabs = snapshot.data ?? [];
+                    if (vocabs.isEmpty) {
+                      return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("這個場景還沒有單字喔！")));
+                    }
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_outline, color: Color(0xFF6AA86B)), // 綠色勾勾
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              '$wordText ($translationText)', 
-                              style: TextStyle(fontSize: 16, color: _textColor),
-                            ),
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: vocabs.length,
+                      itemBuilder: (context, index) {
+                        final vocab = vocabs[index];
+                        final isUnlocked = vocab['is_unlocked'] == true;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isUnlocked ? Icons.check_circle : Icons.radio_button_unchecked, 
+                                color: isUnlocked ? const Color(0xFF6AA86B) : Colors.grey.shade400
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  '${vocab['word']} (${vocab['meaning']})', 
+                                  style: TextStyle(
+                                    fontSize: 16, 
+                                    color: isUnlocked ? _textColor : Colors.grey.shade500
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -154,8 +197,83 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ==========================================
-  // UI 區塊構建
+  // 4. UI 區塊元件 (Widgets)
   // ==========================================
+  
+  // 獨立出來的：最近解鎖場景列表 Widget
+  Widget _buildRecentScenesList() {
+    if (_isLoadingScenes) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_recentScenes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Text("還沒有解鎖的場景，趕快去拍照探索吧！", style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: List.generate(
+            _recentScenes.length,
+            (index) {
+              final scene = _recentScenes[index];
+              final isEven = index % 2 == 0; // 判斷單雙數來變換卡片顏色
+
+              return GestureDetector(
+                onTap: () => _showVocabularyBottomSheet(context, scene),
+                child: Container(
+                  width: 160,
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isEven ? const Color(0xFFEBE8F2) : const Color(0xFFEAF4F6),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isEven ? const Color(0xFF8B6B9E) : const Color(0xFF7FAFD0),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        // 之後如果有存圖示名稱，也可以用 scene['icon_name'] 來判斷顯示什麼 Icon
+                        child: const Icon(Icons.train, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        scene['scene_name'] ?? '未知場景',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${scene['unlocked_at']} • ${scene['vocab_count']}個單字',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPremiumLockedOverlay({required Widget child, required String message}) {
     return Stack(
       alignment: Alignment.center,
@@ -298,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ==========================================
-  // 主畫面 Build
+  // 5. 主畫面排版 (Main Build)
   // ==========================================
   @override
   Widget build(BuildContext context) {
@@ -382,58 +500,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: List.generate(
-                    FavoritesDataProvider.allFavorites.take(5).length,
-                    (index) {
-                      final scenario = FavoritesDataProvider.allFavorites[index];
-                      return GestureDetector(
-                        // 點擊後從下方彈出輕量級單字清單，不再跳轉到詳細相簿！
-                        onTap: () => _showVocabularyBottomSheet(context, scenario),
-                        child: Container(
-                          width: 160,
-                          margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: index % 2 == 0 ? const Color(0xFFEBE8F2) : const Color(0xFFEAF4F6),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: index % 2 == 0 ? const Color(0xFF8B6B9E) : const Color(0xFF7FAFD0),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.train, color: Colors.white, size: 24),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                scenario.title,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${scenario.date} • ${scenario.vocabularyList.length}個單字',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
+            
+            // 這裡原本是一大串的 SingleChildScrollView，現在變得超級乾淨！
+            _buildRecentScenesList(),
+            
             const SizedBox(height: 24),
             GestureDetector(
               onTap: isGuest ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),

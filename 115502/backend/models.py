@@ -34,13 +34,15 @@ class Scene(db.Model):
     icon_name = db.Column(db.String(50), nullable=True) 
     vocabs = db.relationship('Vocab', backref='scene', lazy=True)
 
-# 系統單字字典 (Vocab)
+# 單字字典 (Vocab)
 class Vocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False)
-    word = db.Column(db.String(100), nullable=False)    
-    kana = db.Column(db.String(100), nullable=False)    
-    meaning = db.Column(db.String(200), nullable=False) 
+    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False) # 紀錄這個單字屬於哪個場景(場景的外鍵)
+    word = db.Column(db.String(100), nullable=False) # 單字的日文原型或漢字
+    kana = db.Column(db.String(100), nullable=False) # 單字的假名拼音
+    meaning = db.Column(db.String(200), nullable=False)  # 單字的中文解釋
+    example_sentence = db.Column(db.String(255), nullable=True) # 儲存例句，例如: このラーメンは美味しいです。
+    audio_filename = db.Column(db.String(100), nullable=True)   # 儲存音檔檔名或路徑
 
 # 使用者的「單字收藏夾」 (UserVocab)
 class UserVocab(db.Model):

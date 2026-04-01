@@ -38,6 +38,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     // 2. 清空輸入框
     _controller.clear();
+    // 3. 替換：向你的 Python 後端發送真正的請求
+    try {
+      // 這邊的網址請換成你 Python 後端真正運行的網址（例如 http://127.0.0.1:8000/chat）
+      final url = Uri.parse('http://你的後端API網址/路徑'); 
+      
+      // 發送請求，把你剛剛打的字 (text) 傳給後端
+      final response = await http.post(
+        url,
+        body: {'message': text}, 
+      );
   }
 
   @override

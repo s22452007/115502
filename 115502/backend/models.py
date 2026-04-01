@@ -47,8 +47,10 @@ class UserVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
     collected_at = db.Column(db.DateTime, default=datetime.utcnow)
-    vocab = db.relationship('Vocab') 
+    vocab = db.relationship('Vocab')
+    folder = db.relationship('UserFolder')
 
 # 系統徽章/成就 (Achievement)
 class Achievement(db.Model):

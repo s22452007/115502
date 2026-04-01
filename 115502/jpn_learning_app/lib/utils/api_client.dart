@@ -577,7 +577,101 @@ class ApiClient {
       );
       return jsonDecode(response.body);
     } catch (e) {
-      print('建立資料夾失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 取得資料夾內的單字
+  static Future<Map<String, dynamic>> getFolderVocabs(
+    int userId, {
+    int? folderId,
+  }) async {
+    final url = Uri.parse('$baseUrl/vocab/folder_vocabs');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'folder_id': folderId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 移動單字到資料夾
+  static Future<Map<String, dynamic>> moveVocab(
+    int userVocabId, {
+    int? targetFolderId,
+  }) async {
+    final url = Uri.parse('$baseUrl/vocab/move_vocab');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_vocab_id': userVocabId,
+          'target_folder_id': targetFolderId,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 收藏單字（可選資料夾）
+  static Future<Map<String, dynamic>> collectVocab(
+    int userId,
+    int vocabId, {
+    int? folderId,
+  }) async {
+    final url = Uri.parse('$baseUrl/vocab/collect');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'vocab_id': vocabId,
+          'folder_id': folderId,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 刪除資料夾
+  static Future<Map<String, dynamic>> deleteFolder(int folderId) async {
+    final url = Uri.parse('$baseUrl/vocab/delete_folder');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'folder_id': folderId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 重新命名資料夾
+  static Future<Map<String, dynamic>> renameFolder(
+    int folderId,
+    String name,
+  ) async {
+    final url = Uri.parse('$baseUrl/vocab/rename_folder');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'folder_id': folderId, 'name': name}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
       return {'error': '網路連線失敗'};
     }
   }

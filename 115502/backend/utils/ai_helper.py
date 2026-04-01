@@ -5,9 +5,10 @@ from PIL import Image
 from dotenv import load_dotenv
 
 # 載入環境變數 (讀取 backend/.env 檔案中的 GEMINI_API_KEY)
+# 特別加上 override=True，強制覆蓋終端機中可能殘留的舊變數（避免一直讀到舊金鑰）
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_path = os.path.join(BASE_DIR, '.env')
-load_dotenv(env_path)
+load_dotenv(env_path, override=True)
 
 def analyze_image_from_path(file_path):
     """

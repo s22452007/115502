@@ -57,6 +57,16 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ user_vocab.folder_id 可能已存在：{e}")
 
+# ==========================================
+# 5. 升級 vocab (單字詳細內容：例句與音檔)
+# ==========================================
+try:
+    cursor.execute("ALTER TABLE vocab ADD COLUMN example_sentence VARCHAR(255);")
+    cursor.execute("ALTER TABLE vocab ADD COLUMN audio_filename VARCHAR(100);")
+    print("✅ vocab 單字表擴充成功 (加入例句與音檔)！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ vocab 欄位可能已存在：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

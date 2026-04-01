@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
+import 'package:jpn_learning_app/utils/api_client.dart'; // 請確認路徑是不是這個
 // import 'package:jpn_learning_app/screens/scenario/naturalness_screen.dart';
 
 // 2-2-4 角色扮演

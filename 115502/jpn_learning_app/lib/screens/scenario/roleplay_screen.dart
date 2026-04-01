@@ -48,6 +48,19 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         url,
         body: {'message': text}, 
       );
+    // 如果成功收到後端回覆 (Status Code 200)
+      if (response.statusCode == 200) {
+        final aiReply = response.body; // 抓出後端傳回來真正的 Gemini 回覆
+        
+        if (mounted) {
+          setState(() {
+            // 把真正的 AI 回覆加進畫面上！
+            _messages.add({'text': aiReply, 'isUser': false});
+          });
+        }
+      } else {
+        print('後端發生錯誤，狀態碼：${response.statusCode}');
+      }
   }
 
   @override

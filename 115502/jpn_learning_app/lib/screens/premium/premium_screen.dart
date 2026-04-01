@@ -64,6 +64,31 @@ class PremiumScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
+              _PlanCard(
+                title: 'Premium Pro',
+                titleColor: _green,
+                actionText: '免費試用',
+                priceText: '\$ 490/月  \$ 1280/年',
+                features: const [
+                  '無限使用，免廣告',
+                  '無限次 AI 對話、場景照片上傳',
+                  '詳細學習分析報告',
+                  '每月贈送 1000 Points',
+                ],
+                actionColor: _lightGreen,
+                showCrown: true,
+                onActionTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PremiumTrialScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
               // 購買點數入口
               GestureDetector(
                 onTap: () {
@@ -106,31 +131,6 @@ class PremiumScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              _PlanCard(
-                title: 'Premium Pro',
-                titleColor: _green,
-                actionText: '免費試用',
-                priceText: '\$ 490/月  \$ 1280/年',
-                features: const [
-                  '無限使用，免廣告',
-                  '無限次 AI 對話、場景照片上傳',
-                  '詳細學習分析報告',
-                  '每月贈送 1000 Points',
-                ],
-                actionColor: _lightGreen,
-                showCrown: true,
-                onActionTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PremiumTrialScreen(),
-                    ),
-                  );
-                },
               ),
             ],
           ),

@@ -27,7 +27,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     });
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return; // 沒打字不理他
 
@@ -41,17 +41,14 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     // 3. 替換：向你的 Python 後端發送真正的請求
     try {
       // 這邊的網址請換成你 Python 後端真正運行的網址（例如 http://127.0.0.1:8000/chat）
-      final url = Uri.parse('http://你的後端API網址/路徑'); 
-      
+      final url = Uri.parse('http://你的後端API網址/路徑');
+
       // 發送請求，把你剛剛打的字 (text) 傳給後端
-      final response = await http.post(
-        url,
-        body: {'message': text}, 
-      );
-    // 如果成功收到後端回覆 (Status Code 200)
+      final response = await http.post(url, body: {'message': text});
+      // 如果成功收到後端回覆 (Status Code 200)
       if (response.statusCode == 200) {
         final aiReply = response.body; // 抓出後端傳回來真正的 Gemini 回覆
-        
+
         if (mounted) {
           setState(() {
             // 把真正的 AI 回覆加進畫面上！

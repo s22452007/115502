@@ -42,18 +42,23 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     _controller.clear();
     // 3. 替換：向你的 Python 後端發送真正的請求
     try {
-      // 這邊的網址請換成你 Python 後端真正運行的網址（例如 http://127.0.0.1:8000/chat）
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
 
-      // 發送請求，把你剛剛打的字 (text) 傳給後端
+      // 👇 監視器 1：確認你的 App 到底要把信寄到哪個完整網址
+      print('🔍 監視器 1：準備發送請求到 $url');
+
+      // 發送請求
       final response = await http.post(url, body: {'message': text});
-      // 如果成功收到後端回覆 (Status Code 200)
+
+      // 👇 監視器 2 & 3：確認 Python 那邊回傳了什麼狀態和內容
+      print('🔍 監視器 2：收到後端狀態碼 ${response.statusCode}');
+      print('🔍 監視器 3：收到後端回覆內容 ${response.body}');
+
       if (response.statusCode == 200) {
-        final aiReply = response.body; // 抓出後端傳回來真正的 Gemini 回覆
+        final aiReply = response.body;
 
         if (mounted) {
           setState(() {
-            // 把真正的 AI 回覆加進畫面上！
             _messages.add({'text': aiReply, 'isUser': false});
           });
         }

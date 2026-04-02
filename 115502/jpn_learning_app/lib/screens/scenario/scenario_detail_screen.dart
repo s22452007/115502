@@ -7,7 +7,6 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
 class ScenarioDetailScreen extends StatelessWidget {
-  // 改為接收動態的 Map 資料，而不是寫死的 ScenarioItem
   final dynamic scene;
 
   const ScenarioDetailScreen({Key? key, required this.scene}) : super(key: key);
@@ -102,10 +101,10 @@ class ScenarioDetailScreen extends StatelessWidget {
 }
 
 // ==========================================
-// 會自己抓取例句、記住按讚狀態的獨立單字卡元件
+// 獨立單字卡元件 (StatefulWidget)
 // ==========================================
 class _VocabCardWidget extends StatefulWidget {
-  final dynamic vocab; // 接收從 SceneVocabs 撈回來的基本單字資料
+  final dynamic vocab;
 
   const _VocabCardWidget({Key? key, required this.vocab}) : super(key: key);
 
@@ -124,7 +123,6 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
     _fetchDetail();
   }
 
-  // 單字卡一載入，就去後端問「我有沒有收藏這個字？」、「這個字的例句是什麼？」
   Future<void> _fetchDetail() async {
     final userId = context.read<UserProvider>().userId;
     try {
@@ -146,27 +144,111 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
     }
   }
 
-  // 切換星星的邏輯
-  Future<void> _toggleStar() async {
+  // ==========================================
+  // 點擊星星後，彈出選擇資料夾的視窗
+  // ==========================================
+  void _toggleStar() {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
     if (_isStarred) {
-      // 💡 溫馨提醒：因為你的後端 models 裡目前只有寫 /collect 的新增收藏，沒有取消
       ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('目前系統版本暫不支援取消收藏喔！')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('這個單字已經在你的收藏夾囉！')),
+      );
       return;
     }
 
-    // 發送收藏 API
-    final success = await ApiClient.toggleFavorite(widget.vocab['vocab_id'], userId);
-    if (success) {
+    // 彈出 BottomSheet
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // 根據內容自動調整高度
+              children: [
+                const Text('請選擇要加入的單字本', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                
+                // 動態呼叫 API 撈取使用者的所有資料夾
+                FutureBuilder<Map<String, dynamic>>(
+                  future: ApiClient.fetchUserFavorites(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return const Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Text("載入資料夾失敗，請稍後再試"),
+                      );
+                    }
+
+                    final data = snapshot.data ?? {};
+                    final folders = data['favorites'] as List<dynamic>? ?? [];
+
+                    // 限制最大高度，避免資料夾太多時破版
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: folders.length,
+                        itemBuilder: (context, index) {
+                          final folder = folders[index];
+                          final isDefault = folder['is_default'] == true;
+
+                          return ListTile(
+                            leading: Icon(
+                              isDefault ? Icons.star : Icons.folder,
+                              color: isDefault ? Colors.amber : const Color(0xFF8B6B9E),
+                              size: 28,
+                            ),
+                            title: Text(folder['name'] ?? '未命名', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('已收錄 ${folder['count']} 個單字'),
+                            onTap: () {
+                              Navigator.pop(sheetContext); // 1. 先關閉彈出視窗
+                              _executeCollection(userId, folder['id']); // 2. 執行收藏 API
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 真正發送 API 把單字塞入指定資料夾的函式
+  Future<void> _executeCollection(int userId, int? folderId) async {
+    final result = await ApiClient.collectVocab(userId, widget.vocab['vocab_id'], folderId: folderId);
+    
+    ScaffoldMessenger.of(context).clearSnackBars();
+    
+    if (result.containsKey('error')) {
+      // 顯示後端回傳的錯誤 (例如: 已經收藏過囉)
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+    } else {
+      // 收藏成功，星星變黃色
       setState(() => _isStarred = true);
-      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('已加入收藏單字本！⭐'),
-          duration: const Duration(seconds: 1),
+          content: const Text('已成功加入單字本！⭐'),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -247,7 +329,7 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _exampleSentence, // 動態顯示從後端撈回來的例句
+                    _exampleSentence, 
                     style: const TextStyle(fontSize: 16, color: Color(0xFF444444), height: 1.4),
                   ),
                 ),

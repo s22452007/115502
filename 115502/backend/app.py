@@ -49,12 +49,6 @@ app.register_blueprint(tutor_bp, url_prefix='/api/tutor')   # AI家教用這個
 with app.app_context():
     db.create_all()
 
-if __name__ == '__main__':
-    print("[Startup] 後端伺服器啟動中...")
-    print(f"[Database] 資料庫已牢牢綁定於: {db_path}") 
-
-    # 加上 host='0.0.0.0' 代表允許區域網路內的所有設備連線
-    app.run(host='0.0.0.0', port=5000, debug=True)
 
 # 🌟 把 chat 路由搬到這裡！(在 app.run 的上面)
 @app.route('/api/chat', methods=['POST'])

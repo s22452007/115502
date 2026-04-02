@@ -145,21 +145,37 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
   }
 
   // ==========================================
-  // 點擊星星後，彈出選擇資料夾的視窗
+  // 點擊星星的邏輯 (加入與取消)
   // ==========================================
-  void _toggleStar() {
+  Future<void> _toggleStar() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
+    // 【情境 A】已經是黃星星 -> 執行「取消收藏」
     if (_isStarred) {
+      final success = await ApiClient.removeFavorite(widget.vocab['vocab_id'], userId);
+      
       ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('這個單字已經在你的收藏夾囉！')),
-      );
-      return;
+      
+      if (success) {
+        setState(() => _isStarred = false); // 星星變回灰色
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('已取消收藏'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('取消失敗，請稍後再試')),
+        );
+      }
+      return; // 結束，不繼續往下彈出資料夾視窗
     }
 
-    // 彈出 BottomSheet
+    // 【情境 B】是灰色星星 -> 執行原本的「彈出資料夾視窗」來加入收藏
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -171,33 +187,25 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
           child: Padding(
             padding: const EdgeInsets.only(top: 20, bottom: 10),
             child: Column(
-              mainAxisSize: MainAxisSize.min, // 根據內容自動調整高度
+              mainAxisSize: MainAxisSize.min, 
               children: [
                 const Text('請選擇要加入的單字本', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 
-                // 動態呼叫 API 撈取使用者的所有資料夾
                 FutureBuilder<Map<String, dynamic>>(
                   future: ApiClient.fetchUserFavorites(userId),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.all(40.0),
-                        child: CircularProgressIndicator(),
-                      );
+                      return const Padding(padding: EdgeInsets.all(40.0), child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
-                      return const Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: Text("載入資料夾失敗，請稍後再試"),
-                      );
+                      return const Padding(padding: EdgeInsets.all(20.0), child: Text("載入資料夾失敗，請稍後再試"));
                     }
 
                     final data = snapshot.data ?? {};
                     final folders = data['favorites'] as List<dynamic>? ?? [];
 
-                    // 限制最大高度，避免資料夾太多時破版
                     return ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
                       child: ListView.builder(
@@ -216,8 +224,8 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
                             title: Text(folder['name'] ?? '未命名', style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text('已收錄 ${folder['count']} 個單字'),
                             onTap: () {
-                              Navigator.pop(sheetContext); // 1. 先關閉彈出視窗
-                              _executeCollection(userId, folder['id']); // 2. 執行收藏 API
+                              Navigator.pop(sheetContext); 
+                              _executeCollection(userId, folder['id']); 
                             },
                           );
                         },

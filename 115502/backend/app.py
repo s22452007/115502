@@ -83,3 +83,11 @@ def chat():
     
     # 6. 把熱騰騰的 AI 回覆送回給 Flutter
     return ai_reply
+
+# 🛑 app.run 必須永遠在整個檔案的最下面！
+if __name__ == '__main__':
+    print("[Startup] 後端伺服器啟動中...")
+    print(f"[Database] 資料庫已牢牢綁定於: {db_path}") 
+
+    # 加上 host='0.0.0.0' 代表允許區域網路內的所有設備連線
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,0 +1,21 @@
+# 環境變數與機密資訊 (絕對不可以上傳！)
+.env
+.env.local
+
+# FastAPI / Flask / Python 產生檔
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# SQLite 資料庫 (視需求，確保 jlens.db 如果是本地測試不會被上傳)
+instance/
+*.sqlite3
+*.db
+
+# MediaPipe 模型 (檔案太大，通常不放入 git)
+*.tflite
+
+# 其他暫存檔
+.DS_Store

@@ -676,6 +676,63 @@ class ApiClient {
     }
   }
 
+  // 取得解鎖場景
+  static Future<List<dynamic>> getUnlockedScenes(int userId, {int limit = 3}) async {
+    final url = Uri.parse('$baseUrl/scenario/unlocked/$userId?limit=$limit');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['scenes']; 
+    } else {
+      throw Exception('無法載入解鎖場景');
+    }
+  }
+
+  // 取得場景單字清單
+  static Future<List<dynamic>> getSceneVocabs(int sceneId, int userId) async {
+    final url = Uri.parse('$baseUrl/vocab/scene/$sceneId?user_id=$userId');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['vocabs']; 
+    } else {
+      throw Exception('無法載入單字清單');
+    }
+  }
+
+  // 取得單字詳細資訊
+  static Future<Map<String, dynamic>> getVocabDetail(int vocabId, int userId) async {
+    final url = Uri.parse('$baseUrl/vocab/detail/$vocabId?user_id=$userId');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('無法載入單字詳細資訊');
+    }
+  }
+
+  // 收藏單字
+  static Future<bool> toggleFavorite(int vocabId, int userId) async {
+    final url = Uri.parse('$baseUrl/vocab/collect');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'user_id': userId,
+        'vocab_id': vocabId,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return true; 
+    } else {
+      return false; 
+    }
+  }
+
   // ==========================================
   // 🤖 其他 AI 與測驗功能
   // ==========================================
@@ -764,7 +821,7 @@ class ApiClient {
 
   // --- AI 家教問答 API ---
   static Future<Map<String, dynamic>> askTutorQuestion(String question) async {
-    final url = Uri.parse('$baseUrl/tutor/ask'); // 假設您的 Flask 後端路由是這個
+    final url = Uri.parse('$baseUrl/tutor/ask'); 
     try {
       final response = await http.post(
         url,

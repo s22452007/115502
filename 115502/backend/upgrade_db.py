@@ -57,6 +57,38 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ user_vocab.folder_id 可能已存在：{e}")
 
+# ==========================================
+# 5. 升級 vocab (單字詳細內容：例句與音檔)
+# ==========================================
+try:
+    cursor.execute("ALTER TABLE vocab ADD COLUMN example_sentence VARCHAR(255);")
+    cursor.execute("ALTER TABLE vocab ADD COLUMN audio_filename VARCHAR(100);")
+    print("✅ vocab 單字表擴充成功 (加入例句與音檔)！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ vocab 欄位可能已存在：{e}")
+
+# ==========================================
+# 📖 6. 新增 quiz_question (測驗題庫表)
+# ==========================================
+try:
+    # 使用 CREATE TABLE IF NOT EXISTS，如果表不存在就建立，存在就跳過
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS quiz_question (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        stage VARCHAR(50) NOT NULL,
+        level_tag VARCHAR(20) NOT NULL,
+        question TEXT NOT NULL,
+        option_a VARCHAR(100) NOT NULL,
+        option_b VARCHAR(100) NOT NULL,
+        option_c VARCHAR(100) NOT NULL,
+        option_d VARCHAR(100) NOT NULL,
+        correct_answer VARCHAR(1) NOT NULL
+    );
+    """)
+    print("✅ quiz_question 測驗題目表確認/建立成功！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ quiz_question 建立失敗：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

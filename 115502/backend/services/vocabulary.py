@@ -165,3 +165,60 @@ def rename_folder():
     db.session.commit()
 
     return jsonify({"message": "重新命名成功"}), 200
+
+@vocab_bp.route('/scene/<int:scene_id>', methods=['GET'])
+def get_scene_vocabs(scene_id):
+    """
+    點開的單字：取得特定場景下的所有單字，並標示該使用者是否已解鎖(打勾)
+    必須傳入 Query Parameter: ?user_id=1
+    """
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    # 1. 撈出該場景的所有系統單字
+    scene_vocabs = Vocab.query.filter_by(scene_id=scene_id).all()
+    
+    # 2. 撈出使用者已經解鎖/收藏的單字 ID 列表
+    user_vocab_records = UserVocab.query.filter_by(user_id=user_id).all()
+    user_vocab_ids = [uv.vocab_id for uv in user_vocab_records]
+
+    results = []
+    for v in scene_vocabs:
+        results.append({
+            "vocab_id": v.id,
+            "word": v.word,
+            "kana": v.kana,
+            "meaning": v.meaning,
+            "is_unlocked": v.id in user_vocab_ids  # True 前端就顯示綠色打勾
+        })
+        
+    return jsonify({"vocabs": results}), 200
+
+
+@vocab_bp.route('/detail/<int:vocab_id>', methods=['GET'])
+def get_vocab_detail(vocab_id):
+    """
+    單字詳細頁面：取得單字詳細資訊(含例句、音檔)，並標示是否已加入收藏夾(黃星星)
+    必須傳入 Query Parameter: ?user_id=1
+    """
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    v = Vocab.query.get(vocab_id)
+    if not v:
+        return jsonify({"error": "單字不存在"}), 404
+
+    # 檢查是否已收藏 (有紀錄代表星星要亮起)
+    is_favorited = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first() is not None
+
+    return jsonify({
+        "vocab_id": v.id,
+        "word": v.word,
+        "kana": v.kana,
+        "meaning": v.meaning,
+        "example_sentence": v.example_sentence,
+        "audio_url": f"/static/audio/{v.audio_filename}" if v.audio_filename else None,
+        "is_favorited": is_favorited # True 前端就顯示實心黃星星
+    }), 200

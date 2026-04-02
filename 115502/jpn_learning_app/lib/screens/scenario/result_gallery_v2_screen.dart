@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 // 1. 匯入工具與資料
 import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/providers/favorites_data.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
-// 2. 匯入你要跳轉的相簿詳細頁面
+// 2. 匯入跳轉的相簿詳細頁面
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
 
 class ResultGalleryV2Screen extends StatelessWidget {
@@ -12,11 +14,10 @@ class ResultGalleryV2Screen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 取得資料庫中的場景紀錄
-    final scenarios = FavoritesDataProvider.allFavorites;
+    final userId = context.read<UserProvider>().userId;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // 或是 AppColors.background
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text(
           '我的單字探險',
@@ -29,107 +30,112 @@ class ResultGalleryV2Screen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: scenarios.isEmpty
-          ? const Center(
-              child: Text(
-                '還沒有收藏任何場景喔！',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: scenarios.length,
-              itemBuilder: (context, index) {
-                final scenario = scenarios[index];
+      // 加入防呆：如果沒登入就擋下來
+      body: userId == null
+          ? const Center(child: Text('請先登入才能查看單字探險喔！', style: TextStyle(fontSize: 16, color: Colors.grey)))
+          : FutureBuilder<List<dynamic>>(
+              // 傳入 limit: 999 這樣就能把所有場景都撈出來，不受首頁只撈3個的限制
+              future: ApiClient.getUnlockedScenes(userId, limit: 999),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  // 把錯誤訊息印在編輯器的終端機裡
+                  debugPrint('取得單字探險發生錯誤: ${snapshot.error}'); 
+                  
+                  // 並且也顯示在手機畫面上，方便我們看
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text('載入失敗原因：\n${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                    ),
+                  );
+                }
 
-                return GestureDetector(
-                  // ==========================================
-                  // 點擊後直接跳轉到「詳細相簿網格」
-                  // ==========================================
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ScenarioDetailScreen(scenario: scenario),
+                final scenarios = snapshot.data ?? [];
+
+                if (scenarios.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      '還沒有解鎖任何場景喔！\n趕快去拍照探索吧！',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: scenarios.length,
+                  itemBuilder: (context, index) {
+                    final scene = scenarios[index];
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            // 把整個 scene 的 Map 傳給詳細頁面
+                            builder: (context) => ScenarioDetailScreen(scene: scene),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            // 左側：圓形 Icon
+                            Container(
+                              width: 50, height: 50,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLighter.withOpacity(0.4),
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.train, color: AppColors.primary), // 可依照 scene['icon_name'] 替換
+                            ),
+                            const SizedBox(width: 16),
+                            // 中間：標題與提示文字
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    scene['scene_name'],
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '點擊查看詳細單字 >',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // 右側：日期 (動態從資料庫抓取)
+                            Text(
+                              scene['unlocked_at'],
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
-                  // ==========================================
-                  // 卡片精美 UI 設計 (完全保留你的巧思)
-                  // ==========================================
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        // 左側：圓形圖片或 Icon
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLighter.withOpacity(0.4),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: scenario.image != null
-                              ? ClipOval(
-                                  child: Image.asset(
-                                    scenario.image!,
-                                    fit: BoxFit.cover,
-                                    width: 50,
-                                    height: 50,
-                                  ),
-                                )
-                              : const Icon(Icons.ramen_dining, color: AppColors.primary),
-                        ),
-                        const SizedBox(width: 16),
-                        
-                        // 中間：標題與提示文字
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                scenario.title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF333333),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '點擊查看詳細單字 >',
-                                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        // 右側：日期 (直接抓取 scenario 資料庫裡的日期，更精準！)
-                        Text(
-                          scenario.date,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade400,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 );
               },
             ),

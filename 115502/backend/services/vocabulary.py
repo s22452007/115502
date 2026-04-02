@@ -125,6 +125,26 @@ def collect_vocab():
 
     return jsonify({"message": "收藏成功！", "user_vocab_id": uv.id}), 201
 
+# 取消收藏單字
+@vocab_bp.route('/uncollect', methods=['POST'])
+def uncollect_vocab():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    vocab_id = data.get('vocab_id')
+
+    if not user_id or not vocab_id:
+        return jsonify({"error": "缺少必要資料"}), 400
+
+    # 尋找使用者的收藏紀錄
+    uv = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
+    if not uv:
+        return jsonify({"error": "找不到該收藏紀錄"}), 404
+
+    # 刪除該紀錄
+    db.session.delete(uv)
+    db.session.commit()
+
+    return jsonify({"message": "已取消收藏"}), 200
 
 # 刪除資料夾（裡面的單字移回預設）
 @vocab_bp.route('/delete_folder', methods=['POST'])

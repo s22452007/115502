@@ -19,6 +19,9 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 CORS(app) # 允許跨網域請求
 
+# 👇 加上這行暗號
+print("================ 我是最新版的 app.py 喔喔喔 ================")
+
 # 強制把資料庫路徑綁定在 backend/instance/jlens.db
 instance_path = os.path.join(BASE_DIR, 'instance')
 db_path = os.path.join(instance_path, 'jlens.db')

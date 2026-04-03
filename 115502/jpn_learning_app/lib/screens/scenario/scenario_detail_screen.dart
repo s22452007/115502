@@ -115,7 +115,7 @@ class _VocabCardWidget extends StatefulWidget {
 class _VocabCardWidgetState extends State<_VocabCardWidget> {
   bool _isLoading = true;
   bool _isStarred = false;
-  String _exampleSentence = "例句載入中...";
+  List<dynamic> _sentences = []; // 儲存多個例句
 
   @override
   void initState() {
@@ -130,17 +130,12 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
       if (mounted) {
         setState(() {
           _isStarred = detail['is_favorited'] ?? false;
-          _exampleSentence = detail['example_sentence'] ?? '暫無提供例句';
+          _sentences = detail['sentences'] ?? []; // 接收 API 的 List
           _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _exampleSentence = "載入失敗";
-          _isLoading = false;
-        });
-      }
+      setState(() => _isLoading = false);
     }
   }
 
@@ -322,26 +317,40 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
           Text(widget.vocab['meaning'], style: const TextStyle(fontSize: 16, color: Colors.grey)),
           const SizedBox(height: 16),
           
-          // 例句區塊
+          // 🌟 鷹架式例句區塊
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: const Color(0xFFF7F9FA),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.volume_up_rounded, color: Colors.blueGrey, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _exampleSentence, 
-                    style: const TextStyle(fontSize: 16, color: Color(0xFF444444), height: 1.4),
-                  ),
+            child: Column(
+              children: _sentences.map((s) => Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s['level_name'] ?? s['level'] ?? '提示', // 找 level_name，找不到就找 level，再沒有就顯示'提示'
+                            style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)
+                          ),
+                          Text(
+                            s['text'] ?? '暫無例句', // 如果沒有句子，就顯示'暫無例句'
+                            style: const TextStyle(fontSize: 15, height: 1.4)
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              )).toList(),
             ),
           ),
         ],

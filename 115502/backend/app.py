@@ -4,6 +4,7 @@ from flask_cors import CORS
 from utils.db import db
 from flask import request
 import google.generativeai as genai
+from dotenv import load_dotenv
 
 # 匯入各個模組的 Blueprint
 from services.quiz import quiz_bp

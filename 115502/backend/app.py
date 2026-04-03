@@ -63,7 +63,7 @@ def chat():
         genai.configure(api_key="GEMINI_PRO_KEY")
 
         # 3. 呼叫 Gemini 模型 (使用最新的 gemini-1.5-flash 或 gemini-pro)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-pro')
 
         # 4. 給 AI 的「人設」提示詞 (你可以自己改寫，讓它更符合你們的 App！)
         prompt = f"""

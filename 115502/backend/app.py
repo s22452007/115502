@@ -60,7 +60,7 @@ def chat():
     try:
         # 2. 設定你的 Gemini API Key (請換成你們專案申請好的金鑰！)
         # ⚠️ 實戰中建議寫在 .env 檔案裡，這裡先直接貼上來測試
-        genai.configure(api_key="[ENCRYPTION_KEY]")
+        genai.configure(api_key="AIzaSyBHQKB3xbHDrnUUtlDu6GdfVUBEkjGq0CY")
 
         # 3. 呼叫 Gemini 模型 (使用最新的 gemini-1.5-flash 或 gemini-pro)
         model = genai.GenerativeModel('gemini-1.5-flash')

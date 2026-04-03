@@ -60,11 +60,11 @@ def chat():
     print(f"收到來自 App 的訊息：{user_message}") 
 
     try:
-        load_dotenv()
+        #load_dotenv()
         
         # 3. 抓取金鑰 (剛剛就是漏了或拼錯這行！)
         my_secret_key = os.getenv("GEMINI_API_KEY") 
-        print(f"🕵️ 檢查金鑰：{my_secret_key}")
+        #print(f"🕵️ 檢查金鑰：{my_secret_key}")
 
         model = genai.GenerativeModel('gemini-pro')
         prompt = f"""

@@ -61,6 +61,9 @@ def chat():
 
     try:
         genai.configure(api_key="GEMINI_PRO_KEY")
+
+        print(f"🕵️ 檢查金鑰：{my_secret_key}")
+
         model = genai.GenerativeModel('gemini-pro')
         prompt = f"""
         你現在是一個親切的日語對話小幫手。

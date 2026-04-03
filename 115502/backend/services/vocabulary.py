@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 
 from utils.db import db
-from models import UserVocab, UserFolder, Vocab
+from models import User, UserVocab, UserFolder, Vocab
 
 vocab_bp = Blueprint('vocab', __name__)
 
@@ -223,22 +223,39 @@ def get_vocab_detail(vocab_id):
     必須傳入 Query Parameter: ?user_id=1
     """
     user_id = request.args.get('user_id', type=int)
-    if not user_id:
-        return jsonify({"error": "缺少 user_id"}), 400
-
     v = Vocab.query.get(vocab_id)
-    if not v:
-        return jsonify({"error": "單字不存在"}), 404
+    user = User.query.get(user_id)
+
+    if not v or not user:
+        return jsonify({"error": "找不到資料"}), 404
 
     # 檢查是否已收藏 (有紀錄代表星星要亮起)
     is_favorited = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first() is not None
+    user_lvl = user.japanese_level or 'N5' # 預設 N5
+    
+    sentences = []
+    
+    # 1. 所有人都能看到初級 (鷹架的底層)
+    if v.sentence_basic:
+        sentences.append({"level": "初階應用", "text": v.sentence_basic})
+        
+    # 2. N3, N2, N1 可以多看中級 (鷹架的中層)
+    if user_lvl in ['N3', 'N2', 'N1'] and v.sentence_inter:
+        sentences.append({"level": "中階變化", "text": v.sentence_inter})
+        
+    # 3. 只有 N1 可以多看高級 (鷹架的頂層)
+    if user_lvl == 'N1' and v.sentence_advanced:
+        sentences.append({"level": "進階語感", "text": v.sentence_advanced})
+
+    # 防呆：如果都沒資料
+    if not sentences:
+        sentences.append({"level": "提示", "text": "系統努力生成例句中..."})
 
     return jsonify({
         "vocab_id": v.id,
         "word": v.word,
         "kana": v.kana,
         "meaning": v.meaning,
-        "example_sentence": v.example_sentence,
-        "audio_url": f"/static/audio/{v.audio_filename}" if v.audio_filename else None,
-        "is_favorited": is_favorited # True 前端就顯示實心黃星星
+        "sentences": sentences,
+        "is_favorited": is_favorited
     }), 200

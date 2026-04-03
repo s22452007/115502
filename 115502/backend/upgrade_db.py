@@ -58,14 +58,23 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ user_vocab.folder_id 可能已存在：{e}")
 
 # ==========================================
-# 5. 升級 vocab (單字詳細內容：例句與音檔)
+# 🌟 5. 升級 vocab (單字詳細內容：適性化分級例句與音檔)
 # ==========================================
 try:
+    # 保留原本的 example_sentence 防呆，並加入新的分級例句欄位
     cursor.execute("ALTER TABLE vocab ADD COLUMN example_sentence VARCHAR(255);")
+except sqlite3.OperationalError:
+    pass # 如果舊欄位已經存在就跳過
+
+try:
+    # 新增三種難度的例句欄位
+    cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_basic VARCHAR(255);")
+    cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_inter VARCHAR(255);")
+    cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_advanced VARCHAR(255);")
     cursor.execute("ALTER TABLE vocab ADD COLUMN audio_filename VARCHAR(100);")
-    print("✅ vocab 單字表擴充成功 (加入例句與音檔)！")
+    print("✅ vocab 單字表擴充成功 (加入初、中、高級分級例句與音檔)！")
 except sqlite3.OperationalError as e:
-    print(f"⚠️ vocab 欄位可能已存在：{e}")
+    print(f"⚠️ vocab 分級例句欄位可能已存在：{e}")
 
 # ==========================================
 # 📖 6. 新增 quiz_question (測驗題庫表)

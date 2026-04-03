@@ -24,16 +24,45 @@ def seed_data():
         db.session.commit() 
 
         # ==========================================
-        # 2. 建立系統單字庫 (Vocab)
+        # 2. 建立系統單字庫 (Vocab) - 支援適性化分級例句！
         # ==========================================
         vocabs = [
-            Vocab(scene_id=scene1.id, word='ラーメン', kana='ラーメン', meaning='拉麵', example_sentence='このラーメンは美味しいです。', audio_filename='ramen.mp3'),
-            Vocab(scene_id=scene1.id, word='替玉', kana='かえだま', meaning='加麵', example_sentence='替玉をお願いします。', audio_filename='kaedama.mp3'),
-            Vocab(scene_id=scene2.id, word='切符', kana='きっぷ', meaning='車票', example_sentence='切符を買います。', audio_filename='kippu.mp3'),
-            Vocab(scene_id=scene2.id, word='改札口', kana='かいさつぐち', meaning='剪票口', example_sentence='改札口はどこですか？', audio_filename='kaisatsuguchi.mp3'),
-            Vocab(scene_id=scene3.id, word='お守り', kana='おまもり', meaning='御守', example_sentence='お守りを買いました。', audio_filename='omamori.mp3'),
-            Vocab(scene_id=scene4.id, word='アニメ', kana='アニメ', meaning='動畫', example_sentence='日本のアニメが好きです。', audio_filename='anime.mp3'),
-            Vocab(scene_id=scene5.id, word='コーヒー', kana='コーヒー', meaning='咖啡', example_sentence='ホットコーヒーを一つください。', audio_filename='coffee.mp3')
+            Vocab(scene_id=scene1.id, word='ラーメン', kana='ラーメン', meaning='拉麵', 
+                  sentence_basic='このラーメンは美味しいです。', 
+                  sentence_inter='このラーメン屋は行列ができるほど有名だ。', 
+                  sentence_advanced='こだわりの豚骨を何時間も煮込んだ、至極のラーメンである。',
+                  audio_filename='ramen.mp3'),
+            
+            Vocab(scene_id=scene1.id, word='替玉', kana='かえだま', meaning='加麵', 
+                  sentence_basic='替玉をお願いします。', 
+                  sentence_inter='スープが残っているので、替玉を注文した。',
+                  sentence_advanced='博多ラーメンの醍醐味は、やはり替玉にあると言えるだろう。',
+                  audio_filename='kaedama.mp3'),
+            
+            Vocab(scene_id=scene2.id, word='切符', kana='きっぷ', meaning='車票', 
+                  sentence_basic='切符を買います。', 
+                  sentence_inter='券売機で新幹線の切符を購入した。',
+                  audio_filename='kippu.mp3'),
+            
+            Vocab(scene_id=scene2.id, word='改札口', kana='かいさつぐち', meaning='剪票口', 
+                  sentence_basic='改札口はどこですか？', 
+                  sentence_inter='改札口で友達と待ち合わせをしている。',
+                  audio_filename='kaisatsuguchi.mp3'),
+            
+            Vocab(scene_id=scene3.id, word='お守り', kana='おまもり', meaning='御守', 
+                  sentence_basic='お守りを買いました。', 
+                  sentence_inter='神社で合格祈願のお守りを買った。',
+                  audio_filename='omamori.mp3'),
+            
+            Vocab(scene_id=scene4.id, word='アニメ', kana='アニメ', meaning='動畫', 
+                  sentence_basic='日本のアニメが好きです。', 
+                  sentence_inter='休日は一日中アニメを見て過ごすことが多い。',
+                  audio_filename='anime.mp3'),
+            
+            Vocab(scene_id=scene5.id, word='コーヒー', kana='コーヒー', meaning='咖啡', 
+                  sentence_basic='ホットコーヒーを一つください。', 
+                  sentence_inter='毎朝、淹れたてのコーヒーを飲むのが日課だ。',
+                  audio_filename='coffee.mp3')
         ]
         db.session.add_all(vocabs)
 

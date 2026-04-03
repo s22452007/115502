@@ -643,6 +643,30 @@ class ApiClient {
     }
   }
 
+  // 取消收藏單字
+  static Future<bool> removeFavorite(int vocabId, int userId) async {
+    final url = Uri.parse('$baseUrl/vocab/uncollect');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': userId,
+          'vocab_id': vocabId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true; // 成功取消
+      } else {
+        return false;
+      }
+    } catch (e) {
+      print('取消收藏失敗: $e');
+      return false;
+    }
+  }
+  
   // 刪除資料夾
   static Future<Map<String, dynamic>> deleteFolder(int folderId) async {
     final url = Uri.parse('$baseUrl/vocab/delete_folder');

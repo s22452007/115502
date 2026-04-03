@@ -98,17 +98,23 @@ class ResultGalleryV2Screen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            // 左側：圓形 Icon
                             Container(
-                              width: 50, height: 50,
+                              width: 60, height: 60,
                               decoration: BoxDecoration(
-                                color: AppColors.primaryLighter.withOpacity(0.4),
-                                shape: BoxShape.circle,
+                                borderRadius: BorderRadius.circular(10),
+                                color: Colors.grey[200],
                               ),
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.train, color: AppColors.primary), // 可依照 scene['icon_name'] 替換
+                              child: scene['image_path'] != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      // 假設照片存放在後端的 uploads 資料夾
+                                      child: Image.network(
+                                        '${ApiClient.baseUrl}/uploads/${scene['image_path']}',
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : const Icon(Icons.image, color: Colors.grey),
                             ),
-                            const SizedBox(width: 16),
                             // 中間：標題與提示文字
                             Expanded(
                               child: Column(

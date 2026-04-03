@@ -13,7 +13,7 @@ GEMINI_API_KEY = "GEMINI_API_KEY"
 genai.configure(api_key=GEMINI_API_KEY)
 
 # 2. 初始化 Gemini 模型 (使用目前最快且免費額度高的 flash 模型)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-pro')
 
 @tutor_bp.route('/ask', methods=['POST'])
 def ask_question():

@@ -98,6 +98,15 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ quiz_question 建立失敗：{e}")
 
+# ==========================================
+# 📸 7. 升級 user_scene (加入使用者上傳的照片路徑)
+# ==========================================
+try:
+    cursor.execute("ALTER TABLE user_scene ADD COLUMN image_path VARCHAR(255);")
+    print("✅ user_scene 擴充成功 (加入照片路徑欄位)！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user_scene 欄位可能已存在：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

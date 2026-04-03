@@ -60,14 +60,8 @@ def chat():
     print(f"收到來自 App 的訊息：{user_message}") 
 
     try:
-        # 2. 設定你的 Gemini API Key (請換成你們專案申請好的金鑰！)
-        # ⚠️ 實戰中建議寫在 .env 檔案裡，這裡先直接貼上來測試
         genai.configure(api_key="GEMINI_PRO_KEY")
-
-        # 3. 呼叫 Gemini 模型 (使用最新的 gemini-1.5-flash 或 gemini-pro)
         model = genai.GenerativeModel('gemini-pro')
-
-        # 4. 給 AI 的「人設」提示詞 (你可以自己改寫，讓它更符合你們的 App！)
         prompt = f"""
         你現在是一個親切的日語對話小幫手。
         使用者說了這句話：「{user_message}」

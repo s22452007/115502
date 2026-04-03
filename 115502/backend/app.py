@@ -1,10 +1,11 @@
 import os
+from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from utils.db import db
 from flask import request
 import google.generativeai as genai
-from dotenv import load_dotenv
+
 
 # 匯入各個模組的 Blueprint
 from services.quiz import quiz_bp
@@ -61,7 +62,7 @@ def chat():
     try:
         # 2. 設定你的 Gemini API Key (請換成你們專案申請好的金鑰！)
         # ⚠️ 實戰中建議寫在 .env 檔案裡，這裡先直接貼上來測試
-        genai.configure(api_key="")
+        genai.configure(api_key="GEMINI_PRO_KEY")
 
         # 3. 呼叫 Gemini 模型 (使用最新的 gemini-1.5-flash 或 gemini-pro)
         model = genai.GenerativeModel('gemini-pro')

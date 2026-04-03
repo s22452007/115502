@@ -59,7 +59,10 @@ class Vocab(db.Model):
     word = db.Column(db.String(100), nullable=False) # 單字的日文原型或漢字
     kana = db.Column(db.String(100), nullable=False) # 單字的假名拼音
     meaning = db.Column(db.String(200), nullable=False)  # 單字的中文解釋
-    example_sentence = db.Column(db.String(255), nullable=True) # 儲存例句
+    # === 改為難度分級的例句 ===
+    sentence_basic = db.Column(db.String(255), nullable=True)     # 初級例句 (給 N5, N4 看)
+    sentence_inter = db.Column(db.String(255), nullable=True)     # 中級例句 (給 N3, N2 看)
+    sentence_advanced = db.Column(db.String(255), nullable=True)  # 高級例句 (給 N1 看)
     audio_filename = db.Column(db.String(100), nullable=True)   # 儲存音檔檔名或路徑
 
 # 測驗題目表 (QuizQuestion) - 用於新手程度判定

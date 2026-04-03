@@ -3,6 +3,7 @@ from flask import Flask
 from flask_cors import CORS
 from utils.db import db
 from flask import request
+from flask_cors import CORS
 
 # 匯入各個模組的 Blueprint
 from services.quiz import quiz_bp
@@ -17,7 +18,7 @@ from services.tutor import tutor_bp
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
-CORS(app) # 允許跨網域請求
+CORS(app, resources={r"/*": {"origins": "*"}}) # 允許跨網域請求
 
 # 👇 加上這行暗號
 print("================ 我是最新版的 app.py 喔喔喔 ================")

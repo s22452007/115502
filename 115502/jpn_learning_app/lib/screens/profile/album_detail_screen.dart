@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/providers/favorites_data.dart';
-import 'vocab_detail_v2_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/vocab_detail_v2_screen.dart';
 
 class AlbumDetailScreen extends StatefulWidget {
   final ScenarioItem scenario; // 🌟 接收完整的相簿資料

@@ -22,61 +22,67 @@ def analyze_image_from_path(file_path):
             
         genai.configure(api_key=api_key)
         
-        # 2. 選擇 Gemini 模型
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        # 3. 讀取圖片
+        # 2. 讀取圖片
         img = Image.open(file_path)
         
-        # 4. 設計 Prompt
+        # 3. 定義 prompt：嚴格要求回傳符合前端格式的 JSON
         prompt = '''
-        請以合乎語法的 JSON 格式分析這張圖片。
-        1. 找出圖中最多 5 個主要或明顯的物品。
-        2. 若圖中有任何文字，請進行 OCR 取出。
+        請分析這張圖片，找出最重要的 3 到 5 個物品，並以合乎語法的 JSON 格式回傳。
+        你需要將每個物品翻譯成日文，並提供假名、羅馬拼音、以及中文解釋。
+        此外，針對每個單字，生成一個簡單實用的日文例句及其中文翻譯。
         
-        你需要嚴格遵守以下 JSON 格式回傳，不要加上任何 markdown 標記 (如 ```json)：
+        請「嚴格」遵守以下 JSON 格式回傳，不可加上 `json` 或 markdown 標籤：
         {
           "labels": ["英文名稱1 (中文翻譯1)", "英文名稱2 (中文翻譯2)"],
-          "text": "圖中看得到的文字，若沒有請留空字串"
+          "text": "圖中看得到的文字OCR，若沒有請留空字串",
+          "vocabs": [
+            {
+              "word": "日文漢字或單字",
+              "kana": "平假名發音",
+              "romaji": "羅馬拼音",
+              "meaning": "中文解釋"
+            }
+          ],
+          "sentences": [
+            {
+              "japanese": "包含該單字的日文例句1",
+              "chinese": "例句1的中文翻譯"
+            },
+            {
+              "japanese": "包含該單字的日文例句2",
+              "chinese": "例句2的中文翻譯"
+            }
+          ]
         }
         '''
-        
-        # 5. 呼叫 Gemini API
-        response = model.generate_content([prompt, img])
-        
-        # 6. 解析回應
-        response_text = response.text.strip()
-        # 防呆機制：清除 Gemini 可能回傳的 markdown 格式或首尾空白
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-            
-        result_data = json.loads(response_text.strip())
-        
-        labels = result_data.get("labels", [])
-        text = result_data.get("text", "")
-        
-        if not labels:
-            labels = ["Unknown Object (未辨識出特定物件)"]
-            
-        # 7. 保留原本的假資料格式供前端串接/擴充使用
-        result_data["vocabs"] = [
-            {'word': 'パソコン', 'kana': 'ぱそこん', 'meaning': '電腦', 'romaji': 'pasokon'},
-            {'word': '机', 'kana': 'つくえ', 'meaning': '桌子', 'romaji': 'tsukue'},
-            {'word': '珈琲', 'kana': 'コーヒー', 'meaning': '咖啡', 'romaji': 'ko-hi-'}
-        ]
-        result_data["sentences"] = [
-            {'japanese': '机の上にパソコンがあります。', 'chinese': '桌子上有電腦。'},
-            {'japanese': '私はコーヒーを飲みながら仕事をします。', 'chinese': '我一邊喝咖啡一邊工作。'}
-        ]
-        
-        return {
-            "success": True,
-            "result": result_data
-        }
+
+        # 4. 呼叫 Gemini 解析圖片
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        response = model.generate_content([img, prompt])
+        result_text = response.text.strip()
+
+        # 5. 因為要求回傳 JSON，但 Gemini 有時會加上 markdown (如 ```json ... ```)
+        #    這裡做個簡單的清理
+        if result_text.startswith("```json"):
+            result_text = result_text.replace("```json", "", 1)
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+        elif result_text.startswith("```"):
+            result_text = result_text.replace("```", "", 1)
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+
+        result_text = result_text.strip()
+
+        # 6. 將文字解析為 Python Dict
+        try:
+            result_data = json.loads(result_text)
+        except json.JSONDecodeError as decode_err:
+            print("Gemini 回傳的格式不是正確的 JSON:", result_text)
+            return {"success": False, "error": f"JSON 解析錯誤: {decode_err}"}
+
+        # 7. 回傳成功的 JSON 結果 (裡面已經有真實的 vocabs 和 sentences 了)
+        return {"success": True, "result": result_data}
         
     except Exception as e:
         print(f"Gemini API 分析錯誤: {e}")

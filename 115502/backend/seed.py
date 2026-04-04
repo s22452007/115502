@@ -30,38 +30,50 @@ def seed_data():
             Vocab(scene_id=scene1.id, word='ラーメン', kana='ラーメン', meaning='拉麵', 
                   sentence_basic='このラーメンは美味しいです。', 
                   sentence_inter='このラーメン屋は行列ができるほど有名だ。', 
+                  sentence_upper_inter='この店のラーメンは、スープがなくなり次第終了となります。', # N2文法: ~次第 (一...就...)
                   sentence_advanced='こだわりの豚骨を何時間も煮込んだ、至極のラーメンである。',
                   audio_filename='ramen.mp3'),
             
             Vocab(scene_id=scene1.id, word='替玉', kana='かえだま', meaning='加麵', 
                   sentence_basic='替玉をお願いします。', 
                   sentence_inter='スープが残っているので、替玉を注文した。',
+                  sentence_upper_inter='ダイエット中にもかかわらず、誘惑に負けて替玉を頼んでしまった。', # N2文法: ~にもかかわらず (儘管...)
                   sentence_advanced='博多ラーメンの醍醐味は、やはり替玉にあると言えるだろう。',
                   audio_filename='kaedama.mp3'),
             
             Vocab(scene_id=scene2.id, word='切符', kana='きっぷ', meaning='車票', 
                   sentence_basic='切符を買います。', 
                   sentence_inter='券売機で新幹線の切符を購入した。',
+                  sentence_upper_inter='払い戻し期間を過ぎた切符は、無効になってしまうので注意が必要だ。', # N2單字: 払い戻し、無効
+                  sentence_advanced='電子マネーの普及により、紙の切符を手にする機会はめっきり減った。',
                   audio_filename='kippu.mp3'),
             
             Vocab(scene_id=scene2.id, word='改札口', kana='かいさつぐち', meaning='剪票口', 
                   sentence_basic='改札口はどこですか？', 
                   sentence_inter='改札口で友達と待ち合わせをしている。',
+                  sentence_upper_inter='朝のラッシュ時の改札口は、前に進めないほど混雑している。', # N2文法: ~ほど (到...的程度)
+                  sentence_advanced='最新の顔認証システムを備えた改札口が、一部の駅で導入され始めている。',
                   audio_filename='kaisatsuguchi.mp3'),
             
             Vocab(scene_id=scene3.id, word='お守り', kana='おまもり', meaning='御守', 
                   sentence_basic='お守りを買いました。', 
                   sentence_inter='神社で合格祈願のお守りを買った。',
+                  sentence_upper_inter='祖母からもらったこのお守りは、私にとって何よりも大切なものだ。', # N2文法: ~にとって (對...而言)
+                  sentence_advanced='古来より、お守りには人々の切実な願いと祈りが込められている。',
                   audio_filename='omamori.mp3'),
             
             Vocab(scene_id=scene4.id, word='アニメ', kana='アニメ', meaning='動畫', 
                   sentence_basic='日本のアニメが好きです。', 
                   sentence_inter='休日は一日中アニメを見て過ごすことが多い。',
+                  sentence_upper_inter='日本のアニメは国内のみならず、海外でも高く評価されている。', # N2文法: ~のみならず (不僅...)
+                  sentence_advanced='精緻な作画と複雑な人間模様を描いたそのアニメは、社会現象を巻き起こした。',
                   audio_filename='anime.mp3'),
             
             Vocab(scene_id=scene5.id, word='コーヒー', kana='コーヒー', meaning='咖啡', 
                   sentence_basic='ホットコーヒーを一つください。', 
                   sentence_inter='毎朝、淹れたてのコーヒーを飲むのが日課だ。',
+                  sentence_upper_inter='彼はコーヒーの豆の産地にまでこだわるほどのコーヒー好きだ。', # N2文法: ~にまで (甚至到...)
+                  sentence_advanced='芳醇な香りと深いコクが特徴のこのコーヒーは、至福のひとときをもたらしてくれる。',
                   audio_filename='coffee.mp3')
         ]
         db.session.add_all(vocabs)

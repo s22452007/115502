@@ -37,6 +37,49 @@ def update_level():
 
     return jsonify({"message": "程度更新成功！", "level": level}), 200
 
+# 補發初始程度徽章
+@user_bp.route('/grant_initial_badges', methods=['POST'])
+def grant_initial_badges():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    level = data.get('level') # 例如: 'N3'
+
+    if not user_id or not level:
+        return jsonify({"error": "缺少必要資料"}), 400
+
+    # 1. 定義每個等級對應「應該擁有的徽章名稱」
+    level_badges = {
+        'N5': ['新手上路'], 
+        'N4': ['新手上路', '生活達人'],
+        'N3': ['新手上路', '生活達人', '交流無礙'],
+        'N2': ['新手上路', '生活達人', '交流無礙', '商務菁英'],
+        'N1': ['新手上路', '生活達人', '交流無礙', '商務菁英', '日語大師']
+    }
+
+    badges_to_grant = level_badges.get(level, [])
+    if not badges_to_grant:
+        return jsonify({"message": "沒有需要補發的徽章", "granted": []}), 200
+
+    granted_badge_names = []
+
+    # 2. 找出這些徽章的 ID 並發放給使用者
+    for badge_name in badges_to_grant:
+        ach = Achievement.query.filter_by(name=badge_name).first()
+        if ach:
+            # 檢查是否已經擁有，避免重複發放
+            exists = UserAchievement.query.filter_by(user_id=user_id, achievement_id=ach.id).first()
+            if not exists:
+                new_ua = UserAchievement(user_id=user_id, achievement_id=ach.id)
+                db.session.add(new_ua)
+                granted_badge_names.append(badge_name)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "初始徽章結算完成",
+        "granted": granted_badge_names 
+    }), 200
+
 # 上傳大頭貼
 @user_bp.route('/upload_avatar', methods=['POST'])
 def upload_avatar():

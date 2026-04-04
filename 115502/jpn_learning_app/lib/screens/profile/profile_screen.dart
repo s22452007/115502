@@ -46,6 +46,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchData();
   }
 
+  // ==========================================
+  // 邏輯函式區塊
+  // ==========================================
+
+  // 將資料庫的 N 等級轉換為好聽的稱號
+  String _getDisplayLevel(String? dbLevel) {
+    if (dbLevel == null || dbLevel.isEmpty) return '尚未設定等級';
+    switch (dbLevel) {
+      case 'N1': return '日語大師';
+      case 'N2': return '商務菁英';
+      case 'N3': return '交流無礙';
+      case 'N4': return '生活達人';
+      case 'N5': 
+      default:   return '日語新手';
+    }
+  }
+
   Future<void> _fetchData() async {
     final userId = context.read<UserProvider>().userId;
 

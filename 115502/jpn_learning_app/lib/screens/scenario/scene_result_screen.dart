@@ -23,7 +23,6 @@ class SceneResultScreen extends StatefulWidget {
 class _SceneResultScreenState extends State<SceneResultScreen> {
   // 🌟 魔法變數：控制綠色捲簾的當前高度 (一開始預設 550)
   double _curtainHeight = 550.0;
-  final Color _darkGreen = const Color(0xFF4A7A4D);
 
   @override
   Widget build(BuildContext context) {
@@ -65,92 +64,102 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
           // ==========================================
           Align(
             alignment: Alignment.bottomCenter,
-            child: GestureDetector(
-              // 🌟 偵測手指上下滑動
-              onVerticalDragUpdate: (details) {
-                setState(() {
-                  // 手指往上滑是負值，所以用減的讓高度增加
-                  _curtainHeight -= details.delta.dy;
-                  // 限制高度，不要讓它被拉到螢幕外面，也不要縮到不見
-                  _curtainHeight = _curtainHeight.clamp(
-                    minCurtainHeight,
-                    maxCurtainHeight,
-                  );
-                });
-              },
-              child: Container(
-                height: _curtainHeight, // 捲簾的高度會跟著手指變化
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFBFE1C3), // 淺綠色底
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
+            child: Container(
+              height: _curtainHeight, // 捲簾的高度會跟著手指變化
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFBFE1C3), // 淺綠色底
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
                 ),
-                // 🌟 關鍵：用 SingleChildScrollView 包住內容，但不允許內部滾動！
-                // 這樣當綠色框變矮時，白色卡片不會被擠壓變形，而是像被「遮住」一樣自然隱藏！
-                child: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(), // 禁止卡片自己滾動
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      // 灰色小把手
-                      Container(
-                        width: 48,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // 🌟 白色單字卡片就乖乖裝在綠色捲簾裡面！
-                      _buildVocabCard(),
-
-                      // 底部的 Start Role-Play 按鈕
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 24,
-                          right: 24,
-                          bottom: 40,
-                          top: 16,
-                        ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      RoleplayScreen(topicTitle: '情境對話練習'),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              'Start Role-Play',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+              ),
+              child: Column(
+                children: [
+                  // 🌟 1. 將「上下滑動偵測」限定在最上面的把手區域
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque, // 確保空白處也能滑動
+                    onVerticalDragUpdate: (details) {
+                      setState(() {
+                        // 手指往上滑是負值，所以用減的讓高度增加
+                        _curtainHeight -= details.delta.dy;
+                        // 限制高度，不要讓它被拉到螢幕外面，也不要縮到不見
+                        _curtainHeight = _curtainHeight.clamp(
+                          minCurtainHeight,
+                          maxCurtainHeight,
+                        );
+                      });
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(top: 12, bottom: 20),
+                      child: Center(
+                        child: Container(
+                          width: 48,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+
+                  // 🌟 2. 卡片內容區放入 Expanded 讓他佔滿剩下的空間，並且可以獨立滾動
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(), // 允許卡片自己滾動！
+                      child: Column(
+                        children: [
+                          // 動態渲染每一張單字卡片
+                          _buildVocabList(),
+
+                          // 底部的 Start Role-Play 按鈕
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: 24,
+                              right: 24,
+                              bottom: 40,
+                              top: 16,
+                            ),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const RoleplayScreen(
+                                        topicTitle: '情境對話練習',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  'Start Role-Play',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -159,77 +168,167 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     );
   }
 
-  // --- 白色單字卡片模具 ---
-  Widget _buildVocabCard() {
-    List<String> labels = [];
-    if (widget.analysisData != null && widget.analysisData!['labels'] != null) {
-      labels = List<String>.from(widget.analysisData!['labels']);
+  // --- 動態將 AI 回傳的字彙陣列轉換成美麗的實體單字卡 ---
+  Widget _buildVocabList() {
+    List<dynamic> vocabs = [];
+    if (widget.analysisData != null && widget.analysisData!['vocabs'] != null) {
+      vocabs = List<dynamic>.from(widget.analysisData!['vocabs']);
     }
-    String mainLabel = labels.isNotEmpty ? labels.first : 'Object';
-    String text = widget.analysisData?['text'] ?? '';
+    List<dynamic> sentences = [];
+    if (widget.analysisData != null &&
+        widget.analysisData!['sentences'] != null) {
+      sentences = List<dynamic>.from(widget.analysisData!['sentences']);
+    }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Object Detected',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            mainLabel,
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: _darkGreen,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            labels.length > 1
-                ? 'Other labels: ${labels.skip(1).take(3).join(', ')}'
-                : 'No other objects',
-            style: const TextStyle(fontSize: 16, color: Colors.black87),
-            textAlign: TextAlign.center,
-          ),
-          if (text.trim().isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Divider(color: Colors.grey.shade300, thickness: 1),
-            const SizedBox(height: 10),
-            const Text(
-              'Detected Text:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
+    if (vocabs.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text('未能辨識出任何單字', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    return Column(
+      children: List.generate(vocabs.length, (index) {
+        final vocab = vocabs[index];
+        // 對應第 n 個單字的例句 (防呆，確保不會超出陣列)
+        final sentence = index < sentences.length ? sentences[index] : null;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              text,
-              maxLines: 5,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ],
-        ],
-      ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 上半部：假名、單字、(暫時禁用的)星星
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          vocab['kana'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          vocab['word'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('功能即將開放！等欄位確定後就能存入資料庫收藏囉 ⭐'),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: Icon(
+                      Icons.star_border_rounded,
+                      color: Colors.grey.shade300,
+                      size: 40,
+                    ),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Divider(color: Color(0xFFEEEEEE), thickness: 1.5),
+              ),
+              // 下半部：詞彙說明
+              const Text(
+                '詞彙說明',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                vocab['meaning'] ?? '',
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+
+              if (sentence != null) ...[
+                const SizedBox(height: 16),
+                // 鷹架式例句區塊
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F9FA),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.volume_up,
+                        color: Colors.blueGrey,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              sentence['japanese'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                height: 1.4,
+                                color: Color(0xFF444444),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              sentence['chinese'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }),
     );
   }
 }

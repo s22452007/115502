@@ -107,6 +107,15 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ user_scene 欄位可能已存在：{e}")
 
+# ==========================================
+# 📸 7. 升級 Vocab (中高級)
+# ==========================================
+try:
+    cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_upper_inter VARCHAR(255);")
+    print("✅ vocab 成功新增『中高級』例句欄位！")
+except sqlite3.OperationalError:
+    print("⚠️ 欄位可能已存在")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import 'package:jpn_learning_app/widgets/common/radar_chart.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/screens/home/home_screen.dart'; // 確保路徑正確
-
-import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 class TestResultScreen extends StatelessWidget {
   final String levelCode; // 後端傳來的乾淨代碼 (N5, N4, N3, N2, N1)

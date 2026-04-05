@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/badge_model.dart';
+import '../../providers/user_provider.dart';
 
 class BadgeLibraryScreen extends StatefulWidget {
   const BadgeLibraryScreen({Key? key}) : super(key: key);
@@ -49,15 +51,6 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
     ),
   ];
 
-  // 🛡️ 模擬後端傳來的進度 (之後換成 Provider 的真實數據)
-  final Map<String, int> _mockProgress = {
-    'level_01': 3,       // N3 程度 (對應 level 3)
-    'vocab_01': 120,     // 收集了 120 個單字 (對應 level 3, 銀牌)
-    'streak_01': 5,      // 連續 5 天 (對應 level 1, 木牌)
-    'marathon_01': 80,   // 總天數 80 天 (對應 level 3, 銀牌)
-    'camera_01': 1150,   // 拍照 1150 次 (對應 level 5, 白金牌！)
-  };
-
   // === 🎨 核心視覺邏輯：根據等級給予不同顏色與名稱 ===
   Map<String, dynamic> _getLevelTheme(int currentLevel) {
     switch (currentLevel) {
@@ -91,6 +84,8 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FA),
       appBar: AppBar(
@@ -104,7 +99,7 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
         itemCount: coreBadges.length,
         itemBuilder: (context, index) {
           final badge = coreBadges[index];
-          final progress = _mockProgress[badge.id] ?? 0;
+          final progress = userProvider.badgeProgress[badge.id] ?? 0;
           final currentLevel = _calculateLevel(progress, badge.milestones);
           final theme = _getLevelTheme(currentLevel);
           
@@ -137,7 +132,7 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(badge.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333))),
+                            Text(badge.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333))),
                             if (currentLevel > 0)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

@@ -11,7 +11,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
-// UI 元件與其他畫面 (請確認這些路徑與你的專案相符)
+// UI 元件與其他畫面
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/app_drawer.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
@@ -90,6 +90,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
       }
+    }
+
+    // 把後端傳來的徽章進度，正式存進管家 (Provider) 裡！
+    if (result.containsKey('badge_progress')) {
+      context.read<UserProvider>().setBadgeProgress(result['badge_progress']);
     }
   }
 
@@ -203,7 +208,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // 1. 頂部頭像與個人資訊區塊
   Widget _buildProfileHeader(BuildContext context, bool isGuest, String safeName, String userName, String? userAvatar, String defaultAvatarUrl) {
-    // 獲取原始等級 (N5, N3 等)
     final rawLevel = context.watch<UserProvider>().japaneseLevel;
 
     return Row(
@@ -270,13 +274,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              
-              // 這裡套用了轉換器！畫面上會顯示「交流無礙 (中級)」
               Text(
                 isGuest ? '登入解鎖更多功能' : _getDisplayLevel(rawLevel),
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
-              
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
@@ -351,12 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // 3. 成就徽章區塊 (對應 5 大核心徽章)
   Widget _buildAchievementsSection(BuildContext context, bool isGuest) {
-    // 🛡️ 模擬進度 (與 badge_library_screen 保持一致)
-    final mockProgress = {
-      'level_01': 3,   // N3 程度 (3級: 銀牌)
-      'vocab_01': 120, // 收集 120 字 (3級: 銀牌)
-      'streak_01': 5,  // 連續 5 天 (1級: 初階木牌)
-    };
+    final badgeProgress = context.watch<UserProvider>().badgeProgress;
 
     // 模擬門檻
     final milestones = {
@@ -365,10 +361,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'streak_01': [3, 7, 14, 30, 60],
     };
 
-    // 取得等級的迷你函式
+    // 取得等級的迷你函式 (根據真實進度算等級)
     int getLevel(String id) {
       if (isGuest) return 0;
-      int progress = mockProgress[id] ?? 0;
+      int progress = badgeProgress[id] ?? 0;
       List<int> ms = milestones[id] ?? [];
       int level = 0;
       for (int i = 0; i < ms.length; i++) {

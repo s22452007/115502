@@ -32,40 +32,16 @@ class UserProvider extends ChangeNotifier {
   // --- 🏆 徽章系統狀態 ---
   // ==========================================
   
-  // 存放真實的 5 大核心徽章進度 (例如 {"level_01": 3, "camera_01": 150})
+  // 存放真實的 5 大核心徽章進度
   Map<String, int> _badgeProgress = {};
   Map<String, int> get badgeProgress => _badgeProgress;
-
-  // 舊版保留：存放手動/其他途徑解鎖的徽章 ID (避免你其他舊畫面報錯)
-  List<String> _unlockedBadgeIds = [];
-  List<String> get unlockedBadgeIds => _unlockedBadgeIds;
 
   // 設定真實徽章進度的方法
   void setBadgeProgress(Map<String, dynamic> progressData) {
     _badgeProgress = progressData.map((key, value) {
-      // 確保從 JSON 來的數字型態正確轉換為 int
       return MapEntry(key, value is int ? value : (value as num).toInt());
     });
-    notifyListeners(); // 通知畫面：徽章進度更新了！
-  }
-
-  // 舊版保留：從後端取得資料後，整批設定已解鎖徽章
-  void setUnlockedBadges(List<String> badgeIds) {
-    _unlockedBadgeIds = badgeIds;
-    notifyListeners();
-  }
-
-  // 舊版保留：檢查特定徽章是否已解鎖
-  bool isBadgeUnlocked(String badgeId) {
-    return _unlockedBadgeIds.contains(badgeId);
-  }
-
-  // 舊版保留：解鎖單一新徽章
-  void unlockBadge(String badgeId) {
-    if (!_unlockedBadgeIds.contains(badgeId)) {
-      _unlockedBadgeIds.add(badgeId);
-      notifyListeners(); 
-    }
+    notifyListeners(); 
   }
 
   // ==========================================
@@ -150,7 +126,6 @@ class UserProvider extends ChangeNotifier {
     
     // 清空徽章資料
     _badgeProgress = {}; 
-    _unlockedBadgeIds = []; 
     
     notifyListeners(); 
   }

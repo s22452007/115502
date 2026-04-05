@@ -349,10 +349,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 3. 成就徽章區塊
+  // 3. 成就徽章區塊 (對應 5 大核心徽章)
   Widget _buildAchievementsSection(BuildContext context, bool isGuest) {
-    final userProvider = Provider.of<UserProvider>(context);
-    final unlockedCount = isGuest ? 0 : userProvider.unlockedBadgeIds.length;
+    // 🛡️ 模擬進度 (與 badge_library_screen 保持一致)
+    final mockProgress = {
+      'level_01': 3,   // N3 程度 (3級: 銀牌)
+      'vocab_01': 120, // 收集 120 字 (3級: 銀牌)
+      'streak_01': 5,  // 連續 5 天 (1級: 初階木牌)
+    };
+
+    // 模擬門檻
+    final milestones = {
+      'level_01': [1, 2, 3, 4, 5],
+      'vocab_01': [10, 50, 100, 300, 500],
+      'streak_01': [3, 7, 14, 30, 60],
+    };
+
+    // 取得等級的迷你函式
+    int getLevel(String id) {
+      if (isGuest) return 0;
+      int progress = mockProgress[id] ?? 0;
+      List<int> ms = milestones[id] ?? [];
+      int level = 0;
+      for (int i = 0; i < ms.length; i++) {
+        if (progress >= ms[i]) level = i + 1;
+        else break;
+      }
+      return level;
+    }
 
     return GestureDetector(
       onTap: () {
@@ -376,7 +400,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Row(
                   children: [
                     Text(
-                      '$unlockedCount 個已解鎖',
+                      isGuest ? '登入查看' : '查看全部進度',
                       style: TextStyle(color: _primaryGreen, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     Icon(Icons.chevron_right, color: _primaryGreen),
@@ -385,12 +409,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 20),
+            // 展示前三個核心徽章
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMiniBadge(Icons.ramen_dining, '拉麵大師', isGuest ? false : userProvider.isBadgeUnlocked('ramen_01')),
-                _buildMiniBadge(Icons.restaurant, '美食導航', isGuest ? false : userProvider.isBadgeUnlocked('food_01')),
-                _buildMiniBadge(Icons.menu_book, '語法通', isGuest ? false : userProvider.isBadgeUnlocked('grammar_01')),
+                _buildMiniBadge(Icons.school, '程度認證', getLevel('level_01')),
+                _buildMiniBadge(Icons.menu_book, '單字大富翁', getLevel('vocab_01')),
+                _buildMiniBadge(Icons.local_fire_department, '學習火種', getLevel('streak_01')),
               ],
             ),
           ],

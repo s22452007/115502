@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-// import 'package:jpn_learning_app/providers/favorites_data.dart'; // [已移除] 不再需要假資料
 
 // 2. 共用元件
 import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
@@ -37,23 +36,83 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color _subTextColor = const Color(0xFF888888);
 
   // ==========================================
-  // 1. 狀態變數與生命週期
+  // 1. 狀態變數與生命週期 (包含徽章設定)
   // ==========================================
   List<dynamic> _recentScenes = [];
   bool _isLoadingScenes = true;
+
+  // 集中管理徽章門檻與資訊 (為了計算升級彈窗)
+  final Map<String, List<int>> _badgeMilestones = {
+    'level_01': [1, 2, 3, 4, 5],
+    'vocab_01': [10, 50, 100, 300, 500],
+    'streak_01': [3, 7, 14, 30, 60],
+    'marathon_01': [5, 15, 50, 100, 200],
+    'camera_01': [10, 50, 200, 500, 1000],
+  };
+
+  final Map<String, Map<String, dynamic>> _badgeInfo = {
+    'level_01': {'title': '程度認證', 'icon': Icons.school},
+    'vocab_01': {'title': '單字大富翁', 'icon': Icons.menu_book},
+    'streak_01': {'title': '學習火種', 'icon': Icons.local_fire_department},
+    'marathon_01': {'title': '學習馬拉松', 'icon': Icons.directions_run},
+    'camera_01': {'title': '快門獵人', 'icon': Icons.camera_alt},
+  };
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPendingFriendRequests();
-      _fetchRecentScenes(); // 畫面載入時呼叫抓取場景
+      _fetchRecentScenes(); 
+      _fetchAndCheckBadgeProgress(); // 🌟 首頁載入時檢查是否升級
     });
   }
 
   // ==========================================
-  // 2. API 資料抓取
+  // 2. API 資料抓取與進度檢查
   // ==========================================
+  
+  // 向後端抓取 Profile，檢查有沒有升級！
+  Future<void> _fetchAndCheckBadgeProgress() async {
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId;
+    if (userId == null) return; // 訪客不檢查
+
+    // 先記住舊的進度
+    final oldProgress = Map<String, int>.from(userProvider.badgeProgress);
+
+    try {
+      final result = await ApiClient.fetchProfileData(userId);
+      
+      if (!mounted) return;
+
+      if (result.containsKey('badge_progress')) {
+        final newProgress = result['badge_progress'] as Map<String, dynamic>;
+
+        // 只有舊進度存在時才檢查升級 (避免使用者第一次登入時瘋狂跳彈窗)
+        if (oldProgress.isNotEmpty) {
+          for (String id in _badgeMilestones.keys) {
+            int oldVal = oldProgress[id] ?? 0;
+            int newVal = newProgress[id] is int ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
+
+            int oldLevel = _calculateLevel(oldVal, _badgeMilestones[id]!);
+            int newLevel = _calculateLevel(newVal, _badgeMilestones[id]!);
+
+            // 如果等級變高了，就叫出慶祝彈窗！
+            if (newLevel > oldLevel) {
+              if (mounted) await _showLevelUpDialog(id, newLevel);
+            }
+          }
+        }
+        
+        // 存入最新的進度給 Provider
+        userProvider.setBadgeProgress(newProgress);
+      }
+    } catch (e) {
+      debugPrint('檢查徽章進度失敗: $e');
+    }
+  }
+
   Future<void> _fetchRecentScenes() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
@@ -94,6 +153,27 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==========================================
   // 3. 輔助函式與彈出視窗
   // ==========================================
+  
+  int _calculateLevel(int progress, List<int> ms) {
+    int level = 0;
+    for (int i = 0; i < ms.length; i++) {
+      if (progress >= ms[i]) level = i + 1;
+      else break;
+    }
+    return level;
+  }
+
+  Map<String, dynamic> _getLevelTheme(int level) {
+    switch (level) {
+      case 5: return {'name': '白金級', 'color': Colors.purpleAccent, 'isGradient': true};
+      case 4: return {'name': '金牌', 'color': Colors.amber[400]!, 'isGradient': false};
+      case 3: return {'name': '銀牌', 'color': Colors.blueGrey[300]!, 'isGradient': false};
+      case 2: return {'name': '銅牌', 'color': Colors.orange[700]!, 'isGradient': false};
+      case 1: return {'name': '初階', 'color': Colors.brown[400]!, 'isGradient': false};
+      default: return {'name': '未解鎖', 'color': Colors.grey[400]!, 'isGradient': false};
+    }
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) return '早安';
@@ -101,7 +181,75 @@ class _HomeScreenState extends State<HomeScreen> {
     return '晚安';
   }
 
-void _showVocabularyBottomSheet(BuildContext context, dynamic scene) {
+  // 升級慶祝彈窗
+  Future<void> _showLevelUpDialog(String id, int level) async {
+    final info = _badgeInfo[id]!;
+    final theme = _getLevelTheme(level);
+    final bool isGradient = theme['isGradient'];
+    final Color solidColor = isGradient ? Colors.white : theme['color'];
+
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: false, 
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black.withOpacity(0.7), 
+      transitionDuration: const Duration(milliseconds: 600), 
+      pageBuilder: (context, anim1, anim2) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim1, curve: Curves.elasticOut),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+            contentPadding: const EdgeInsets.all(32),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🎉 恭喜升級 🎉', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange)),
+                const SizedBox(height: 28),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: solidColor.withOpacity(0.15),
+                    gradient: isGradient ? const SweepGradient(colors: [Colors.purple, Colors.blue, Colors.pink, Colors.purple]) : null,
+                    border: !isGradient ? Border.all(color: solidColor, width: 4) : null,
+                    boxShadow: [BoxShadow(color: (isGradient ? Colors.purple : solidColor).withOpacity(0.5), blurRadius: 30, spreadRadius: 5)],
+                  ),
+                  child: isGradient
+                      ? Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                          child: Icon(info['icon'] as IconData, color: Colors.purple, size: 60),
+                        )
+                      : Icon(info['icon'] as IconData, color: solidColor, size: 70),
+                ),
+                const SizedBox(height: 28),
+                Text(info['title'] as String, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('已解鎖【${theme['name']}】', style: TextStyle(fontSize: 18, color: isGradient ? Colors.purple : solidColor, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Text('你的努力有了回報！繼續保持下去！', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                const SizedBox(height: 36),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A7C59),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('太棒了！', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showVocabularyBottomSheet(BuildContext context, dynamic scene) {
     final userId = context.read<UserProvider>().userId;
     
     // 如果尚未登入 (userId 為 null)，直接提示並擋下，避免報錯
@@ -200,7 +348,6 @@ void _showVocabularyBottomSheet(BuildContext context, dynamic scene) {
   // 4. UI 區塊元件 (Widgets)
   // ==========================================
   
-  // 獨立出來的：最近解鎖場景列表 Widget
   Widget _buildRecentScenesList() {
     if (_isLoadingScenes) {
       return const Center(
@@ -248,7 +395,6 @@ void _showVocabularyBottomSheet(BuildContext context, dynamic scene) {
                           color: isEven ? const Color(0xFF8B6B9E) : const Color(0xFF7FAFD0),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        // 之後如果有存圖示名稱，也可以用 scene['icon_name'] 來判斷顯示什麼 Icon
                         child: const Icon(Icons.train, color: Colors.white, size: 24),
                       ),
                       const SizedBox(height: 12),
@@ -500,10 +646,7 @@ void _showVocabularyBottomSheet(BuildContext context, dynamic scene) {
               ],
             ),
             const SizedBox(height: 12),
-            
-            // 這裡原本是一大串的 SingleChildScrollView，現在變得超級乾淨！
             _buildRecentScenesList(),
-            
             const SizedBox(height: 24),
             GestureDetector(
               onTap: isGuest ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),

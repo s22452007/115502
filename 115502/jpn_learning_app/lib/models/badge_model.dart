@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
 class BadgeModel {
-  final String id;          // 徽章唯一 ID
-  final String title;       // 徽章名稱
-  final String description; // 已解鎖的取得說明
-  final String lockedHint;  // 未解鎖的提示
-  final IconData icon;      // 徽章圖示 
-  bool isUnlocked;          // 是否已解鎖
-  String? unlockedDate;     // 解鎖日期 (可選)
+  final String id;
+  final String title;
+  final String description;
+  final String lockedHint;
+  final IconData icon;
+  final String category; // 這是為了新版分類 UI 加的
 
   BadgeModel({
     required this.id,
@@ -15,7 +14,6 @@ class BadgeModel {
     required this.description,
     required this.lockedHint,
     required this.icon,
-    this.isUnlocked = false,
-    this.unlockedDate,
+    this.category = '未分類', // 給個預設值，不怕報錯
   });
 }

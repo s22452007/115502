@@ -1,9 +1,16 @@
+/// 每日學習目標卡片 Widget
+/// 負責顯示用戶當日的學習目標進度，包括拍照場景數量的進度條和開啟相機按鈕
+/// 這個卡片會根據 UserProvider 的 dailyScans 狀態動態更新進度
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 
+/// 每日目標卡片組件
+/// 顯示「探索3個新場景」的進度，並提供快速開啟相機的功能
 class DailyGoalCard extends StatelessWidget {
+  /// 建構子
+  /// 不需要額外參數，因為所有必要資料都從 UserProvider 獲取
   const DailyGoalCard({Key? key}) : super(key: key);
 
   @override

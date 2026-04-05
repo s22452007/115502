@@ -1,7 +1,16 @@
+/// 徽章升級慶祝對話框
+/// 負責在用戶徽章等級提升時顯示動畫慶祝對話框
+/// 使用不同的顏色主題和動畫效果來慶祝用戶的學習成就
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 
+/// 徽章升級對話框類別
+/// 提供靜態方法來顯示徽章升級的慶祝動畫
 class LevelUpDialog {
+  /// 顯示徽章升級慶祝對話框
+  /// @param context 建構函式上下文
+  /// @param id 徽章 ID (如 'level_01', 'vocab_01' 等)
+  /// @param level 新的等級 (1-5)
   static Future<void> show(BuildContext context, String id, int level) async {
     final badgeInfo = {
       'level_01': {'title': '程度認證', 'icon': Icons.school},

@@ -1,8 +1,17 @@
+/// 單字解鎖進度底部表單
+/// 負責顯示特定場景中所有單字的解鎖狀態
+/// 以底部滑出表單形式展示，用戶可以查看哪些單字已解鎖
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 
+/// 單字底部表單類別
+/// 提供靜態方法來顯示場景單字的解鎖進度
 class VocabBottomSheet {
-  static void show(BuildContext context, dynamic scene, int? userId) {
+  /// 顯示單字解鎖進度底部表單
+  /// @param context 建構函式上下文
+  /// @param scene 場景資料，包含 scene_name 和 scene_id
+  /// @param userId 用戶 ID，如果為 null 則提示登入
+  static void show(BuildContext context, dynamic scene, String? userId) {
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('請先登入才能查看單字解鎖進度喔！')),
@@ -41,7 +50,7 @@ class VocabBottomSheet {
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
                 child: FutureBuilder<List<dynamic>>(
-                  future: ApiClient.getSceneVocabs(scene['scene_id'], userId),
+                future: ApiClient.getSceneVocabs(scene['scene_id'], int.parse(userId)),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));

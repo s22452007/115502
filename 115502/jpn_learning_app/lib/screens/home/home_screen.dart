@@ -1,3 +1,10 @@
+/// 首頁畫面
+/// 負責顯示學習應用的主要介面，包含：
+/// - 用戶問候與狀態資訊（學習天數、點數）
+/// - 每日學習目標進度
+/// - 最近解鎖的學習場景列表
+/// - 學習小組動態
+/// - 徽章升級檢查與慶祝對話框
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -30,7 +37,10 @@ import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart'
 import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 
+/// 首頁畫面狀態管理類別
+/// 負責管理首頁的所有狀態和業務邏輯
 class HomeScreen extends StatefulWidget {
+  /// 建構子
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
@@ -64,41 +74,50 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==========================================
   // 2. API 資料抓取與進度檢查
   // ==========================================
-  
-  // 向後端抓取 Profile，檢查有沒有升級！
+
+  /// 檢查徽章進度並顯示升級慶祝對話框
+  /// 這個函式負責：
+  /// Step 1: 從後端獲取最新的用戶資料（包含徽章進度）
+  /// Step 2: 比較舊進度與新進度，判斷是否有徽章等級提升
+  /// Step 3: 如果有升級，顯示動畫慶祝對話框
+  /// Step 4: 更新 UserProvider 中的徽章進度資料
   Future<void> _fetchAndCheckBadgeProgress() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
-    if (userId == null) return; // 訪客不檢查
+    if (userId == null) return; // 訪客模式不檢查徽章進度
 
-    // 先記住舊的進度
+    // Step 1: 記錄檢查開始前的舊進度，用於比較
     final oldProgress = Map<String, int>.from(userProvider.badgeProgress);
 
     try {
+      // 從後端 API 獲取最新的用戶個人資料
       final result = await ApiClient.fetchProfileData(userId);
-      
-      if (!mounted) return;
+
+      if (!mounted) return; // 組件已被銷毀，中止操作
 
       if (result.containsKey('badge_progress')) {
         final newProgress = result['badge_progress'] as Map<String, dynamic>;
 
-        // 只有舊進度存在時才檢查升級 (避免使用者第一次登入時瘋狂跳彈窗)
+        // Step 2: 只有在舊進度存在時才檢查升級（避免新用戶首次登入時彈窗氾濫）
         if (oldProgress.isNotEmpty) {
+          // 遍歷所有徽章類型，檢查是否有等級提升
           for (String id in BadgeUtils.badgeMilestones.keys) {
+            // 獲取舊進度和新進度值
             int oldVal = oldProgress[id] ?? 0;
             int newVal = newProgress[id] is int ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
 
+            // 使用 BadgeUtils 計算對應的等級
             int oldLevel = BadgeUtils.calculateLevel(oldVal, BadgeUtils.badgeMilestones[id]!);
             int newLevel = BadgeUtils.calculateLevel(newVal, BadgeUtils.badgeMilestones[id]!);
 
-            // 如果等級變高了，就叫出慶祝彈窗！
+            // Step 3: 如果等級有提升，顯示慶祝對話框
             if (newLevel > oldLevel) {
               if (mounted) await LevelUpDialog.show(context, id, newLevel);
             }
           }
         }
-        
-        // 存入最新的進度給 Provider
+
+        // Step 4: 更新 UserProvider 中的徽章進度，讓 UI 反映最新狀態
         userProvider.setBadgeProgress(newProgress);
       }
     } catch (e) {
@@ -242,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
             RecentScenesList(
               recentScenes: _recentScenes,
               isLoadingScenes: _isLoadingScenes,
-              onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, context.read<UserProvider>().userId),
+              onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, context.read<UserProvider>().userId?.toString()),
             ),
             const SizedBox(height: 24),
             GestureDetector(

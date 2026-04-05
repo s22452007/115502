@@ -24,6 +24,10 @@ class User(db.Model):
     daily_scans = db.Column(db.Integer, default=0)
     last_scan_date = db.Column(db.Date, nullable=True)
 
+    # 徽章新增的計數器
+    total_active_days = db.Column(db.Integer, default=0) # 對應：學習馬拉松
+    total_scans = db.Column(db.Integer, default=0)       # 對應：快門獵人
+    
     # 關聯
     collected_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)

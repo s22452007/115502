@@ -6,7 +6,7 @@ import '../../providers/user_provider.dart';
 class BadgeLibraryScreen extends StatelessWidget {
   BadgeLibraryScreen({Key? key}) : super(key: key);
 
-  // 系統中所有的徽章定義清單 (共 26 個)
+  // 系統中所有的徽章定義清單 (已分類)
   final List<BadgeModel> allBadges = [
     // 1. 場景探索類
     BadgeModel(id: 'food_01', title: '美食導航員', description: '成功辨識 10 種不同的日本料理。', lockedHint: '快去拍下眼前的日式美食，解鎖此徽章！', icon: Icons.restaurant),
@@ -43,45 +43,122 @@ class BadgeLibraryScreen extends StatelessWidget {
     BadgeModel(id: 'premium_01', title: '資深學員', description: '升級訂閱 Premium 方案或單次購買超過 3000 點。', lockedHint: '解鎖無限次 AI 對話功能，讓學習不中斷！', icon: Icons.workspace_premium),
   ];
 
+  // 將徽章手動分組的輔助方法
+  Map<String, List<BadgeModel>> get categorizedBadges {
+    return {
+      '📍 場景探索徽章': allBadges.sublist(0, 8),
+      '📖 學習成就徽章': allBadges.sublist(8, 16),
+      '👥 社群互動徽章': allBadges.sublist(16, 21),
+      '🔥 習慣與連勝徽章': allBadges.sublist(21, 26),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final unlockedCount = userProvider.unlockedBadgeIds.length;
+    final categories = categorizedBadges;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F9FA), // 換成稍微帶灰的背景，讓卡片更突出
       appBar: AppBar(
         title: const Text('成就徽章庫', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green[600],
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Container(
-        color: Colors.grey[100],
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('我的收集進度', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('已解鎖 $unlockedCount / ${allBadges.length} 個徽章', style: TextStyle(color: Colors.grey[700])),
-            const SizedBox(height: 20),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.8,
+      body: CustomScrollView(
+        slivers: [
+          // 頂部總覽區塊
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
                 ),
-                itemCount: allBadges.length,
-                itemBuilder: (context, index) {
-                  final badge = allBadges[index];
-                  final isUnlocked = userProvider.isBadgeUnlocked(badge.id);
-                  return _buildBadgeItem(context, badge, isUnlocked);
-                },
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text('總收集進度', style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$unlockedCount / ${allBadges.length}', 
+                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green[700])
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: unlockedCount / allBadges.length,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green[500]!),
+                      minHeight: 10,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+          // 動態生成分類區塊
+          ...categories.entries.map((entry) {
+            final categoryTitle = entry.key;
+            final categoryBadges = entry.value;
+
+            return SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 分類標題
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
+                      child: Text(
+                        categoryTitle,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      ),
+                    ),
+                    // 分類內的徽章 Grid
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Wrap(
+                        spacing: 16,
+                        runSpacing: 24,
+                        alignment: WrapAlignment.start,
+                        children: categoryBadges.map((badge) {
+                          final isUnlocked = userProvider.isBadgeUnlocked(badge.id);
+                          return SizedBox(
+                            width: (MediaQuery.of(context).size.width - 96) / 3, // 計算三等分的寬度
+                            child: _buildBadgeItem(context, badge, isUnlocked),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+          
+          const SliverToBoxAdapter(child: SizedBox(height: 40)), // 底部留白
+        ],
       ),
     );
   }
@@ -90,29 +167,39 @@ class BadgeLibraryScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showBadgeDialog(context, badge, isUnlocked),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isUnlocked ? Colors.green[100] : Colors.grey[300],
+              // 未解鎖的底色改為更淡的灰色，讓解鎖後的顏色更跳
+              color: isUnlocked ? Colors.green[100] : const Color(0xFFF0F0F0),
+              border: Border.all(
+                color: isUnlocked ? Colors.green.shade300 : Colors.transparent,
+                width: 2,
+              ),
               boxShadow: isUnlocked 
-                  ? [BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 8, spreadRadius: 2)] 
+                  ? [BoxShadow(color: Colors.green.withOpacity(0.4), blurRadius: 12, spreadRadius: 1)] 
                   : [],
             ),
             child: Icon(
-              badge.icon, size: 40,
-              color: isUnlocked ? Colors.green[800] : Colors.grey[500],
+              badge.icon, size: 36,
+              // 未解鎖的圖示改為淺灰色
+              color: isUnlocked ? Colors.green[800] : Colors.grey[400],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             badge.title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14, fontWeight: FontWeight.bold,
-              color: isUnlocked ? Colors.black87 : Colors.grey[600],
+              fontSize: 13, 
+              fontWeight: FontWeight.bold,
+              color: isUnlocked ? Colors.black87 : Colors.grey[500],
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -124,64 +211,68 @@ class BadgeLibraryScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           contentPadding: const EdgeInsets.all(24),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isUnlocked ? Colors.green[100] : Colors.grey[200],
+                  color: isUnlocked ? Colors.green[100] : Colors.grey[100],
+                  boxShadow: isUnlocked ? [BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 15)] : [],
                 ),
                 child: Icon(
-                  badge.icon, size: 60,
-                  color: isUnlocked ? Colors.green[800] : Colors.grey[500],
+                  badge.icon, size: 70,
+                  color: isUnlocked ? Colors.green[800] : Colors.grey[400],
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(badge.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              Text(badge.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isUnlocked ? Colors.green : Colors.grey,
-                  borderRadius: BorderRadius.circular(12),
+                  color: isUnlocked ? Colors.green : Colors.grey[600],
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  isUnlocked ? '已解鎖' : '未解鎖',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  isUnlocked ? '✅ 已解鎖' : '🔒 未解鎖',
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Text(
                 isUnlocked ? badge.description : badge.lockedHint,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey[800], height: 1.5),
+                style: TextStyle(fontSize: 15, color: Colors.grey[800], height: 1.6),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    // 測試功能：點擊未解鎖徽章可以直接測試解鎖 (實務上請移除)
                     if (!isUnlocked) {
                       Provider.of<UserProvider>(context, listen: false).unlockBadge(badge.id);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('已為您測試解鎖：${badge.title}')),
+                        SnackBar(
+                          content: Text('🎉 測試解鎖成功：${badge.title}'),
+                          backgroundColor: Colors.green[700],
+                        ),
                       );
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isUnlocked ? Colors.green[700] : Colors.grey[400],
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: isUnlocked ? Colors.green[700] : Colors.grey[800],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
                   ),
                   child: Text(
                     isUnlocked ? '關閉' : '前往任務 (點擊測試解鎖)', 
-                    style: const TextStyle(color: Colors.white, fontSize: 16)
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                 ),
               )

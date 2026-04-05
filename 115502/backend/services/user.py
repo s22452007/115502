@@ -200,6 +200,8 @@ def delete_account():
 @user_bp.route('/profile_data/<int:user_id>', methods=['GET'])
 def get_profile_data(user_id):
     user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
 
     # 動態計算能力值
     vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
@@ -221,25 +223,22 @@ def get_profile_data(user_id):
         if ability_data[key] < 0.05:
             ability_data[key] = 0.05
 
-    # 2. 抓取成就徽章
-    # 先抓出系統裡所有的徽章總表
-    all_achievements = Achievement.query.all()
-    # 再抓出這個使用者「已經解鎖」的徽章
-    unlocked_records = UserAchievement.query.filter_by(user_id=user_id).all()
-    unlocked_ids = [record.achievement_id for record in unlocked_records]
+    # 2. 算 5 大核心徽章的進度數字
+    # 日語檢定轉換為 1~5 的數字
+    level_map = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
+    current_n_level = level_map.get(user.japanese_level, 0)
 
-    achievements_data = []
-    for ach in all_achievements:
-        achievements_data.append({
-            "id": ach.id,
-            "name": ach.name,
-            "description": ach.description,
-            "is_unlocked": ach.id in unlocked_ids # 判斷是否有解鎖
-        })
+    badge_progress = {
+        "level_01": current_n_level,             # 程度認證
+        "vocab_01": vocab_count,                 # 單字大富翁
+        "streak_01": user.streak_days or 0,      # 學習火種
+        "marathon_01": user.total_active_days or 0, # 學習馬拉松
+        "camera_01": user.total_scans or 0       # 快門獵人
+    }
 
     return jsonify({
         "ability": ability_data,
-        "achievements": achievements_data
+        "badge_progress": badge_progress # 將進度打包回傳
     }), 200
 
 # 增加點數

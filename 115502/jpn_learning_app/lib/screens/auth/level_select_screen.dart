@@ -1,224 +1,166 @@
-// 1. Flutter 官方套件
 import 'package:flutter/material.dart';
-
-// 2. 第三方套件
 import 'package:provider/provider.dart';
 
-// 3. 我們自己寫的工具與狀態管理
-import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-
-// 4. 我們自己寫的畫面 (跳轉用)
-import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart'; // 讓「我不確定」按鈕可以跳去測驗
+import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
-class LevelSelectScreen extends StatefulWidget {
+class LevelSelectScreen extends StatelessWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
-
-  @override
-  State<LevelSelectScreen> createState() => _LevelSelectScreenState();
-}
-
-class _LevelSelectScreenState extends State<LevelSelectScreen> {
-  // 用來記錄目前選擇的等級索引，null 代表尚未選擇
-  int? _selectedIndex;
-
-  final List<Map<String, String>> levels = [
-    {'title': '入門新手', 'desc': '會五十音，能進行非常簡單的自我介紹與日常問候'},
-    {'title': '初級應用(N5)', 'desc': '能理解基本生活短句，可在餐廳、超商進行簡單的基礎溝通'},
-    {'title': '中級應用(N4)', 'desc': '能聽懂放慢的日常會話，可表達自身意圖並與人進行基礎交流'},
-    {'title': '高級對話(N3以上)', 'desc': '能大致聽懂自然語速的日常對話，並能順暢表達自己的想法與意見'},
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // AppColors.white
+      backgroundColor: const Color(0xFFF8FAFC), // 帶有一點點灰藍的柔和背景色
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              // --- 上半部：標題與選項 (使用 Expanded + SingleChildScrollView 讓內容過長時可滾動) ---
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 24),
-                      const Text(
-                        '歡迎加入我們！\n請選擇您目前的日語程度',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22, 
-                          fontWeight: FontWeight.bold, 
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // 程度選擇按鈕列表
-                      ...List.generate(levels.length, (index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _LevelButton(
-                            title: levels[index]['title']!,
-                            desc: levels[index]['desc']!,
-                            isSelected: _selectedIndex == index,
-                            onTap: () {
-                              setState(() {
-                                _selectedIndex = index;
-                              });
-                            },
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-              
-              // --- 下半部：底部按鈕 (固定在畫面最下方) ---
-              const SizedBox(height: 12), // 與上方選項保持一點距離
-              
-              // 我不確定，進行測驗
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const QuickTestScreen()),
-                  );
-                },
-                child: const Text(
-                  '我不確定，進行測驗', 
+        // 💡 加上 SingleChildScrollView 讓畫面可以上下捲動，完美解決破版問題！
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              children: [
+                const SizedBox(height: 20),
+                // --- 歡迎標題區 ---
+                Text(
+                  'ようこそ！',
                   style: TextStyle(
-                    fontSize: 16,
-                    decoration: TextDecoration.underline,
-                    color: Colors.grey, // AppColors.textGrey
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold, 
+                    color: Colors.green.shade600,
+                    letterSpacing: 1.2,
                   ),
                 ),
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // 確定並開始學習
-              ElevatedButton(
-                onPressed: () async {
-                  // 1. 防呆：檢查有沒有選中任何一個索引
-                  if (_selectedIndex == null) {
+                const SizedBox(height: 8),
+                const Text(
+                  '歡迎來到 J-Lens\n請選擇您的日文起點',
+                  style: TextStyle(
+                    fontSize: 28, 
+                    fontWeight: FontWeight.bold, 
+                    height: 1.4, 
+                    color: Color(0xFF1E293B)
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // --- 卡片 1：我是新手 (移除 Expanded，讓卡片根據內容自動決定高度) ---
+                _buildSelectionCard(
+                  context: context,
+                  title: '我是日文新手',
+                  subtitle: '從五十音開始，穩紮穩打建立基礎，適合完全沒有接觸過日文的你。',
+                  icon: Icons.spa_rounded, 
+                  gradientColors: [Colors.green.shade400, Colors.teal.shade500],
+                  shadowColor: Colors.green.withOpacity(0.3),
+                  onTap: () async {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('請先選擇一個程度喔！')),
+                      const SnackBar(content: Text('正在為您設定新手模式...')),
                     );
-                    return;
-                  }
 
-                  // 把數字索引轉換回文字標題 (例如：將 1 轉換成 '入門新手')
-                  final String selectedTitle = levels[_selectedIndex!]['title']!;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('正在儲存您的程度...')),
-                  );
-
-                  // 2. 從 Provider 抓出目前登入的 user_id
-                  final currentUserId = context.read<UserProvider>().userId;
-
-                  // 3. 如果有登入 (不是訪客)，就存進資料庫
-                  if (currentUserId != null) {
-                    // 這裡把轉換好的 selectedTitle 傳給後端
-                    final result = await ApiClient.updateLevel(currentUserId, selectedTitle);
-                    
-                    if (!context.mounted) return; // 確保畫面還活著
-
-                    if (result.containsKey('error')) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(result['error'])),
-                      );
-                      return; // 儲存失敗就中斷
+                    final currentUserId = context.read<UserProvider>().userId;
+                    if (currentUserId != null) {
+                      await ApiClient.updateLevel(currentUserId, 'N5');
                     }
-                  }
 
-                  // 4. 不管是登入還是訪客，都把程度存進 APP 暫存記憶體
-                  if (context.mounted) {
-                    // 這裡也把 selectedTitle 存進 Provider
-                    context.read<UserProvider>().setJapaneseLevel(selectedTitle);
-                    
-                    // 5. 跳轉到首頁！
-                    Navigator.pushReplacement(
+                    if (context.mounted) {
+                      context.read<UserProvider>().setJapaneseLevel('N5');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    }
+                  },
+                ),
+                
+                const SizedBox(height: 24),
+
+                // --- 卡片 2：我已經有基礎了 (一樣移除 Expanded) ---
+                _buildSelectionCard(
+                  context: context,
+                  title: '我已經有點基礎',
+                  subtitle: '進行 10 題階梯式快速測驗，AI 將為您量身打造專屬的學習起點。',
+                  icon: Icons.school_rounded, 
+                  gradientColors: [Colors.blue.shade400, Colors.indigo.shade500],
+                  shadowColor: Colors.blue.withOpacity(0.3),
+                  onTap: () {
+                    Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      MaterialPageRoute(builder: (_) => const QuickTestScreen()),
                     );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green, // AppColors.primary
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)
-                  ),
+                  },
                 ),
-                child: const Text(
-                  '確定並開始學習', 
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
-                ),
-              ),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-// 獨立出來的按鈕元件 (保持你原本完美的設計)
-class _LevelButton extends StatelessWidget {
-  final String title;
-  final String desc;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _LevelButton({
-    required this.title, 
-    required this.desc, 
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  // ==========================================
+  // 🎨 抽離出來的卡片 UI 元件
+  // ==========================================
+  Widget _buildSelectionCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required List<Color> gradientColors,
+    required Color shadowColor,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12), // 讓點擊水波紋符合圓角
+      borderRadius: BorderRadius.circular(24),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          // 選中時背景變深，未選中時背景較淺
-          color: isSelected ? Colors.green.withOpacity(0.8) : Colors.green.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.green : Colors.black54,
-            width: isSelected ? 2 : 1,
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center, // 依照設計圖，文字似乎是置中的
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title, 
-              style: TextStyle(
-                fontWeight: FontWeight.bold, 
-                fontSize: 18, 
-                color: isSelected ? Colors.white : Colors.black87
-              )
-            ),
-            const SizedBox(height: 6),
-            Text(
-              desc, 
-              style: TextStyle(
-                fontSize: 12, 
-                color: isSelected ? Colors.white70 : Colors.black54
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
               ),
-              textAlign: TextAlign.center,
+              child: Icon(icon, size: 42, color: Colors.white),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 26, 
+                fontWeight: FontWeight.bold, 
+                color: Colors.white,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 15, 
+                color: Colors.white.withOpacity(0.9), 
+                height: 1.5,
+              ),
             ),
           ],
         ),

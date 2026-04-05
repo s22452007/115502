@@ -114,6 +114,20 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
+  // 為了新版徽章 UI 暫時加的假資料方法 (未來再串接真實資料)
+  String? getBadgeUnlockDate(String badgeId) {
+    // 假設如果是已解鎖的，就回傳今天日期
+    if (isBadgeUnlocked(badgeId)) {
+      return '2026.04.05'; 
+    }
+    return null;
+  }
+
+  List<int> getBadgeProgress(String badgeId) {
+    // 隨便給個進度里程碑讓畫面有東西畫
+    return [10, 50, 100]; 
+  }
+
   // 登出方法，清空所有資料
   void logout() {
     _userId = null;

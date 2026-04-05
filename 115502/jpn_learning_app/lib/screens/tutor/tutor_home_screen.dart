@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/screens/tutor/ask_question_screen.dart';
-import 'package:jpn_learning_app/widgets/app_drawer.dart';
+import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 
 class TutorHomeScreen extends StatelessWidget {
   const TutorHomeScreen({Key? key}) : super(key: key);

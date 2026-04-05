@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:jpn_learning_app/widgets/radar_chart.dart';
+import 'package:jpn_learning_app/widgets/common/radar_chart.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart'; // 確保路徑正確
 

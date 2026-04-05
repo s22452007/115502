@@ -12,8 +12,8 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
 // UI 元件與其他畫面
-import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
-import 'package:jpn_learning_app/widgets/app_drawer.dart';
+import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';

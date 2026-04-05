@@ -38,15 +38,15 @@ import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart'
 // ==========================================
 // 5. 獨立 UI 元件與彈出視窗 (Widgets & Dialogs - 組成首頁的樂高積木)
 // ==========================================
-import 'package:jpn_learning_app/widgets/app_drawer.dart';                         // 左側滑出的漢堡選單
-import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';                     // App 底部的五顆導覽按鈕
-import 'package:jpn_learning_app/widgets/daily_goal_card.dart';                    // 首頁綠色的「今日學習目標」卡片
-import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';            // 🎉 華麗的徽章升級慶祝彈窗
-import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';         // 點擊場景後，從底部滑出的單字清單
-import 'package:jpn_learning_app/widgets/premium_locked_overlay.dart';             // 訪客未登入時，蓋在卡片上的「毛玻璃上鎖」遮罩
-import 'package:jpn_learning_app/widgets/recent_scenes_list.dart';                 // 首頁橫向滑動的「最近解鎖場景」列表
-import 'package:jpn_learning_app/widgets/status_chip.dart';                        // 首頁上方顯示連勝天數、點數的小膠囊標籤
-import 'package:jpn_learning_app/widgets/study_group_card.dart';                   // 首頁顯示朋友獲得徽章動態的卡片
+import 'package:jpn_learning_app/widgets/common/app_drawer.dart';               // 左側滑出的漢堡選單
+import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';           // App 底部的五顆導覽按鈕
+import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart';            // 首頁綠色的「今日學習目標」卡片
+import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';         // 🎉 華麗的徽章升級慶祝彈窗
+import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';      // 點擊場景後，從底部滑出的單字清單
+import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';   // 訪客未登入時，蓋在卡片上的「毛玻璃上鎖」遮罩
+import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';         // 首頁橫向滑動的「最近解鎖場景」列表
+import 'package:jpn_learning_app/widgets/common/status_chip.dart';             // 首頁上方顯示連勝天數、點數的小膠囊標籤
+import 'package:jpn_learning_app/widgets/home/study_group_card.dart';          // 首頁顯示朋友獲得徽章動態的卡片
 
 /// 首頁畫面狀態管理類別
 /// 負責管理首頁的所有狀態和業務邏輯

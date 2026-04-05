@@ -424,26 +424,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 4. 迷你徽章 UI 元件
-  Widget _buildMiniBadge(IconData icon, String title, bool isUnlocked) {
+  // 4. 支援 5 階顏色的迷你徽章 UI
+  Widget _buildMiniBadge(IconData icon, String title, int level) {
+    Map<String, dynamic> theme;
+    // 根據等級給予顏色
+    switch (level) {
+      case 5: theme = {'color': Colors.purpleAccent, 'isGradient': true}; break;
+      case 4: theme = {'color': Colors.amber[400]!, 'isGradient': false}; break;
+      case 3: theme = {'color': Colors.blueGrey[300]!, 'isGradient': false}; break;
+      case 2: theme = {'color': Colors.orange[700]!, 'isGradient': false}; break;
+      case 1: theme = {'color': Colors.brown[400]!, 'isGradient': false}; break;
+      default: theme = {'color': Colors.grey[400]!, 'isGradient': false}; break;
+    }
+
+    bool isUnlocked = level > 0;
+    bool isGradient = theme['isGradient'];
+    Color solidColor = isGradient ? Colors.white : theme['color'];
+
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isUnlocked ? const Color(0xFFC5E1A5) : Colors.grey[300],
+            color: isUnlocked ? solidColor.withOpacity(0.15) : Colors.grey[200],
+            // 白金級漸層魔法
+            gradient: isGradient ? const SweepGradient(colors: [Colors.purple, Colors.blue, Colors.pink, Colors.purple]) : null,
+            // 邊框顏色
+            border: !isGradient ? Border.all(color: isUnlocked ? solidColor : Colors.transparent, width: 2.5) : null,
           ),
-          child: Icon(
-            isUnlocked ? icon : Icons.lock,
-            color: isUnlocked ? _primaryGreen : Colors.grey[500],
-            size: 28,
-          ),
+          child: isGradient
+              ? Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                  child: Icon(icon, color: Colors.purple, size: 24),
+                )
+              : Icon(
+                  isUnlocked ? icon : Icons.lock,
+                  color: isUnlocked ? solidColor : Colors.grey[400],
+                  size: 28,
+                ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Text(
           title,
-          style: TextStyle(fontSize: 12, color: isUnlocked ? _textColor : Colors.grey[600]),
+          style: TextStyle(
+            fontSize: 12, 
+            fontWeight: isUnlocked ? FontWeight.bold : FontWeight.normal,
+            color: isUnlocked ? _textColor : Colors.grey[600]
+          ),
         ),
       ],
     );

@@ -189,7 +189,7 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
     );
   }
 
-  // 🌟 獨立的徽章圖示繪製工具 (支援漸層白金外框)
+  // 獨立的徽章圖示繪製工具 (支援漸層白金外框)
   Widget _buildBadgeIcon(IconData icon, Map<String, dynamic> theme, {required double size, required double iconSize}) {
     final bool isGradient = theme['isGradient'];
     final Color solidColor = isGradient ? Colors.white : theme['color'];
@@ -217,7 +217,7 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
     );
   }
 
-  // 🌟 彈出詳細視窗 (Pikmin Bloom 風格進度節點)
+  // 彈出詳細視窗
   void _showBadgeDetailDialog(BadgeModel badge, int progress, int currentLevel, Map<String, dynamic> theme) {
     showDialog(
       context: context,

@@ -59,12 +59,26 @@ C:.
       │
       ├─ <utils>                     # 前端小工具
       │  ├─ constants.dart           # 存放全站統的顏色 (AppColors)、API 網址
-      │  └─ api_client.dart          # 處理 HTTP 請求的基底
+      │  ├─ api_client.dart          # 處理 HTTP 請求的基底
+      │  └─ badge_utils.dart         # 徽章進度計算與等級邏輯 (新重構的工具類別)
       │
       ├─ <widgets>                   # 樂高積木 (共用的小元件，避免重複寫程式)
-      │  ├─ app_drawer.dart          # 側邊欄選單
-      │  ├─ bottom_nav_bar.dart      # 底部五顆導覽按鈕
-      │  └─ vocab_card.dart / scenario_card.dart / radar_chart.dart 等自訂卡片
+      │  ├─ common/                  # 通用元件
+      │  │  ├─ app_drawer.dart       # 側邊欄選單
+      │  │  ├─ bottom_nav_bar.dart   # 底部五顆導覽按鈕
+      │  │  ├─ premium_locked_overlay.dart # 付費功能鎖定覆蓋層
+      │  │  ├─ status_chip.dart      # 狀態標籤元件
+      │  │  ├─ vocab_card.dart       # 單字卡片元件
+      │  │  ├─ scenario_card.dart    # 場景卡片元件
+      │  │  ├─ radar_chart.dart      # 雷達圖元件
+      │  │  ├─ app_bar_widget.dart   # 自訂 AppBar 元件
+      │  ├─ home/                    # 首頁專屬元件
+      │  │  ├─ daily_goal_card.dart  # 每日目標卡片
+      │  │  ├─ study_group_card.dart # 學習小組卡片
+      │  │  └─ recent_scenes_list.dart # 最近場景列表
+      │  └─ dialogs/                 # 對話框元件目錄
+      │     ├─ level_up_dialog.dart  # 徽章升級慶祝對話框
+      │     └─ vocab_bottom_sheet.dart # 單字詳情底部彈窗
       │
       └─ <screens>                   👉 📱 【所有 App 的視覺畫面】
          │
@@ -78,7 +92,7 @@ C:.
          │
          ├─ <scenario>               # 3. 情境探險相關
          │  ├─ camera_screen.dart (拍照) / manual_search_screen.dart (手動搜尋)
-         │  ├─ align_screen.dart (對齊) / analyzing_screen.dart (AI分析中動畫)
+         │  ├─ analyzing_screen.dart (AI分析中動畫)
          │  ├─ scene_result_screen.dart (分析結果)
          │  ├─ result_gallery_v2_screen.dart # 單字探險列表
          |  ├─ scenario_detail_screen.dart # 單字探險詳細卡片

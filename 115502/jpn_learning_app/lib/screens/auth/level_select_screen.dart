@@ -12,94 +12,157 @@ class LevelSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC), // 帶有一點點灰藍的柔和背景色
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                '歡迎加入！\n請選擇您的日文程度',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 48),
+        // 💡 加上 SingleChildScrollView 讓畫面可以上下捲動，完美解決破版問題！
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              children: [
+                const SizedBox(height: 20),
+                // --- 歡迎標題區 ---
+                Text(
+                  'ようこそ！',
+                  style: TextStyle(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold, 
+                    color: Colors.green.shade600,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '歡迎來到 J-Lens\n請選擇您的日文起點',
+                  style: TextStyle(
+                    fontSize: 28, 
+                    fontWeight: FontWeight.bold, 
+                    height: 1.4, 
+                    color: Color(0xFF1E293B)
+                  ),
+                ),
+                const SizedBox(height: 40),
 
-              // 按鈕 1：我是日文新手 (略過測驗)
-              InkWell(
-                onTap: () async {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('正在為您設定新手模式...')),
-                  );
-
-                  final currentUserId = context.read<UserProvider>().userId;
-                  if (currentUserId != null) {
-                    // 【關鍵】：直接呼叫現有的 update_level，並寫入乾淨的 N5
-                    await ApiClient.updateLevel(currentUserId, 'N5');
-                  }
-
-                  if (context.mounted) {
-                    context.read<UserProvider>().setJapaneseLevel('N5');
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                // --- 卡片 1：我是新手 (移除 Expanded，讓卡片根據內容自動決定高度) ---
+                _buildSelectionCard(
+                  context: context,
+                  title: '我是日文新手',
+                  subtitle: '從五十音開始，穩紮穩打建立基礎，適合完全沒有接觸過日文的你。',
+                  icon: Icons.spa_rounded, 
+                  gradientColors: [Colors.green.shade400, Colors.teal.shade500],
+                  shadowColor: Colors.green.withOpacity(0.3),
+                  onTap: () async {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('正在為您設定新手模式...')),
                     );
-                  }
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    border: Border.all(color: Colors.green, width: 2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.egg_alt_outlined, size: 48, color: Colors.green),
-                      SizedBox(height: 12),
-                      Text('我是日文新手', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
-                      SizedBox(height: 4),
-                      Text('從五十音開始打穩基礎', style: TextStyle(color: Colors.black54)),
-                    ],
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 24),
 
-              // 按鈕 2：我已經有點基礎了 (進入 10 題測驗)
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const QuickTestScreen()),
-                  );
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    border: Border.all(color: Colors.blue, width: 2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.school_outlined, size: 48, color: Colors.blue),
-                      SizedBox(height: 12),
-                      Text('我已經有點基礎了', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
-                      SizedBox(height: 4),
-                      Text('進行 10 題測驗，為您量身打造起點', style: TextStyle(color: Colors.black54)),
-                    ],
-                  ),
+                    final currentUserId = context.read<UserProvider>().userId;
+                    if (currentUserId != null) {
+                      await ApiClient.updateLevel(currentUserId, 'N5');
+                    }
+
+                    if (context.mounted) {
+                      context.read<UserProvider>().setJapaneseLevel('N5');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    }
+                  },
                 ),
-              ),
-            ],
+                
+                const SizedBox(height: 24),
+
+                // --- 卡片 2：我已經有基礎了 (一樣移除 Expanded) ---
+                _buildSelectionCard(
+                  context: context,
+                  title: '我已經有點基礎',
+                  subtitle: '進行 10 題階梯式快速測驗，AI 將為您量身打造專屬的學習起點。',
+                  icon: Icons.school_rounded, 
+                  gradientColors: [Colors.blue.shade400, Colors.indigo.shade500],
+                  shadowColor: Colors.blue.withOpacity(0.3),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QuickTestScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // 🎨 抽離出來的卡片 UI 元件
+  // ==========================================
+  Widget _buildSelectionCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required List<Color> gradientColors,
+    required Color shadowColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 42, color: Colors.white),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 26, 
+                fontWeight: FontWeight.bold, 
+                color: Colors.white,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 15, 
+                color: Colors.white.withOpacity(0.9), 
+                height: 1.5,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -5,37 +5,48 @@
 /// - 最近解鎖的學習場景列表
 /// - 學習小組動態
 /// - 徽章升級檢查與慶祝對話框
-import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// ==========================================
+// 1. 系統內建與第三方套件 (Core & Packages)
+// ==========================================
+import 'dart:ui';                                  // 處理毛玻璃模糊效果 (ImageFilter) 等底層 UI 功能
+import 'package:flutter/material.dart';            // Flutter 核心 Material 設計元件庫
+import 'package:provider/provider.dart';           // 狀態管理套件 (負責呼叫 context.watch 或 read)
 
-// 1. 工具與 Provider
-import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/utils/api_client.dart';
-import 'package:jpn_learning_app/utils/badge_utils.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
+// ==========================================
+// 2. 常數、工具與 API (Utils & Services)
+// ==========================================
+import 'package:jpn_learning_app/utils/api_client.dart';       // 負責跟 Python 後端溝通的 API 外送員
+import 'package:jpn_learning_app/utils/badge_utils.dart';      // 🏆 集中管理徽章門檻、顏色與等級計算的工具箱
+import 'package:jpn_learning_app/utils/constants.dart';        // 全站共用常數設定 (例如 AppColors 主題色)
 
-// 2. 共用元件
-import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';
-import 'package:jpn_learning_app/widgets/app_drawer.dart';
-import 'package:jpn_learning_app/widgets/daily_goal_card.dart';
-import 'package:jpn_learning_app/widgets/study_group_card.dart';
-import 'package:jpn_learning_app/widgets/premium_locked_overlay.dart';
-import 'package:jpn_learning_app/widgets/status_chip.dart';
-import 'package:jpn_learning_app/widgets/recent_scenes_list.dart';
+// ==========================================
+// 3. 狀態管理 (Providers)
+// ==========================================
+import 'package:jpn_learning_app/providers/user_provider.dart';// 記住使用者當前狀態 (點數、連勝、徽章進度) 的專屬管家
 
-// 3. 畫面 Screens
-import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
-import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
-import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
-import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
-import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+// ==========================================
+// 4. 畫面路由 (Screens - 切換頁面用)
+// ==========================================
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';                  // 登入與註冊畫面
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';     // 學習小組排行榜與動態畫面
+import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';          // 購買 J-Pts 點數的商城畫面
+import 'package:jpn_learning_app/screens/profile/profile_screen.dart';             // 個人檔案、能力雷達圖與徽章庫畫面
+import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';             // AR 相機拍照辨識核心畫面
+import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';      // 手動輸入搜尋單字畫面
+import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';  // 我的單字探險 (相簿/收藏夾) 總覽畫面
 
-// 4. Dialogs
-import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
-import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
+// ==========================================
+// 5. 獨立 UI 元件與彈出視窗 (Widgets & Dialogs - 組成首頁的樂高積木)
+// ==========================================
+import 'package:jpn_learning_app/widgets/app_drawer.dart';                         // 左側滑出的漢堡選單
+import 'package:jpn_learning_app/widgets/bottom_nav_bar.dart';                     // App 底部的五顆導覽按鈕
+import 'package:jpn_learning_app/widgets/daily_goal_card.dart';                    // 首頁綠色的「今日學習目標」卡片
+import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';            // 🎉 華麗的徽章升級慶祝彈窗
+import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';         // 點擊場景後，從底部滑出的單字清單
+import 'package:jpn_learning_app/widgets/premium_locked_overlay.dart';             // 訪客未登入時，蓋在卡片上的「毛玻璃上鎖」遮罩
+import 'package:jpn_learning_app/widgets/recent_scenes_list.dart';                 // 首頁橫向滑動的「最近解鎖場景」列表
+import 'package:jpn_learning_app/widgets/status_chip.dart';                        // 首頁上方顯示連勝天數、點數的小膠囊標籤
+import 'package:jpn_learning_app/widgets/study_group_card.dart';                   // 首頁顯示朋友獲得徽章動態的卡片
 
 /// 首頁畫面狀態管理類別
 /// 負責管理首頁的所有狀態和業務邏輯

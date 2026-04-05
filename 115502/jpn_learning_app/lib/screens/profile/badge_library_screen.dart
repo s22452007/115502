@@ -9,7 +9,7 @@ class BadgeLibraryScreen extends StatefulWidget {
 }
 
 class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
-  // 🌟 核心 5 大徽章定義
+  // 核心 5 大徽章定義
   final List<BadgeModel> coreBadges = [
     BadgeModel(
       id: 'level_01', 
@@ -17,7 +17,7 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
       description: '透過測驗證明你的日語實力，邁向日語大師之路！', 
       icon: Icons.school,
       milestones: [1, 2, 3, 4, 5], // 對應 5 個等級
-      levelLabels: ['N5 新手', 'N4 達人', 'N3 無礙', 'N2 菁英', 'N1 大師'],
+      levelLabels: ['新手上路', '生活達人', '交流無礙', '商務菁英', '日語大師'],
     ),
     BadgeModel(
       id: 'vocab_01', 

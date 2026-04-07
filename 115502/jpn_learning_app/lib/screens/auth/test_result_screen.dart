@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+// 引入首頁與我們的工具箱、彈窗
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/utils/badge_utils.dart';
+import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 
 class TestResultScreen extends StatelessWidget {
   final String levelCode; // 後端傳來的乾淨代碼 (N5, N4, N3, N2, N1)
@@ -10,11 +13,11 @@ class TestResultScreen extends StatelessWidget {
   // 前端自己負責將代碼轉為 UI 文字
   String get displayTitle {
     switch (levelCode) {
-      case 'N1': return '日語大師 (N1)';
-      case 'N2': return '商務菁英 (N2)';
-      case 'N3': return '高級對話 (N3)';
-      case 'N4': return '中級應用 (N4)';
-      case 'N5': default: return '入門新手 (N5)';
+      case 'N1': return '日語大師';
+      case 'N2': return '商務菁英';
+      case 'N3': return '高級對話';
+      case 'N4': return '中級應用';
+      case 'N5': default: return '入門新手';
     }
   }
 
@@ -73,13 +76,24 @@ class TestResultScreen extends StatelessWidget {
 
               const SizedBox(height: 48),
 
-              // 因為已經存入資料庫了，按此按鈕直接回家
+              // 改成非同步 (async) 執行彈窗
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
-                  );
+                onPressed: () async {
+                  // 1. 將 N3 轉成數字 3
+                  int parsedLevel = BadgeUtils.japaneseLevelToNumber(levelCode);
+
+                  // 2. 噴發慶祝彈窗！程式會在這裡等待使用者點擊「太棒了！」
+                  await LevelUpDialog.show(context, badgeId: 'level_01', level: parsedLevel);
+
+                  // 3. 視窗關閉後，帶使用者回到首頁
+                  // 使用 pushAndRemoveUntil 可以清空導覽紀錄，避免使用者按返回鍵又回到測驗結果
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      (route) => false, // false 代表清空前面所有的畫面
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,

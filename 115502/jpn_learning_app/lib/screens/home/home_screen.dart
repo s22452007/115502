@@ -97,58 +97,44 @@ class _HomeScreenState extends State<HomeScreen> {
     final userId = userProvider.userId;
     if (userId == null) return; // 訪客不檢查
 
-    // 1. 紀錄舊的狀態 (使用 BadgeUtils 解析舊等級)
-    final int oldJpLevel = BadgeUtils.japaneseLevelToNumber(userProvider.japaneseLevel);
+    // 1. 紀錄舊的進度
     final Map<String, int> oldProgress = Map<String, int>.from(userProvider.badgeProgress);
 
     try {
       final result = await ApiClient.fetchProfileData(userId);
-      
       if (!mounted) return;
 
       if (result.containsKey('badge_progress')) {
         final newProgress = result['badge_progress'] as Map<String, dynamic>;
         
-        // 假設 API 的 profile 資料裡有回傳 japanese_level
-        final String? newJpLevelStr = result['japanese_level']; 
-        final int newJpLevel = BadgeUtils.japaneseLevelToNumber(newJpLevelStr);
+        // 判斷是否為「剛打開App」或「剛做完測驗」的初始狀態
+        bool isInitialLoad = oldProgress.isEmpty;
 
-        // 2. 只有在「舊進度不是空的」或是「新註冊剛測驗完」的情況下才彈窗
-        bool hasInitialData = oldProgress.isNotEmpty || oldJpLevel > 0;
+        // 2. 把所有徽章一視同仁，交給迴圈處理！
+        for (String id in BadgeUtils.milestones.keys) {
+          int oldVal = oldProgress[id] ?? 0;
+          int newVal = (newProgress[id] is int) ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
 
-        // --- 檢查「程度認證」徽章 (新註冊測驗後適用) ---
-        if (newJpLevel > oldJpLevel) {
-          await LevelUpDialog.show(context, badgeId: 'level_01', level: newJpLevel);
-        }
+          int oldLvl = BadgeUtils.calculateLevel(oldVal, id);
+          int newLvl = BadgeUtils.calculateLevel(newVal, id);
 
-        // --- 檢查「其他 4 大核心徽章」 (拍照、連勝等) ---
-        if (hasInitialData) {
-          // 注意這裡：改用 BadgeUtils.milestones.keys 拿取所有徽章 ID
-          for (String id in BadgeUtils.milestones.keys) {
-            if (id == 'level_01') continue; // 跳過已經獨立檢查過的程度認證
-
-            int oldVal = oldProgress[id] ?? 0;
-            int newVal = newProgress[id] is int ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
-
-            // 注意這裡：改用 BadgeUtils 裡的計算方法，不用自己算了！
-            int oldLevel = BadgeUtils.calculateLevel(oldVal, id);
-            int newLevel = BadgeUtils.calculateLevel(newVal, id);
-
-            // 如果等級變高了，就叫出慶祝彈窗！
-            if (newLevel > oldLevel) {
-              await LevelUpDialog.show(context, badgeId: id, level: newLevel);
+          // 如果等級變高了！
+          if (newLvl > oldLvl) {
+            // 觸發條件：
+            // A. 一般升級：不是初始載入，且進度增加了。
+            // B. 新手補發：是初始載入 (剛測驗完)，且是「程度認證 (level_01)」。
+            if (!isInitialLoad || (isInitialLoad && id == 'level_01')) {
+              debugPrint('🎊 觸發彈窗！徽章 $id 升級到等級 $newLvl');
+              await LevelUpDialog.show(context, badgeId: id, level: newLvl);
             }
           }
         }
         
         // 3. 最後同步更新 Provider 裡的資料
-        if (newJpLevelStr != null) {
-          userProvider.setJapaneseLevel(newJpLevelStr);
-        }
         userProvider.setBadgeProgress(newProgress);
       }
     } catch (e) {
-      debugPrint('檢查徽章進度失敗: $e');
+      debugPrint('❌ [BadgeCheck] 發生錯誤: $e');
     }
   }
 

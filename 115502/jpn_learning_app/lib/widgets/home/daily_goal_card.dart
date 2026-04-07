@@ -9,9 +9,13 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 /// 每日目標卡片組件
 /// 顯示「探索3個新場景」的進度，並提供快速開啟相機的功能
 class DailyGoalCard extends StatelessWidget {
-  /// 建構子
-  /// 不需要額外參數，因為所有必要資料都從 UserProvider 獲取
-  const DailyGoalCard({Key? key}) : super(key: key);
+  // 開一個接口，讓老爸 (首頁) 可以把「重新檢查進度」的方法傳進來
+  final VoidCallback onReturnFromCamera;
+
+  const DailyGoalCard({
+    Key? key, 
+    required this.onReturnFromCamera, // 設為必填
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +56,13 @@ class DailyGoalCard extends StatelessWidget {
             children: [
               Text('進度 : ${userProvider.dailyScans}/3', style: const TextStyle(color: Colors.white, fontSize: 14)),
               ElevatedButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())),
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()))
+                    .then((_) {
+                      // 從相機回來後，執行老爸傳進來的方法！
+                      onReturnFromCamera(); 
+                    });
+                }, // 修復了這裡原本漏掉的逗號
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: goalGreen,

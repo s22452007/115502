@@ -761,32 +761,25 @@ class ApiClient {
   // 🤖 其他 AI 與測驗功能
   // ==========================================
 
-  // 原本的單純傳送分數 API (保留以防其他地方還在使用)
-  static Future<Map<String, dynamic>> submitQuizScore(
-    int userId,
-    int score,
-  ) async {
-    final url = Uri.parse('$baseUrl/quiz/submit');
+  // 🚀 新增：從後端資料庫抓取 10 題隨機題庫
+  static Future<List<dynamic>> fetchQuizQuestions() async {
+    final url = Uri.parse('$baseUrl/quiz/questions');
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'score': score}),
-      );
-
+      final response = await http.get(url);
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final data = jsonDecode(response.body);
+        return data['questions'] ?? [];
       } else {
-        print('後端回傳錯誤代碼: ${response.statusCode}');
-        return {'error': '請求失敗'};
+        print('後端抓取題目失敗: ${response.statusCode}');
+        return [];
       }
     } catch (e) {
       print('連線失敗: $e');
-      return {'error': e.toString()};
+      return [];
     }
   }
 
-  // 🚀 新增：傳送 10 題階梯式測驗陣列給後端的 API
+  // 傳送 10 題階梯式測驗陣列給後端的 API
   static Future<Map<String, dynamic>> submitQuizResults(
     int userId, 
     List<bool> results
@@ -810,6 +803,31 @@ class ApiClient {
     } catch (e) {
       print('連線失敗: $e');
       return {'error': '無法連線到伺服器: $e'};
+    }
+  }
+
+  // 原本的單純傳送分數 API (保留以防其他地方還在使用)
+  static Future<Map<String, dynamic>> submitQuizScore(
+    int userId,
+    int score,
+  ) async {
+    final url = Uri.parse('$baseUrl/quiz/submit');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'score': score}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('後端回傳錯誤代碼: ${response.statusCode}');
+        return {'error': '請求失敗'};
+      }
+    } catch (e) {
+      print('連線失敗: $e');
+      return {'error': e.toString()};
     }
   }
 

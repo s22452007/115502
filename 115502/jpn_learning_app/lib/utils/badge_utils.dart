@@ -4,34 +4,40 @@
 import 'package:flutter/material.dart';
 
 class BadgeUtils {
-  /// 徽章里程碑定義
-  /// 每個徽章類型對應的進度門檻，用於計算等級
-  static const Map<String, List<int>> badgeMilestones = {
-    'level_01': [1, 2, 3, 4, 5],           // 程度認證：1,2,3,4,5 級
-    'vocab_01': [10, 50, 100, 300, 500],   // 單字大富翁：10,50,100,300,500 個單字
-    'streak_01': [3, 7, 14, 30, 60],       // 學習火種：3,7,14,30,60 天連續學習
-    'marathon_01': [5, 15, 50, 100, 200],  // 學習馬拉松：5,15,50,100,200 次學習
-    'camera_01': [10, 50, 200, 500, 1000], // 快門獵人：10,50,200,500,1000 次拍照
+  // 1. 徽章門檻 (把原本的 _badgeMilestones 改成公開的 milestones)
+  static final Map<String, List<int>> milestones = {
+    'level_01': [1, 2, 3, 4, 5],
+    'vocab_01': [10, 50, 100, 300, 500],
+    'streak_01': [3, 7, 14, 30, 60],
+    'marathon_01': [5, 15, 50, 100, 200],
+    'camera_01': [10, 50, 200, 500, 1000],
   };
 
-  /// 計算徽章等級
-  /// 根據當前進度值和里程碑列表，計算出對應的等級
-  /// @param progress 當前進度值
-  /// @param milestones 該徽章的里程碑列表
-  /// @return 等級 (1-5)，如果沒有達到任何里程碑則返回 0
-  static int calculateLevel(int progress, List<int> milestones) {
+  // 2. 徽章基本資訊 (彈窗需要用到名稱與圖示)
+  static final Map<String, Map<String, dynamic>> badgeInfo = {
+    'level_01': {'title': '程度認證', 'icon': Icons.school},
+    'vocab_01': {'title': '單字大富翁', 'icon': Icons.menu_book},
+    'streak_01': {'title': '學習火種', 'icon': Icons.local_fire_department},
+    'marathon_01': {'title': '學習馬拉松', 'icon': Icons.directions_run},
+    'camera_01': {'title': '快門獵人', 'icon': Icons.camera_alt},
+  };
+
+  // 3. 計算等級 (修改參數：接收「進度數值」和「徽章 ID 字串」)
+  static int calculateLevel(int progress, String badgeId) {
+    // 透過 badgeId 自動去上面抓對應的門檻陣列
+    final ms = milestones[badgeId] ?? [];
     int level = 0;
-    for (int i = 0; i < milestones.length; i++) {
-      if (progress >= milestones[i]) level = i + 1;
-      else break;
+    for (int i = 0; i < ms.length; i++) {
+      if (progress >= ms[i]) {
+        level = i + 1;
+      } else {
+        break;
+      }
     }
     return level;
   }
 
-  /// 獲取等級主題樣式
-  /// 根據等級返回對應的顯示名稱、顏色和是否使用漸層效果
-  /// @param level 等級 (1-5)
-  /// @return 包含 'name', 'color', 'isGradient' 的地圖
+  // 4. 取得徽章顏色與樣式
   static Map<String, dynamic> getLevelTheme(int level) {
     switch (level) {
       case 5: return {'name': '白金級', 'color': Colors.purpleAccent, 'isGradient': true};
@@ -40,6 +46,18 @@ class BadgeUtils {
       case 2: return {'name': '銅牌', 'color': Colors.orange[700]!, 'isGradient': false};
       case 1: return {'name': '初階', 'color': Colors.brown[400]!, 'isGradient': false};
       default: return {'name': '未解鎖', 'color': Colors.grey[400]!, 'isGradient': false};
+    }
+  }
+
+  // 5. 日文等級轉換數字 (給程度認證徽章比對升級用)
+  static int japaneseLevelToNumber(String? level) {
+    switch (level) {
+      case 'N5': return 1;
+      case 'N4': return 2;
+      case 'N3': return 3;
+      case 'N2': return 4;
+      case 'N1': return 5;
+      default: return 0; // 尚未測驗或初學者
     }
   }
 }

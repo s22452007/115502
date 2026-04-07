@@ -3,6 +3,8 @@ from datetime import date, datetime
 
 from flask import Blueprint, request, jsonify
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
 from models import (
@@ -238,9 +240,42 @@ def get_profile_data(user_id):
 
     return jsonify({
         "ability": ability_data,
-        "badge_progress": badge_progress # 將進度打包回傳
+        "badge_progress": badge_progress,
+        "notified_levels": user.notified_levels or {}
     }), 200
 
+# 標記徽章彈窗已讀 API
+@user_bp.route('/mark_badge_seen', methods=['POST'])
+def mark_badge_seen():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        badge_id = data.get('badge_id') # 例如 'streak_01'
+        level = data.get('level')       # 例如 2
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "找不到使用者"}), 404
+            
+        # 1. 拿出舊的紀錄 (如果沒有就生一個空字典)
+        levels = user.notified_levels or {}
+        
+        # 2. 更新這顆徽章的已讀等級
+        levels[badge_id] = level
+        
+        # 3. 存回資料庫
+        user.notified_levels = levels
+        
+        # 🌟 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
+        flag_modified(user, "notified_levels")
+        
+        db.session.commit()
+        return jsonify({"message": "徽章彈窗已標記為看過"}), 200
+        
+    except Exception as e:
+        print(f"標記已讀失敗: {e}")
+        return jsonify({"error": "伺服器發生錯誤"}), 500
+    
 # 增加點數
 @user_bp.route('/add_points', methods=['POST'])
 def add_points():

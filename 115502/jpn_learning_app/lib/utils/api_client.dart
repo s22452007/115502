@@ -307,6 +307,24 @@ class ApiClient {
     }
   }
 
+  // 這個徽章的升級彈窗我看過了！
+  static Future<void> markBadgeSeen(int userId, String badgeId, int level) async { 
+    try {
+      final url = Uri.parse('$baseUrl/user/mark_badge_seen');
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId, 
+          'badge_id': badgeId,
+          'level': level,
+        }),
+      );
+    } catch (e) {
+      print('標記徽章已讀失敗: $e');
+    }
+  }
+
   // ==========================================
   // 🤝 好友系統相關
   // ==========================================

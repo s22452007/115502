@@ -1,53 +1,88 @@
-# backend/services/quiz.py
 from flask import Blueprint, request, jsonify
 from utils.db import db
-from models import User
+from models import User, QuizQuestion
 
 quiz_bp = Blueprint('quiz', __name__)
 
+# ========================================
+# 🆕 1. 隨機抽取 10 題測驗卷 API (智能防呆版)
+# ========================================
+@quiz_bp.route('/questions', methods=['GET'])
+def get_quiz_questions():
+    try:
+        # 撈取所有題目並照 ID 排序 (也就是當初寫入的難易度順序)
+        all_questions = QuizQuestion.query.order_by(QuizQuestion.id).all()
+        final_questions = []
+
+        # 智能判斷：題庫如果超過 10 題，才啟用「分級隨機抽題」
+        if len(all_questions) > 10:
+            # 配合你 seed.py 的實際難度標籤
+            levels = ['超級新手', 'N5', 'N4', 'N3', 'N2', 'N1']
+            for level in levels:
+                # 使用 db.func.random() 安全隨機排序，每個難度抽 2 題
+                sampled = QuizQuestion.query.filter_by(level_tag=level).order_by(db.func.random()).limit(2).all()
+                final_questions.extend(sampled)
+        else:
+            # 如果題庫剛好只有 10 題，就直接全部照順序拿出來，確保「由簡入深」
+            final_questions = all_questions
+
+        # 轉換成前端看得懂的 JSON 格式
+        result_list = []
+        for q in final_questions:
+            # 轉換正確答案字串為數字索引 (A->0, B->1, C->2, D->3)
+            ans_map = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+            correct_idx = ans_map.get(q.correct_answer.upper(), 0)
+            
+            result_list.append({
+                "id": q.id,
+                "context": f"{q.stage} ({q.level_tag})",
+                "question": q.question,
+                "options": [q.option_a, q.option_b, q.option_c, q.option_d],
+                "correctIndex": correct_idx
+            })
+
+        # 回傳最終的 10 題
+        return jsonify({"questions": result_list[:10]}), 200
+
+    except Exception as e:
+        print(f"題庫撈取發生錯誤: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ========================================
+# 🚀 2. 階梯式程度判定演算法 (Fail-Stop)
+# ========================================
 @quiz_bp.route('/submit', methods=['POST'])
 def submit_quiz():
     data = request.get_json()
     user_id = data.get('user_id')
-    # 預期收到長度 10 的布林值陣列，例如: [True, True, False, True, False...]
     results = data.get('results', []) 
 
     if user_id is None:
         return jsonify({"error": "缺少使用者 ID"}), 400
 
-    # ========================================
-    # 🚀 核心：階梯式程度判定演算法 (Fail-Stop)
-    # ========================================
-    final_level = 'N5'  # 預設起點：所有人進來都是 N5
+    final_level = 'N5'  # 預設起點
 
-    # 確保前端有傳入完整的 10 題結果再進行判定
+    # 確保有完整 10 題結果再進行 Fail-Stop 判定
     if len(results) >= 10:
-        # 晉級 N4 條件：答對 Q3 或 Q4 至少一題 (索引 2 或 3)
-        if results[2] or results[3]:
+        if results[2] or results[3]:   # N4 條件
             final_level = 'N4'
-            
-            # 晉級 N3 條件：在 N4 成立下，答對 Q5 或 Q6 至少一題 (索引 4 或 5)
-            if results[4] or results[5]:
+            if results[4] or results[5]: # N3 條件
                 final_level = 'N3'
-                
-                # 晉級 N2 條件：在 N3 成立下，答對 Q7 或 Q8 至少一題 (索引 6 或 7)
-                if results[6] or results[7]:
+                if results[6] or results[7]: # N2 條件
                     final_level = 'N2'
-                    
-                    # 晉級 N1 條件：在 N2 成立下，答對 Q9 或 Q10 至少一題 (索引 8 或 9)
-                    if results[8] or results[9]:
+                    if results[8] or results[9]: # N1 條件
                         final_level = 'N1'
 
-    # 尋找使用者並寫入資料庫
     user = User.query.get(user_id)
     if not user:
-        return jsonify({"error": "找不到此使用者，請先登入或註冊"}), 404
+        return jsonify({"error": "找不到此使用者"}), 404
     
     # 【資料庫寫入標準】：只存乾淨的代碼 ('N5', 'N4', 'N3', 'N2', 'N1')
     user.japanese_level = final_level
     db.session.commit()
 
     return jsonify({
-        "message": "測驗結果已成功儲存至資料庫",
-        "level": final_level  # 回傳給前端，讓前端轉換 UI 文字
+        "message": "測驗結果已儲存",
+        "level": final_level 
     }), 200

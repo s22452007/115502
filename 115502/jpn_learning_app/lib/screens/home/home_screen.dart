@@ -8,7 +8,8 @@
 // ==========================================
 // 1. 系統內建與第三方套件 (Core & Packages)
 // ==========================================
-import 'dart:ui';                                  // 處理毛玻璃模糊效果 (ImageFilter) 等底層 UI 功能
+import 'dart:ui';             
+import 'dart:convert';                     // 處理毛玻璃模糊效果 (ImageFilter) 等底層 UI 功能
 import 'package:flutter/material.dart';            // Flutter 核心 Material 設計元件庫
 import 'package:provider/provider.dart';           // 狀態管理套件 (負責呼叫 context.watch 或 read)
 
@@ -95,10 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchAndCheckBadgeProgress() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
-    if (userId == null) return; // 訪客不檢查
-
-    // 1. 紀錄舊的進度
-    final Map<String, int> oldProgress = Map<String, int>.from(userProvider.badgeProgress);
+    if (userId == null) return; 
 
     try {
       final result = await ApiClient.fetchProfileData(userId);
@@ -107,23 +105,43 @@ class _HomeScreenState extends State<HomeScreen> {
       if (result.containsKey('badge_progress')) {
         final newProgress = result['badge_progress'] as Map<String, dynamic>;
         
-        // 只有「舊進度裡面有資料」（代表不是剛打開 App 的冷啟動），才允許彈窗！
-        if (oldProgress.isNotEmpty) {
-          for (String id in BadgeUtils.milestones.keys) {
-            int oldVal = oldProgress[id] ?? 0;
-            int newVal = (newProgress[id] is int) ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
+        // 防呆加強版：處理 SQLite 傳回來的可能是一般字串 "{}" 的情況
+        Map<String, dynamic> notifiedLevels = {};
+        final rawNotified = result['notified_levels'];
+        
+        if (rawNotified is Map) {
+          notifiedLevels = Map<String, dynamic>.from(rawNotified);
+        } else if (rawNotified is String && rawNotified.isNotEmpty) {
+          try {
+            notifiedLevels = json.decode(rawNotified);
+          } catch (e) {
+            debugPrint('JSON 解碼失敗: $e');
+          }
+        }
 
-            int oldLvl = BadgeUtils.calculateLevel(oldVal, id);
-            int newLvl = BadgeUtils.calculateLevel(newVal, id);
+        // 開始比對每個徽章
+        for (String id in BadgeUtils.milestones.keys) {
+          int currentVal = 0;
+          int currentLvl = 0;
 
-            // 只有當「真正達成任務、等級變高了」才彈窗！
-            if (newLvl > oldLvl) {
-              await LevelUpDialog.show(context, badgeId: id, level: newLvl);
-            }
+          if (id == 'level_01') {
+            final String? levelStr = result['japanese_level'];
+            currentLvl = BadgeUtils.japaneseLevelToNumber(levelStr);
+            if (levelStr != null) userProvider.setJapaneseLevel(levelStr);
+          } else {
+            currentVal = (newProgress[id] is int) ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
+            currentLvl = BadgeUtils.calculateLevel(currentVal, id);
+          }
+
+          int notifiedLvl = (notifiedLevels[id] as num?)?.toInt() ?? 0;
+
+          // 終極判斷：實際等級 > 已經看過的等級
+          if (currentLvl > notifiedLvl) {
+            await LevelUpDialog.show(context, badgeId: id, level: currentLvl);
+            await ApiClient.markBadgeSeen(userId, id, currentLvl);
           }
         }
         
-        // 3. 默默同步更新 Provider。這樣下次回到首頁時，oldProgress 就不會是空的，就能正常比對了！
         userProvider.setBadgeProgress(newProgress);
       }
     } catch (e) {
@@ -250,8 +268,11 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text('今日學習目標', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             isGuest
-                ? PremiumLockedOverlay(child: DailyGoalCard(), message: '登入啟用今日目標')
-                : DailyGoalCard(),
+                ? PremiumLockedOverlay( 
+                    message: '登入啟用今日目標',
+                    child: DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress), 
+                  )
+                : DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
             const SizedBox(height: 32),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -295,11 +316,26 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (i) {
           setState(() => _currentIndex = i);
-          if (i == 0) Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
-          if (i == 1) Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
-          if (i == 2) Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-          if (i == 3) Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()));
-          if (i == 4) Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+          if (i == 0) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()))
+              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+          }
+          if (i == 1) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()))
+              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+          }
+          if (i == 2) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen()))
+              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+          }
+          if (i == 3) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()))
+              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+          }
+          if (i == 4) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()))
+              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+          }
         },
       ),
     );

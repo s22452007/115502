@@ -107,30 +107,23 @@ class _HomeScreenState extends State<HomeScreen> {
       if (result.containsKey('badge_progress')) {
         final newProgress = result['badge_progress'] as Map<String, dynamic>;
         
-        // 判斷是否為「剛打開App」或「剛做完測驗」的初始狀態
-        bool isInitialLoad = oldProgress.isEmpty;
+        // 只有「舊進度裡面有資料」（代表不是剛打開 App 的冷啟動），才允許彈窗！
+        if (oldProgress.isNotEmpty) {
+          for (String id in BadgeUtils.milestones.keys) {
+            int oldVal = oldProgress[id] ?? 0;
+            int newVal = (newProgress[id] is int) ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
 
-        // 2. 把所有徽章一視同仁，交給迴圈處理！
-        for (String id in BadgeUtils.milestones.keys) {
-          int oldVal = oldProgress[id] ?? 0;
-          int newVal = (newProgress[id] is int) ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
+            int oldLvl = BadgeUtils.calculateLevel(oldVal, id);
+            int newLvl = BadgeUtils.calculateLevel(newVal, id);
 
-          int oldLvl = BadgeUtils.calculateLevel(oldVal, id);
-          int newLvl = BadgeUtils.calculateLevel(newVal, id);
-
-          // 如果等級變高了！
-          if (newLvl > oldLvl) {
-            // 觸發條件：
-            // A. 一般升級：不是初始載入，且進度增加了。
-            // B. 新手補發：是初始載入 (剛測驗完)，且是「程度認證 (level_01)」。
-            if (!isInitialLoad || (isInitialLoad && id == 'level_01')) {
-              debugPrint('🎊 觸發彈窗！徽章 $id 升級到等級 $newLvl');
+            // 只有當「真正達成任務、等級變高了」才彈窗！
+            if (newLvl > oldLvl) {
               await LevelUpDialog.show(context, badgeId: id, level: newLvl);
             }
           }
         }
         
-        // 3. 最後同步更新 Provider 裡的資料
+        // 3. 默默同步更新 Provider。這樣下次回到首頁時，oldProgress 就不會是空的，就能正常比對了！
         userProvider.setBadgeProgress(newProgress);
       }
     } catch (e) {

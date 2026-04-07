@@ -120,6 +120,15 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ user 徽章計數欄位可能已存在：{e}")
 
+# ==========================================
+# 🎁 9. 升級 User 表 (新增 notified_levels 徽章彈窗記憶)
+# ==========================================
+try:
+    # 注意：SQLite 沒有專門的 JSON 格式，所以我們用 TEXT 來存，預設給一個空的 JSON 字串 '{}'
+    cursor.execute("ALTER TABLE user ADD COLUMN notified_levels TEXT DEFAULT '{}';")
+    print("✅ user 表升級成功 (加入 notified_levels 徽章彈窗記憶)！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user.notified_levels 欄位可能已存在：{e}")
 
 # 儲存並關閉
 conn.commit()

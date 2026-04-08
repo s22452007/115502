@@ -69,7 +69,7 @@ def chat():
         # 把鑰匙交給 Gemini
         genai.configure(api_key=my_secret_key)
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-pro')
         prompt = f"""
         你現在是一個親切的日語對話小幫手。
         使用者說了這句話：「{user_message}」

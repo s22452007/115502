@@ -60,14 +60,14 @@ def chat():
     print(f"收到來自 App 的訊息：{user_message}") 
 
     try:
-        # 👉 修正 1：把 # 拿掉，並且加上 override=True 強迫抓取最新 .env
+        # 強迫抓取最新 .env
         load_dotenv(override=True)
         
         # 抓取金鑰
         my_secret_key = os.getenv("GEMINI_API_KEY") 
         print(f"🕵️ 攔截到的金鑰：{my_secret_key}")
 
-        # 👉 修正 2：補上這行最關鍵的！把鑰匙交給 Gemini！
+        # 把鑰匙交給 Gemini
         genai.configure(api_key=my_secret_key)
 
         model = genai.GenerativeModel('gemini-1.5-flash')

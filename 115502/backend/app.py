@@ -59,12 +59,22 @@ def chat():
     user_message = request.form.get('message', '')
     print(f"收到來自 App 的訊息：{user_message}") 
 
+    @app.route('/api/chat', methods=['POST'])
+def chat():
+    # 1. 接收從 Flutter 傳過來的日文訊息
+    user_message = request.form.get('message', '')
+    print(f"收到來自 App 的訊息：{user_message}") 
+
     try:
-        #load_dotenv()
+        # 👉 修正 1：把 # 拿掉，並且加上 override=True 強迫抓取最新 .env
+        load_dotenv(override=True)
         
-        # 3. 抓取金鑰 (剛剛就是漏了或拼錯這行！)
+        # 抓取金鑰
         my_secret_key = os.getenv("GEMINI_API_KEY") 
         print(f"🕵️ 攔截到的金鑰：{my_secret_key}")
+
+        # 👉 修正 2：補上這行最關鍵的！把鑰匙交給 Gemini！
+        genai.configure(api_key=my_secret_key)
 
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
@@ -74,7 +84,7 @@ def chat():
         回覆請盡量簡短，像真人在聊天一樣。
         """
 
-        # 5. 請 AI 產生回覆
+        # 請 AI 產生回覆
         response = model.generate_content(prompt)
         ai_reply = response.text
 
@@ -82,7 +92,7 @@ def chat():
         print(f"呼叫 Gemini 時發生錯誤: {e}")
         ai_reply = "系統小精靈有點累了，請稍後再試一次！"
     
-    # 6. 把熱騰騰的 AI 回覆送回給 Flutter
+    # 把熱騰騰的 AI 回覆送回給 Flutter
     return ai_reply
 
 # 🛑 app.run 必須永遠在整個檔案的最下面！

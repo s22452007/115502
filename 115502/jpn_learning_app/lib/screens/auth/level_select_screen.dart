@@ -62,8 +62,16 @@ class LevelSelectScreen extends StatelessWidget {
                       await ApiClient.updateLevel(currentUserId, 'N5');
                     }
 
+                    // 確認畫面還在，更新 Provider 狀態
+                    if (!context.mounted) return;
+                    context.read<UserProvider>().setJapaneseLevel('N5');
+
+                    // 3. 噴發迎新彈窗！(傳入 level_01 並且 level 是 1)
+                    // 程式會停在這裡，直到使用者按下彈窗的「開始探索！」
+                    await LevelUpDialog.show(context, badgeId: 'level_01', level: 1);
+
+                    // 4. 彈窗關閉後，正式帶使用者進首頁
                     if (context.mounted) {
-                      context.read<UserProvider>().setJapaneseLevel('N5');
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (_) => const HomeScreen()),

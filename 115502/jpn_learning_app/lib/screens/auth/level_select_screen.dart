@@ -1,10 +1,33 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// ==========================================
+// 1. 系統內建與第三方套件 (Core & Packages)
+// ==========================================
+import 'package:flutter/material.dart';          // Flutter 核心 Material 設計元件庫
+import 'package:provider/provider.dart';         // 狀態管理套件 (負責呼叫 context.read)
 
-import 'package:jpn_learning_app/utils/api_client.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart';
-import 'package:jpn_learning_app/screens/home/home_screen.dart';
+// ==========================================
+// 2. 常數、工具與 API (Utils & Services)
+// ==========================================
+import 'package:jpn_learning_app/utils/api_client.dart';       // 負責跟 Python 後端溝通的 API 服務
+
+// ==========================================
+// 3. 狀態管理 (Providers)
+// ==========================================
+import 'package:jpn_learning_app/providers/user_provider.dart';// 記住使用者當前狀態 (等級、點數、連勝) 的專屬管家
+
+// ==========================================
+// 4. 畫面路由 (Screens - 切換頁面用)
+// ==========================================
+import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart'; // 老手專用的 10 題階梯式測驗畫面
+import 'package:jpn_learning_app/screens/home/home_screen.dart';       // App 核心首頁
+
+// ==========================================
+// 5. 獨立 UI 元件與彈出視窗 (Widgets & Dialogs)
+// ==========================================
+import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart'; // 🎉 華麗的徽章升級/迎新慶祝彈窗
+
+// ==========================================
+// 🚀 以下為畫面 UI 實作
+// ==========================================
 
 class LevelSelectScreen extends StatelessWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
@@ -14,20 +37,21 @@ class LevelSelectScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // 帶有一點點灰藍的柔和背景色
       body: SafeArea(
-        // 💡 加上 SingleChildScrollView 讓畫面可以上下捲動，完美解決破版問題！
+        // 💡 加上 SingleChildScrollView 讓畫面可以上下捲動，完美解決破版問題
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, 
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
+                
                 // --- 歡迎標題區 ---
                 Text(
                   'ようこそ！',
                   style: TextStyle(
-                    fontSize: 16, 
-                    fontWeight: FontWeight.bold, 
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                     color: Colors.green.shade600,
                     letterSpacing: 1.2,
                   ),
@@ -36,34 +60,44 @@ class LevelSelectScreen extends StatelessWidget {
                 const Text(
                   '歡迎來到 J-Lens\n請選擇您的日文起點',
                   style: TextStyle(
-                    fontSize: 28, 
-                    fontWeight: FontWeight.bold, 
-                    height: 1.4, 
-                    color: Color(0xFF1E293B)
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    height: 1.4,
+                    color: Color(0xFF1E293B),
                   ),
                 ),
                 const SizedBox(height: 40),
 
-                // --- 卡片 1：我是新手 (移除 Expanded，讓卡片根據內容自動決定高度) ---
+                // --- 卡片 1：我是新手 ---
                 _buildSelectionCard(
                   context: context,
                   title: '我是日文新手',
                   subtitle: '從五十音開始，穩紮穩打建立基礎，適合完全沒有接觸過日文的你。',
-                  icon: Icons.spa_rounded, 
+                  icon: Icons.spa_rounded,
                   gradientColors: [Colors.green.shade400, Colors.teal.shade500],
                   shadowColor: Colors.green.withOpacity(0.3),
                   onTap: () async {
+                    // 1. 顯示提示字
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('正在為您設定新手模式...')),
                     );
 
+                    // 2. 更新後端與 Provider 的等級資料
                     final currentUserId = context.read<UserProvider>().userId;
                     if (currentUserId != null) {
                       await ApiClient.updateLevel(currentUserId, 'N5');
                     }
 
+                    // 確認畫面還在，更新 Provider 狀態
+                    if (!context.mounted) return;
+                    context.read<UserProvider>().setJapaneseLevel('N5');
+
+                    // 3. 噴發迎新彈窗！(傳入 level_01 並且 level 是 1)
+                    // 程式會停在這裡，直到使用者按下彈窗的「開始探索！」
+                    await LevelUpDialog.show(context, badgeId: 'level_01', level: 1);
+
+                    // 4. 彈窗關閉後，正式帶使用者進首頁
                     if (context.mounted) {
-                      context.read<UserProvider>().setJapaneseLevel('N5');
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -74,15 +108,16 @@ class LevelSelectScreen extends StatelessWidget {
                 
                 const SizedBox(height: 24),
 
-                // --- 卡片 2：我已經有基礎了 (一樣移除 Expanded) ---
+                // --- 卡片 2：我已經有基礎了 ---
                 _buildSelectionCard(
                   context: context,
                   title: '我已經有點基礎',
                   subtitle: '進行 10 題階梯式快速測驗，AI 將為您量身打造專屬的學習起點。',
-                  icon: Icons.school_rounded, 
+                  icon: Icons.school_rounded,
                   gradientColors: [Colors.blue.shade400, Colors.indigo.shade500],
                   shadowColor: Colors.blue.withOpacity(0.3),
                   onTap: () {
+                    // 導向測驗畫面
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const QuickTestScreen()),
@@ -147,8 +182,8 @@ class LevelSelectScreen extends StatelessWidget {
             Text(
               title,
               style: const TextStyle(
-                fontSize: 26, 
-                fontWeight: FontWeight.bold, 
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
                 color: Colors.white,
                 letterSpacing: 1.0,
               ),
@@ -157,8 +192,8 @@ class LevelSelectScreen extends StatelessWidget {
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 15, 
-                color: Colors.white.withOpacity(0.9), 
+                fontSize: 15,
+                color: Colors.white.withOpacity(0.9),
                 height: 1.5,
               ),
             ),

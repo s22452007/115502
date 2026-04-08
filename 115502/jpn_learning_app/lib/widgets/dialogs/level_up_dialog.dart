@@ -37,13 +37,37 @@ class LevelUpDialog extends StatelessWidget {
     final IconData iconData = info['icon'] as IconData;
     final String title = info['title'] as String;
 
+    // ==========================================
+    // 🌟 智慧文案判斷邏輯：給予專屬的對話框文字
+    // ==========================================
+    String topTitle = '🎉 恭喜升級 🎉';
+    String descText = '你的努力有了回報！繼續保持下去！';
+    String buttonText = '太棒了！';
+
+    if (badgeId == 'level_01') {
+      if (level == 1) {
+        // 🎁 專屬迎新禮包 (N5 新手)
+        topTitle = '🎉 歡迎加入 🎉';
+        descText = '這是專屬於你的新手徽章，準備好開始你的日語探索之旅了嗎？';
+        buttonText = '開始探索！';
+      } else {
+        // 🎓 老手測驗出來的結果 (N4~N1)
+        topTitle = '🎉 程度認證 🎉';
+        descText = '太厲害了！AI 已經為您設定好專屬的學習起點囉！';
+        buttonText = '開始學習！';
+      }
+    } else if (badgeId == 'streak_01') {
+      descText = '燃燒吧學習之魂！請繼續保持這份毅力！';
+    }
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       contentPadding: const EdgeInsets.all(32),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🎉 恭喜升級 🎉', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange)),
+          // 這裡換成動態的 topTitle
+          Text(topTitle, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange)),
           const SizedBox(height: 28),
           
           // 發光大徽章
@@ -72,7 +96,9 @@ class LevelUpDialog extends StatelessWidget {
           const SizedBox(height: 8),
           Text('已解鎖【${theme['name']}】', style: TextStyle(fontSize: 18, color: isGradient ? Colors.purple : solidColor, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          Text('你的努力有了回報！繼續保持下去！', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey)),
+          
+          // 這裡換成動態的 descText
+          Text(descText, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           const SizedBox(height: 36),
           
           SizedBox(
@@ -84,7 +110,8 @@ class LevelUpDialog extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text('太棒了！', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              // 這裡換成動態的 buttonText
+              child: Text(buttonText, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             ),
           )
         ],

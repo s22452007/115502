@@ -59,12 +59,6 @@ def chat():
     user_message = request.form.get('message', '')
     print(f"收到來自 App 的訊息：{user_message}") 
 
-    @app.route('/api/chat', methods=['POST'])
-def chat():
-    # 1. 接收從 Flutter 傳過來的日文訊息
-    user_message = request.form.get('message', '')
-    print(f"收到來自 App 的訊息：{user_message}") 
-
     try:
         # 👉 修正 1：把 # 拿掉，並且加上 override=True 強迫抓取最新 .env
         load_dotenv(override=True)

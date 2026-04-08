@@ -64,7 +64,7 @@ def chat():
         
         # 3. 抓取金鑰 (剛剛就是漏了或拼錯這行！)
         my_secret_key = os.getenv("AIzaSyBu1YTfS7F0iToc4dAU8uK6pGORw7t59a4") 
-        print(f"🕵️ 檢查金鑰：{my_secret_key}")
+        print(f"🕵️ 攔截到的金鑰：{my_secret_key}")
 
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""

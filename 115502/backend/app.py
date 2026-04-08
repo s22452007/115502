@@ -66,7 +66,7 @@ def chat():
         my_secret_key = os.getenv("AIzaSyBu1YTfS7F0iToc4dAU8uK6pGORw7t59a4") 
         print(f"🕵️ 檢查金鑰：{my_secret_key}")
 
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
         你現在是一個親切的日語對話小幫手。
         使用者說了這句話：「{user_message}」

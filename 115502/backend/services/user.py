@@ -205,43 +205,6 @@ def get_profile_data(user_id):
     if not user:
         return jsonify({"error": "找不到使用者"}), 404
 
-    # ==========================================
-    # 🌟 核心新增：跨日結算邏輯 (判斷是否為新的一天)
-    # ==========================================
-    try:
-        # 取得今天與昨天的字串 (格式: 2026-04-08)
-        today_dt = datetime.now()
-        today_str = today_dt.strftime('%Y-%m-%d')
-        yesterday_str = (today_dt - timedelta(days=1)).strftime('%Y-%m-%d')
-        
-        # 安全地讀取資料庫的日期並強迫轉成字串 (只取前 10 碼 YYYY-MM-DD)
-        last_login = str(user.last_login_date)[:10] if user.last_login_date else None
-
-        # 🌟 加上這行超級除錯代碼！
-        print(f"🔍 [跨日測試] 今天:{today_str} | DB紀錄:{last_login} | 馬拉松:{user.total_active_days}")
-
-        if last_login != today_str:
-            # 1. 學習馬拉松：只要今天跟上次登入不同天，總天數就 +1
-            user.total_active_days = (user.total_active_days or 0) + 1
-            
-            # 2. 學習火種 (連勝)：判斷昨天有沒有登入
-            if last_login == yesterday_str:
-                user.streak_days = (user.streak_days or 0) + 1
-            else:
-                user.streak_days = 1
-                
-            # 3. 每日拍照歸零
-            user.daily_scans = 0 
-
-            # 4. 把最後登入日更新為今天的字串！
-            user.last_login_date = today_str
-            
-            # 存檔！
-            db.session.commit()
-    except Exception as e:
-        print(f"跨日結算發生錯誤: {e}")
-        # 就算結算失敗，也不要讓整支 API 崩潰，讓下面能繼續傳資料給前端
-
     # 動態計算能力值
     vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
     scene_count = UserScene.query.filter_by(user_id=user_id).count()

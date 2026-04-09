@@ -91,14 +91,14 @@ class QuizQuestion(db.Model):
 # 🗂️ 3. 使用者學習紀錄 (場景解鎖、單字收藏)
 # ==========================================
 
-# 使用者場景表 (UserScene)
-class UserScene(db.Model):
+# 玩家單字圖鑑 (UserVocab)
+class UserVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False)
-    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow) # 紀錄解鎖時間
-    image_path = db.Column(db.String(255), nullable=True) # 紀錄使用者當下拍的那張照片
-    scene = db.relationship('Scene')
+    vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False) 
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow) # 解鎖時間
+    image_path = db.Column(db.String(255), nullable=True)         # 存下他自己拍的那張專屬照片
+    vocab = db.relationship('Vocab')
 
 # 使用者的「單字收藏夾」 (UserVocab)
 class UserVocab(db.Model):

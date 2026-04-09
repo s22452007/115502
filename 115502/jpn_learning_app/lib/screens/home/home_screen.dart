@@ -8,46 +8,46 @@
 // ==========================================
 // 1. 系統內建與第三方套件 (Core & Packages)
 // ==========================================
-import 'dart:ui';             
-import 'dart:convert';                     // 處理毛玻璃模糊效果 (ImageFilter) 等底層 UI 功能
-import 'package:flutter/material.dart';            // Flutter 核心 Material 設計元件庫
-import 'package:provider/provider.dart';           // 狀態管理套件 (負責呼叫 context.watch 或 read)
+import 'dart:ui';
+import 'dart:convert'; // 處理毛玻璃模糊效果 (ImageFilter) 等底層 UI 功能
+import 'package:flutter/material.dart'; // Flutter 核心 Material 設計元件庫
+import 'package:provider/provider.dart'; // 狀態管理套件 (負責呼叫 context.watch 或 read)
 
 // ==========================================
 // 2. 常數、工具與 API (Utils & Services)
 // ==========================================
-import 'package:jpn_learning_app/utils/api_client.dart';       // 負責跟 Python 後端溝通的 API 外送員
-import 'package:jpn_learning_app/utils/badge_utils.dart';      // 🏆 集中管理徽章門檻、顏色與等級計算的工具箱
-import 'package:jpn_learning_app/utils/constants.dart';        // 全站共用常數設定 (例如 AppColors 主題色)
+import 'package:jpn_learning_app/utils/api_client.dart'; // 負責跟 Python 後端溝通的 API 外送員
+import 'package:jpn_learning_app/utils/badge_utils.dart'; // 🏆 集中管理徽章門檻、顏色與等級計算的工具箱
+import 'package:jpn_learning_app/utils/constants.dart'; // 全站共用常數設定 (例如 AppColors 主題色)
 
 // ==========================================
 // 3. 狀態管理 (Providers)
 // ==========================================
-import 'package:jpn_learning_app/providers/user_provider.dart';// 記住使用者當前狀態 (點數、連勝、徽章進度) 的專屬管家
+import 'package:jpn_learning_app/providers/user_provider.dart'; // 記住使用者當前狀態 (點數、連勝、徽章進度) 的專屬管家
 
 // ==========================================
 // 4. 畫面路由 (Screens - 切換頁面用)
 // ==========================================
-import 'package:jpn_learning_app/screens/auth/login_screen.dart';                  // 登入與註冊畫面
-import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';     // 學習小組排行榜與動態畫面
-import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';          // 購買 J-Pts 點數的商城畫面
-import 'package:jpn_learning_app/screens/profile/profile_screen.dart';             // 個人檔案、能力雷達圖與徽章庫畫面
-import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';             // AR 相機拍照辨識核心畫面
-import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';      // 手動輸入搜尋單字畫面
-import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';  // 我的單字探險 (相簿/收藏夾) 總覽畫面
+import 'package:jpn_learning_app/screens/auth/login_screen.dart'; // 登入與註冊畫面
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart'; // 學習小組排行榜與動態畫面
+import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart'; // 購買 J-Pts 點數的商城畫面
+import 'package:jpn_learning_app/screens/profile/profile_screen.dart'; // 個人檔案、能力雷達圖與徽章庫畫面
+import 'package:jpn_learning_app/screens/scenario/camera_screen.dart'; // AR 相機拍照辨識核心畫面
+import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart'; // 手動輸入搜尋單字畫面
+import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart'; // 我的單字探險 (相簿/收藏夾) 總覽畫面
 
 // ==========================================
 // 5. 獨立 UI 元件與彈出視窗 (Widgets & Dialogs - 組成首頁的樂高積木)
 // ==========================================
-import 'package:jpn_learning_app/widgets/common/app_drawer.dart';               // 左側滑出的漢堡選單
-import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';           // App 底部的五顆導覽按鈕
-import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart';            // 首頁綠色的「今日學習目標」卡片
-import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';         // 🎉 華麗的徽章升級慶祝彈窗
-import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';      // 點擊場景後，從底部滑出的單字清單
-import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';   // 訪客未登入時，蓋在卡片上的「毛玻璃上鎖」遮罩
-import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';         // 首頁橫向滑動的「最近解鎖場景」列表
-import 'package:jpn_learning_app/widgets/common/status_chip.dart';             // 首頁上方顯示連勝天數、點數的小膠囊標籤
-import 'package:jpn_learning_app/widgets/home/study_group_card.dart';          // 首頁顯示朋友獲得徽章動態的卡片
+import 'package:jpn_learning_app/widgets/common/app_drawer.dart'; // 左側滑出的漢堡選單
+import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart'; // App 底部的五顆導覽按鈕
+import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart'; // 首頁綠色的「今日學習目標」卡片
+import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart'; // 🎉 華麗的徽章升級慶祝彈窗
+import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart'; // 點擊場景後，從底部滑出的單字清單
+import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart'; // 訪客未登入時，蓋在卡片上的「毛玻璃上鎖」遮罩
+import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart'; // 首頁橫向滑動的「最近解鎖場景」列表
+import 'package:jpn_learning_app/widgets/common/status_chip.dart'; // 首頁上方顯示連勝天數、點數的小膠囊標籤
+import 'package:jpn_learning_app/widgets/home/study_group_card.dart'; // 首頁顯示朋友獲得徽章動態的卡片
 
 /// 首頁畫面狀態管理類別
 /// 負責管理首頁的所有狀態和業務邏輯
@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPendingFriendRequests();
-      _fetchRecentScenes(); 
+      _fetchRecentScenes();
       _fetchAndCheckBadgeProgress(); // 首頁載入時檢查是否升級
     });
   }
@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchAndCheckBadgeProgress() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
-    if (userId == null) return; 
+    if (userId == null) return;
 
     try {
       final result = await ApiClient.fetchProfileData(userId);
@@ -104,11 +104,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (result.containsKey('badge_progress')) {
         final newProgress = result['badge_progress'] as Map<String, dynamic>;
-        
+
         // 防呆加強版：處理 SQLite 傳回來的可能是一般字串 "{}" 的情況
         Map<String, dynamic> notifiedLevels = {};
         final rawNotified = result['notified_levels'];
-        
+
         if (rawNotified is Map) {
           notifiedLevels = Map<String, dynamic>.from(rawNotified);
         } else if (rawNotified is String && rawNotified.isNotEmpty) {
@@ -129,7 +129,9 @@ class _HomeScreenState extends State<HomeScreen> {
             currentLvl = BadgeUtils.japaneseLevelToNumber(levelStr);
             if (levelStr != null) userProvider.setJapaneseLevel(levelStr);
           } else {
-            currentVal = (newProgress[id] is int) ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
+            currentVal = (newProgress[id] is int)
+                ? newProgress[id]
+                : (newProgress[id] as num?)?.toInt() ?? 0;
             currentLvl = BadgeUtils.calculateLevel(currentVal, id);
           }
 
@@ -141,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
             await ApiClient.markBadgeSeen(userId, id, currentLvl);
           }
         }
-        
+
         userProvider.setBadgeProgress(newProgress);
       }
     } catch (e) {
@@ -152,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchRecentScenes() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
-    
+
     if (userId == null) {
       setState(() => _isLoadingScenes = false);
       return;
@@ -177,7 +179,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final result = await ApiClient.getPendingRequests(userId);
-      if (result.containsKey('pending_requests') && result['pending_requests'] is List) {
+      if (result.containsKey('pending_requests') &&
+          result['pending_requests'] is List) {
         final List requests = result['pending_requests'];
         userProvider.setPendingFriendRequests(requests.length);
       }
@@ -189,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==========================================
   // 3. 輔助函式與彈出視窗
   // ==========================================
-  
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) return '早安';
@@ -202,8 +205,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // ==========================================
   @override
   Widget build(BuildContext context) {
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
-    final userName = context.watch<UserProvider>().username ?? userEmail.split('@')[0];
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName =
+        context.watch<UserProvider>().username ?? userEmail.split('@')[0];
     final streakDays = context.watch<UserProvider>().streakDays;
     final jPts = context.watch<UserProvider>().jPts;
     final isGuest = context.watch<UserProvider>().userId == null;
@@ -222,13 +227,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         title: IconButton(
           icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
-          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.white),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -238,9 +249,19 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${_getGreeting()}，$userName!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _textColor)),
+            Text(
+              '${_getGreeting()}，$userName!',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: _textColor,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text('今天也是學習日語的好日子', style: TextStyle(fontSize: 14, color: _subTextColor)),
+            Text(
+              '今天也是學習日語的好日子',
+              style: TextStyle(fontSize: 14, color: _subTextColor),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -253,7 +274,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 12),
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => isGuest ? const LoginScreen() : const BuyPointsScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => isGuest
+                            ? const LoginScreen()
+                            : const BuyPointsScreen(),
+                      ),
+                    );
                   },
                   child: StatusChip(
                     icon: Icons.monetization_on,
@@ -265,22 +293,44 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 32),
-            const Text('今日學習目標', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              '今日學習目標',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             isGuest
-                ? PremiumLockedOverlay( 
+                ? PremiumLockedOverlay(
                     message: '登入啟用今日目標',
-                    child: DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress), 
+                    child: DailyGoalCard(
+                      onReturnFromCamera: _fetchAndCheckBadgeProgress,
+                    ),
                   )
-                : DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
+                : DailyGoalCard(
+                    onReturnFromCamera: _fetchAndCheckBadgeProgress,
+                  ),
             const SizedBox(height: 32),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('最近解鎖場景', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  '最近解鎖場景',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
-                  child: Text('我的單字探險 >', style: TextStyle(fontSize: 14, color: _goalGreen, fontWeight: FontWeight.bold)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ResultGalleryV2Screen(),
+                    ),
+                  ),
+                  child: Text(
+                    '我的單字探險 >',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: _goalGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -288,24 +338,46 @@ class _HomeScreenState extends State<HomeScreen> {
             RecentScenesList(
               recentScenes: _recentScenes,
               isLoadingScenes: _isLoadingScenes,
-              onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, context.read<UserProvider>().userId?.toString()),
+              onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(
+                context,
+                scene,
+                context.read<UserProvider>().userId?.toString(),
+              ),
             ),
             const SizedBox(height: 24),
             GestureDetector(
-              onTap: isGuest ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),
+              onTap: isGuest
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudyGroupScreen(),
+                      ),
+                    ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('學習小組動態', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '學習小組動態',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   Icon(Icons.chevron_right, color: Colors.grey.shade600),
                 ],
               ),
             ),
             const SizedBox(height: 12),
             isGuest
-                ? PremiumLockedOverlay(child: StudyGroupCard(), message: '登入查看群組動態')
+                ? PremiumLockedOverlay(
+                    child: StudyGroupCard(),
+                    message: '登入查看群組動態',
+                  )
                 : GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudyGroupScreen(),
+                      ),
+                    ),
                     child: StudyGroupCard(),
                   ),
             const SizedBox(height: 20),
@@ -317,24 +389,34 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (i) {
           setState(() => _currentIndex = i);
           if (i == 0) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()))
-              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 1) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()))
-              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 2) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen()))
-              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 3) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()))
-              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+            ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 4) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()))
-              .then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
+            ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
         },
       ),

@@ -94,6 +94,12 @@ add_column("vocab", "sentence_basic VARCHAR(255)")
 add_column("vocab", "sentence_inter VARCHAR(255)")
 add_column("vocab", "sentence_upper_inter VARCHAR(255)")
 add_column("vocab", "sentence_advanced VARCHAR(255)")
+# 獨立發音檔
+add_column("vocab", "audio_word VARCHAR(100)")
+add_column("vocab", "audio_basic VARCHAR(100)")
+add_column("vocab", "audio_inter VARCHAR(100)")
+add_column("vocab", "audio_upper VARCHAR(100)")
+add_column("vocab", "audio_adv VARCHAR(100)")
 
 print("✅ vocab 單字表擴充成功 (已支援分級例句與獨立語音檔)！")
 

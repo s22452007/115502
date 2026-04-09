@@ -409,13 +409,17 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+              MaterialPageRoute(
+                builder: (_) => const StudyGroupScreen(),
+              ), // 學習小組
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 4) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
+              MaterialPageRoute(
+                builder: (_) => const ResultGalleryV2Screen(),
+              ), // 個人檔案
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
         },

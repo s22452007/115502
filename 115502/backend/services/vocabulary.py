@@ -116,9 +116,24 @@ def collect_vocab():
 
     # 檢查是否已收藏
     existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
+    
     if existing:
-        return jsonify({"error": "已經收藏過囉！"}), 400
-
+        if existing.collected_at is not None:
+            # 真的已經收藏過了
+            return jsonify({"error": "已經收藏過囉！"}), 400
+        else:
+            # 之前只有解鎖，現在補上收藏時間和資料夾
+            existing.collected_at = datetime.utcnow()
+            existing.folder_id = folder_id
+            db.session.commit()
+            return jsonify({"message": "收藏成功！", "user_vocab_id": existing.id}), 200
+    else:
+        # 完全沒紀錄，新增一筆 (只有收藏)
+        uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id, collected_at=datetime.utcnow())
+        db.session.add(uv)
+        db.session.commit()
+        return jsonify({"message": "收藏成功！", "user_vocab_id": uv.id}), 201
+    
     uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id)
     db.session.add(uv)
     db.session.commit()
@@ -140,12 +155,14 @@ def uncollect_vocab():
     if not uv:
         return jsonify({"error": "找不到該收藏紀錄"}), 404
 
-    # 如果該單字已被解鎖，僅將 folder_id 設為 None；否則刪除整筆紀錄
+    # 如果該單字已被解鎖，僅將 collected_at 和 folder_id 設為 None
     if uv.unlocked_at is not None:
         uv.folder_id = None
+        uv.collected_at = None # 確保清除收藏時間
         db.session.commit()
         return jsonify({"message": "已從資料夾移除，但保留解鎖狀態"}), 200
     else:
+        # 既沒解鎖也沒收藏，整筆刪除
         db.session.delete(uv)
         db.session.commit()
         return jsonify({"message": "已取消收藏"}), 200
@@ -233,10 +250,9 @@ def get_vocab_detail(vocab_id):
     if not v or not user:
         return jsonify({"error": "找不到資料"}), 404
 
-    # 檢查是否已收藏 (有紀錄代表星星要亮起)
-    is_favorited = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first() is not None
-    user_lvl = user.japanese_level or 'N5' # 預設 N5
-    
+    # 檢查是否已收藏 (有 collected_at 紀錄代表星星要亮起)
+    user_vocab = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
+    is_favorited = user_vocab is not None and user_vocab.collected_at is not None
     sentences = []
     
     # 1. 所有人：顯示初級 (N5, N4)

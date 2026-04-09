@@ -393,14 +393,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('成就徽章', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
-                Row(
-                  children: [
-                    Text(
-                      isGuest ? '登入查看' : '查看全部進度',
-                      style: TextStyle(color: _primaryGreen, fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    Icon(Icons.chevron_right, color: _primaryGreen),
-                  ],
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          isGuest ? '登入查看' : '查看全部進度',
+                          style: TextStyle(color: _primaryGreen, fontSize: 14, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: _primaryGreen),
+                    ],
+                  ),
                 ),
               ],
             ),

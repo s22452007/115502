@@ -174,7 +174,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     '輕鬆',
                     easyVal,
                     unit,
-                    Colors.green.shade400,
+                    const Color(0xFF8BA837),
                   ),
                 ),
                 const SizedBox(width: 12),

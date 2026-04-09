@@ -391,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 0) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const CameraScreen()),
+              MaterialPageRoute(builder: (_) => const CameraScreen()), // 拍照
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 1) {

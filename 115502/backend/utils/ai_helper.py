@@ -15,10 +15,10 @@ def analyze_image_from_path(file_path):
     使用 Google Gemini API 進行圖像分析與文字辨識。
     """
     try:
-        # 1. 取得 API Key 並設定
-        api_key = os.environ.get("GEMINI_API_KEY")
+        # 1. 取得專屬照片辨識的 API Key 並設定
+        api_key = os.environ.get("GEMINI_API_KEY_camara")
         if not api_key or api_key == "在這裡貼上您的Key":
-            return {"success": False, "error": "尚未設定 GEMINI_API_KEY。請打開 C:\\Users\\Administrator\\115502\\115502\\backend\\.env 檔案並貼入金鑰。"}
+            return {"success": False, "error": "尚未設定 GEMINI_API_KEY_camara。請打開 C:\\Users\\Administrator\\115502\\115502\\backend\\.env 檔案並貼入金鑰。"}
             
         genai.configure(api_key=api_key)
         

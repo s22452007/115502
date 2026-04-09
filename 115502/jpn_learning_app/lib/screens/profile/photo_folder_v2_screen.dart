@@ -623,10 +623,10 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       ),
       child: Row(
         children: [
-          // 單字大字
+          // 單字大字（隨字體大小自動成長）
           Container(
-            width: 52,
-            height: 52,
+            constraints: const BoxConstraints(minWidth: 52, minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: primaryGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(14),
@@ -635,6 +635,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
               child: Text(
                 vocab['word'] ?? '',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryGreen),
+                textAlign: TextAlign.center,
               ),
             ),
           ),

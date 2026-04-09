@@ -397,13 +397,15 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+              MaterialPageRoute(
+                builder: (_) => const ManualSearchScreen(),
+              ), // 搜尋
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 2) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              MaterialPageRoute(builder: (_) => const HomeScreen()), // 首頁
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 3) {

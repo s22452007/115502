@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from datetime import datetime
 
 from utils.db import db
 from models import User, UserVocab, UserFolder, Vocab
@@ -251,8 +252,11 @@ def get_vocab_detail(vocab_id):
         return jsonify({"error": "找不到資料"}), 404
 
     # 檢查是否已收藏 (有 collected_at 紀錄代表星星要亮起)
-    user_vocab = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
-    is_favorited = user_vocab is not None and user_vocab.collected_at is not None
+    uv = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
+    is_favorited = (uv is not None and uv.collected_at is not None)
+    
+    user_lvl = user.japanese_level or 'N5' # 如果玩家沒設定，預設為 N5
+    
     sentences = []
     
     # 1. 所有人：顯示初級 (N5, N4)

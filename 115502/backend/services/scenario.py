@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import UserScene, Scene
+from models import UserVocab, Scene
 import os
 import uuid
 
@@ -57,7 +57,7 @@ def get_scenario_history():
     (提供給你的擴充範例骨架)
     """
     # TODO: 1. 從 Token 中取得 user_id
-    # TODO: 2. 從資料庫 (例如 UserScene 或是自訂的 ScenarioHistory 表) 撈取該使用者的歷史紀錄
+    # TODO: 2. 從資料庫 (例如 UserVocab 或是自訂的 ScenarioHistory 表) 撈取該使用者的歷史紀錄
     # TODO: 3. 將資料格式化並回傳
     
     return jsonify({
@@ -119,25 +119,41 @@ def get_unlocked_scenes(user_id):
     """
     limit = request.args.get('limit', type=int)
     
-    # 依照解鎖時間倒序排列
-    query = UserScene.query.filter_by(user_id=user_id).order_by(UserScene.unlocked_at.desc())
+    # 過濾已解鎖的 UserVocab
+    query = UserVocab.query.filter(UserVocab.user_id == user_id, UserVocab.unlocked_at.isnot(None))
     
     if limit:
-        user_scenes = query.limit(limit).all()
+        user_vocabs = query.limit(limit).all()
     else:
-        user_scenes = query.all()
-
+        user_vocabs = query.all()
+    
+    # 使用字典去重場景，取最新解鎖時間
+    scene_dict = {}
+    for us in user_vocabs:
+        scene = us.vocab.scene
+        if scene:
+            scene_id = scene.id
+            if scene_id not in scene_dict or us.unlocked_at > scene_dict[scene_id]['unlocked_at']:
+                scene_dict[scene_id] = {
+                    'scene': scene,
+                    'unlocked_at': us.unlocked_at
+                }
+    
+    # 排序並限制
+    sorted_scenes = sorted(scene_dict.values(), key=lambda x: x['unlocked_at'], reverse=True)
+    if limit:
+        sorted_scenes = sorted_scenes[:limit]
+    
     results = []
-    for us in user_scenes:
-        scene = us.scene
-        if scene: # 防呆，確保場景存在
-            vocab_count = len(scene.vocabs)
-            results.append({
-                "scene_id": scene.id,
-                "scene_name": scene.name,
-                "icon_name": scene.icon_name,
-                "unlocked_at": us.unlocked_at.strftime('%Y.%m.%d'),
-                "vocab_count": vocab_count
-            })
+    for item in sorted_scenes:
+        scene = item['scene']
+        vocab_count = len(scene.vocabs)
+        results.append({
+            "scene_id": scene.id,
+            "scene_name": scene.name,
+            "icon_name": scene.icon_name,
+            "unlocked_at": item['unlocked_at'].strftime('%Y.%m.%d'),
+            "vocab_count": vocab_count
+        })
             
     return jsonify({"scenes": results}), 200

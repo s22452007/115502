@@ -216,7 +216,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
               ),
               onPressed: _goToNextStep,
               child: const Text(
-                '下一步：邀請好友 ',
+                '下一步：邀請好友',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,

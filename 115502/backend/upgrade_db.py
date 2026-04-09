@@ -11,6 +11,14 @@ db_path = os.path.join(BASE_DIR, 'instance', 'jlens.db')
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
+def add_column(table, column_def):
+    """安全新增欄位的小工具，避免因為欄位已存在而中斷程式"""
+    try:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column_def};")
+    except sqlite3.OperationalError:
+        pass # 欄位已存在就安靜跳過
+
+print("開始執行資料庫升級...")
 # ==========================================
 # 1. 升級 group_member
 # ==========================================

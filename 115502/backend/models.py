@@ -56,8 +56,8 @@ class UserAbility(db.Model):
 # 場景表 (Scene)
 class Scene(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    icon_name = db.Column(db.String(50), nullable=True) 
+    name = db.Column(db.String(100), nullable=False)  # 例如：咖啡廳
+    icon_name = db.Column(db.String(50), nullable=True)   # 存 Flutter 的 Icon 名稱，例如 'local_cafe'
     vocabs = db.relationship('Vocab', backref='scene', lazy=True)
 
 # 單字字典 (Vocab)

@@ -498,7 +498,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => PhotoFolderV2Screen()));
               }
             },
-            child: Text('查看全部 >', style: TextStyle(color: _primaryGreen, fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('查看全部', style: TextStyle(color: _primaryGreen, fontWeight: FontWeight.bold, fontSize: 16)),
+                Icon(Icons.chevron_right, color: _primaryGreen),
+              ],
+            ),
           ),
         ],
       ),

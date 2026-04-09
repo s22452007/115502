@@ -40,7 +40,7 @@ class AppBottomNavBar extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bookmark_border),
-            label: '個人檔案',
+            label: '我的收藏夾',
           ),
         ],
       ),

@@ -140,11 +140,15 @@ def uncollect_vocab():
     if not uv:
         return jsonify({"error": "找不到該收藏紀錄"}), 404
 
-    # 刪除該紀錄
-    db.session.delete(uv)
-    db.session.commit()
-
-    return jsonify({"message": "已取消收藏"}), 200
+    # 如果該單字已被解鎖，僅將 folder_id 設為 None；否則刪除整筆紀錄
+    if uv.unlocked_at is not None:
+        uv.folder_id = None
+        db.session.commit()
+        return jsonify({"message": "已從資料夾移除，但保留解鎖狀態"}), 200
+    else:
+        db.session.delete(uv)
+        db.session.commit()
+        return jsonify({"message": "已取消收藏"}), 200
 
 # 刪除資料夾（裡面的單字移回預設）
 @vocab_bp.route('/delete_folder', methods=['POST'])

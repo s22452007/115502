@@ -32,11 +32,10 @@ class User(db.Model):
     notified_levels = db.Column(db.JSON, default={}) 
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
 
-    # 關聯
-    collected_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
+    # 使用者單字紀錄（解鎖 / 收藏）
+    user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)
     abilities = db.relationship('UserAbility', backref='user', uselist=False, lazy=True) # 一對一關聯
-    unlocked_scenes = db.relationship('UserScene', backref='user', lazy=True)
 
 # 使用者能力值表 (UserAbility) - 雷達圖專用
 class UserAbility(db.Model):
@@ -99,20 +98,18 @@ class QuizQuestion(db.Model):
 
 # 玩家單字圖鑑 (UserVocab)
 class UserVocab(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False) 
-    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow) # 解鎖時間
-    image_path = db.Column(db.String(255), nullable=True)         # 存下他自己拍的那張專屬照片
-    vocab = db.relationship('Vocab')
+    __tablename__ = 'user_vocab'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'vocab_id', name='uq_user_vocab_user_vocab'),
+    )
 
-# 使用者的「單字收藏夾」 (UserVocab)
-class UserVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    image_path = db.Column(db.String(255), nullable=True)
+    unlocked_at = db.Column(db.DateTime, nullable=True)
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
-    collected_at = db.Column(db.DateTime, default=datetime.utcnow)
+    collected_at = db.Column(db.DateTime, nullable=True)
     vocab = db.relationship('Vocab')
     folder = db.relationship('UserFolder')
 

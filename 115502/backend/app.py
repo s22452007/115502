@@ -52,7 +52,6 @@ app.register_blueprint(tutor_bp, url_prefix='/api/tutor')   # AI家教用這個
 with app.app_context():
     db.create_all()
 
-
 @app.route('/api/chat', methods=['POST'])
 def chat():
     # 1. 接收從 Flutter 傳過來的日文訊息
@@ -60,13 +59,17 @@ def chat():
     print(f"收到來自 App 的訊息：{user_message}") 
 
     try:
-        #load_dotenv()
+        # 強迫抓取最新 .env
+        load_dotenv(override=True)
         
-        # 3. 抓取金鑰 (剛剛就是漏了或拼錯這行！)
-        my_secret_key = os.getenv("AIzaSyBu1YTfS7F0iToc4dAU8uK6pGORw7t59a4") 
-        print(f"🕵️ 檢查金鑰：{my_secret_key}")
+        # 抓取金鑰
+        my_secret_key = os.getenv("GEMINI_API_KEY") 
+        print(f"🕵️ 攔截到的金鑰：{my_secret_key}")
 
-        model = genai.GenerativeModel('gemini-pro')
+        # 把鑰匙交給 Gemini
+        genai.configure(api_key=my_secret_key)
+
+        model = genai.GenerativeModel('gemini-2.5-flash-lite')
         prompt = f"""
         你現在是一個親切的日語對話小幫手。
         使用者說了這句話：「{user_message}」
@@ -74,7 +77,7 @@ def chat():
         回覆請盡量簡短，像真人在聊天一樣。
         """
 
-        # 5. 請 AI 產生回覆
+        # 請 AI 產生回覆
         response = model.generate_content(prompt)
         ai_reply = response.text
 
@@ -82,7 +85,7 @@ def chat():
         print(f"呼叫 Gemini 時發生錯誤: {e}")
         ai_reply = "系統小精靈有點累了，請稍後再試一次！"
     
-    # 6. 把熱騰騰的 AI 回覆送回給 Flutter
+    # 把熱騰騰的 AI 回覆送回給 Flutter
     return ai_reply
 
 # 🛑 app.run 必須永遠在整個檔案的最下面！

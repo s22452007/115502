@@ -307,6 +307,24 @@ class ApiClient {
     }
   }
 
+  // 這個徽章的升級彈窗我看過了！
+  static Future<void> markBadgeSeen(int userId, String badgeId, int level) async { 
+    try {
+      final url = Uri.parse('$baseUrl/user/mark_badge_seen');
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId, 
+          'badge_id': badgeId,
+          'level': level,
+        }),
+      );
+    } catch (e) {
+      print('標記徽章已讀失敗: $e');
+    }
+  }
+
   // ==========================================
   // 🤝 好友系統相關
   // ==========================================
@@ -761,7 +779,52 @@ class ApiClient {
   // 🤖 其他 AI 與測驗功能
   // ==========================================
 
-  // 傳送測驗分數給後端的 API
+  // 🚀 新增：從後端資料庫抓取 10 題隨機題庫
+  static Future<List<dynamic>> fetchQuizQuestions() async {
+    final url = Uri.parse('$baseUrl/quiz/questions');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['questions'] ?? [];
+      } else {
+        print('後端抓取題目失敗: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('連線失敗: $e');
+      return [];
+    }
+  }
+
+  // 傳送 10 題階梯式測驗陣列給後端的 API
+  static Future<Map<String, dynamic>> submitQuizResults(
+    int userId, 
+    List<bool> results
+  ) async {
+    final url = Uri.parse('$baseUrl/quiz/submit');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'results': results,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'error': '伺服器錯誤: ${response.statusCode}'};
+      }
+    } catch (e) {
+      print('連線失敗: $e');
+      return {'error': '無法連線到伺服器: $e'};
+    }
+  }
+
+  // 原本的單純傳送分數 API (保留以防其他地方還在使用)
   static Future<Map<String, dynamic>> submitQuizScore(
     int userId,
     int score,

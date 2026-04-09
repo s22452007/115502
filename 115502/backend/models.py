@@ -24,6 +24,14 @@ class User(db.Model):
     daily_scans = db.Column(db.Integer, default=0)
     last_scan_date = db.Column(db.Date, nullable=True)
 
+    # 徽章新增的計數器
+    total_active_days = db.Column(db.Integer, default=0) # 對應：學習馬拉松
+    total_scans = db.Column(db.Integer, default=0)       # 對應：快門獵人
+    
+    # 記錄他看過哪些徽章彈窗 (紀錄通知過，避免重複通知)
+    notified_levels = db.Column(db.JSON, default={}) 
+    # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
+
     # 關聯
     collected_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)

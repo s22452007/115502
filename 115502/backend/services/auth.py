@@ -66,19 +66,21 @@ def login():
             user.friend_id = generate_friend_id()
             db.session.commit()
 
-        # ----- 連續登入計算邏輯開始 -----
+        # ----- 登入天數與任務重置邏輯 -----
         today = date.today()
         
-        if user.last_login_date == today:
-            # 狀況 A：今天已經登入過了，天數不變
-            pass 
-        elif user.last_login_date == today - timedelta(days=1):
-            # 狀況 B：昨天有登入，天數 +1
-            user.streak_days += 1
-        else:
-            # 狀況 C：斷掉了，或是第一次登入，重置為 1
-            user.streak_days = 1
-            
+        # 只要今天還沒登入過，馬拉松總天數就 +1
+        if user.last_login_date != today:
+            user.total_active_days = (user.total_active_days or 0) + 1
+
+            # 接著算連續登入 (學習火種)
+            if user.last_login_date == today - timedelta(days=1):
+                # 狀況 B：昨天有登入，連勝 +1
+                user.streak_days += 1
+            else:
+                # 狀況 C：斷掉了，或是第一次登入，重置為 1
+                user.streak_days = 1
+                
         # 把最後登入日期更新為今天
         user.last_login_date = today
         
@@ -163,17 +165,23 @@ def google_login():
         if avatar and not user.avatar:
             user.avatar = avatar
 
-    # ----- 登入天數與任務重置邏輯 (跟一般登入完全一樣) -----
-    today = date.today()
-    
-    if user.last_login_date == today:
-        pass 
-    elif user.last_login_date == today - timedelta(days=1):
-        user.streak_days += 1
-    else:
-        user.streak_days = 1
+    # ----- 登入天數與任務重置邏輯 -----
+        today = date.today()
         
-    user.last_login_date = today
+        # 只要今天還沒登入過，馬拉松總天數就 +1
+        if user.last_login_date != today:
+            user.total_active_days = (user.total_active_days or 0) + 1
+
+            # 接著算連續登入 (學習火種)
+            if user.last_login_date == today - timedelta(days=1):
+                # 狀況 B：昨天有登入，連勝 +1
+                user.streak_days += 1
+            else:
+                # 狀況 C：斷掉了，或是第一次登入，重置為 1
+                user.streak_days = 1
+                
+        # 把最後登入日期更新為今天
+        user.last_login_date = today
     
     if user.last_scan_date != today:
         user.daily_scans = 0

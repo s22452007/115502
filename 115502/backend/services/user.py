@@ -1,7 +1,9 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, request, jsonify
+
+from sqlalchemy.orm.attributes import flag_modified
 
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
@@ -200,6 +202,8 @@ def delete_account():
 @user_bp.route('/profile_data/<int:user_id>', methods=['GET'])
 def get_profile_data(user_id):
     user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
 
     # 動態計算能力值
     vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
@@ -221,27 +225,57 @@ def get_profile_data(user_id):
         if ability_data[key] < 0.05:
             ability_data[key] = 0.05
 
-    # 2. 抓取成就徽章
-    # 先抓出系統裡所有的徽章總表
-    all_achievements = Achievement.query.all()
-    # 再抓出這個使用者「已經解鎖」的徽章
-    unlocked_records = UserAchievement.query.filter_by(user_id=user_id).all()
-    unlocked_ids = [record.achievement_id for record in unlocked_records]
+    # 2. 算 5 大核心徽章的進度數字
+    # 日語檢定轉換為 1~5 的數字
+    level_map = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
+    current_n_level = level_map.get(user.japanese_level, 0)
 
-    achievements_data = []
-    for ach in all_achievements:
-        achievements_data.append({
-            "id": ach.id,
-            "name": ach.name,
-            "description": ach.description,
-            "is_unlocked": ach.id in unlocked_ids # 判斷是否有解鎖
-        })
+    badge_progress = {
+        "level_01": current_n_level,             # 程度認證
+        "vocab_01": vocab_count,                 # 單字大富翁
+        "streak_01": user.streak_days or 0,      # 學習火種
+        "marathon_01": user.total_active_days or 0, # 學習馬拉松
+        "camera_01": user.total_scans or 0       # 快門獵人
+    }
 
     return jsonify({
         "ability": ability_data,
-        "achievements": achievements_data
+        "badge_progress": badge_progress,
+        "notified_levels": user.notified_levels or {}
     }), 200
 
+# 標記徽章彈窗已讀 API
+@user_bp.route('/mark_badge_seen', methods=['POST'])
+def mark_badge_seen():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        badge_id = data.get('badge_id') # 例如 'streak_01'
+        level = data.get('level')       # 例如 2
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "找不到使用者"}), 404
+            
+        # 1. 拿出舊的紀錄 (如果沒有就生一個空字典)
+        levels = user.notified_levels or {}
+        
+        # 2. 更新這顆徽章的已讀等級
+        levels[badge_id] = level
+        
+        # 3. 存回資料庫
+        user.notified_levels = levels
+        
+        # 🌟 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
+        flag_modified(user, "notified_levels")
+        
+        db.session.commit()
+        return jsonify({"message": "徽章彈窗已標記為看過"}), 200
+        
+    except Exception as e:
+        print(f"標記已讀失敗: {e}")
+        return jsonify({"error": "伺服器發生錯誤"}), 500
+    
 # 增加點數
 @user_bp.route('/add_points', methods=['POST'])
 def add_points():

@@ -1,224 +1,179 @@
-// 1. Flutter 官方套件
-import 'package:flutter/material.dart';
+// ==========================================
+// 1. 系統內建與第三方套件 (Core & Packages)
+// ==========================================
+import 'package:flutter/material.dart';          // Flutter 核心 Material 設計元件庫
+import 'package:provider/provider.dart';         // 狀態管理套件
 
-// 2. 第三方套件
-import 'package:provider/provider.dart';
+// ==========================================
+// 2. 本地端服務與工具 (Local Services & Utils)
+// ==========================================
+import 'package:jpn_learning_app/utils/api_client.dart';       // 負責與後端 Flask API 溝通的工具類別
+import 'package:jpn_learning_app/utils/constants.dart';      // 📌 引入 APP 統一色系設定
 
-// 3. 我們自己寫的工具與狀態管理
-import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/utils/api_client.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
+// ==========================================
+// 3. 狀態提供者 (Providers)
+// ==========================================
+import 'package:jpn_learning_app/providers/user_provider.dart';// 提供全域的使用者資料 (如 userId, japaneseLevel)
 
-// 4. 我們自己寫的畫面 (跳轉用)
-import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart'; // 讓「我不確定」按鈕可以跳去測驗
-import 'package:jpn_learning_app/screens/home/home_screen.dart';
+// ==========================================
+// 4. 畫面路由跳轉 (Screens)
+// ==========================================
+import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart'; // 10 題快速測驗畫面
+import 'package:jpn_learning_app/screens/home/home_screen.dart';       // APP 主要首頁畫面
 
-class LevelSelectScreen extends StatefulWidget {
+/// **[程度選擇畫面 (Level Select Screen)]**
+/// 位於註冊後 / 登入後的第一個破冰畫面。
+/// 提供使用者兩個選項：「我是新手」或「我已經有基礎了」。
+/// 用意在於分流，避免有程度的學生被強迫從五十音開始學起。
+class LevelSelectScreen extends StatelessWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
-
-  @override
-  State<LevelSelectScreen> createState() => _LevelSelectScreenState();
-}
-
-class _LevelSelectScreenState extends State<LevelSelectScreen> {
-  // 用來記錄目前選擇的等級索引，null 代表尚未選擇
-  int? _selectedIndex;
-
-  final List<Map<String, String>> levels = [
-    {'title': '入門新手', 'desc': '會五十音，能進行非常簡單的自我介紹與日常問候'},
-    {'title': '初級應用(N5)', 'desc': '能理解基本生活短句，可在餐廳、超商進行簡單的基礎溝通'},
-    {'title': '中級應用(N4)', 'desc': '能聽懂放慢的日常會話，可表達自身意圖並與人進行基礎交流'},
-    {'title': '高級對話(N3以上)', 'desc': '能大致聽懂自然語速的日常對話，並能順暢表達自己的想法與意見'},
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // AppColors.white
+      // 📌 使用 APP 統一的背景色
+      backgroundColor: AppColors.background, 
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              // --- 上半部：標題與選項 (使用 Expanded + SingleChildScrollView 讓內容過長時可滾動) ---
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 24),
-                      const Text(
-                        '歡迎加入我們！\n請選擇您目前的日語程度',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22, 
-                          fontWeight: FontWeight.bold, 
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // 程度選擇按鈕列表
-                      ...List.generate(levels.length, (index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _LevelButton(
-                            title: levels[index]['title']!,
-                            desc: levels[index]['desc']!,
-                            isSelected: _selectedIndex == index,
-                            onTap: () {
-                              setState(() {
-                                _selectedIndex = index;
-                              });
-                            },
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-              
-              // --- 下半部：底部按鈕 (固定在畫面最下方) ---
-              const SizedBox(height: 12), // 與上方選項保持一點距離
-              
-              // 我不確定，進行測驗
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const QuickTestScreen()),
-                  );
-                },
-                child: const Text(
-                  '我不確定，進行測驗', 
+        child: SingleChildScrollView( // 保留滑動功能，防止小螢幕破版
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center, // 置中對齊
+              children: [
+                const SizedBox(height: 20),
+                Text(
+                  '歡迎來到 J-Lens',
                   style: TextStyle(
-                    fontSize: 16,
-                    decoration: TextDecoration.underline,
-                    color: Colors.grey, // AppColors.textGrey
+                    fontSize: 24, 
+                    fontWeight: FontWeight.bold, 
+                    // 📌 使用 APP 統一的深色文字
+                    color: Colors.black87,
                   ),
                 ),
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // 確定並開始學習
-              ElevatedButton(
-                onPressed: () async {
-                  // 1. 防呆：檢查有沒有選中任何一個索引
-                  if (_selectedIndex == null) {
+                const SizedBox(height: 8),
+                Text(
+                  '請選擇您的日文學習起點',
+                  style: TextStyle(
+                    fontSize: 16, 
+                    // 📌 使用 APP 統一的次要文字顏色
+                   color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 48),
+
+                // --- 卡片 1：我是新手 ---
+                _buildFlatCard(
+                  context: context,
+                  title: '我是日文新手',
+                  subtitle: '從五十音開始打穩基礎\n適合完全沒學過日文的你',
+                  icon: Icons.spa_outlined, 
+                  // 📌 統一使用 APP 的主色系
+                  mainColor: AppColors.primary,
+                  onTap: () async {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('請先選擇一個程度喔！')),
+                      SnackBar(
+                        content: const Text('正在為您設定新手模式...'),
+                        backgroundColor: AppColors.primary, // SnackBar 顏色也統一
+                      ),
                     );
-                    return;
-                  }
 
-                  // 把數字索引轉換回文字標題 (例如：將 1 轉換成 '入門新手')
-                  final String selectedTitle = levels[_selectedIndex!]['title']!;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('正在儲存您的程度...')),
-                  );
-
-                  // 2. 從 Provider 抓出目前登入的 user_id
-                  final currentUserId = context.read<UserProvider>().userId;
-
-                  // 3. 如果有登入 (不是訪客)，就存進資料庫
-                  if (currentUserId != null) {
-                    // 這裡把轉換好的 selectedTitle 傳給後端
-                    final result = await ApiClient.updateLevel(currentUserId, selectedTitle);
-                    
-                    if (!context.mounted) return; // 確保畫面還活著
-
-                    if (result.containsKey('error')) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(result['error'])),
-                      );
-                      return; // 儲存失敗就中斷
+                    // 1. 取得目前登入者的 ID
+                    final currentUserId = context.read<UserProvider>().userId;
+                    if (currentUserId != null) {
+                      // 2. 呼叫後端 API，強制將該使用者的程度更新為最基礎的 'N5'
+                      await ApiClient.updateLevel(currentUserId, 'N5');
                     }
-                  }
 
-                  // 4. 不管是登入還是訪客，都把程度存進 APP 暫存記憶體
-                  if (context.mounted) {
-                    // 這裡也把 selectedTitle 存進 Provider
-                    context.read<UserProvider>().setJapaneseLevel(selectedTitle);
-                    
-                    // 5. 跳轉到首頁！
-                    Navigator.pushReplacement(
+                    // 3. 更新成功後，更新本地端 Provider 狀態，並跳轉至首頁
+                    if (context.mounted) {
+                      context.read<UserProvider>().setJapaneseLevel('N5');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    }
+                  },
+                ),
+                
+                const SizedBox(height: 24),
+
+                // --- 卡片 2：我已經有基礎了 ---
+                _buildFlatCard(
+                  context: context,
+                  title: '我已經有點基礎',
+                  subtitle: '進行 10 題快速測驗\nAI 將為您量身打造專屬起點',
+                  icon: Icons.school_outlined, 
+                  // 📌 第二個卡片也使用主色，以維持畫面一致性
+                  mainColor: AppColors.primary,
+                  onTap: () {
+                    // 若有基礎，則跳轉至「10題快速測驗」畫面進行程度判定
+                    Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      MaterialPageRoute(builder: (_) => const QuickTestScreen()),
                     );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green, // AppColors.primary
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)
-                  ),
+                  },
                 ),
-                child: const Text(
-                  '確定並開始學習', 
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
-                ),
-              ),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-// 獨立出來的按鈕元件 (保持你原本完美的設計)
-class _LevelButton extends StatelessWidget {
-  final String title;
-  final String desc;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _LevelButton({
-    required this.title, 
-    required this.desc, 
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  // ==========================================
+  // 🎨 乾淨扁平化卡片 UI 元件 (符合 App 風格)
+  // ==========================================
+  Widget _buildFlatCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color mainColor,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12), // 讓點擊水波紋符合圓角
+      borderRadius: BorderRadius.circular(16), // 圓角保持與其他按鈕一致
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
         decoration: BoxDecoration(
-          // 選中時背景變深，未選中時背景較淺
-          color: isSelected ? Colors.green.withOpacity(0.8) : Colors.green.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.green : Colors.black54,
-            width: isSelected ? 2 : 1,
-          ),
+          color: Colors.white, // 卡片底色改為純白，在米白背景上會有很好的層次感
+          border: Border.all(color: mainColor.withOpacity(0.3), width: 1.5), // 更輕量柔和的邊框
+          borderRadius: BorderRadius.circular(16),
+          // 加上極為輕微的陰影，增加立體感但不會顯得花俏
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ]
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center, // 依照設計圖，文字似乎是置中的
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(icon, size: 56, color: mainColor),
+            const SizedBox(height: 16),
             Text(
-              title, 
+              title,
               style: TextStyle(
+                fontSize: 22, 
                 fontWeight: FontWeight.bold, 
-                fontSize: 18, 
-                color: isSelected ? Colors.white : Colors.black87
-              )
-            ),
-            const SizedBox(height: 6),
-            Text(
-              desc, 
-              style: TextStyle(
-                fontSize: 12, 
-                color: isSelected ? Colors.white70 : Colors.black54
+                color: mainColor,
               ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              subtitle,
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14, 
+                color: Colors.black54, // 使用統一的次要文字色
+                height: 1.5,
+              ),
             ),
           ],
         ),

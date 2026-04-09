@@ -6,6 +6,7 @@ class UserProvider extends ChangeNotifier {
   String? _email;
   String? _username;
   String? _avatar;
+  
   // 連續天數與點數
   int _streakDays = 0;
   int _jPts = 0;
@@ -27,10 +28,25 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ==========================================
   // --- 🏆 徽章系統狀態 ---
-  // 存放已解鎖的徽章 ID (預設先放入兩個作為測試)
-  List<String> _unlockedBadgeIds = ['food_01', 'novice_01'];
-  List<String> get unlockedBadgeIds => _unlockedBadgeIds;
+  // ==========================================
+  
+  // 存放真實的 5 大核心徽章進度
+  Map<String, int> _badgeProgress = {};
+  Map<String, int> get badgeProgress => _badgeProgress;
+
+  // 設定真實徽章進度的方法
+  void setBadgeProgress(Map<String, dynamic> progressData) {
+    _badgeProgress = progressData.map((key, value) {
+      return MapEntry(key, value is int ? value : (value as num).toInt());
+    });
+    notifyListeners(); 
+  }
+
+  // ==========================================
+  // --- 基本資料設定方法 ---
+  // ==========================================
 
   // 設定今日進度的方法
   void setDailyScans(int scans) {
@@ -81,52 +97,19 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 設定點數的方法
   void setJPts(int pts) {
     _jPts = pts;
     notifyListeners();
   }
 
-  // 新增 set 方法
   void setFriendId(String id) {
     _friendId = id;
     notifyListeners();
   }
 
-  // --- 🏆 徽章系統相關方法 ---
-
-  // 從後端取得資料後，整批設定已解鎖徽章
-  void setUnlockedBadges(List<String> badgeIds) {
-    _unlockedBadgeIds = badgeIds;
-    notifyListeners();
-  }
-
-  // 檢查特定徽章是否已解鎖
-  bool isBadgeUnlocked(String badgeId) {
-    return _unlockedBadgeIds.contains(badgeId);
-  }
-
-  // 解鎖單一新徽章
-  void unlockBadge(String badgeId) {
-    if (!_unlockedBadgeIds.contains(badgeId)) {
-      _unlockedBadgeIds.add(badgeId);
-      notifyListeners(); // 通知所有畫面更新徽章狀態
-    }
-  }
-
-  // 為了新版徽章 UI 暫時加的假資料方法 (未來再串接真實資料)
-  String? getBadgeUnlockDate(String badgeId) {
-    // 假設如果是已解鎖的，就回傳今天日期
-    if (isBadgeUnlocked(badgeId)) {
-      return '2026.04.05'; 
-    }
-    return null;
-  }
-
-  List<int> getBadgeProgress(String badgeId) {
-    // 隨便給個進度里程碑讓畫面有東西畫
-    return [10, 50, 100]; 
-  }
+  // ==========================================
+  // --- 登出 ---
+  // ==========================================
 
   // 登出方法，清空所有資料
   void logout() {
@@ -135,12 +118,15 @@ class UserProvider extends ChangeNotifier {
     _username = null;
     _japaneseLevel = '';
     _avatar = null;
-    _streakDays = 0; // 登出時歸零
-    _jPts = 0;       // 登出時歸零
-    _friendId = null; // 登出時清空
+    _streakDays = 0; 
+    _jPts = 0;       
+    _friendId = null; 
     _dailyScans = 0;
-    _unlockedBadgeIds = []; // 登出時清空徽章資料
     _pendingFriendRequests = 0;
-    notifyListeners(); // 通知所有畫面「這個人已經登出了，請更新畫面！」
+    
+    // 清空徽章資料
+    _badgeProgress = {}; 
+    
+    notifyListeners(); 
   }
 }

@@ -58,16 +58,14 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ user_vocab.folder_id 可能已存在：{e}")
 
 # ==========================================
-# 🌟 5. 升級 vocab (單字詳細內容：適性化分級例句與音檔)
+# 5. 升級 vocab (單字詳細內容：適性化分級例句與音檔)
 # ==========================================
 try:
-    # 保留原本的 example_sentence 防呆，並加入新的分級例句欄位
     cursor.execute("ALTER TABLE vocab ADD COLUMN example_sentence VARCHAR(255);")
 except sqlite3.OperationalError:
-    pass # 如果舊欄位已經存在就跳過
+    pass
 
 try:
-    # 新增三種難度的例句欄位
     cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_basic VARCHAR(255);")
     cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_inter VARCHAR(255);")
     cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_advanced VARCHAR(255);")
@@ -80,7 +78,6 @@ except sqlite3.OperationalError as e:
 # 📖 6. 新增 quiz_question (測驗題庫表)
 # ==========================================
 try:
-    # 使用 CREATE TABLE IF NOT EXISTS，如果表不存在就建立，存在就跳過
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS quiz_question (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,22 +96,39 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ quiz_question 建立失敗：{e}")
 
 # ==========================================
-# 📸 7. 升級 user_scene (加入使用者上傳的照片路徑)
+# 📸 7. 升級 user_scene & Vocab 中高級
 # ==========================================
 try:
     cursor.execute("ALTER TABLE user_scene ADD COLUMN image_path VARCHAR(255);")
     print("✅ user_scene 擴充成功 (加入照片路徑欄位)！")
-except sqlite3.OperationalError as e:
-    print(f"⚠️ user_scene 欄位可能已存在：{e}")
+except sqlite3.OperationalError:
+    pass
 
-# ==========================================
-# 📸 7. 升級 Vocab (中高級)
-# ==========================================
 try:
     cursor.execute("ALTER TABLE vocab ADD COLUMN sentence_upper_inter VARCHAR(255);")
     print("✅ vocab 成功新增『中高級』例句欄位！")
 except sqlite3.OperationalError:
-    print("⚠️ 欄位可能已存在")
+    pass
+
+# ==========================================
+# 🏆 8. 升級 User 表 (新版 5 大徽章計數器)
+# ==========================================
+try:
+    cursor.execute("ALTER TABLE user ADD COLUMN total_active_days INTEGER DEFAULT 0;")
+    cursor.execute("ALTER TABLE user ADD COLUMN total_scans INTEGER DEFAULT 0;")
+    print("✅ user 表升級成功 (加入 total_active_days, total_scans 徽章計數器)！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user 徽章計數欄位可能已存在：{e}")
+
+# ==========================================
+# 🎁 9. 升級 User 表 (新增 notified_levels 徽章彈窗記憶)
+# ==========================================
+try:
+    # 注意：SQLite 沒有專門的 JSON 格式，所以我們用 TEXT 來存，預設給一個空的 JSON 字串 '{}'
+    cursor.execute("ALTER TABLE user ADD COLUMN notified_levels TEXT DEFAULT '{}';")
+    print("✅ user 表升級成功 (加入 notified_levels 徽章彈窗記憶)！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user.notified_levels 欄位可能已存在：{e}")
 
 # 儲存並關閉
 conn.commit()

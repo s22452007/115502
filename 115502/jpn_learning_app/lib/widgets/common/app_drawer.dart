@@ -65,10 +65,7 @@ class AppDrawer extends StatelessWidget {
             ),
             accountName: Text(
               isGuest ? '訪客' : userName,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             accountEmail: Text(isGuest ? '登入解鎖更多功能！' : userEmail),
             currentAccountPicture: Container(
@@ -80,8 +77,9 @@ class AppDrawer extends StatelessWidget {
                 backgroundColor: Colors.grey.shade200,
                 backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
                     ? (userAvatar.startsWith('http')
-                        ? NetworkImage(userAvatar)
-                        : MemoryImage(base64Decode(userAvatar)) as ImageProvider)
+                          ? NetworkImage(userAvatar)
+                          : MemoryImage(base64Decode(userAvatar))
+                                as ImageProvider)
                     : NetworkImage(defaultAvatarUrl) as ImageProvider,
               ),
             ),
@@ -128,7 +126,7 @@ class AppDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.people_outline),
-            title: const Text('我的好友', style: TextStyle(fontSize: 16)),
+            title: const Text('好友', style: TextStyle(fontSize: 16)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -147,7 +145,7 @@ class AppDrawer extends StatelessWidget {
                     padding: const EdgeInsets.all(6), // 控制紅點內部的空間
                     decoration: const BoxDecoration(
                       color: Colors.redAccent, // 經典的通知紅
-                      shape: BoxShape.circle,  // 圓形
+                      shape: BoxShape.circle, // 圓形
                     ),
                     child: Text(
                       '$pendingRequests',

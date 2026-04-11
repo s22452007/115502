@@ -183,7 +183,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     '標準',
                     normalVal,
                     unit,
-                    const Color(),
+                    const Color(0XFFFFD568),
                   ),
                 ),
                 const SizedBox(width: 12),

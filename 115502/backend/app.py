@@ -56,6 +56,7 @@ with app.app_context():
 def chat():
     # 1. 接收從 Flutter 傳過來的日文訊息
     user_message = request.form.get('message', '')
+    chat_history = request.form.get('history', '無歷史紀錄')
     print(f"收到來自 App 的訊息：{user_message}") 
 
     try:

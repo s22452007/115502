@@ -66,7 +66,7 @@ def chat():
         
         # 抓取金鑰
         my_secret_key = os.getenv("GEMINI_API_KEY") 
-        print(f"🕵️ 攔截到的金鑰：{my_secret_key}")
+        
 
         # 把鑰匙交給 Gemini
         genai.configure(api_key=my_secret_key)

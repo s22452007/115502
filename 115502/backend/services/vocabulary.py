@@ -10,7 +10,12 @@ vocab_bp = Blueprint('vocab', __name__)
 @vocab_bp.route('/favorites/<int:user_id>', methods=['GET'])
 def get_user_favorites(user_id):
     # 預設資料夾（folder_id 為 null 的單字）
-    default_count = UserVocab.query.filter_by(user_id=user_id, folder_id=None).count()
+    default_count = UserVocab.query.filter(
+        UserVocab.user_id == user_id, 
+        UserVocab.folder_id == None,
+        UserVocab.collected_at.isnot(None)
+    ).count()
+    
     result = [{
         "id": None,
         "name": "預設相簿",
@@ -37,13 +42,17 @@ def get_user_favorites(user_id):
 def get_folder_vocabs():
     data = request.get_json()
     user_id = data.get('user_id')
-    folder_id = data.get('folder_id')  # None = 預設資料夾
+    folder_id = data.get('folder_id')
 
     if not user_id:
         return jsonify({"error": "缺少 user_id"}), 400
 
     if folder_id is None:
-        user_vocabs = UserVocab.query.filter_by(user_id=user_id, folder_id=None).all()
+        user_vocabs = UserVocab.query.filter(
+            UserVocab.user_id == user_id, 
+            UserVocab.folder_id == None,
+            UserVocab.collected_at.isnot(None)
+        ).all()
     else:
         user_vocabs = UserVocab.query.filter_by(user_id=user_id, folder_id=folder_id).all()
 

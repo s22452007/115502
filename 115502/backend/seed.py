@@ -81,11 +81,49 @@ def seed_data():
         db.session.commit()
 
         # ==========================================
-        # 3. 📝 建立測驗題庫 (省略部分內容以保持簡潔)
+        # 3. 📝 建立測驗題庫
         # ==========================================
-        # ... (這裡保留你原本那 30 題的 QuizQuestion 建立代碼)
-        # db.session.add_all(questions)
-        # db.session.commit()
+        questions = [
+            # --- 第一階段：超級新手 ---
+            QuizQuestion(stage="第一階段：超級新手", level_tag="超級新手", question="「わたし」的漢字寫法是？", option_a="私", option_b="彼", option_c="君", option_d="僕", correct_answer="A"),
+            QuizQuestion(stage="第一階段：超級新手", level_tag="超級新手", question="圖片中是「壽司」，請問它的日文平假名是？", option_a="さし", option_b="すし", option_c="せし", option_d="そし", correct_answer="B"),
+            QuizQuestion(stage="第一階段：超級新手", level_tag="超級新手", question="「おはよう」的意思是？", option_a="謝謝", option_b="對不起", option_c="早安", option_d="再見", correct_answer="C"),
+            QuizQuestion(stage="第一階段：超級新手", level_tag="超級新手", question="數字「5」的讀音是？", option_a="いち", option_b="さん", option_c="ご", option_d="なな", correct_answer="C"),
+            QuizQuestion(stage="第一階段：超級新手", level_tag="超級新手", question="「パン（麵包）」的讀音是？", option_a="pan", option_b="pen", option_c="pin", option_d="pon", correct_answer="A"),
+            QuizQuestion(stage="第一階段：超級新手", level_tag="超級新手", question="想要稱呼老師時，會用哪個平假名？", option_a="せいせい", option_b="せんせい", option_c="さんせい", option_d="しんせい", correct_answer="B"),
+            QuizQuestion(stage="第一階段：超級新手", level_tag="超級新手", question="「水」的平假名寫法是？", option_a="みず", option_b="みち", option_c="みみ", option_d="みき", correct_answer="A"),
+
+            # --- 第二階段：初級 (N5~N4) ---
+            QuizQuestion(stage="第二階段：初級", level_tag="N5", question="あそこに白い（　）が止まっています。", option_a="くるま", option_b="かばん", option_c="つくえ", option_d="いす", correct_answer="A"),
+            QuizQuestion(stage="第二階段：初級", level_tag="N4", question="この料理はとても（　）です。", option_a="しんせん", option_b="しんせつ", option_c="ていねい", option_d="にぎやか", correct_answer="A"),
+            QuizQuestion(stage="第二階段：初級", level_tag="N5", question="毎日（　）で学校へ通っています。", option_a="でんしゃ", option_b="じかん", option_c="じしょ", option_d="きょうしつ", correct_answer="A"),
+            QuizQuestion(stage="第二階段：初級", level_tag="N5", question="心斎橋はとても（　）なところですね。", option_a="にぎやか", option_b="しずか", option_c="ひま", option_d="きれい", correct_answer="A"),
+            QuizQuestion(stage="第二階段：初級", level_tag="N4", question="テストが終わって（　）しました。", option_a="あんしん", option_b="ちゅうい", option_c="じゅんび", option_d="しっぱい", correct_answer="A"),
+            QuizQuestion(stage="第二階段：初級", level_tag="N4", question="この地図はとても（　）やすいです。", option_a="み", option_b="かき", option_c="よみ", option_d="わかり", correct_answer="D"),
+            QuizQuestion(stage="第二階段：初級", level_tag="N4", question="明日（　）があれば、買い物に行きましょう。", option_a="つごう", option_b="ぐあい", option_c="きぶん", option_d="ちょうし", correct_answer="A"),
+
+            # --- 第三階段：中級 (N3) ---
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="台湾の夏は気温が高いだけでなく、とても（　）です。", option_a="むしあつい", option_b="ものたりない", option_c="うっとうしい", option_d="やかましい", correct_answer="A"),
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="大阪で２ヶ月間（　）する予定なので、交通パスを買おうと思っています。", option_a="たいざい", option_b="そんざい", option_c="じゅうたい", option_d="きたい", correct_answer="A"),
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="このアプリの（　）を改善する必要があります。", option_a="きのう", option_b="きのう", option_c="せいのう", option_d="ぎのう", correct_answer="A"),
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="異文化を（　）するために、大阪へ留学します。", option_a="たいけん", option_b="じっけん", option_c="けんさく", option_d="れんしゅう", correct_answer="A"),
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="毎日練習を（　）ことで、日本語が上手になります。", option_a="つづける", option_b="はじめる", option_c="おわる", option_d="わすれる", correct_answer="A"),
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="彼はいつも（　）に計画を立てます。", option_a="しんちょう", option_b="きんちょう", option_c="きちょう", option_d="じゅうだい", correct_answer="A"),
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="予定を（　）しなければなりません。", option_a="へんこう", option_b="こうしん", option_c="せいり", option_d="けってい", correct_answer="A"),
+
+            # --- 第四階段：高級 (N2~N1) ---
+            QuizQuestion(stage="第四階段：高級", level_tag="N2", question="彼はとても（　）性格で、誰とでもすぐ仲良くなる。", option_a="おおまかな", option_b="おおらかな", option_c="おごそかな", option_d="おろかな", correct_answer="B"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N2", question="会議の資料を（　）読んでおいてください。", option_a="ざっと", option_b="そっと", option_c="じっと", option_d="ほっと", correct_answer="A"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N1", question="新しい事業を始めるにあたって、資金の（　）がついた。", option_a="めど", option_b="もくひょう", option_c="めじるし", option_d="めさき", correct_answer="A"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N1", question="長年の努力がようやく（　）、彼は金メダルを手にした。", option_a="むくわれて", option_b="やしなわれて", option_c="そこなわれて", option_d="まぎれて", correct_answer="A"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N2", question="プログラミングの（　）を磨くために、日々努力している。", option_a="うで", option_b="あし", option_c="ゆび", option_d="かた", correct_answer="A"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N2", question="彼の意見は非常に（　）を得ている。", option_a="まと", option_b="しん", option_c="ふし", option_d="みゃく", correct_answer="A"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N1", question="この技術は今後、世界中に（　）していくことが予想される。", option_a="ふきゅう", option_b="るふ", option_c="でんせん", option_d="じゅうまん", correct_answer="A"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N1", question="自分の信念を最後まで（　）通す。", option_a="つらぬき", option_b="みちびき", option_c="しのぎ", option_d="あおぎ", correct_answer="A"),
+            QuizQuestion(stage="第四階段：高級", level_tag="N1", question="細部にまで（　）抜かれたデザインは、多くの人を魅了する。", option_a="ねり", option_b="ほり", option_c="しぼり", option_d="けずり", correct_answer="A")
+        ]
+        db.session.add_all(questions)
+        db.session.commit()
 
         # ==========================================
         # 4. 建立 VIP 測試帳號與新版紀錄

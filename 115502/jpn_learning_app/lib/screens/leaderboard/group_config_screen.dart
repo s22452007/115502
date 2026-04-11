@@ -192,7 +192,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     '爆肝',
                     hardVal,
                     unit,
-                    const Color(0xFFD43737),
+                    const Color(),
                   ),
                 ),
               ],

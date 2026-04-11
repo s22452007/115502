@@ -58,6 +58,7 @@ def chat():
     user_message = request.form.get('message', '')
     chat_history = request.form.get('history', '無歷史紀錄')
     print(f"收到來自 App 的訊息：{user_message}") 
+    print(f"對話紀錄：{chat_history}")
 
     try:
         # 強迫抓取最新 .env

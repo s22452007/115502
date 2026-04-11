@@ -47,7 +47,7 @@ add_column("study_group", "is_reward_claimed BOOLEAN DEFAULT 0")
 print("✅ study_group 獎勵機制欄位確認完畢")
 
 # ==========================================
-# 🌟 4. 升級 Scene (確保單字目錄的 icon 欄位存在)
+# 4. 升級 Scene (確保單字目錄的 icon 欄位存在)
 # ==========================================
 try:
     cursor.execute("""
@@ -63,7 +63,7 @@ except Exception as e:
     print(f"⚠️ scene 建立或升級警告：{e}")
 
 # ==========================================
-# 🌟 5. 建立與升級 user_vocab (玩家的單字圖鑑！)
+# 5. 建立與升級 user_vocab (玩家的單字圖鑑！)
 # ==========================================
 try:
     # 如果是舊專案沒有這張表，先建起來
@@ -82,12 +82,13 @@ try:
     # 針對已經存在的表，確保這兩個重要欄位有加上去
     add_column("user_vocab", "image_path VARCHAR(255)")
     add_column("user_vocab", "folder_id INTEGER")
+    add_column("user_vocab", "custom_title VARCHAR(100)")
     print("✅ user_vocab 單字圖鑑擴充成功 (加入照片路徑與資料夾功能)！")
 except sqlite3.OperationalError as e:
     print(f"⚠️ user_vocab 升級警告：{e}")
 
 # ==========================================
-# 🌟 6. 升級 vocab (單字詳細內容：適性化分級例句與 5 種音檔)
+# 6. 升級 vocab (單字詳細內容：適性化分級例句與 5 種音檔)
 # ==========================================
 # 分級例句
 add_column("vocab", "sentence_basic VARCHAR(255)")

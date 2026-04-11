@@ -71,14 +71,19 @@ def chat():
 
         model = genai.GenerativeModel('gemini-2.5-flash-lite')
         prompt = f"""
-        你現在是一個親切的日語對話小幫手。
-        使用者說了這句話：「{user_message}」
-        請用符合 N5~N4 程度的自然日文回覆他，並且在日文後面附上簡單的中文翻譯。
-        回覆請盡量簡短，像真人在聊天一樣。
+        【這是我們剛剛的對話紀錄】
+        {chat_history}
+
+        【現在】
+        我對你說了這句話：「{user_message}」
+
+        請根據上面的對話脈絡，用符合 N5~N4 程度的自然日文回覆我。
+        ⚠️ 重要任務：回覆完之後，請務必主動「反問我一個問題」，引導我繼續跟你聊這個話題！
+        回覆請盡量簡短，像真人在聊天一樣，並在日文後面附上簡單的中文翻譯。
         """
 
         # 請 AI 產生回覆
-        
+    
         response = model.generate_content(prompt)
         ai_reply = response.text
 

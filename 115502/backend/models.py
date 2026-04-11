@@ -96,7 +96,7 @@ class QuizQuestion(db.Model):
 # 🗂️ 3. 使用者學習紀錄 (場景解鎖、單字收藏)
 # ==========================================
 
-# 玩家單字圖鑑 (UserVocab)
+# 使用者單字圖鑑 (UserVocab)
 class UserVocab(db.Model):
     __tablename__ = 'user_vocab'
     __table_args__ = (
@@ -106,7 +106,7 @@ class UserVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
-    image_path = db.Column(db.String(255), nullable=True)
+    image_path = db.Column(db.String(255), nullable=True)  # 使用者的照片
     unlocked_at = db.Column(db.DateTime, nullable=True)
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
     collected_at = db.Column(db.DateTime, nullable=True)

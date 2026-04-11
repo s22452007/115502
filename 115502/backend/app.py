@@ -83,7 +83,7 @@ def chat():
         """
 
         # 請 AI 產生回覆
-    
+
         response = model.generate_content(prompt)
         ai_reply = response.text
 

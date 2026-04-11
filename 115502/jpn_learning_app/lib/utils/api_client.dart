@@ -744,6 +744,21 @@ class ApiClient {
     }
   }
 
+  // 取得「特定照片」解鎖的單字清單
+  static Future<List<dynamic>> getVocabsByPhoto(String imagePath, int userId) async {
+    // 記得將字串 encode，避免檔名有特殊字元
+    final encodedPath = Uri.encodeComponent(imagePath);
+    final url = Uri.parse('$baseUrl/scenario/photo_vocabs?user_id=$userId&image_path=$encodedPath');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['vocabs']; 
+    } else {
+      throw Exception('無法載入此照片的單字清單');
+    }
+  }
+
   // 取得單字詳細資訊
   static Future<Map<String, dynamic>> getVocabDetail(int vocabId, int userId) async {
     final url = Uri.parse('$baseUrl/vocab/detail/$vocabId?user_id=$userId');

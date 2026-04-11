@@ -106,6 +106,7 @@ class UserVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂的照片標題 (例如: 新宿的一蘭拉麵)
     image_path = db.Column(db.String(255), nullable=True)  # 使用者的照片
     unlocked_at = db.Column(db.DateTime, nullable=True)
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)

@@ -57,8 +57,7 @@ def chat():
     # 1. 接收從 Flutter 傳過來的日文訊息
     user_message = request.form.get('message', '')
     chat_history = request.form.get('history', '無歷史紀錄')
-    print(f"收到來自 App 的訊息：{user_message}") 
-    print(f"對話紀錄：{chat_history}")
+    print(f"收到來自 App 的訊息：{user_message}")
 
     try:
         # 強迫抓取最新 .env
@@ -66,7 +65,6 @@ def chat():
         
         # 抓取金鑰
         my_secret_key = os.getenv("GEMINI_API_KEY") 
-        
 
         # 把鑰匙交給 Gemini
         genai.configure(api_key=my_secret_key)

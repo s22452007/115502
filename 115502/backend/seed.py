@@ -88,7 +88,7 @@ def seed_data():
         # db.session.commit()
 
         # ==========================================
-        # 4. 🌟 建立 VIP 測試帳號與新版紀錄
+        # 4. 建立 VIP 測試帳號與新版紀錄
         # ==========================================
         print("👑 正在建立 VIP 測試帳號...")
         vip_user = User(
@@ -115,18 +115,20 @@ def seed_data():
             vocab_id=vocabs[0].id, 
             unlocked_at=datetime.utcnow(), 
             image_path='test_ramen.jpg',
+            custom_title='我在新宿吃的第一碗一蘭拉麵🍜', # 展示玩家自訂的名稱
             collected_at=datetime.utcnow() # 同時加入收藏
         )
         
-        # 僅解鎖，未收藏
+        # 僅解鎖，未收藏 (這筆也可以加，或者保持原樣測試沒有 custom_title 的情況)
         uv2 = UserVocab(
             user_id=vip_user.id, 
             vocab_id=vocabs[2].id, 
             unlocked_at=datetime.utcnow(), 
-            image_path='test_ticket.jpg'
+            image_path='test_ticket.jpg',
+            custom_title='回程的車票'
         )
 
-        # 僅收藏，未解鎖 (例如在單字本手動加入)
+        # 僅收藏，未解鎖 (例如在單字本手動加入，通常不會有照片和自訂標題)
         uv3 = UserVocab(
             user_id=vip_user.id, 
             vocab_id=vocabs[1].id, 

@@ -75,10 +75,11 @@ class VocabBottomSheet {
                           padding: const EdgeInsets.symmetric(vertical: 12.0),
                           child: Row(
                             children: [
-                              Icon(
-                                isUnlocked ? Icons.check_circle : Icons.radio_button_unchecked,
-                                color: isUnlocked ? const Color(0xFF6AA86B) : Colors.grey.shade400
-                              ),
+                              // 註解掉的綠色勾勾
+                              // Icon(
+                              //   isUnlocked ? Icons.check_circle : Icons.radio_button_unchecked,
+                              //   color: isUnlocked ? const Color(0xFF6AA86B) : Colors.grey.shade400
+                              // ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Text(

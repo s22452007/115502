@@ -71,7 +71,7 @@ def chat():
 
         model = genai.GenerativeModel('gemini-2.5-flash-lite')
         prompt = f"""
-        你現在是一個親切的日語對話小幫手。
+        你現在是一個親切的日語對話小老師兼朋友。
 
         【這是我們剛剛的對話紀錄】
         {chat_history}

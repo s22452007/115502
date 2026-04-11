@@ -25,7 +25,6 @@ def seed_data():
 
         # ==========================================
         # 2. 建立系統單字庫 (Vocab)
-        # ⚠️ 修正：將 audio_filename 改為 audio_word
         # ==========================================
         vocabs = [
             Vocab(scene_id=scene1.id, word='ラーメン', kana='ラーメン', meaning='拉麵', 
@@ -33,49 +32,49 @@ def seed_data():
                   sentence_inter='このラーメン屋は行列ができるほど有名だ。', 
                   sentence_upper_inter='この店のラーメンは、スープがなくなり次第終了となります。',
                   sentence_advanced='こだわりの豚骨を何時間も煮込んだ、至極のラーメンである。',
-                  audio_word='ramen.mp3'), # 修正這裡
+                  audio_word='ramen.mp3'),
             
             Vocab(scene_id=scene1.id, word='替玉', kana='かえだま', meaning='加麵', 
                   sentence_basic='替玉をお願いします。', 
                   sentence_inter='スープが残っているので、替玉を注文した。',
                   sentence_upper_inter='ダイエット中にもかかわらず、誘惑に負けて替玉を頼んでしまった。',
                   sentence_advanced='博多ラーメンの醍醐味は、やはり替玉にあると言えるだろう。',
-                  audio_word='kaedama.mp3'), # 修正這裡
+                  audio_word='kaedama.mp3'),
             
             Vocab(scene_id=scene2.id, word='切符', kana='きっぷ', meaning='車票', 
                   sentence_basic='切符を買います。', 
                   sentence_inter='券売機で新幹線の切符を購入した。',
                   sentence_upper_inter='払い戻し期間を過ぎた切符は、無効になってしまうので注意が必要だ。',
                   sentence_advanced='電子マネーの普及により、紙の切符を手にする機会はめっきり減った。',
-                  audio_word='kippu.mp3'), # 修正這裡
+                  audio_word='kippu.mp3'),
             
             Vocab(scene_id=scene2.id, word='改札口', kana='かいさつぐち', meaning='剪票口', 
                   sentence_basic='改札口はどこですか？', 
                   sentence_inter='改札口で友達と待ち合わせをしている。',
                   sentence_upper_inter='朝のラッシュ時の改札口は、前に進めないほど混雜している。',
                   sentence_advanced='最新の顔認証システムを備えた改札口が、一部の駅で導入され始めている。',
-                  audio_word='kaisatsuguchi.mp3'), # 修正這裡
+                  audio_word='kaisatsuguchi.mp3'),
             
             Vocab(scene_id=scene3.id, word='お守り', kana='おまもり', meaning='御守', 
                   sentence_basic='お守りを買いました。', 
                   sentence_inter='神社で合格祈願のお守りを買った。',
                   sentence_upper_inter='祖母からもらったこのお守りは、私にとって何よりも大切なものだ。',
                   sentence_advanced='古来より、お守りには人々の切実な願いと祈りが込められている。',
-                  audio_word='omamori.mp3'), # 修正這裡
+                  audio_word='omamori.mp3'),
             
             Vocab(scene_id=scene4.id, word='アニメ', kana='アニメ', meaning='動畫', 
                   sentence_basic='日本のアニメが好きです。', 
                   sentence_inter='休日は一日中アニメを見て過ごすことが多い。',
                   sentence_upper_inter='日本のアニメは國內のみならず、海外でも高く評価されている。',
                   sentence_advanced='精緻な作畫と複雑な人間模様を描いたそのアニメは、社會現象を巻き起こした。',
-                  audio_word='anime.mp3'), # 修正這裡
+                  audio_word='anime.mp3'),
             
             Vocab(scene_id=scene5.id, word='コーヒー', kana='コーヒー', meaning='咖啡', 
                   sentence_basic='ホットコーヒーを一つください。', 
                   sentence_inter='毎朝、淹れたてのコーヒーを飲むのが日課だ。',
                   sentence_upper_inter='彼はコーヒーの豆の產地にまでこだわるほどのコーヒー好きだ。',
                   sentence_advanced='芳醇な香りと深いコクが特徴のこのコーヒーは、至福のひとときをもたらしてくれる。',
-                  audio_word='coffee.mp3') # 修正這裡
+                  audio_word='coffee.mp3')
         ]
         db.session.add_all(vocabs)
         db.session.commit()
@@ -146,32 +145,40 @@ def seed_data():
         # 能力值
         db.session.add(UserAbility(user_id=vip_user.id, listening=0.8, speaking=0.6, reading=0.9, writing=0.5, culture=0.7))
 
-        # ⚠️ 重構核心：建立 UserVocab 紀錄
-        # 同時解鎖與收藏 (有照片、有時間、有資料夾)
+        # ==========================================
+        # 🌟 完美的假資料：模擬一次拍照，解鎖兩個單字！
+        # ==========================================
+        current_time = datetime.utcnow() # 確保時間完全一致
+
+        # 1. 第一個字：拉麵 (ラーメン)
         uv1 = UserVocab(
             user_id=vip_user.id, 
             vocab_id=vocabs[0].id, 
-            unlocked_at=datetime.utcnow(), 
-            image_path='test_ramen.jpg',
-            custom_title='我在新宿吃的第一碗一蘭拉麵🍜', # 展示玩家自訂的名稱
-            collected_at=datetime.utcnow() # 同時加入收藏
+            unlocked_at=current_time, 
+            image_path='test_ramen.jpg',            # 👈 綁定照片
+            custom_title='我在新宿吃的第一碗一蘭拉麵🍜', # 👈 玩家自訂名稱
+            collected_at=current_time               # 同時加入收藏
         )
         
-        # 僅解鎖，未收藏 (這筆也可以加，或者保持原樣測試沒有 custom_title 的情況)
+        # 2. 第二個字：加麵 (替玉)
+        # 模擬這是在同一張「test_ramen.jpg」照片裡被辨識出來的字
+        uv3 = UserVocab(
+            user_id=vip_user.id, 
+            vocab_id=vocabs[1].id, 
+            unlocked_at=current_time,               # 👈 必須有解鎖時間，才會被算進探險紀錄
+            image_path='test_ramen.jpg',            # 👈 跟拉麵用同一張照片
+            custom_title='我在新宿吃的第一碗一蘭拉麵🍜', # 👈 跟拉麵用同一個名稱
+            collected_at=current_time,
+            folder_id=None 
+        )
+
+        # 3. 另一件獨立的拍照事件：車票 (切符)
         uv2 = UserVocab(
             user_id=vip_user.id, 
             vocab_id=vocabs[2].id, 
             unlocked_at=datetime.utcnow(), 
             image_path='test_ticket.jpg',
-            custom_title='回程的車票'
-        )
-
-        # 僅收藏，未解鎖 (例如在單字本手動加入，通常不會有照片和自訂標題)
-        uv3 = UserVocab(
-            user_id=vip_user.id, 
-            vocab_id=vocabs[1].id, 
-            collected_at=datetime.utcnow(),
-            folder_id=None # 預設資料夾
+            custom_title='準備搭新幹線回程囉🚉'
         )
 
         db.session.add_all([uv1, uv2, uv3])

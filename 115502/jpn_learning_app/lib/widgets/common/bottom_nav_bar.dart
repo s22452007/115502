@@ -32,6 +32,10 @@ class AppBottomNavBar extends StatelessWidget {
             icon: Icon(Icons.camera_alt_outlined),
             label: '相機',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark_border),
+            label: '我的收藏夾',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: '搜尋'),
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '首頁'),
           BottomNavigationBarItem(

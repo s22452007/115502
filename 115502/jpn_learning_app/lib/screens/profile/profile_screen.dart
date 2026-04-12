@@ -20,7 +20,7 @@ import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'photo_folder_v2_screen.dart';
-import 'badge_library_screen.dart'; 
+import 'badge_library_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -54,12 +54,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _getDisplayLevel(String? dbLevel) {
     if (dbLevel == null || dbLevel.isEmpty) return '尚未設定等級';
     switch (dbLevel) {
-      case 'N1': return '日語大師';
-      case 'N2': return '商務菁英';
-      case 'N3': return '交流無礙';
-      case 'N4': return '生活達人';
-      case 'N5': 
-      default:   return '日語新手';
+      case 'N1':
+        return '日語大師';
+      case 'N2':
+        return '商務菁英';
+      case 'N3':
+        return '交流無礙';
+      case 'N4':
+        return '生活達人';
+      case 'N5':
+      default:
+        return '日語新手';
     }
   }
 
@@ -88,7 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } else {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('抓取資料失敗，請稍後再試')));
       }
     }
 
@@ -101,7 +108,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _pickAndUploadImage() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('訪客無法修改大頭貼，請先註冊或登入喔！')));
       return;
     }
 
@@ -115,26 +124,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (pickedFile != null) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
-      
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
+
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
       final result = await ApiClient.uploadAvatar(userId, base64String);
-      
+
       if (!context.mounted) return;
 
       if (result.containsKey('avatar')) {
         context.read<UserProvider>().setAvatar(result['avatar']);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
       }
     }
   }
 
   Future<void> _editNickname(String currentName) async {
     final userId = context.read<UserProvider>().userId;
-    final controller = TextEditingController(text: context.read<UserProvider>().username ?? '');
+    final controller = TextEditingController(
+      text: context.read<UserProvider>().username ?? '',
+    );
     String? errorText;
 
     final result = await showDialog<String>(
@@ -166,7 +183,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   setDialogState(() => errorText = '請輸入暱稱');
                   return;
                 }
-                final check = await ApiClient.checkUsername(name, userId: userId);
+                final check = await ApiClient.checkUsername(
+                  name,
+                  userId: userId,
+                );
                 if (check['error'] != null) {
                   setDialogState(() => errorText = check['error']);
                   return;
@@ -190,16 +210,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
 
     if (res['error'] != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(res['error'])));
       return;
     }
 
     context.read<UserProvider>().setUsername(result);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱已更新')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('暱稱已更新')));
   }
 
   void _handleGuestClick(String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
   }
 
   // ==========================================
@@ -207,7 +233,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==========================================
 
   // 1. 頂部頭像與個人資訊區塊
-  Widget _buildProfileHeader(BuildContext context, bool isGuest, String safeName, String userName, String? userAvatar, String defaultAvatarUrl) {
+  Widget _buildProfileHeader(
+    BuildContext context,
+    bool isGuest,
+    String safeName,
+    String userName,
+    String? userAvatar,
+    String defaultAvatarUrl,
+  ) {
     final rawLevel = context.watch<UserProvider>().japaneseLevel;
 
     return Row(
@@ -223,7 +256,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 3)),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
                   ],
                 ),
                 child: CircleAvatar(
@@ -231,8 +268,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundColor: const Color(0xFFC5E1A5),
                   backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
                       ? (userAvatar.startsWith('http')
-                          ? NetworkImage(userAvatar)
-                          : MemoryImage(base64Decode(userAvatar)) as ImageProvider)
+                            ? NetworkImage(userAvatar)
+                            : MemoryImage(base64Decode(userAvatar))
+                                  as ImageProvider)
                       : NetworkImage(defaultAvatarUrl) as ImageProvider,
                 ),
               ),
@@ -243,7 +281,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
-                child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                child: const Icon(
+                  Icons.camera_alt,
+                  size: 14,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -261,14 +303,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Flexible(
                       child: Text(
                         isGuest ? '訪客' : userName,
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textColor),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _textColor,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (!isGuest) ...[
                       const SizedBox(width: 6),
-                      Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: Colors.grey.shade500,
+                      ),
                     ],
                   ],
                 ),
@@ -309,7 +359,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(
             '能力',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: _textColor,
+            ),
           ),
           const SizedBox(height: 20),
           Stack(
@@ -320,7 +374,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 200,
                   height: 200,
                   child: CustomPaint(
-                    painter: RadarChartPainter(color: _primaryGreen, values: _radarValues),
+                    painter: RadarChartPainter(
+                      color: _primaryGreen,
+                      values: _radarValues,
+                    ),
                   ),
                 ),
               ),
@@ -333,13 +390,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _primaryGreen,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
                       ),
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                        );
                       },
-                      child: const Text('登入查看能力分析', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        '登入查看能力分析',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -368,8 +442,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       List<int> ms = milestones[id] ?? [];
       int level = 0;
       for (int i = 0; i < ms.length; i++) {
-        if (progress >= ms[i]) level = i + 1;
-        else break;
+        if (progress >= ms[i])
+          level = i + 1;
+        else
+          break;
       }
       return level;
     }
@@ -379,28 +455,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (isGuest) {
           _handleGuestClick('成就徽章庫');
         } else {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => BadgeLibraryScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => BadgeLibraryScreen()),
+          );
         }
       },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: _cardColor, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+          color: _cardColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('成就徽章', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
-                Row(
-                  children: [
-                    Text(
-                      isGuest ? '登入查看' : '查看全部進度',
-                      style: TextStyle(color: _primaryGreen, fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    Icon(Icons.chevron_right, color: _primaryGreen),
-                  ],
+                Text(
+                  '成就徽章',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _textColor,
+                  ),
+                ),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          isGuest ? '登入查看' : '查看全部進度',
+                          style: TextStyle(
+                            color: _primaryGreen,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: _primaryGreen),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -411,7 +510,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 _buildMiniBadge(Icons.school, '程度認證', getLevel('level_01')),
                 _buildMiniBadge(Icons.menu_book, '單字大富翁', getLevel('vocab_01')),
-                _buildMiniBadge(Icons.local_fire_department, '學習火種', getLevel('streak_01')),
+                _buildMiniBadge(
+                  Icons.local_fire_department,
+                  '學習火種',
+                  getLevel('streak_01'),
+                ),
               ],
             ),
           ],
@@ -425,12 +528,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Map<String, dynamic> theme;
     // 根據等級給予顏色
     switch (level) {
-      case 5: theme = {'color': Colors.purpleAccent, 'isGradient': true}; break;
-      case 4: theme = {'color': Colors.amber[400]!, 'isGradient': false}; break;
-      case 3: theme = {'color': Colors.blueGrey[300]!, 'isGradient': false}; break;
-      case 2: theme = {'color': Colors.orange[700]!, 'isGradient': false}; break;
-      case 1: theme = {'color': Colors.brown[400]!, 'isGradient': false}; break;
-      default: theme = {'color': Colors.grey[400]!, 'isGradient': false}; break;
+      case 5:
+        theme = {'color': Colors.purpleAccent, 'isGradient': true};
+        break;
+      case 4:
+        theme = {'color': Colors.amber[400]!, 'isGradient': false};
+        break;
+      case 3:
+        theme = {'color': Colors.blueGrey[300]!, 'isGradient': false};
+        break;
+      case 2:
+        theme = {'color': Colors.orange[700]!, 'isGradient': false};
+        break;
+      case 1:
+        theme = {'color': Colors.brown[400]!, 'isGradient': false};
+        break;
+      default:
+        theme = {'color': Colors.grey[400]!, 'isGradient': false};
+        break;
     }
 
     bool isUnlocked = level > 0;
@@ -445,14 +560,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
             shape: BoxShape.circle,
             color: isUnlocked ? solidColor.withOpacity(0.15) : Colors.grey[200],
             // 白金級漸層魔法
-            gradient: isGradient ? const SweepGradient(colors: [Colors.purple, Colors.blue, Colors.pink, Colors.purple]) : null,
+            gradient: isGradient
+                ? const SweepGradient(
+                    colors: [
+                      Colors.purple,
+                      Colors.blue,
+                      Colors.pink,
+                      Colors.purple,
+                    ],
+                  )
+                : null,
             // 邊框顏色
-            border: !isGradient ? Border.all(color: isUnlocked ? solidColor : Colors.transparent, width: 2.5) : null,
+            border: !isGradient
+                ? Border.all(
+                    color: isUnlocked ? solidColor : Colors.transparent,
+                    width: 2.5,
+                  )
+                : null,
           ),
           child: isGradient
               ? Container(
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
                   child: Icon(icon, color: Colors.purple, size: 24),
                 )
               : Icon(
@@ -465,9 +597,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(
           title,
           style: TextStyle(
-            fontSize: 12, 
+            fontSize: 12,
             fontWeight: isUnlocked ? FontWeight.bold : FontWeight.normal,
-            color: isUnlocked ? _textColor : Colors.grey[600]
+            color: isUnlocked ? _textColor : Colors.grey[600],
           ),
         ),
       ],
@@ -479,20 +611,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: _cardColor, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('收藏夾', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
+          Text(
+            '收藏夾',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: _textColor,
+            ),
+          ),
           TextButton(
             onPressed: () {
               if (isGuest) {
                 _handleGuestClick('收藏夾');
               } else {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => PhotoFolderV2Screen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PhotoFolderV2Screen(),
+                  ),
+                );
               }
             },
-            child: Text('查看全部 >', style: TextStyle(color: _primaryGreen, fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '查看全部',
+                  style: TextStyle(
+                    color: _primaryGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: _primaryGreen),
+              ],
+            ),
           ),
         ],
       ),
@@ -504,20 +664,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==========================================
   @override
   Widget build(BuildContext context) {
-    final userEmail = context.watch<UserProvider>().email ?? 'guest@example.com';
-    final userName = context.watch<UserProvider>().username ?? userEmail.split('@')[0];
+    final userEmail =
+        context.watch<UserProvider>().email ?? 'guest@example.com';
+    final userName =
+        context.watch<UserProvider>().username ?? userEmail.split('@')[0];
     final userAvatar = context.watch<UserProvider>().avatar;
     final isGuest = context.watch<UserProvider>().userId == null;
 
-    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
+    final List<String> colors = [
+      'E57373',
+      'F06292',
+      'BA68C8',
+      '9575CD',
+      '7986CB',
+      '64B5F6',
+      '4DD0E1',
+      '4DB6AC',
+      '81C784',
+      'AED581',
+      'FFB74D',
+      'FF8A65',
+    ];
     final String safeName = userName.isEmpty ? 'Guest' : userName;
 
     int hash = 0;
     for (int i = 0; i < safeName.length; i++) {
       hash = (hash * 31 + safeName.codeUnitAt(i)) & 0x7FFFFFFF;
     }
-    final String bgColor = colors.isNotEmpty ? colors[hash % colors.length] : '000000';
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(safeName)}&background=$bgColor&color=fff';
+    final String bgColor = colors.isNotEmpty
+        ? colors[hash % colors.length]
+        : '000000';
+    final String defaultAvatarUrl =
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(safeName)}&background=$bgColor&color=fff';
 
     return Scaffold(
       backgroundColor: _bgColor,
@@ -533,7 +711,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         title: IconButton(
           icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          ),
         ),
         centerTitle: true,
       ),
@@ -544,7 +725,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildProfileHeader(context, isGuest, safeName, userName, userAvatar, defaultAvatarUrl),
+                  _buildProfileHeader(
+                    context,
+                    isGuest,
+                    safeName,
+                    userName,
+                    userAvatar,
+                    defaultAvatarUrl,
+                  ),
                   const SizedBox(height: 32),
                   _buildRadarChartSection(isGuest),
                   const SizedBox(height: 24),
@@ -558,10 +746,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 4,
         onTap: (i) {
-          if (i == 0) Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
-          else if (i == 1) Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
-          else if (i == 2) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
-          else if (i == 3) Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()));
+          if (i == 0)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          else if (i == 1)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            );
+          else if (i == 2)
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          else if (i == 3)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+            );
         },
       ),
     );
@@ -594,8 +799,10 @@ class RadarChartPainter extends CustomPainter {
         double currentRadius = radius * (step / 3);
         double x = centerX + currentRadius * math.cos(angle);
         double y = centerY + currentRadius * math.sin(angle);
-        if (i == 0) path.moveTo(x, y);
-        else path.lineTo(x, y);
+        if (i == 0)
+          path.moveTo(x, y);
+        else
+          path.lineTo(x, y);
       }
       path.close();
       canvas.drawPath(path, gridPaint);
@@ -622,14 +829,22 @@ class RadarChartPainter extends CustomPainter {
       double valueRadius = radius * values[i];
       double x = centerX + valueRadius * math.cos(angle);
       double y = centerY + valueRadius * math.sin(angle);
-      if (i == 0) valuePath.moveTo(x, y);
-      else valuePath.lineTo(x, y);
+      if (i == 0)
+        valuePath.moveTo(x, y);
+      else
+        valuePath.lineTo(x, y);
     }
     valuePath.close();
     canvas.drawPath(valuePath, valuePaint);
     canvas.drawPath(valuePath, valueStrokePaint);
 
-    final List<String> labels = ['Listening', 'Speaking', 'Reading', 'Writing', 'Culture'];
+    final List<String> labels = [
+      'Listening',
+      'Speaking',
+      'Reading',
+      'Writing',
+      'Culture',
+    ];
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
     for (int i = 0; i < 5; i++) {
@@ -643,7 +858,10 @@ class RadarChartPainter extends CustomPainter {
         style: const TextStyle(color: Colors.black87, fontSize: 12),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(x - textPainter.width / 2, y - textPainter.height / 2));
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, y - textPainter.height / 2),
+      );
     }
   }
 

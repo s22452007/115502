@@ -39,8 +39,8 @@ class AppBottomNavBar extends StatelessWidget {
             label: '學習小組',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: '個人檔案',
+            icon: Icon(Icons.bookmark_border),
+            label: '我的收藏夾',
           ),
         ],
       ),

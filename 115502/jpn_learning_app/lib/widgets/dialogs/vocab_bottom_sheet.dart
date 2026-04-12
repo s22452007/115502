@@ -42,7 +42,8 @@ class VocabBottomSheet {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('${scene['scene_name']} 的單字', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
+                  // 改成通用的標題，避免跟照片自訂名稱混淆
+                  Text('此場景的單字圖鑑', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
                   IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: () => Navigator.pop(context)),
                 ],
               ),
@@ -50,7 +51,8 @@ class VocabBottomSheet {
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
                 child: FutureBuilder<List<dynamic>>(
-                future: ApiClient.getSceneVocabs(scene['scene_id'], int.parse(userId)),
+                // 換成呼叫 getVocabsByPhoto，並傳入 image_path
+                future: ApiClient.getVocabsByPhoto(scene['image_path'], int.parse(userId)),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
@@ -75,10 +77,11 @@ class VocabBottomSheet {
                           padding: const EdgeInsets.symmetric(vertical: 12.0),
                           child: Row(
                             children: [
-                              Icon(
-                                isUnlocked ? Icons.check_circle : Icons.radio_button_unchecked,
-                                color: isUnlocked ? const Color(0xFF6AA86B) : Colors.grey.shade400
-                              ),
+                              // 註解掉的綠色勾勾
+                              // Icon(
+                              //   isUnlocked ? Icons.check_circle : Icons.radio_button_unchecked,
+                              //   color: isUnlocked ? const Color(0xFF6AA86B) : Colors.grey.shade400
+                              // ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Text(

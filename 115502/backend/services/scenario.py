@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import UserScene, Scene
+from models import UserVocab, Scene
 import os
 import uuid
 
@@ -119,7 +119,7 @@ def get_scenario_history():
     (提供給你的擴充範例骨架)
     """
     # TODO: 1. 從 Token 中取得 user_id
-    # TODO: 2. 從資料庫 (例如 UserScene 或是自訂的 ScenarioHistory 表) 撈取該使用者的歷史紀錄
+    # TODO: 2. 從資料庫 (例如 UserVocab 或是自訂的 ScenarioHistory 表) 撈取該使用者的歷史紀錄
     # TODO: 3. 將資料格式化並回傳
     
     return jsonify({
@@ -176,30 +176,76 @@ def analyze_text_scenario():
 @scenario_bp.route('/unlocked/<int:user_id>', methods=['GET'])
 def get_unlocked_scenes(user_id):
     """
-    取得使用者已解鎖的場景列表
-    支援 Query Parameter: ?limit=3 (首頁用)
+    取得使用者已解鎖的探險紀錄 (以照片/拍照事件為單位)
     """
     limit = request.args.get('limit', type=int)
     
-    # 依照解鎖時間倒序排列
-    query = UserScene.query.filter_by(user_id=user_id).order_by(UserScene.unlocked_at.desc())
+    # 撈出該使用者所有已解鎖的紀錄
+    user_vocabs = UserVocab.query.filter(UserVocab.user_id == user_id, UserVocab.unlocked_at.isnot(None)).all()
     
+    event_dict = {}
+    for us in user_vocabs:
+        # 以「照片 (image_path)」為單位分組。如果沒照片，就以單字 ID 獨立顯示。
+        key = us.image_path if us.image_path else f"no_img_{us.id}"
+        
+        if key not in event_dict:
+            # 優先取得使用者自訂標題，如果沒有，才顯示系統場景名稱
+            title = us.custom_title or (us.vocab.scene.name if us.vocab and us.vocab.scene else "單字探險")
+            
+            event_dict[key] = {
+                "scene_id": us.vocab.scene_id if us.vocab else 0, # 依然保留 scene_id 給前端跳轉用
+                "scene_name": title, # 這裡已經變成玩家自訂的標題了！
+                "icon_name": us.vocab.scene.icon_name if us.vocab and us.vocab.scene else "image",
+                "image_path": us.image_path,
+                "unlocked_at_raw": us.unlocked_at,
+                "unlocked_at": us.unlocked_at.strftime('%Y.%m.%d'),
+                "vocab_count": 1 # 初始這張照片抓到 1 個字
+            }
+        else:
+            # 這張照片抓到了第 2、第 3 個字！把數量加上去
+            event_dict[key]["vocab_count"] += 1
+            # 時間以最新的為主
+            if us.unlocked_at > event_dict[key]["unlocked_at_raw"]:
+                event_dict[key]["unlocked_at_raw"] = us.unlocked_at
+                
+    # 依照時間排序 (最新的在最上面)
+    sorted_events = sorted(event_dict.values(), key=lambda x: x['unlocked_at_raw'], reverse=True)
+    
+    # 移除暫存的 raw 時間
+    for event in sorted_events:
+        del event['unlocked_at_raw']
+        
     if limit:
-        user_scenes = query.limit(limit).all()
-    else:
-        user_scenes = query.all()
+        sorted_events = sorted_events[:limit]
+        
+    return jsonify({"scenes": sorted_events}), 200
+
+# 用照片查單字
+@scenario_bp.route('/photo_vocabs', methods=['GET'])
+def get_vocabs_by_photo():
+    """
+    取得特定照片 (image_path) 下解鎖的所有單字。
+    必須傳入 Query Parameter: ?user_id=1&image_path=test_ticket.jpg
+    """
+    user_id = request.args.get('user_id', type=int)
+    image_path = request.args.get('image_path', type=str)
+    
+    if not user_id or not image_path:
+        return jsonify({"error": "缺少 user_id 或 image_path"}), 400
+
+    # 從 UserVocab 撈出這張照片解鎖的紀錄
+    user_vocabs = UserVocab.query.filter_by(user_id=user_id, image_path=image_path).all()
 
     results = []
-    for us in user_scenes:
-        scene = us.scene
-        if scene: # 防呆，確保場景存在
-            vocab_count = len(scene.vocabs)
+    for uv in user_vocabs:
+        v = uv.vocab
+        if v:
             results.append({
-                "scene_id": scene.id,
-                "scene_name": scene.name,
-                "icon_name": scene.icon_name,
-                "unlocked_at": us.unlocked_at.strftime('%Y.%m.%d'),
-                "vocab_count": vocab_count
+                "vocab_id": v.id,
+                "word": v.word,
+                "kana": v.kana,
+                "meaning": v.meaning,
+                "is_unlocked": True # 既然是從這張照片撈出來的，一定有解鎖
             })
             
-    return jsonify({"scenes": results}), 200
+    return jsonify({"vocabs": results}), 200

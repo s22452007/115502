@@ -11,7 +11,7 @@ class GroupConfigScreen extends StatefulWidget {
 
 class _GroupConfigScreenState extends State<GroupConfigScreen> {
   final TextEditingController _nameController = TextEditingController();
-  
+
   // 預設選擇的目標類型與數值
   String _selectedTaskType = 'scans'; // scans:拍照, points:點數, logins:登入
   int _selectedTarget = 30; // 預設為標準難度 30
@@ -42,9 +42,9 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   void _goToNextStep() {
     final groupName = _nameController.text.trim();
     if (groupName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請先為小組取個響亮的名稱喔！')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('請先為小組取個響亮的名稱喔！')));
       return;
     }
 
@@ -91,7 +91,14 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- 區塊 1：小組名稱 ---
-            Text('🏷️ 小組名稱', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textColor)),
+            Text(
+              '🏷️ 小組名稱',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _textColor,
+              ),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _nameController,
@@ -104,15 +111,28 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
               ),
             ),
             const SizedBox(height: 32),
 
             // --- 區塊 2：任務類型 ---
-            Text('🎯 本週共同目標', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textColor)),
+            Text(
+              '🎯 本週共同目標',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _textColor,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('決定你們小組這週要一起完成什麼任務', style: TextStyle(fontSize: 14, color: _subTextColor)),
+            Text(
+              '決定你們小組這週要一起完成什麼任務',
+              style: TextStyle(fontSize: 14, color: _subTextColor),
+            ),
             const SizedBox(height: 16),
             _buildTaskTypeOption(
               icon: Icons.camera_alt,
@@ -137,16 +157,45 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             const SizedBox(height: 32),
 
             // --- 區塊 3：動態目標難度 ---
-            Text('🔥 目標難度 (以滿編 5 人計算)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textColor)),
+            Text(
+              '🔥 目標難度 (以滿編 5 人計算)',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _textColor,
+              ),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
                 // 把動態算出的數值跟單位傳給按鈕
-                Expanded(child: _buildDifficultyButton('輕鬆', easyVal, unit, Colors.green.shade400)),
+                Expanded(
+                  child: _buildDifficultyButton(
+                    '輕鬆',
+                    easyVal,
+                    unit,
+                    const Color(0XFFC6DB76),
+                  ),
+                ),
+
                 const SizedBox(width: 12),
-                Expanded(child: _buildDifficultyButton('標準', normalVal, unit, Colors.orange.shade400)),
+                Expanded(
+                  child: _buildDifficultyButton(
+                    '標準',
+                    normalVal,
+                    unit,
+                    const Color(0XFFFFD568),
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: _buildDifficultyButton('爆肝', hardVal, unit, Colors.red.shade400)),
+                Expanded(
+                  child: _buildDifficultyButton(
+                    '爆肝',
+                    hardVal,
+                    unit,
+                    const Color(0XFFFFAFAB),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 40),
@@ -161,13 +210,19 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
                 elevation: 0,
               ),
               onPressed: _goToNextStep,
               child: const Text(
-                '下一步：邀請好友 👉',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                '下一步：邀請好友',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -177,15 +232,20 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   }
 
   // 建立任務類型的選項卡片
-  Widget _buildTaskTypeOption({required IconData icon, required String title, required String subtitle, required String value}) {
+  Widget _buildTaskTypeOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String value,
+  }) {
     final isSelected = _selectedTaskType == value;
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedTaskType = value; // 切換目標
-          
+
           final newConfig = _getDifficultyConfig();
-          _selectedTarget = newConfig['normal']; 
+          _selectedTarget = newConfig['normal'];
         });
       },
       child: Container(
@@ -200,15 +260,34 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? AppColors.primary : Colors.grey, size: 28),
+            Icon(
+              icon,
+              color: isSelected ? AppColors.primary : Colors.grey,
+              size: 28,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isSelected ? AppColors.primary : _textColor)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isSelected ? AppColors.primary : _textColor,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(fontSize: 13, color: isSelected ? AppColors.primary.withOpacity(0.8) : _subTextColor)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isSelected
+                          ? AppColors.primary.withOpacity(0.8)
+                          : _subTextColor,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -220,7 +299,12 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   }
 
   // 🌟 升級版按鈕：接收 unit (單位)
-  Widget _buildDifficultyButton(String label, int value, String unit, Color color) {
+  Widget _buildDifficultyButton(
+    String label,
+    int value,
+    String unit,
+    Color color,
+  ) {
     final isSelected = _selectedTarget == value;
     return GestureDetector(
       onTap: () => setState(() => _selectedTarget = value),
@@ -229,14 +313,31 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
         decoration: BoxDecoration(
           color: isSelected ? color : _cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? color : Colors.transparent, width: 2),
+          border: Border.all(
+            color: isSelected ? color : Colors.transparent,
+            width: 2,
+          ),
         ),
         child: Column(
           children: [
-            Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isSelected ? Colors.white : _textColor)),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: isSelected ? Colors.white : _textColor,
+              ),
+            ),
             const SizedBox(height: 4),
             // 🌟 這裡把 $value 和 $unit 拼在一起顯示！
-            Text('$value $unit', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : _subTextColor)),
+            Text(
+              '$value $unit',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : _subTextColor,
+              ),
+            ),
           ],
         ),
       ),

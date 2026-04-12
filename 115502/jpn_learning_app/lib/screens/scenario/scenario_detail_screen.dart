@@ -22,7 +22,7 @@ class ScenarioDetailScreen extends StatelessWidget {
           _buildSliverAppBar(context),
           // 使用 FutureBuilder 撈出該場景底下所有的單字清單
           FutureBuilder<List<dynamic>>(
-            future: ApiClient.getSceneVocabs(scene['scene_id'], userId!),
+            future: ApiClient.getVocabsByPhoto(scene['image_path'], userId!),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const SliverToBoxAdapter(

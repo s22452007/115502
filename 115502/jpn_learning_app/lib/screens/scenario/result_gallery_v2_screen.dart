@@ -107,26 +107,37 @@ class ResultGalleryV2Screen extends StatelessWidget {
                               child: scene['image_path'] != null
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(10),
-                                      // 假設照片存放在後端的 uploads 資料夾
+                                      // 修正照片破圖：改為 /static/photos/，並且加上 errorBuilder 防止白畫面
                                       child: Image.network(
-                                        '${ApiClient.baseUrl}/uploads/${scene['image_path']}',
+                                        scene['image_path'].startsWith('http')
+                                            ? scene['image_path']
+                                            : '${ApiClient.baseUrl}/static/photos/${scene['image_path'].split('/').last}',
                                         fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => 
+                                            const Icon(Icons.broken_image, color: Colors.grey),
                                       ),
                                     )
                                   : const Icon(Icons.image, color: Colors.grey),
                             ),
+                            
+                            // 解決太擠的問題：在這裡加入一個 16 像素的隱形空白寬度
+                            const SizedBox(width: 16),
+                            
                             // 中間：標題與提示文字
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    scene['scene_name'],
+                                    scene['scene_name'], // 因為後端改了，這裡會自動印出 custom_title！
                                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis, // 如果標題太長會自動變成 ...
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '點擊查看詳細單字 >',
+                                    // 讓提示文字顯示這張照片解鎖了幾個字
+                                    '這張照片解鎖了 ${scene['vocab_count']} 個單字 >',
                                     style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                                   ),
                                 ],

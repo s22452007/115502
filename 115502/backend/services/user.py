@@ -1,16 +1,17 @@
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 from flask import Blueprint, request, jsonify
 
+from sqlalchemy import func
 from sqlalchemy.orm.attributes import flag_modified
 
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
 from models import (
-    User, UserAbility, UserAchievement, UserVocab, UserFolder, UserScene,
+    User, UserAbility, UserAchievement, UserVocab, UserFolder, UserVocab,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
-    Feedback, PointTransaction
+    Feedback, PointTransaction, Vocab
 )
 
 user_bp = Blueprint('user', __name__)
@@ -206,8 +207,8 @@ def get_profile_data(user_id):
         return jsonify({"error": "找不到使用者"}), 404
 
     # 動態計算能力值
-    vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
-    scene_count = UserScene.query.filter_by(user_id=user_id).count()
+    vocab_count = UserVocab.query.filter(UserVocab.user_id == user_id, UserVocab.unlocked_at.isnot(None)).count()
+    scene_count = db.session.query(func.count(func.distinct(Vocab.scene_id))).select_from(UserVocab).join(Vocab, UserVocab.vocab_id == Vocab.id).filter(UserVocab.user_id == user_id, UserVocab.unlocked_at.isnot(None)).scalar()
     folder_count = UserFolder.query.filter_by(user_id=user_id).count()
     streak = user.streak_days if user else 0
     pts = user.j_pts if user else 0

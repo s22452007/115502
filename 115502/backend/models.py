@@ -32,11 +32,10 @@ class User(db.Model):
     notified_levels = db.Column(db.JSON, default={}) 
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
 
-    # 關聯
-    collected_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
+    # 使用者單字紀錄（解鎖 / 收藏）
+    user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)
     abilities = db.relationship('UserAbility', backref='user', uselist=False, lazy=True) # 一對一關聯
-    unlocked_scenes = db.relationship('UserScene', backref='user', lazy=True)
 
 # 使用者能力值表 (UserAbility) - 雷達圖專用
 class UserAbility(db.Model):
@@ -56,8 +55,8 @@ class UserAbility(db.Model):
 # 場景表 (Scene)
 class Scene(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    icon_name = db.Column(db.String(50), nullable=True) 
+    name = db.Column(db.String(100), nullable=False)  # 例如：咖啡廳
+    icon_name = db.Column(db.String(50), nullable=True)   # 存 Flutter 的 Icon 名稱，例如 'local_cafe'
     vocabs = db.relationship('Vocab', backref='scene', lazy=True)
 
 # 單字字典 (Vocab)
@@ -67,12 +66,18 @@ class Vocab(db.Model):
     word = db.Column(db.String(100), nullable=False) # 單字的日文原型或漢字
     kana = db.Column(db.String(100), nullable=False) # 單字的假名拼音
     meaning = db.Column(db.String(200), nullable=False)  # 單字的中文解釋
-    # === 改為難度分級的例句 ===
-    sentence_basic = db.Column(db.String(255), nullable=True)     # 初級例句 (給 N5, N4 看)
-    sentence_inter = db.Column(db.String(255), nullable=True)     # 中級例句 (給 N3 看)
-    sentence_upper_inter = db.Column(db.String(255), nullable=True) # 中高級 (給 N2 看)
-    sentence_advanced = db.Column(db.String(255), nullable=True)  # 高級例句 (給 N1 看)
-    audio_filename = db.Column(db.String(100), nullable=True)   # 儲存音檔檔名或路徑
+    # --- 難度分級例句 ---
+    sentence_basic = db.Column(db.String(255), nullable=True)       # 初級例句 (N5, N4)
+    sentence_inter = db.Column(db.String(255), nullable=True)       # 中級例句 (N3)
+    sentence_upper_inter = db.Column(db.String(255), nullable=True) # 中高級例句 (N2)
+    sentence_advanced = db.Column(db.String(255), nullable=True)    # 高級例句 (N1)
+
+    # --- 語音檔路徑 (支援單字與各級例句發音) ---
+    audio_word = db.Column(db.String(100), nullable=True)     # 單字本身的發音檔
+    audio_basic = db.Column(db.String(100), nullable=True)    # 初級例句發音檔
+    audio_inter = db.Column(db.String(100), nullable=True)    # 中級例句發音檔
+    audio_upper = db.Column(db.String(100), nullable=True)    # 中高級例句發音檔
+    audio_adv = db.Column(db.String(100), nullable=True)      # 高級例句發音檔
 
 # 測驗題目表 (QuizQuestion) - 用於新手程度判定
 class QuizQuestion(db.Model):
@@ -110,10 +115,11 @@ class UserVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂的照片標題 (例如: 新宿的一蘭拉麵)
     image_path = db.Column(db.String(255), nullable=True)  # 使用者的照片
     unlocked_at = db.Column(db.DateTime, nullable=True)
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
-    collected_at = db.Column(db.DateTime, nullable=True) # 使用者主動收藏的時間
+    collected_at = db.Column(db.DateTime, nullable=True)
     vocab = db.relationship('Vocab')
     folder = db.relationship('UserFolder')
 

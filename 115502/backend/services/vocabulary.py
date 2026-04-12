@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from datetime import datetime
 
 from utils.db import db
 from models import User, UserVocab, UserFolder, Vocab
@@ -9,7 +10,12 @@ vocab_bp = Blueprint('vocab', __name__)
 @vocab_bp.route('/favorites/<int:user_id>', methods=['GET'])
 def get_user_favorites(user_id):
     # 預設資料夾（folder_id 為 null 的單字）
-    default_count = UserVocab.query.filter_by(user_id=user_id, folder_id=None).count()
+    default_count = UserVocab.query.filter(
+        UserVocab.user_id == user_id, 
+        UserVocab.folder_id == None,
+        UserVocab.collected_at.isnot(None)
+    ).count()
+    
     result = [{
         "id": None,
         "name": "預設相簿",
@@ -36,13 +42,17 @@ def get_user_favorites(user_id):
 def get_folder_vocabs():
     data = request.get_json()
     user_id = data.get('user_id')
-    folder_id = data.get('folder_id')  # None = 預設資料夾
+    folder_id = data.get('folder_id')
 
     if not user_id:
         return jsonify({"error": "缺少 user_id"}), 400
 
     if folder_id is None:
-        user_vocabs = UserVocab.query.filter_by(user_id=user_id, folder_id=None).all()
+        user_vocabs = UserVocab.query.filter(
+            UserVocab.user_id == user_id, 
+            UserVocab.folder_id == None,
+            UserVocab.collected_at.isnot(None)
+        ).all()
     else:
         user_vocabs = UserVocab.query.filter_by(user_id=user_id, folder_id=folder_id).all()
 
@@ -116,22 +126,25 @@ def collect_vocab():
 
     # 檢查是否已收藏
     existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
-    from datetime import datetime
-
+    
     if existing:
-        # 單字已存在：可能是先前拍照被自動加進圖鑑的，也可能是已經收藏過的
-        if existing.folder_id is not None and existing.folder_id != folder_id:
-            # 已在其他資料夾
+        if existing.collected_at is not None:
+            # 真的已經收藏過了
             return jsonify({"error": "已經收藏過囉！"}), 400
-        
-        # 覆蓋資料夾、並且記錄使用者主動按星星「收藏」的時間點
-        existing.folder_id = folder_id
-        existing.collected_at = datetime.utcnow()
+        else:
+            # 之前只有解鎖，現在補上收藏時間和資料夾
+            existing.collected_at = datetime.utcnow()
+            existing.folder_id = folder_id
+            db.session.commit()
+            return jsonify({"message": "收藏成功！", "user_vocab_id": existing.id}), 200
+    else:
+        # 完全沒紀錄，新增一筆 (只有收藏)
+        uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id, collected_at=datetime.utcnow())
+        db.session.add(uv)
         db.session.commit()
-        return jsonify({"message": "收藏成功！", "user_vocab_id": existing.id}), 200
-
-    # 正常新建邏輯 (例如從系統的其他地方手動收藏單字)
-    uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id, collected_at=datetime.utcnow())
+        return jsonify({"message": "收藏成功！", "user_vocab_id": uv.id}), 201
+    
+    uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id)
     db.session.add(uv)
     db.session.commit()
 
@@ -152,11 +165,17 @@ def uncollect_vocab():
     if not uv:
         return jsonify({"error": "找不到該收藏紀錄"}), 404
 
-    # 刪除該紀錄
-    db.session.delete(uv)
-    db.session.commit()
-
-    return jsonify({"message": "已取消收藏"}), 200
+    # 如果該單字已被解鎖，僅將 collected_at 和 folder_id 設為 None
+    if uv.unlocked_at is not None:
+        uv.folder_id = None
+        uv.collected_at = None # 確保清除收藏時間
+        db.session.commit()
+        return jsonify({"message": "已從資料夾移除，但保留解鎖狀態"}), 200
+    else:
+        # 既沒解鎖也沒收藏，整筆刪除
+        db.session.delete(uv)
+        db.session.commit()
+        return jsonify({"message": "已取消收藏"}), 200
 
 # 刪除資料夾（裡面的單字移回預設）
 @vocab_bp.route('/delete_folder', methods=['POST'])
@@ -241,9 +260,11 @@ def get_vocab_detail(vocab_id):
     if not v or not user:
         return jsonify({"error": "找不到資料"}), 404
 
-    # 檢查是否已收藏 (有紀錄代表星星要亮起)
-    is_favorited = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first() is not None
-    user_lvl = user.japanese_level or 'N5' # 預設 N5
+    # 檢查是否已收藏 (有 collected_at 紀錄代表星星要亮起)
+    uv = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
+    is_favorited = (uv is not None and uv.collected_at is not None)
+    
+    user_lvl = user.japanese_level or 'N5' # 如果玩家沒設定，預設為 N5
     
     sentences = []
     

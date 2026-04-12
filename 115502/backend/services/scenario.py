@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from models import UserVocab, Scene
 from models import UserPhoto, UserPhotoVocab, UserVocab, Scene
 import os
 import uuid
@@ -186,49 +185,32 @@ def analyze_text_scenario():
 @scenario_bp.route('/unlocked/<int:user_id>', methods=['GET'])
 def get_unlocked_scenes(user_id):
     """
-    取得使用者已解鎖的探險紀錄 (以照片/拍照事件為單位)
+    取得使用者拍過的照片紀錄
     """
     limit = request.args.get('limit', type=int)
     
-    # 撈出該使用者所有已解鎖的紀錄
-    user_vocabs = UserVocab.query.filter(UserVocab.user_id == user_id, UserVocab.unlocked_at.isnot(None)).all()
-    
-    event_dict = {}
-    for us in user_vocabs:
-        # 以「照片 (image_path)」為單位分組。如果沒照片，就以單字 ID 獨立顯示。
-        key = us.image_path if us.image_path else f"no_img_{us.id}"
-        
-        if key not in event_dict:
-            # 優先取得使用者自訂標題，如果沒有，才顯示系統場景名稱
-            title = us.custom_title or (us.vocab.scene.name if us.vocab and us.vocab.scene else "單字探險")
-            
-            event_dict[key] = {
-                "scene_id": us.vocab.scene_id if us.vocab else 0, # 依然保留 scene_id 給前端跳轉用
-                "scene_name": title, # 這裡已經變成玩家自訂的標題了！
-                "icon_name": us.vocab.scene.icon_name if us.vocab and us.vocab.scene else "image",
-                "image_path": us.image_path,
-                "unlocked_at_raw": us.unlocked_at,
-                "unlocked_at": us.unlocked_at.strftime('%Y.%m.%d'),
-                "vocab_count": 1 # 初始這張照片抓到 1 個字
-            }
-        else:
-            # 這張照片抓到了第 2、第 3 個字！把數量加上去
-            event_dict[key]["vocab_count"] += 1
-            # 時間以最新的為主
-            if us.unlocked_at > event_dict[key]["unlocked_at_raw"]:
-                event_dict[key]["unlocked_at_raw"] = us.unlocked_at
-                
-    # 依照時間排序 (最新的在最上面)
-    sorted_events = sorted(event_dict.values(), key=lambda x: x['unlocked_at_raw'], reverse=True)
-    
-    # 移除暫存的 raw 時間
-    for event in sorted_events:
-        del event['unlocked_at_raw']
-        
+    # 1. 直接撈使用者的「拍照事件表」
+    query = UserPhoto.query.filter(UserPhoto.user_id == user_id).order_by(UserPhoto.created_at.desc())
     if limit:
-        sorted_events = sorted_events[:limit]
+        photos = query.limit(limit).all()
+    else:
+        photos = query.all()
+    
+    results = []
+    for p in photos:
+        # 2. 算一下這張照片下面掛了幾個單字
+        vocab_count = UserPhotoVocab.query.filter_by(photo_id=p.id).count()
         
-    return jsonify({"scenes": sorted_events}), 200
+        results.append({
+            "scene_id": p.scene_id if p.scene_id else 0, 
+            "scene_name": p.custom_title or (p.scene.name if p.scene else "單字探險"),
+            "icon_name": p.scene.icon_name if p.scene else "image",
+            "image_path": p.image_path,
+            "unlocked_at": p.created_at.strftime('%Y.%m.%d'),
+            "vocab_count": vocab_count
+        })
+        
+    return jsonify({"scenes": results}), 200
 
 # 用照片查單字
 @scenario_bp.route('/photo_vocabs', methods=['GET'])

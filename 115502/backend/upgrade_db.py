@@ -130,6 +130,27 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ user.notified_levels 欄位可能已存在：{e}")
 
+# ==========================================
+# 📸 10. 升級 user_vocab (新增相片、解鎖時間與去重索引)
+# ==========================================
+try:
+    cursor.execute("ALTER TABLE user_vocab ADD COLUMN image_path VARCHAR(255);")
+    print("✅ user_vocab 擴充成功 (加入相片路徑欄位)！")
+except sqlite3.OperationalError:
+    pass
+
+try:
+    cursor.execute("ALTER TABLE user_vocab ADD COLUMN unlocked_at DATETIME;")
+    print("✅ user_vocab 擴充成功 (加入解鎖時間欄位)！")
+except sqlite3.OperationalError:
+    pass
+
+try:
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_user_vocab_user_vocab ON user_vocab(user_id, vocab_id);")
+    print("✅ user_vocab 去重複索引建立成功！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user_vocab 索引建立失敗：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

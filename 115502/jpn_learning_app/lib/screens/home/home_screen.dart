@@ -421,7 +421,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => const ResultGalleryV2Screen(),
-              ), // 個人檔案
+              ), // 學習小組
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
         },

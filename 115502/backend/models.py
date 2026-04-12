@@ -96,16 +96,19 @@ class QuizQuestion(db.Model):
 # 🗂️ 3. 使用者學習紀錄 (場景解鎖、單字收藏)
 # ==========================================
 
-# 使用者場景表 (UserScene)
-class UserScene(db.Model):
+# 照片事件表(UserPhoto) - 主檔
+# 記錄使用者的每一次「拍照動態」
+class UserPhoto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False)
-    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow) # 紀錄解鎖時間
-    image_path = db.Column(db.String(255), nullable=True) # 紀錄使用者當下拍的那張照片
-    scene = db.relationship('Scene')
+    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=True) # 系統判斷的大場景
+    image_path = db.Column(db.String(255), nullable=False) # 使用者拍的照片
+    custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂的名稱 (例如：新宿一蘭)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow) # 拍照時間
 
-# 使用者的「單字收藏夾 / 圖鑑」 (UserVocab)
+    # 關聯：這張照片包含哪些單字明細
+    photo_vocabs = db.relationship('UserPhotoVocab', backref='photo', lazy=True, cascade="all, delete-orphan")
+    scene = db.relationship('Scene') # 讓 UserPhoto 可以找到對應的 Scene 物件
 class UserVocab(db.Model):
     __tablename__ = 'user_vocab'
     __table_args__ = (

@@ -16,7 +16,7 @@ def analyze_scene():
     """
     from datetime import datetime
     from utils.db import db
-    from models import Scene, Vocab, UserVocab, UserScene
+    from models import Scene, Vocab, UserVocab, UserPhoto, UserPhotoVocab
 
     # 確保有傳 user_id (相機辨識綁定使用者)
     user_id = request.form.get('user_id')

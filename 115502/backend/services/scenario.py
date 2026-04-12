@@ -12,8 +12,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @scenario_bp.route('/analyze', methods=['POST'])
 def analyze_scene():
     """
-    接收前端上傳的相片，並交由 AI 分析回傳結果。
+    接收前端上傳的相片，交由 AI 分析回傳結果，並將分析出的單字強制寫入使用者的單字圖鑑 (UserVocab)。
     """
+    from datetime import datetime
+    from utils.db import db
+    from models import Scene, Vocab, UserVocab, UserScene
+
+    # 確保有傳 user_id (相機辨識綁定使用者)
+    user_id = request.form.get('user_id')
+    if not user_id:
+        return jsonify({'error': '缺少 user_id'}), 400
+
     if 'image' not in request.files:
         return jsonify({'error': '沒有找到圖片檔案 (image)'}), 400
 
@@ -23,31 +32,84 @@ def analyze_scene():
 
     if file:
         try:
-            # 1. 生成唯一的檔案名稱並儲存圖片到伺服器 (模擬)
+            # 1. 生成唯一的檔案名稱並儲存圖片到伺服器
             ext = os.path.splitext(file.filename)[1]
             if not ext:
                 ext = '.jpg' # 預設副檔名
             unique_filename = f"{uuid.uuid4()}{ext}"
             file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
             file.save(file_path)
+            relative_image_path = f'/static/photos/{unique_filename}'
 
-            # 2. 呼叫 AI 工具函式 (使用更新後的 Google MediaPipe 實作)
+            # 2. 呼叫 AI 工具函式
             from utils.ai_helper import analyze_image_from_path
             ai_result_wrapper = analyze_image_from_path(file_path)
 
             if not ai_result_wrapper.get("success"):
                 return jsonify({'error': ai_result_wrapper.get("error", "AI 分析失敗")}), 500
             
-            ai_data = ai_result_wrapper.get("result", {"labels": ["Unknown"], "text": ""})
+            ai_data = ai_result_wrapper.get("result", {})
+            labels = ai_data.get('labels', [])
+            main_label = labels[0] if labels else "未知物件"
+            
+            # --- 以下為寫入資料庫邏輯 ---
+            # 3. 建立一個虛擬的 Scene 來代表這次照片解鎖事件 (由於 Vocab 必須綁定 Scene)
+            scene_name = main_label.split(" (")[0][:20] # 取簡單英文名稱或日文為主
+            new_scene = Scene(name=f"照片解鎖: {scene_name}", icon_name="camera_alt")
+            db.session.add(new_scene)
+            db.session.commit() # 取得 new_scene.id
+
+            # 4. 記錄此使用者的解鎖場景
+            us = UserScene(
+                user_id=user_id,
+                scene_id=new_scene.id,
+                image_path=relative_image_path,
+                unlocked_at=datetime.utcnow()
+            )
+            db.session.add(us)
+
+            # 5. 把單字寫入 Vocab，並自動寫入 UserVocab (圖鑑)
+            vocabs_data = ai_data.get('vocabs', [])
+            sentences_data = ai_data.get('sentences', [])
+            
+            for index, vocab_info in enumerate(vocabs_data):
+                sentence = sentences_data[index] if index < len(sentences_data) else {}
+                
+                # 新增至系統詞庫
+                v = Vocab(
+                    scene_id=new_scene.id,
+                    word=vocab_info.get('word', ''),
+                    kana=vocab_info.get('kana', ''),
+                    meaning=vocab_info.get('meaning', ''),
+                    sentence_basic=sentence.get('japanese', ''),
+                )
+                db.session.add(v)
+                db.session.commit() # 得到 v.id
+                
+                # 綁定給 UserVocab 成為圖鑑收集物
+                uv = UserVocab(
+                    user_id=user_id,
+                    vocab_id=v.id,
+                    image_path=relative_image_path,
+                    unlocked_at=datetime.utcnow()
+                )
+                db.session.add(uv)
+                
+                # 將產生的 vocab_id 給補回去 ai_data，讓前端可以用來收藏
+                vocab_info['vocab_id'] = v.id
+
+            db.session.commit()
+            # --- 寫入結束 ---
 
             return jsonify({
-                'message': '圖片分析成功',
-                'file_path': f'/static/photos/{unique_filename}', # 回傳相對路徑
+                'message': '圖片分析成功並已存入圖鑑',
+                'file_path': relative_image_path,
                 'result': ai_data
             }), 200
 
         except Exception as e:
             print(f"分析圖片時發生錯誤: {e}")
+            db.session.rollback()
             return jsonify({'error': f'伺服器內部錯誤: {str(e)}'}), 500
 
 @scenario_bp.route('/history', methods=['GET'])

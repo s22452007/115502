@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models import UserVocab, Scene
+from models import UserPhoto, UserPhotoVocab, UserVocab, Scene
 import os
 import uuid
 
@@ -52,48 +53,57 @@ def analyze_scene():
             labels = ai_data.get('labels', [])
             main_label = labels[0] if labels else "未知物件"
             
-            # --- 以下為寫入資料庫邏輯 ---
-            # 3. 建立一個虛擬的 Scene 來代表這次照片解鎖事件 (由於 Vocab 必須綁定 Scene)
-            scene_name = main_label.split(" (")[0][:20] # 取簡單英文名稱或日文為主
-            new_scene = Scene(name=f"照片解鎖: {scene_name}", icon_name="camera_alt")
-            db.session.add(new_scene)
-            db.session.commit() # 取得 new_scene.id
-
-            # 4. 記錄此使用者的解鎖場景
-            us = UserScene(
+            # --- 以下為寫入資料庫邏輯 (新版主表明細表架構) ---
+            
+            # 3. 建立相簿主檔 (UserPhoto)
+            photo_title = main_label.split(" (")[0][:20] # 取簡單英文名稱或日文為主
+            new_photo = UserPhoto(
                 user_id=user_id,
-                scene_id=new_scene.id,
+                scene_id=None, # 若沒有特定場景就留空
                 image_path=relative_image_path,
-                unlocked_at=datetime.utcnow()
+                custom_title=f"AI辨識: {photo_title}", # 預設照片名稱
+                created_at=datetime.utcnow()
             )
-            db.session.add(us)
+            db.session.add(new_photo)
+            db.session.flush() # 先 flush 取得 new_photo.id
 
-            # 5. 把單字寫入 Vocab，並自動寫入 UserVocab (圖鑑)
+            # 4. 處理單字並建立明細檔與圖鑑
             vocabs_data = ai_data.get('vocabs', [])
             sentences_data = ai_data.get('sentences', [])
             
             for index, vocab_info in enumerate(vocabs_data):
                 sentence = sentences_data[index] if index < len(sentences_data) else {}
                 
-                # 新增至系統詞庫
+                # A. 新增至系統詞庫 (Vocab)
                 v = Vocab(
-                    scene_id=new_scene.id,
+                    scene_id=1, # 這裡給一個預設場景ID避免報錯，或者你可以把 Vocab 的 scene_id 改為 nullable=True
                     word=vocab_info.get('word', ''),
                     kana=vocab_info.get('kana', ''),
                     meaning=vocab_info.get('meaning', ''),
                     sentence_basic=sentence.get('japanese', ''),
                 )
                 db.session.add(v)
-                db.session.commit() # 得到 v.id
+                db.session.flush() # 取得 v.id
                 
-                # 綁定給 UserVocab 成為圖鑑收集物
-                uv = UserVocab(
-                    user_id=user_id,
-                    vocab_id=v.id,
-                    image_path=relative_image_path,
-                    unlocked_at=datetime.utcnow()
+                # B. 建立照片明細檔 (UserPhotoVocab) -> 記錄這張照片裡有這個字
+                pv = UserPhotoVocab(
+                    photo_id=new_photo.id,
+                    vocab_id=v.id
                 )
-                db.session.add(uv)
+                db.session.add(pv)
+                
+                # C. 檢查並更新全域單字圖鑑 (UserVocab)
+                # 看看這個字以前有沒有解鎖過
+                existing_uv = UserVocab.query.filter_by(user_id=user_id, vocab_id=v.id).first()
+                if not existing_uv:
+                    # 從來沒看過這個字！建一個「已解鎖但未收藏」的空殼 (collected_at=None)
+                    uv_shell = UserVocab(
+                        user_id=user_id, 
+                        vocab_id=v.id, 
+                        collected_at=None, 
+                        folder_id=None
+                    )
+                    db.session.add(uv_shell)
                 
                 # 將產生的 vocab_id 給補回去 ai_data，讓前端可以用來收藏
                 vocab_info['vocab_id'] = v.id

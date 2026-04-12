@@ -412,7 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const StudyGroupScreen(),
+                builder: (_) => const ResultGalleryV2Screen(),
               ), // 我的收藏
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
@@ -420,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const ResultGalleryV2Screen(),
+                builder: (_) => const StudyGroupScreen(),
               ), // 學習小組
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }

@@ -450,75 +450,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return level;
     }
 
-    return GestureDetector(
-      onTap: () {
-        if (isGuest) {
-          _handleGuestClick('成就徽章庫');
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => BadgeLibraryScreen()),
-          );
-        }
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: _cardColor,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '成就徽章',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _textColor,
-                  ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: _cardColor, borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('成就徽章', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textColor)),
+              // 把原本的 GestureDetector 換成跟收藏夾一模一樣的 TextButton 樣式
+              TextButton(
+                onPressed: () {
+                  if (isGuest) {
+                    _handleGuestClick('成就徽章庫');
+                  } else {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => BadgeLibraryScreen()));
+                  }
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isGuest ? '登入查看' : '查看全部',
+                      style: TextStyle(color: _primaryGreen, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Icon(Icons.chevron_right, color: _primaryGreen),
+                  ],
                 ),
-                Flexible(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          isGuest ? '登入查看' : '查看全部進度',
-                          style: TextStyle(
-                            color: _primaryGreen,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Icon(Icons.chevron_right, color: _primaryGreen),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            // 展示前三個核心徽章
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMiniBadge(Icons.school, '程度認證', getLevel('level_01')),
-                _buildMiniBadge(Icons.menu_book, '單字大富翁', getLevel('vocab_01')),
-                _buildMiniBadge(
-                  Icons.local_fire_department,
-                  '學習火種',
-                  getLevel('streak_01'),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildMiniBadge(Icons.school, '程度認證', getLevel('level_01')),
+              _buildMiniBadge(Icons.menu_book, '單字大富翁', getLevel('vocab_01')),
+              _buildMiniBadge(Icons.local_fire_department, '學習火種', getLevel('streak_01')),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -354,16 +354,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (_) => const StudyGroupScreen(),
                       ),
                     ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '學習小組動態',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Icon(Icons.chevron_right, color: Colors.grey.shade600),
-                ],
-              ),
+              // child: Row(
+              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //   children: [
+              //     const Text(
+              //       '學習小組動態',
+              //       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              //     ),
+              //     Icon(Icons.chevron_right, color: Colors.grey.shade600),
+              //   ],
+              // ),
             ),
             const SizedBox(height: 12),
             isGuest

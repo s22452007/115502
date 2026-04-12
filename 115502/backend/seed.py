@@ -1,7 +1,7 @@
 from app import app
 from utils.db import db
 from datetime import date, datetime
-from models import User, Scene, Vocab, Achievement, UserAbility, UserAchievement, UserVocab, QuizQuestion
+from models import User, Scene, UserPhoto, UserPhotoVocab, Vocab, Achievement, UserAbility, UserAchievement, UserVocab, QuizQuestion
 from werkzeug.security import generate_password_hash
 
 def seed_data():
@@ -146,42 +146,52 @@ def seed_data():
         db.session.add(UserAbility(user_id=vip_user.id, listening=0.8, speaking=0.6, reading=0.9, writing=0.5, culture=0.7))
 
         # ==========================================
-        # 🌟 完美的假資料：模擬一次拍照，解鎖兩個單字！
+        # 🌟 新架構假資料：模擬拍照與收藏
         # ==========================================
-        current_time = datetime.utcnow() # 確保時間完全一致
+        current_time = datetime.utcnow()
 
-        # 1. 第一個字：拉麵 (ラーメン)
-        uv1 = UserVocab(
-            user_id=vip_user.id, 
-            vocab_id=vocabs[0].id, 
-            unlocked_at=current_time, 
-            image_path='test_ramen.jpg',            # 👈 綁定照片
-            custom_title='我在新宿吃的第一碗一蘭拉麵🍜', # 👈 玩家自訂名稱
-            collected_at=current_time               # 同時加入收藏
+        # --- 事件 1: 拍了拉麵照片 ---
+        photo1 = UserPhoto(
+            user_id=vip_user.id,
+            scene_id=scene1.id,
+            image_path='test_ramen.jpg',
+            custom_title='我在新宿吃的第一碗一蘭拉麵🍜',
+            created_at=current_time
         )
-        
-        # 2. 第二個字：加麵 (替玉)
-        # 模擬這是在同一張「test_ramen.jpg」照片裡被辨識出來的字
-        uv3 = UserVocab(
-            user_id=vip_user.id, 
-            vocab_id=vocabs[1].id, 
-            unlocked_at=current_time,               # 👈 必須有解鎖時間，才會被算進探險紀錄
-            image_path='test_ramen.jpg',            # 👈 跟拉麵用同一張照片
-            custom_title='我在新宿吃的第一碗一蘭拉麵🍜', # 👈 跟拉麵用同一個名稱
-            collected_at=current_time,
-            folder_id=None 
-        )
+        db.session.add(photo1)
+        db.session.flush() # 先 flush 拿到 photo1.id
 
-        # 3. 另一件獨立的拍照事件：車票 (切符)
-        uv2 = UserVocab(
-            user_id=vip_user.id, 
-            vocab_id=vocabs[2].id, 
-            unlocked_at=datetime.utcnow(), 
+        # 在這張照片裡辨識出「拉麵」跟「加麵」
+        pv1 = UserPhotoVocab(photo_id=photo1.id, vocab_id=vocabs[0].id) # ラーメン
+        pv2 = UserPhotoVocab(photo_id=photo1.id, vocab_id=vocabs[1].id) # 替玉
+        db.session.add_all([pv1, pv2])
+
+        # 玩家同時把這兩個字加入了收藏 (圖鑑打勾 + 星星)
+        uv1 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[0].id, collected_at=current_time)
+        uv2 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[1].id, collected_at=current_time)
+        db.session.add_all([uv1, uv2])
+
+        # --- 事件 2: 拍了車票照片 ---
+        photo2 = UserPhoto(
+            user_id=vip_user.id,
+            scene_id=scene2.id,
             image_path='test_ticket.jpg',
-            custom_title='準備搭新幹線回程囉🚉'
+            custom_title='準備搭新幹線回程囉🚉',
+            created_at=current_time
         )
+        db.session.add(photo2)
+        db.session.flush()
 
-        db.session.add_all([uv1, uv2, uv3])
+        # 在這張照片裡辨識出「車票」
+        pv3 = UserPhotoVocab(photo_id=photo2.id, vocab_id=vocabs[2].id) # 切符
+        db.session.add(pv3)
+
+        # 玩家只有解鎖，沒有收藏車票 (所以圖鑑打勾，但沒星星)
+        # 注意：新架構下，只要有 UserPhotoVocab 就算解鎖。但為了讓圖鑑系統好運作，
+        # 我們通常會在辨識出新單字時，順便在 UserVocab 建立一筆 collected_at=None 的空殼紀錄。
+        uv3 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[2].id, collected_at=None)
+        db.session.add(uv3)
+
         db.session.commit()
         
         print("✅ 豪華版資料灌入完成！")

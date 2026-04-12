@@ -116,10 +116,22 @@ def collect_vocab():
 
     # 檢查是否已收藏
     existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
-    if existing:
-        return jsonify({"error": "已經收藏過囉！"}), 400
+    from datetime import datetime
 
-    uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id)
+    if existing:
+        # 單字已存在：可能是先前拍照被自動加進圖鑑的，也可能是已經收藏過的
+        if existing.folder_id is not None and existing.folder_id != folder_id:
+            # 已在其他資料夾
+            return jsonify({"error": "已經收藏過囉！"}), 400
+        
+        # 覆蓋資料夾、並且記錄使用者主動按星星「收藏」的時間點
+        existing.folder_id = folder_id
+        existing.collected_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"message": "收藏成功！", "user_vocab_id": existing.id}), 200
+
+    # 正常新建邏輯 (例如從系統的其他地方手動收藏單字)
+    uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id, collected_at=datetime.utcnow())
     db.session.add(uv)
     db.session.commit()
 

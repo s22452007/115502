@@ -58,18 +58,31 @@ class ScenarioDetailScreen extends StatelessWidget {
       ),
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
-          scene['scene_name'],
+          scene['scene_name'], // 這裡會完美顯示自訂的標題
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             shadows: [Shadow(color: Colors.black45, blurRadius: 8)],
           ),
         ),
-        // 暫時用圖示代替，如果你資料庫有存 cover_image_url 可以改成 Image.network()
-        background: Container(
-          color: AppColors.primaryLighter,
-          child: const Icon(Icons.camera_alt, size: 80, color: Colors.white),
-        ),
+        // Image.network 抓取使用者的照片！
+        background: scene['image_path'] != null
+            ? Image.network(
+                scene['image_path'].startsWith('http')
+                    ? scene['image_path']
+                    : '${ApiClient.baseUrl}/static/photos/${scene['image_path'].split('/').last}',
+                fit: BoxFit.cover, // 讓照片完美填滿這個長方形區域
+                // 防呆機制：如果照片被刪除了或網路不穩，就顯示破圖圖示，不會整個白畫面
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: AppColors.primaryLighter,
+                  child: const Icon(Icons.broken_image, size: 80, color: Colors.white),
+                ),
+              )
+            // 如果真的沒有照片，才顯示原本預設的相機圖示
+            : Container(
+                color: AppColors.primaryLighter,
+                child: const Icon(Icons.camera_alt, size: 80, color: Colors.white),
+              ),
       ),
     );
   }

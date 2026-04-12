@@ -365,21 +365,21 @@ class _HomeScreenState extends State<HomeScreen> {
             //     ],
             //   ),
             // ),
-            const SizedBox(height: 12),
-            isGuest
-                ? PremiumLockedOverlay(
-                    child: StudyGroupCard(),
-                    message: '登入查看群組動態',
-                  )
-                : GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const StudyGroupScreen(),
-                      ),
-                    ),
-                    child: StudyGroupCard(),
-                  ),
+            // const SizedBox(height: 12),
+            // isGuest
+            //     ? PremiumLockedOverlay(
+            //         child: StudyGroupCard(),
+            //         message: '登入查看群組動態',
+            //       )
+            //     : GestureDetector(
+            //         onTap: () => Navigator.push(
+            //           context,
+            //           MaterialPageRoute(
+            //             builder: (_) => const StudyGroupScreen(),
+            //           ),
+            //         ),
+            //         child: StudyGroupCard(),
+            //       ),
             const SizedBox(height: 20),
           ],
         ),

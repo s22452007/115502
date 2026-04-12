@@ -28,7 +28,12 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
       // final result = await AiService().analyzeScene(widget.imagePath);
 
       // 改為使用後端 API (由後端的 Google MediaPipe 接手分析)
-      final result = await ApiClient.analyzeImage(widget.imagePath);
+      // 這裡必須傳入 user_id 給後端，好讓後端記錄圖鑑
+      final userId = context.read<UserProvider>().userId;
+      if (userId == null) {
+        throw Exception('User ID is null');
+      }
+      final result = await ApiClient.analyzeImage(widget.imagePath, userId);
 
       if (mounted && result.containsKey('result') && result['result'] != null) {
         // 分析成功，把今日進度 +1

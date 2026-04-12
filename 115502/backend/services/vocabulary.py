@@ -165,17 +165,13 @@ def uncollect_vocab():
     if not uv:
         return jsonify({"error": "找不到該收藏紀錄"}), 404
 
-    # 如果該單字已被解鎖，僅將 collected_at 和 folder_id 設為 None
-    if uv.unlocked_at is not None:
-        uv.folder_id = None
-        uv.collected_at = None # 確保清除收藏時間
-        db.session.commit()
-        return jsonify({"message": "已從資料夾移除，但保留解鎖狀態"}), 200
-    else:
-        # 既沒解鎖也沒收藏，整筆刪除
-        db.session.delete(uv)
-        db.session.commit()
-        return jsonify({"message": "已取消收藏"}), 200
+    # 只要單字存在於 UserVocab，就代表它有被解鎖（因為拍照時會建空殼）。
+    # 取消收藏只要把資料夾跟時間拔掉即可，保留解鎖狀態，不要 delete(uv)！
+    uv.folder_id = None
+    uv.collected_at = None
+    db.session.commit()
+    
+    return jsonify({"message": "已從資料夾移除，但保留圖鑑解鎖狀態"}), 200
 
 # 刪除資料夾（裡面的單字移回預設）
 @vocab_bp.route('/delete_folder', methods=['POST'])

@@ -109,6 +109,15 @@ class UserPhoto(db.Model):
     # 關聯：這張照片包含哪些單字明細
     photo_vocabs = db.relationship('UserPhotoVocab', backref='photo', lazy=True, cascade="all, delete-orphan")
     scene = db.relationship('Scene') # 讓 UserPhoto 可以找到對應的 Scene 物件
+
+# 照片包含的單字(UserPhotoVocab) - 明細檔
+# 記錄「某張照片裡，具體辨識出了哪幾個單字」
+class UserPhotoVocab(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    photo_id = db.Column(db.Integer, db.ForeignKey('user_photo.id'), nullable=False)
+    vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    
+    vocab = db.relationship('Vocab')
 class UserVocab(db.Model):
     __tablename__ = 'user_vocab'
     __table_args__ = (

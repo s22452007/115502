@@ -63,29 +63,60 @@ except Exception as e:
     print(f"⚠️ scene 建立或升級警告：{e}")
 
 # ==========================================
-# 5. 建立與升級 user_vocab (玩家的單字圖鑑！)
+# 5. 🚀 建立新版相簿與圖鑑系統 (UserPhoto, UserPhotoVocab, UserVocab)
 # ==========================================
 try:
-    # 如果是舊專案沒有這張表，先建起來
+    # A. 建立 UserPhoto (照片事件主檔)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_photo (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        scene_id INTEGER,
+        image_path VARCHAR(255) NOT NULL,
+        custom_title VARCHAR(100),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id),
+        FOREIGN KEY(scene_id) REFERENCES scene(id)
+    );
+    """)
+    print("✅ user_photo (照片事件主檔) 建立成功！")
+
+    # B. 建立 UserPhotoVocab (照片單字明細檔)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_photo_vocab (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        photo_id INTEGER NOT NULL,
+        vocab_id INTEGER NOT NULL,
+        FOREIGN KEY(photo_id) REFERENCES user_photo(id),
+        FOREIGN KEY(vocab_id) REFERENCES vocab(id)
+    );
+    """)
+    print("✅ user_photo_vocab (照片單字明細檔) 建立成功！")
+
+    # C. 建立/修改 UserVocab (全域單字圖鑑/收藏)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_vocab (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         vocab_id INTEGER NOT NULL,
-        unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        image_path VARCHAR(255),
         folder_id INTEGER,
+        collected_at DATETIME,
         FOREIGN KEY(user_id) REFERENCES user(id),
-        FOREIGN KEY(vocab_id) REFERENCES vocab(id)
+        FOREIGN KEY(vocab_id) REFERENCES vocab(id),
+        FOREIGN KEY(folder_id) REFERENCES user_folder(id)
     );
     """)
-    # 針對已經存在的表，確保這兩個重要欄位有加上去
-    add_column("user_vocab", "image_path VARCHAR(255)")
+    # 確保必要的圖鑑欄位存在
     add_column("user_vocab", "folder_id INTEGER")
-    add_column("user_vocab", "custom_title VARCHAR(100)")
-    print("✅ user_vocab 單字圖鑑擴充成功 (加入照片路徑與資料夾功能)！")
+    add_column("user_vocab", "collected_at DATETIME")
+    
+    # 確保圖鑑系統的 Unique Constraint 存在 (防止同一個單字重複收藏)
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_user_vocab_user_vocab ON user_vocab(user_id, vocab_id);")
+    
+    print("✅ user_vocab (單字收藏狀態檔) 確認完畢！")
+
 except sqlite3.OperationalError as e:
-    print(f"⚠️ user_vocab 升級警告：{e}")
+    print(f"⚠️ 相簿與圖鑑系統升級警告：{e}")
 
 # ==========================================
 # 6. 升級 vocab (單字詳細內容：適性化分級例句與 5 種音檔)
@@ -138,26 +169,6 @@ print("✅ user 表徽章計數器擴充成功！")
 add_column("user", "notified_levels TEXT DEFAULT '{}'")
 print("✅ user 表徽章彈窗記憶擴充成功！")
 
-# ==========================================
-# 📸 10. 升級 user_vocab (新增相片、解鎖時間與去重索引)
-# ==========================================
-try:
-    cursor.execute("ALTER TABLE user_vocab ADD COLUMN image_path VARCHAR(255);")
-    print("✅ user_vocab 擴充成功 (加入相片路徑欄位)！")
-except sqlite3.OperationalError:
-    pass
-
-try:
-    cursor.execute("ALTER TABLE user_vocab ADD COLUMN unlocked_at DATETIME;")
-    print("✅ user_vocab 擴充成功 (加入解鎖時間欄位)！")
-except sqlite3.OperationalError:
-    pass
-
-try:
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_user_vocab_user_vocab ON user_vocab(user_id, vocab_id);")
-    print("✅ user_vocab 去重複索引建立成功！")
-except sqlite3.OperationalError as e:
-    print(f"⚠️ user_vocab 索引建立失敗：{e}")
 
 # 儲存並關閉
 conn.commit()

@@ -1,50 +1,36 @@
-from flask import Blueprint, request, jsonify
+import os
 import google.generativeai as genai
+from dotenv import load_dotenv
 
-# 建立 Blueprint
-tutor_bp = Blueprint('tutor', __name__)
+# 1. 初始化金鑰 (放在這裡，app.py 就不用管金鑰了)
+load_dotenv(override=True)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-2.5-flash')
 
-# ==========================================
-# 1. 設定您的 API Key 
-# (注意：請將下方字串換成您申請到的 API Key)
-# 未來專題上線時，建議把它移到 .env 環境變數檔案中會更安全喔！
-# ==========================================
-GEMINI_API_KEY = "GEMINI_PRO_KEY"
-genai.configure(api_key=GEMINI_API_KEY)
-
-# 2. 初始化 Gemini 模型 (使用目前最快且免費額度高的 flash 模型)
-model = genai.GenerativeModel('gemini-1.5-flash')
-
-@tutor_bp.route('/ask', methods=['POST'])
-def ask_question():
+# 2. 建立一個專門負責聊天的函數
+def get_ai_reply(topic, user_message, chat_history):
     try:
-        # 接收前端傳來的問題
-        data = request.get_json()
-        question = data.get('question', '')
-
-        if not question:
-            return jsonify({'error': '沒有收到問題喔'}), 400
-
-        # 3. 設計 AI 的「人設」(Prompt Engineering)
-        # 告訴 AI 它現在扮演什麼角色，這會讓回覆更像一個家教
         prompt = f"""
-        你現在是一位專業、親切且有耐心的「日文家教老師」。
-        請用繁體中文回答學生的日文問題。
-        你的回答必須：
-        1. 語氣溫柔鼓勵。
-        2. 解釋清晰易懂，不要用太艱澀的語言學術語。
-        3. 針對學生的問題，提供 1~2 個實用的日文例句（包含假名注音與中文翻譯）。
-        
-        學生的問題是：「{question}」
+        【系統設定】
+        你現在是一個專業的日語會話陪練員。
+        使用者目前選擇的模擬情境 / 主題是：「{topic}」
+
+        【你的任務】
+        1. 角色扮演：請根據「{topic}」這個主題，自動判斷並扮演最適合的角色。
+        2. 語言程度：請使用符合 JLPT N5~N4 程度的自然日文與使用者對話。
+        3. 引導對話：每次回覆的最後，務必「反問一個問題」或「做出一個情境引導」。
+        4. 雙語輸出：請在每一句日文的下方，換行並附上（簡單的繁體中文翻譯）。
         """
 
-        # 4. 呼叫 Gemini 產生回答
-        response = model.generate_content(prompt)
-        ai_answer = response.text
+        if user_message == "[幫我開場]":
+            prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！"
+        else:
+            prompt += f"\n這是我們之前的對話紀錄：\n{chat_history}\n\n使用者剛剛對你說了這句話：「{user_message}」\n請自然地回覆使用者，並記得拋出下一個問題。"
 
-        # 5. 將真正 AI 的答案回傳給前端
-        return jsonify({'answer': ai_answer}), 200
+        # 呼叫 Gemini
+        response = model.generate_content(prompt)
+        return response.text
 
     except Exception as e:
-        print(f"AI 家教 API 發生錯誤: {e}")
-        return jsonify({'error': 'AI 伺服器發生內部錯誤，請檢查後端終端機'}), 500
+        print(f"❌ 廚房發生錯誤: {e}")
+        return "系統小精靈有點累了，請稍後再試一次！"

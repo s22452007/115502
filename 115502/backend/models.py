@@ -118,6 +118,9 @@ class UserPhotoVocab(db.Model):
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
     
     vocab = db.relationship('Vocab')
+
+# 使用者「單字收藏夾」(UserVocab) - 狀態檔
+# 記錄使用者跨越所有照片的「全域單字收藏進度」
 class UserVocab(db.Model):
     __tablename__ = 'user_vocab'
     __table_args__ = (
@@ -127,13 +130,12 @@ class UserVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
-    custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂的照片標題 (例如: 新宿的一蘭拉麵)
-    image_path = db.Column(db.String(255), nullable=True)  # 使用者的照片
-    unlocked_at = db.Column(db.DateTime, nullable=True)
+    
+    # 這裡只剩下跟「收藏」有關的欄位！照片路徑跟標題都移走了
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
-    collected_at = db.Column(db.DateTime, nullable=True)
+    collected_at = db.Column(db.DateTime, nullable=True) # 有時間代表有按星星收藏
+    
     vocab = db.relationship('Vocab')
-    folder = db.relationship('UserFolder')
 
 # 使用者自訂資料夾表 (UserFolder)
 class UserFolder(db.Model):

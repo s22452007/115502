@@ -148,15 +148,16 @@ def seed_data():
         # ==========================================
         # 🌟 新架構假資料：模擬拍照與收藏
         # ==========================================
+        from datetime import timedelta
         current_time = datetime.utcnow()
 
-        # --- 事件 1: 拍了拉麵照片 ---
+        # --- 事件 1: 拍了拉麵照片 (新宿) ---
         photo1 = UserPhoto(
             user_id=vip_user.id,
             scene_id=scene1.id,
             image_path='test_ramen.jpg',
             custom_title='我在新宿吃的第一碗一蘭拉麵🍜',
-            created_at=current_time
+            created_at=current_time - timedelta(days=2) # 假裝是兩天前拍的
         )
         db.session.add(photo1)
         db.session.flush() # 先 flush 拿到 photo1.id
@@ -177,7 +178,7 @@ def seed_data():
             scene_id=scene2.id,
             image_path='test_ticket.jpg',
             custom_title='準備搭新幹線回程囉🚉',
-            created_at=current_time
+            created_at=current_time - timedelta(days=1) # 假裝是一天前拍的
         )
         db.session.add(photo2)
         db.session.flush()
@@ -186,11 +187,32 @@ def seed_data():
         pv3 = UserPhotoVocab(photo_id=photo2.id, vocab_id=vocabs[2].id) # 切符
         db.session.add(pv3)
 
-        # 玩家只有解鎖，沒有收藏車票 (所以圖鑑打勾，但沒星星)
-        # 注意：新架構下，只要有 UserPhotoVocab 就算解鎖。但為了讓圖鑑系統好運作，
-        # 我們通常會在辨識出新單字時，順便在 UserVocab 建立一筆 collected_at=None 的空殼紀錄。
+        # 玩家只有解鎖，沒有收藏車票 (圖鑑打勾，但沒星星)
         uv3 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[2].id, collected_at=None)
         db.session.add(uv3)
+
+        # --- 事件 3: 🌟 淺草吃拉麵 (重複出現的單字) ---
+        photo3 = UserPhoto(
+            user_id=vip_user.id,
+            scene_id=scene1.id,
+            # 這裡為了測試，你可以先共用同一張照片，或換成 test_ramen2.jpg 如果你有這張圖
+            image_path='test_ramen.jpg', 
+            custom_title='逛完淺草寺肚子餓了來吃拉麵🏮',
+            created_at=current_time # 假裝是今天拍的
+        )
+        db.session.add(photo3)
+        db.session.flush()
+
+        # 在淺草的照片裡，再次辨識出「拉麵」跟「加麵」
+        # 新架構允許照片明細無限增加，完全不會報錯！
+        pv4 = UserPhotoVocab(photo_id=photo3.id, vocab_id=vocabs[0].id) # ラーメン
+        pv5 = UserPhotoVocab(photo_id=photo3.id, vocab_id=vocabs[1].id) # 替玉
+        db.session.add_all([pv4, pv5])
+
+        # 🛑 注意：我們「不」能在這裡再寫入 UserVocab 了！
+        # 因為 UserVocab 是全域圖鑑，這兩個字在「事件 1」就已經建檔收藏了。
+        # 再寫入會觸發 UniqueConstraint 錯誤。
+        # 這就是新架構完美發揮作用的地方：圖鑑狀態被保護了！
 
         db.session.commit()
         

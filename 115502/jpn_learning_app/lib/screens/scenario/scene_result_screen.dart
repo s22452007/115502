@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
@@ -23,6 +26,7 @@ class SceneResultScreen extends StatefulWidget {
 class _SceneResultScreenState extends State<SceneResultScreen> {
   // 🌟 魔法變數：控制綠色捲簾的當前高度 (一開始預設 550)
   double _curtainHeight = 550.0;
+  final Set<int> _collectedIds = {};
 
   @override
   Widget build(BuildContext context) {
@@ -239,20 +243,56 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('功能即將開放！等欄位確定後就能存入資料庫收藏囉 ⭐'),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                    onTap: () async {
+                      if (vocab['vocab_id'] == null) return;
+                      final int? currentUserId = Provider.of<UserProvider>(
+                        context,
+                        listen: false,
+                      ).userId;
+                      if (currentUserId == null) return;
+
+                      try {
+                        final result = await ApiClient.collectVocab(
+                          currentUserId,
+                          vocab['vocab_id'],
+                        );
+                        if (result.containsKey('error')) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result['error']),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        } else {
+                          setState(() {
+                            _collectedIds.add(vocab['vocab_id']);
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('已更新圖鑑收藏時間 ⭐'),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('發生錯誤: $e'),
+                            behavior: SnackBarBehavior.floating,
                           ),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                        );
+                      }
                     },
                     child: Icon(
-                      Icons.star_border_rounded,
-                      color: Colors.grey.shade300,
+                      _collectedIds.contains(vocab['vocab_id'])
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      color: _collectedIds.contains(vocab['vocab_id'])
+                          ? Colors.amber
+                          : Colors.grey.shade300,
                       size: 40,
                     ),
                   ),

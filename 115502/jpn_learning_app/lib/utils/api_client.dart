@@ -308,14 +308,18 @@ class ApiClient {
   }
 
   // 這個徽章的升級彈窗我看過了！
-  static Future<void> markBadgeSeen(int userId, String badgeId, int level) async { 
+  static Future<void> markBadgeSeen(
+    int userId,
+    String badgeId,
+    int level,
+  ) async {
     try {
       final url = Uri.parse('$baseUrl/user/mark_badge_seen');
       await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'user_id': userId, 
+          'user_id': userId,
           'badge_id': badgeId,
           'level': level,
         }),
@@ -668,10 +672,7 @@ class ApiClient {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'user_id': userId,
-          'vocab_id': vocabId,
-        }),
+        body: json.encode({'user_id': userId, 'vocab_id': vocabId}),
       );
 
       if (response.statusCode == 200) {
@@ -684,7 +685,7 @@ class ApiClient {
       return false;
     }
   }
-  
+
   // 刪除資料夾
   static Future<Map<String, dynamic>> deleteFolder(int folderId) async {
     final url = Uri.parse('$baseUrl/vocab/delete_folder');
@@ -719,13 +720,16 @@ class ApiClient {
   }
 
   // 取得解鎖場景
-  static Future<List<dynamic>> getUnlockedScenes(int userId, {int limit = 3}) async {
+  static Future<List<dynamic>> getUnlockedScenes(
+    int userId, {
+    int limit = 3,
+  }) async {
     final url = Uri.parse('$baseUrl/scenario/unlocked/$userId?limit=$limit');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return data['scenes']; 
+      return data['scenes'];
     } else {
       throw Exception('無法載入解鎖場景');
     }
@@ -738,14 +742,17 @@ class ApiClient {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return data['vocabs']; 
+      return data['vocabs'];
     } else {
       throw Exception('無法載入單字清單');
     }
   }
 
   // 取得單字詳細資訊
-  static Future<Map<String, dynamic>> getVocabDetail(int vocabId, int userId) async {
+  static Future<Map<String, dynamic>> getVocabDetail(
+    int vocabId,
+    int userId,
+  ) async {
     final url = Uri.parse('$baseUrl/vocab/detail/$vocabId?user_id=$userId');
     final response = await http.get(url);
 
@@ -762,16 +769,13 @@ class ApiClient {
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'user_id': userId,
-        'vocab_id': vocabId,
-      }),
+      body: json.encode({'user_id': userId, 'vocab_id': vocabId}),
     );
 
     if (response.statusCode == 201) {
-      return true; 
+      return true;
     } else {
-      return false; 
+      return false;
     }
   }
 
@@ -799,18 +803,15 @@ class ApiClient {
 
   // 傳送 10 題階梯式測驗陣列給後端的 API
   static Future<Map<String, dynamic>> submitQuizResults(
-    int userId, 
-    List<bool> results
+    int userId,
+    List<bool> results,
   ) async {
     final url = Uri.parse('$baseUrl/quiz/submit');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId,
-          'results': results,
-        }),
+        body: jsonEncode({'user_id': userId, 'results': results}),
       );
 
       if (response.statusCode == 200) {
@@ -850,10 +851,14 @@ class ApiClient {
   }
 
   // 上傳場景照片給 AI 分析 API
-  static Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
+  static Future<Map<String, dynamic>> analyzeImage(
+    String imagePath,
+    int userId,
+  ) async {
     final url = Uri.parse('$baseUrl/scenario/analyze');
     try {
       var request = http.MultipartRequest('POST', url);
+      request.fields['user_id'] = userId.toString();
 
       if (kIsWeb) {
         final imageResponse = await http.get(Uri.parse(imagePath));
@@ -908,7 +913,7 @@ class ApiClient {
 
   // --- AI 家教問答 API ---
   static Future<Map<String, dynamic>> askTutorQuestion(String question) async {
-    final url = Uri.parse('$baseUrl/tutor/ask'); 
+    final url = Uri.parse('$baseUrl/tutor/ask');
     try {
       final response = await http.post(
         url,

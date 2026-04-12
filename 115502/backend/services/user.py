@@ -207,8 +207,8 @@ def get_profile_data(user_id):
         return jsonify({"error": "找不到使用者"}), 404
 
     # 動態計算能力值
-    vocab_count = UserVocab.query.filter(UserVocab.user_id == user_id, UserVocab.unlocked_at.isnot(None)).count()
-    scene_count = db.session.query(func.count(func.distinct(Vocab.scene_id))).select_from(UserVocab).join(Vocab, UserVocab.vocab_id == Vocab.id).filter(UserVocab.user_id == user_id, UserVocab.unlocked_at.isnot(None)).scalar()
+    vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
+    scene_count = db.session.query(func.count(func.distinct(Vocab.scene_id))).select_from(UserVocab).join(Vocab, UserVocab.vocab_id == Vocab.id).filter(UserVocab.user_id == user_id).scalar()
     folder_count = UserFolder.query.filter_by(user_id=user_id).count()
     streak = user.streak_days if user else 0
     pts = user.j_pts if user else 0

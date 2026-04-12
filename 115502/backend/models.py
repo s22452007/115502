@@ -100,13 +100,20 @@ class UserScene(db.Model):
     image_path = db.Column(db.String(255), nullable=True) # 紀錄使用者當下拍的那張照片
     scene = db.relationship('Scene')
 
-# 使用者的「單字收藏夾」 (UserVocab)
+# 使用者的「單字收藏夾 / 圖鑑」 (UserVocab)
 class UserVocab(db.Model):
+    __tablename__ = 'user_vocab'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'vocab_id', name='uq_user_vocab_user_vocab'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    image_path = db.Column(db.String(255), nullable=True)  # 使用者的照片
+    unlocked_at = db.Column(db.DateTime, nullable=True)
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
-    collected_at = db.Column(db.DateTime, default=datetime.utcnow)
+    collected_at = db.Column(db.DateTime, nullable=True) # 使用者主動收藏的時間
     vocab = db.relationship('Vocab')
     folder = db.relationship('UserFolder')
 

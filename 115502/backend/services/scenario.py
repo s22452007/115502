@@ -212,12 +212,10 @@ def get_unlocked_scenes(user_id):
         
     return jsonify({"scenes": results}), 200
 
-# 用照片查單字
 @scenario_bp.route('/photo_vocabs', methods=['GET'])
 def get_vocabs_by_photo():
     """
-    取得特定照片 (image_path) 下解鎖的所有單字。
-    必須傳入 Query Parameter: ?user_id=1&image_path=test_ticket.jpg
+    取得特定照片 (image_path) 下辨識出的單字
     """
     user_id = request.args.get('user_id', type=int)
     image_path = request.args.get('image_path', type=str)
@@ -225,19 +223,24 @@ def get_vocabs_by_photo():
     if not user_id or not image_path:
         return jsonify({"error": "缺少 user_id 或 image_path"}), 400
 
-    # 從 UserVocab 撈出這張照片解鎖的紀錄
-    user_vocabs = UserVocab.query.filter_by(user_id=user_id, image_path=image_path).all()
+    # 1. 先找出這張照片的 ID
+    photo = UserPhoto.query.filter_by(user_id=user_id, image_path=image_path).first()
+    if not photo:
+        return jsonify({"vocabs": []}), 200
+
+    # 2. 撈出這張照片底下的單字明細
+    photo_vocabs = UserPhotoVocab.query.filter_by(photo_id=photo.id).all()
 
     results = []
-    for uv in user_vocabs:
-        v = uv.vocab
+    for pv in photo_vocabs:
+        v = pv.vocab
         if v:
             results.append({
                 "vocab_id": v.id,
                 "word": v.word,
                 "kana": v.kana,
                 "meaning": v.meaning,
-                "is_unlocked": True # 既然是從這張照片撈出來的，一定有解鎖
+                "is_unlocked": True # 有拍到就算解鎖
             })
             
     return jsonify({"vocabs": results}), 200

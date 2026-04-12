@@ -413,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => const StudyGroupScreen(),
-              ), // 學習小組
+              ), // 我的收藏
             ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
           }
           if (i == 4) {

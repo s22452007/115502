@@ -1,11 +1,8 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from utils.db import db
-from flask import request
-import google.generativeai as genai
-
 
 # 匯入各個模組的 Blueprint
 from services.quiz import quiz_bp
@@ -16,14 +13,16 @@ from services.group import group_bp
 from services.vocabulary import vocab_bp
 from services.tutor import tutor_bp
 
-# 自動抓取 app.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
+# 👨‍🍳 引入內場廚師 (AI 聊天函數)
+from services.tutor import get_ai_reply
+
+# 自動抓取 app.py 所在的絕對路徑
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 CORS(app) # 允許跨網域請求
 
-# 👇 加上這行暗號
-print("================ 我是最新版的 app.py 喔喔喔 ================")
+print("================ 我是最新版、超乾淨的 app.py 喔喔喔 ================")
 
 # 強制把資料庫路徑綁定在 backend/instance/jlens.db
 instance_path = os.path.join(BASE_DIR, 'instance')
@@ -41,60 +40,37 @@ db.init_app(app)
 
 # 註冊 API 路由 (綁定網址前綴)
 app.register_blueprint(quiz_bp, url_prefix='/api/quiz')
-app.register_blueprint(auth_bp, url_prefix='/api/auth')     # 登入、註冊用這個
+app.register_blueprint(auth_bp, url_prefix='/api/auth')    
 app.register_blueprint(scenario_bp, url_prefix='/api/scenario')
-app.register_blueprint(user_bp, url_prefix='/api/user')     # 個人資料、好友用這個
-app.register_blueprint(group_bp, url_prefix='/api/group')   # 學習小組用這個
-app.register_blueprint(vocab_bp, url_prefix='/api/vocab')   # 單字本用這個
-app.register_blueprint(tutor_bp, url_prefix='/api/tutor')   # AI家教用這個
+app.register_blueprint(user_bp, url_prefix='/api/user')    
+app.register_blueprint(group_bp, url_prefix='/api/group')  
+app.register_blueprint(vocab_bp, url_prefix='/api/vocab')  
+app.register_blueprint(tutor_bp, url_prefix='/api/tutor')  
 
 # 啟動時自動建立資料表
 with app.app_context():
     db.create_all()
 
+# ==========================================
+# 🛎️ 專屬櫃檯：負責接收 Flutter 傳來的聊天包裹
+# ==========================================
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    # 1. 接收從 Flutter 傳過來的日文訊息
+    # 1. 櫃檯接單（把所有 Flutter 傳來的變數收下來）
     user_message = request.form.get('message', '')
-    chat_history = request.form.get('history', '無歷史紀錄')
-    print(f"收到來自 App 的訊息：{user_message}")
+    chat_history = request.form.get('history', '') 
+    topic = request.form.get('topic', '日常對話') 
+    user_level = request.form.get('level', 'N5') # 🌟 接收等級！如果 App 沒傳，預設當作 N5
 
-    try:
-        # 強迫抓取最新 .env
-        load_dotenv(override=True)
-        
-        # 抓取金鑰
-        my_secret_key = os.getenv("GEMINI_API_KEY") 
+    print(f"📦 收到包裹 -> 主題：{topic} | 等級：{user_level} | 訊息：{user_message}")
 
-        # 把鑰匙交給 Gemini
-        genai.configure(api_key=my_secret_key)
+    # 2. 把食材交給內場廚師 (呼叫 tutor.py 的函數，記得把 user_level 也傳進去)
+    ai_response_text = get_ai_reply(topic, user_message, chat_history, user_level)
 
-        model = genai.GenerativeModel('gemini-2.5-flash-lite')
-        prompt = f"""
-        你現在是一個親切的日語對話小老師兼朋友。
+    # 3. 櫃檯送餐（把熱騰騰的 AI 回覆送回給 Flutter）
+    return ai_response_text
 
-        【這是我們剛剛的對話紀錄】
-        {chat_history}
-
-        【現在】
-        我對你說了這句話：「{user_message}」
-
-        請根據上面的對話脈絡，用符合 N5~N4 程度的自然日文回覆我。
-        ⚠️ 重要任務：回覆完之後，請務必主動「反問我一個問題」，引導我繼續跟你聊這個話題！
-        回覆請盡量簡短，像真人在聊天一樣，並在日文後面附上簡單的中文翻譯。
-        """
-
-        # 請 AI 產生回覆
-
-        response = model.generate_content(prompt)
-        ai_reply = response.text
-
-    except Exception as e:
-        print(f"呼叫 Gemini 時發生錯誤: {e}")
-        ai_reply = "系統小精靈有點累了，請稍後再試一次！"
-    
-    # 把熱騰騰的 AI 回覆送回給 Flutter
-    return ai_reply
+# ==========================================
 
 # 🛑 app.run 必須永遠在整個檔案的最下面！
 if __name__ == '__main__':

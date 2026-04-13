@@ -12,7 +12,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # 2. 建立一個專門負責聊天的函數
-def get_ai_reply(topic, user_message, chat_history):
+def get_ai_reply(topic, user_message, chat_history, japanese_level):
     try:
         prompt = f"""
         【系統設定】
@@ -21,7 +21,10 @@ def get_ai_reply(topic, user_message, chat_history):
 
         【你的任務】
         1. 角色扮演：請根據「{topic}」這個主題，自動判斷並扮演最適合的角色。
-        2. 語言程度：請使用符合 JLPT N5~N4 程度的自然日文與使用者對話。
+        
+        # 👇 2. 這裡原本寫死的 N5~N4，換成活的變數！
+        2. 語言程度：請嚴格使用符合 JLPT {japanese_level} 程度的單字與文法，與使用者進行自然對話。如果使用者的程度較初階（如 N5），請盡量使用簡單、簡短的句子。
+        
         3. 引導對話：每次回覆的最後，務必「反問一個問題」或「做出一個情境引導」。
         4. 雙語輸出：請在每一句日文的下方，換行並附上（簡單的繁體中文翻譯）。
         """

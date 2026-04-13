@@ -18,10 +18,10 @@ class _ChatScreenState extends State<ChatScreen> {
   // 模擬的聊天紀錄 (實戰中會從 Firebase 或你的後端資料庫抓取)
   final List<Map<String, dynamic>> _messages = [
     {'type': 'system', 'text': '今天'},
-    {'type': 'text', 'isMe': false, 'text': '你最近進度很快耶！', 'time': '10:00 AM'},
+    {'type': 'text', 'isUser': false, 'text': '你最近進度很快耶！', 'time': '10:00 AM'},
     {
       'type': 'text',
-      'isMe': true,
+      'isUser': true,
       'text': '對啊！我每天都有堅持拍照解鎖單字 📸',
       'time': '10:05 AM',
     },
@@ -29,7 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'type': 'system', // 系統提示訊息
       'text': 'Din 獲得了「麵食大師」徽章 🏅',
     },
-    {'type': 'text', 'isMe': false, 'text': '太神啦！我要追上你了', 'time': '10:12 AM'},
+    {'type': 'text', 'isUser': false, 'text': '太神啦！我要追上你了', 'time': '10:12 AM'},
   ];
 
   void _sendMessage() {
@@ -39,7 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.add({
         'type': 'text',
-        'isMe': true,
+        'isUser': true,
         'text': text,
         'time': 'Just now',
       });

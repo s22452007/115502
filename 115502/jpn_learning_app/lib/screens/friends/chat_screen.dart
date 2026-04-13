@@ -63,7 +63,25 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           // 聊天訊息列表
-          Expanded(child: ListView.builder()),
+          Expanded(
+            child: ListView.builder(
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+
+                // 防呆機制：確保就算是 null 也能當作 false 處理
+                bool isUserMessage = msg['isUser'] ?? false;
+
+                if (msg['type'] == 'system') {
+                  return _buildSystemMessage(msg['text']);
+                } else if (isUserMessage) {
+                  // 👈 換成檢查 isUserMessage！
+                  return _buildMyMessage(msg['text']);
+                } else {
+                  return _buildFriendMessage(msg['text']);
+                }
+              },
+            ),
+          ),
           // 底部輸入框
           _buildMessageInput(),
         ],

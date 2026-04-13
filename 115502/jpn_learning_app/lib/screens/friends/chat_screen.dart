@@ -5,11 +5,8 @@ class ChatScreen extends StatefulWidget {
   final String friendName;
   final String? friendAvatarUrl;
 
-  const ChatScreen({
-    Key? key,
-    required this.friendName,
-    this.friendAvatarUrl,
-  }) : super(key: key);
+  const ChatScreen({Key? key, required this.friendName, this.friendAvatarUrl})
+    : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -20,16 +17,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // 模擬的聊天紀錄 (實戰中會從 Firebase 或你的後端資料庫抓取)
   final List<Map<String, dynamic>> _messages = [
-    {
-      'type': 'system',
-      'text': '今天',
-    },
-    {
-      'type': 'text',
-      'isMe': false,
-      'text': '你最近進度很快耶！',
-      'time': '10:00 AM',
-    },
+    {'type': 'system', 'text': '今天'},
+    {'type': 'text', 'isMe': false, 'text': '你最近進度很快耶！', 'time': '10:00 AM'},
     {
       'type': 'text',
       'isMe': true,
@@ -40,12 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'type': 'system', // 系統提示訊息
       'text': 'Din 獲得了「麵食大師」徽章 🏅',
     },
-    {
-      'type': 'text',
-      'isMe': false,
-      'text': '太神啦！我要追上你了',
-      'time': '10:12 AM',
-    },
+    {'type': 'text', 'isMe': false, 'text': '太神啦！我要追上你了', 'time': '10:12 AM'},
   ];
 
   void _sendMessage() {
@@ -79,22 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           // 聊天訊息列表
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                if (msg['type'] == 'system') {
-                  return _buildSystemMessage(msg['text']);
-                } else if (msg['isMe'] == true) {
-                  return _buildMyMessage(msg['text']);
-                } else {
-                  return _buildFriendMessage(msg['text']);
-                }
-              },
-            ),
-          ),
+          Expanded(child: ListView.builder()),
           // 底部輸入框
           _buildMessageInput(),
         ],
@@ -109,7 +78,11 @@ class _ChatScreenState extends State<ChatScreen> {
       elevation: 0.5,
       scrolledUnderElevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 20),
+        icon: const Icon(
+          Icons.arrow_back_ios_new,
+          color: Colors.black87,
+          size: 20,
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
@@ -200,7 +173,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           // 留白避免太靠右
-          const SizedBox(width: 48), 
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -215,7 +188,7 @@ class _ChatScreenState extends State<ChatScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 留白避免太靠左
-          const SizedBox(width: 48), 
+          const SizedBox(width: 48),
           // 訊息泡泡
           Flexible(
             child: Container(
@@ -250,9 +223,7 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: SafeArea(
         child: Row(
@@ -298,7 +269,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: _sendMessage,
               ),
             ),

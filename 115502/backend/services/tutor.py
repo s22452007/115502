@@ -1,6 +1,10 @@
+from flask import Blueprint, request, jsonify
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+
+# 建立 Blueprint
+tutor_bp = Blueprint('tutor', __name__)
 
 # 1. 初始化金鑰 (放在這裡，app.py 就不用管金鑰了)
 load_dotenv(override=True)

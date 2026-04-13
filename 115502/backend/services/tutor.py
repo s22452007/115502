@@ -12,7 +12,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # 2. 建立一個專門負責聊天的函數
-def get_ai_reply(topic, user_message, chat_history):
+def get_ai_reply(topic, user_message, chat_history, japanese_level):
     try:
         prompt = f"""
         【系統設定】

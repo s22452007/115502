@@ -15,15 +15,25 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
 
+  // 🌟 1. 新增狀態：用來記錄 AI 是不是正在打字！
+  bool _isTyping = false;
+
   @override
   void initState() {
     super.initState();
-    // 🌟 1. 移除了危險的空箱子，換成自動呼叫 AI 開場！
-    _triggerAIOpening();
+    // 🌟 2. 完美的冷啟動：一進畫面馬上給一句溫暖的歡迎詞，讓畫面不空白！
+    _messages.add({
+      'text': '歡迎來到「${widget.topicTitle}」！小精靈正在趕來的路上，請稍等一下喔...✨',
+      'isUserMessage': false,
+    });
   }
 
   // 🌟 2. 這是專屬的自動開場函數
   Future<void> _triggerAIOpening() async {
+    // 🌟 3. 開始轉圈圈：告訴畫面 AI 正在思考
+    setState(() {
+      _isTyping = true;
+    });
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(
@@ -52,6 +62,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
+      // 🌟 4. 自己送出訊息後，也開啟「AI 正在思考中...」的提示
+      _isTyping = true;
     });
 
     _controller.clear();
@@ -173,6 +185,33 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               },
             ),
           ),
+          // 🌟 5. 這裡就是畫出「正在思考中...」的地方！
+          if (_isTyping)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '🤖 AI 小精靈思考中...',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(

@@ -97,7 +97,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               itemCount: _messages.length,
               itemBuilder: (ctx, i) {
                 final msg = _messages[i];
-
+                bool isUserMessage = msg['isUser'] ?? false;
                 return Align(
                   alignment: msg['isUser']
                       ? Alignment.centerRight

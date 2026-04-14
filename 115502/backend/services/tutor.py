@@ -36,6 +36,7 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level):
 
         # 呼叫 Gemini
         response = model.generate_content(prompt)
+        
         return response.text
 
     except Exception as e:

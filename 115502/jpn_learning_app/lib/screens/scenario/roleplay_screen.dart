@@ -15,6 +15,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
 
+  // 🌟 1. 新增狀態：用來記錄 AI 是不是正在打字！
+  bool _isTyping = false;
+
   @override
   void initState() {
     super.initState();

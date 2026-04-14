@@ -185,6 +185,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               },
             ),
           ),
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(

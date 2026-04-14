@@ -30,6 +30,10 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
   // 🌟 2. 這是專屬的自動開場函數
   Future<void> _triggerAIOpening() async {
+    // 🌟 3. 開始轉圈圈：告訴畫面 AI 正在思考
+    setState(() {
+      _isTyping = true;
+    });
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(

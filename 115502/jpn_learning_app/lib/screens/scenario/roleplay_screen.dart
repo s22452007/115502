@@ -26,15 +26,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       'text': '歡迎來到「${widget.topicTitle}」！小精靈正在趕來的路上，請稍等一下喔...✨',
       'isUserMessage': false,
     });
-    // 🌟 3. 啟動打字機動畫
-    setState(() {
-      _isTyping = true;
-    });
-
-    // 🌟 4. 延遲 1 秒後，才真正呼叫 AI 產生內容
-    Future.delayed(const Duration(seconds: 1), () {
-      _triggerAIOpening();
-    });
   }
 
   // 🌟 2. 這是專屬的自動開場函數

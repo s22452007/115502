@@ -62,6 +62,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
+      // 🌟 4. 自己送出訊息後，也開啟「AI 正在思考中...」的提示
+      _isTyping = true;
     });
 
     _controller.clear();

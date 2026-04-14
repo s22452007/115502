@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
-import 'package:jpn_learning_app/utils/api_client.dart'; // 請確認路徑是不是這個
-// import 'package:jpn_learning_app/screens/scenario/naturalness_screen.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
-// 2-2-4 角色扮演
 class RoleplayScreen extends StatefulWidget {
-  // 🌟 1. 新增一個「變數口袋」，準備用來裝上一頁傳來的標題名稱
   final String topicTitle;
 
-  // 🌟 2. 規定進來這個頁面（聊天室）時，一定要附帶傳入這個標題
   const RoleplayScreen({Key? key, required this.topicTitle}) : super(key: key);
   @override
   State<RoleplayScreen> createState() => _RoleplayScreenState();
@@ -22,41 +18,66 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   @override
   void initState() {
     super.initState();
-    // 讓第一句話變成動態的，把選到的主題塞進去！
-    _messages.add({});
+    // 🌟 1. 移除了危險的空箱子，換成自動呼叫 AI 開場！
+    _triggerAIOpening();
+  }
+
+  // 🌟 2. 這是專屬的自動開場函數
+  Future<void> _triggerAIOpening() async {
+    try {
+      final url = Uri.parse('${ApiClient.baseUrl}/chat');
+      final response = await http.post(
+        url,
+        body: {
+          'message': '[幫我開場]',
+          'topic': widget.topicTitle, // 把情境主題傳給後端
+          'level': 'N4', // 你的日文等級
+          'history': '',
+        },
+      );
+
+      if (response.statusCode == 200 && mounted) {
+        setState(() {
+          _messages.add({'text': response.body, 'isUserMessage': false});
+        });
+      }
+    } catch (e) {
+      print('開場請求發生錯誤: $e');
+    }
   }
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return; // 沒打字不理他
+    if (text.isEmpty) return;
 
     setState(() {
-      // 1. 把你打的字，變成綠色氣泡加進對話裡
-      _messages.add({'text': text, 'isUser': true});
+      _messages.add({'text': text, 'isUserMessage': true});
     });
 
-    // 2. 清空輸入框
     _controller.clear();
-    // 3. 替換：向你的 Python 後端發送真正的請求
+
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
+      print('🔍 準備發送請求到 $url');
 
-      // 👇 監視器 1：確認你的 App 到底要把信寄到哪個完整網址
-      print('🔍 監視器 1：準備發送請求到 $url');
+      // 🌟 3. 把完整的包裹寄給 Python 廚師！
+      final response = await http.post(
+        url,
+        body: {
+          'message': text,
+          'topic': widget.topicTitle,
+          'level': 'N4',
+          'history': '',
+        },
+      );
 
-      // 發送請求
-      final response = await http.post(url, body: {'message': text});
-
-      // 👇 監視器 2 & 3：確認 Python 那邊回傳了什麼狀態和內容
-      print('🔍 監視器 2：收到後端狀態碼 ${response.statusCode}');
-      print('🔍 監視器 3：收到後端回覆內容 ${response.body}');
+      print('🔍 收到後端狀態碼 ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final aiReply = response.body;
-
         if (mounted) {
           setState(() {
-            _messages.add({'text': aiReply, 'isUser': false});
+            _messages.add({'text': aiReply, 'isUserMessage': false});
           });
         }
       } else {
@@ -78,8 +99,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
           onPressed: () => Navigator.pop(context),
         ),
-        // 🌟 3. 關鍵改動！把原本寫死的 'Restaurant Scenario'，換成這個！
-        // (注意：這裡要把 const 拿掉喔)
         title: Text(
           widget.topicTitle,
           style: const TextStyle(
@@ -97,16 +116,21 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               itemCount: _messages.length,
               itemBuilder: (ctx, i) {
                 final msg = _messages[i];
-                bool isUserMessage = msg['isUser'] ?? false;
+
+                // 🌟 4. 這裡就是無敵防護罩！
+                bool isUserMessage = msg['isUserMessage'] ?? false;
+                String messageText = msg['text'] ?? ''; // 防止文字是 null 導致當機
+
                 return Align(
-                  alignment: msg['isUser']
+                  // 👇 下面全部改用安全的 isUserMessage 變數來判斷！
+                  alignment: isUserMessage
                       ? Alignment.centerRight
                       : Alignment.centerLeft,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (!msg['isUser']) ...[
+                      if (!isUserMessage) ...[
                         CircleAvatar(
                           radius: 16,
                           backgroundColor: AppColors.primaryLighter,
@@ -128,15 +152,15 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                           maxWidth: MediaQuery.of(context).size.width * 0.65,
                         ),
                         decoration: BoxDecoration(
-                          color: msg['isUser']
+                          color: isUserMessage
                               ? AppColors.primary
                               : AppColors.primaryLighter,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          msg['text'],
+                          messageText, // 👈 顯示安全的文字
                           style: TextStyle(
-                            color: msg['isUser']
+                            color: isUserMessage
                                 ? Colors.white
                                 : AppColors.textDark,
                             fontSize: 15,
@@ -151,14 +175,14 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
               boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
             ),
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.mic, color: AppColors.primary),
+                  icon: const Icon(Icons.mic, color: AppColors.primary),
                   onPressed: () {},
                 ),
                 Expanded(
@@ -179,7 +203,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: Icon(Icons.send, color: AppColors.primary),
+                  icon: const Icon(Icons.send, color: AppColors.primary),
                   onPressed: _sendMessage,
                 ),
               ],

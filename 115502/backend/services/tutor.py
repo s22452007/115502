@@ -41,5 +41,6 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level):
         return response.text
 
     except Exception as e:
-        print(f"❌ 廚房發生錯誤: {e}")
+        
+        print(f"🚨 抓到 Gemini API 錯誤了：{e}")
         return "系統小精靈有點累了，請稍後再試一次！"

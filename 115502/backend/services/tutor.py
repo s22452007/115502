@@ -35,8 +35,9 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level):
             prompt += f"\n這是我們之前的對話紀錄：\n{chat_history}\n\n使用者剛剛對你說了這句話：「{user_message}」\n請自然地回覆使用者，並記得拋出下一個問題。"
 
         # 呼叫 Gemini
+        print("🔍 準備呼叫 Gemini API...")  # 👈 加這行
         response = model.generate_content(prompt)
-        
+        print("✅ Gemini 回覆完成！")       # 👈 加這行
         return response.text
 
     except Exception as e:

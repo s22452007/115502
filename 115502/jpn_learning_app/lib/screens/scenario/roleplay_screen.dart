@@ -28,31 +28,38 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     });
   }
 
-  // 🌟 2. 這是專屬的自動開場函數
   Future<void> _triggerAIOpening() async {
-    // 🌟 3. 開始轉圈圈：告訴畫面 AI 正在思考
     setState(() {
       _isTyping = true;
-    });
+    }); // 👈 1. 開始轉圈圈
+
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(
         url,
         body: {
           'message': '[幫我開場]',
-          'topic': widget.topicTitle, // 把情境主題傳給後端
-          'level': 'N4', // 你的日文等級
+          'topic': widget.topicTitle,
+          'level': 'N4',
           'history': '',
         },
       );
 
       if (response.statusCode == 200 && mounted) {
         setState(() {
+          // 👈 2. 把開場白加進去
           _messages.add({'text': response.body, 'isUserMessage': false});
         });
       }
     } catch (e) {
       print('開場請求發生錯誤: $e');
+    } finally {
+      // 🌟 3. 強制關閉轉圈圈！
+      if (mounted) {
+        setState(() {
+          _isTyping = false;
+        });
+      }
     }
   }
 

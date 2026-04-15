@@ -62,17 +62,13 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
-      // 🌟 4. 自己送出訊息後，也開啟「AI 正在思考中...」的提示
-      _isTyping = true;
+      _isTyping = true; // 👈 1. 開始轉圈圈
     });
 
     _controller.clear();
 
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
-      print('🔍 準備發送請求到 $url');
-
-      // 🌟 3. 把完整的包裹寄給 Python 廚師！
       final response = await http.post(
         url,
         body: {
@@ -83,20 +79,22 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         },
       );
 
-      print('🔍 收到後端狀態碼 ${response.statusCode}');
-
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && mounted) {
         final aiReply = response.body;
-        if (mounted) {
-          setState(() {
-            _messages.add({'text': aiReply, 'isUserMessage': false});
-          });
-        }
-      } else {
-        print('後端發生錯誤，狀態碼：${response.statusCode}');
+        setState(() {
+          // 👈 2. 這裡只要專心把訊息加進去就好
+          _messages.add({'text': aiReply, 'isUserMessage': false});
+        });
       }
     } catch (e) {
       print('發送請求時發生錯誤: $e');
+    } finally {
+      // 🌟 3. 終極保險機制：不管成功還是失敗，最後一定強制關閉轉圈圈！
+      if (mounted) {
+        setState(() {
+          _isTyping = false;
+        });
+      }
     }
   }
 

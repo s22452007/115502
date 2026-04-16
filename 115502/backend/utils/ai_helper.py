@@ -48,11 +48,11 @@ def analyze_image_from_path(file_path):
           ],
           "sentences": [
             {
-              "japanese": "包含該單字的日文例句1",
+              "japanese": "這是一句一定有包含第1個單字的日文例句",
               "chinese": "例句1的中文翻譯"
             },
             {
-              "japanese": "包含該單字的日文例句2",
+              "japanese": "這是一句一定有包含第2個單字的日文例句",
               "chinese": "例句2的中文翻譯"
             }
           ]

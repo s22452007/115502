@@ -9,7 +9,7 @@ tutor_bp = Blueprint('tutor', __name__)
 # 1. 初始化金鑰 (放在這裡，app.py 就不用管金鑰了)
 load_dotenv(override=True)
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # 2. 建立一個專門負責聊天的函數
 def get_ai_reply(topic, user_message, chat_history, japanese_level):

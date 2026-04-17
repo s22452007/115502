@@ -82,5 +82,34 @@ def delete_photo(photo_id):
     conn.close()
     return redirect(url_for('photo_list'))
 
+# ==========================================
+# [教材單字管理] 
+# ==========================================
+@app.route('/vocab/list')
+def vocab_list():
+    conn = get_db_connection()
+    # 關聯查詢單字表與場景表，取得場景名稱 
+    query = '''
+        SELECT v.id, v.word, v.kana, v.meaning, s.name as scene_name, v.sentence_basic
+        FROM vocab v
+        LEFT JOIN scene s ON v.scene_id = s.id
+        ORDER BY v.id DESC
+    '''
+    vocabs = conn.execute(query).fetchall()
+    conn.close()
+    return render_template('vocab/list.html', vocabs=vocabs)
+
+@app.route('/vocab/delete/<int:vocab_id>', methods=['POST'])
+def delete_vocab(vocab_id):
+    conn = get_db_connection()
+    # 執行刪除單字 
+    conn.execute('DELETE FROM vocab WHERE id = ?', (vocab_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('vocab_list'))
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
+
+

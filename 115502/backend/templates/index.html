@@ -22,64 +22,62 @@
             letter-spacing: 1px;
         }
         
-        /* 統計方塊 */
+        /* 統計方塊 - 靠左對齊調整 */
         .stat-box { 
-            background: white; border-radius: 15px; padding: 25px; 
+            background: white; border-radius: 15px; padding: 20px; 
             border: 2px solid var(--snap-green-light); transition: 0.3s;
+            text-align: left; /* 統計文字靠左 */
         }
-        .stat-box:hover { transform: translateY(-5px); background-color: white; border-color: var(--snap-green-dark); }
+        .stat-box:hover { transform: translateY(-5px); border-color: var(--snap-green-dark); }
 
-        /* 統一按鈕樣式 */
+        /* 統一按鈕樣式 - 靠左排列 */
         .btn-snap-unified { 
             background-color: var(--snap-green-dark); 
             color: white; 
             border: none; 
             border-radius: 50px; 
-            padding: 15px 35px; 
+            padding: 12px 30px; 
             font-weight: 600; 
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 220px;
+            text-decoration: none;
         }
         
         .btn-snap-unified:hover { 
-            background-color: #4a6a51; /* 稍微加深的墨綠 */
+            background-color: #4a6a51; 
             color: white; 
             transform: translateY(-3px); 
-            box-shadow: 0 10px 20px rgba(92, 131, 100, 0.2); 
+            box-shadow: 0 8px 15px rgba(92, 131, 100, 0.2); 
         }
-
-        .btn-snap-unified i { margin-right: 8px; }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="d-flex align-items-center mb-4">
+    <div class="container mt-5" style="max-width: 900px;"> <div class="d-flex align-items-center mb-4">
             <div style="width: 40px; height: 40px; background-color: var(--snap-green-light); border-radius: 10px; margin-right: 15px; display: flex; align-items: center; justify-content: center;">
                 <span style="color: var(--snap-green-dark); font-weight: bold;">JL</span>
             </div>
             <h2 style="color: var(--snap-green-dark); font-weight: bold; margin: 0; letter-spacing: -1px;">snap to manage</h2>
         </div>
         
-        <div class="row mb-5">
+        <div class="row mb-5 g-3">
             <div class="col-md-4">
-                <div class="stat-box text-center">
-                    <h6 class="text-muted mb-2">總使用者</h6>
-                    <h2 style="color: var(--snap-green-dark); font-weight: bold;">{{ user_count }}</h2>
+                <div class="stat-box">
+                    <h6 class="text-muted mb-1" style="font-size: 0.9rem;">總使用者</h6>
+                    <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ user_count }}</h3>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="stat-box text-center">
-                    <h6 class="text-muted mb-2">上傳照片</h6>
-                    <h2 style="color: var(--snap-green-dark); font-weight: bold;">{{ photo_count }}</h2>
+                <div class="stat-box">
+                    <h6 class="text-muted mb-1" style="font-size: 0.9rem;">上傳照片</h6>
+                    <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ photo_count }}</h3>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="stat-box text-center">
-                    <h6 class="text-muted mb-2">教材單字</h6>
-                    <h2 style="color: var(--snap-green-dark); font-weight: bold;">{{ vocab_count }}</h2>
+                <div class="stat-box">
+                    <h6 class="text-muted mb-1" style="font-size: 0.9rem;">教材單字</h6>
+                    <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ vocab_count }}</h3>
                 </div>
             </div>
         </div>
@@ -88,9 +86,10 @@
             <div class="card-header">
                 ✦ 系統管理控制台
             </div>
-            <div class="card-body p-5">
-                <p class="text-muted mb-4">請選擇您要進行的管理項目：</p>
-                <div class="d-flex flex-wrap gap-4">
+            <div class="card-body p-4">
+                <p class="text-muted mb-4" style="font-size: 1rem;">請選擇您要進行的管理項目：</p>
+                
+                <div class="d-flex flex-row gap-3">
                     <a href="/customer/list" class="btn btn-snap-unified">
                         👤 帳號與點數管理
                     </a>
@@ -101,6 +100,8 @@
                 </div>
             </div>
         </div>
+        
+        <p class="mt-4 text-muted" style="font-size: 0.8rem; padding-left: 5px;">© 2026 JLens Project Team. All rights reserved.</p>
     </div>
 </body>
 </html>

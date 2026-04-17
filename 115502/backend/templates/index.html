@@ -7,49 +7,97 @@
     <style>
         :root {
             --snap-green-dark: #5c8364;   /* 截圖主色：深灰綠 */
-            --snap-green-mid: #8da994;    /* 次要按鈕：中灰綠 */
             --snap-green-light: #dce7de;  /* 背景點綴：淺灰綠 */
             --snap-bg: #f4f7f5;           /* 網頁底色 */
         }
         body { background-color: var(--snap-bg); font-family: "微軟正黑體", sans-serif; color: #444; }
+        
+        /* 儀表板卡片樣式 */
         .card { border: none; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
         .card-header { 
             background-color: var(--snap-green-dark) !important; 
             color: white !important; 
             border-radius: 20px 20px 0 0 !important; 
             font-weight: bold; padding: 20px; 
+            letter-spacing: 1px;
         }
+        
+        /* 統計方塊 */
         .stat-box { 
             background: white; border-radius: 15px; padding: 25px; 
             border: 2px solid var(--snap-green-light); transition: 0.3s;
         }
-        .btn-snap-primary { 
-            background-color: var(--snap-green-dark); color: white; 
-            border: none; border-radius: 50px; padding: 12px 30px; font-weight: 500; transition: 0.3s;
+        .stat-box:hover { transform: translateY(-5px); background-color: white; border-color: var(--snap-green-dark); }
+
+        /* 統一按鈕樣式 */
+        .btn-snap-unified { 
+            background-color: var(--snap-green-dark); 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 15px 35px; 
+            font-weight: 600; 
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 220px;
         }
-        .btn-snap-secondary { 
-            background-color: var(--snap-green-mid); color: white; 
-            border: none; border-radius: 50px; padding: 12px 30px; font-weight: 500; transition: 0.3s;
+        
+        .btn-snap-unified:hover { 
+            background-color: #4a6a51; /* 稍微加深的墨綠 */
+            color: white; 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 20px rgba(92, 131, 100, 0.2); 
         }
-        .btn-snap-primary:hover, .btn-snap-secondary:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); color: white; }
+
+        .btn-snap-unified i { margin-right: 8px; }
     </style>
 </head>
 <body>
     <div class="container mt-5">
-        <h2 class="mb-4" style="color: var(--snap-green-dark); font-weight: bold; letter-spacing: -1px;">snap to manage</h2>
+        <div class="d-flex align-items-center mb-4">
+            <div style="width: 40px; height: 40px; background-color: var(--snap-green-light); border-radius: 10px; margin-right: 15px; display: flex; align-items: center; justify-content: center;">
+                <span style="color: var(--snap-green-dark); font-weight: bold;">JL</span>
+            </div>
+            <h2 style="color: var(--snap-green-dark); font-weight: bold; margin: 0; letter-spacing: -1px;">snap to manage</h2>
+        </div>
         
         <div class="row mb-5">
-            <div class="col-md-4"><div class="stat-box text-center"><h6>總使用者</h6><h2 style="color: var(--snap-green-dark);">{{ user_count }}</h2></div></div>
-            <div class="col-md-4"><div class="stat-box text-center"><h6>上傳照片</h6><h2 style="color: var(--snap-green-dark);">{{ photo_count }}</h2></div></div>
-            <div class="col-md-4"><div class="stat-box text-center"><h6>詞彙總量</h6><h2 style="color: var(--snap-green-dark);">{{ vocab_count }}</h2></div></div>
+            <div class="col-md-4">
+                <div class="stat-box text-center">
+                    <h6 class="text-muted mb-2">總使用者</h6>
+                    <h2 style="color: var(--snap-green-dark); font-weight: bold;">{{ user_count }}</h2>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box text-center">
+                    <h6 class="text-muted mb-2">上傳照片</h6>
+                    <h2 style="color: var(--snap-green-dark); font-weight: bold;">{{ photo_count }}</h2>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box text-center">
+                    <h6 class="text-muted mb-2">教材單字</h6>
+                    <h2 style="color: var(--snap-green-dark); font-weight: bold;">{{ vocab_count }}</h2>
+                </div>
+            </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">✦ 系統管理後台</div>
-            <div class="card-body p-4">
-                <div class="d-flex gap-3">
-                    <a href="/customer/list" class="btn btn-snap-primary">👤 帳號與點數管理</a>
-                    <a href="/photo/list" class="btn btn-snap-secondary">🖼️ 相簿照片監控</a>
+        <div class="card shadow">
+            <div class="card-header">
+                ✦ 系統管理控制台
+            </div>
+            <div class="card-body p-5">
+                <p class="text-muted mb-4">請選擇您要進行的管理項目：</p>
+                <div class="d-flex flex-wrap gap-4">
+                    <a href="/customer/list" class="btn btn-snap-unified">
+                        👤 帳號與點數管理
+                    </a>
+                    
+                    <a href="/photo/list" class="btn btn-snap-unified">
+                        🖼️ 相簿照片監控
+                    </a>
                 </div>
             </div>
         </div>

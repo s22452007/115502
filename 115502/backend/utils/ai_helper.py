@@ -48,12 +48,18 @@ def analyze_image_from_path(file_path):
           ],
           "sentences": [
             {
-              "japanese": "這是一句一定有包含第1個單字的日文例句",
-              "chinese": "例句1的中文翻譯"
+              "japanese": "包含第1個單字的初級(N5-N4)日文例句",
+              "chinese": "初級例句的中文翻譯",
+              "japanese_inter": "包含第1個單字的中級(N3)日文例句",
+              "japanese_upper": "包含第1個單字的中高級(N2)日文例句",
+              "japanese_adv": "包含第1個單字的高級(N1)日文例句"
             },
             {
-              "japanese": "這是一句一定有包含第2個單字的日文例句",
-              "chinese": "例句2的中文翻譯"
+              "japanese": "包含第2個單字的初級(N5-N4)日文例句",
+              "chinese": "初級例句的中文翻譯",
+              "japanese_inter": "包含第2個單字的中級(N3)日文例句",
+              "japanese_upper": "包含第2個單字的中高級(N2)日文例句",
+              "japanese_adv": "包含第2個單字的高級(N1)日文例句"
             }
           ]
         }

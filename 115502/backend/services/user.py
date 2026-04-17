@@ -199,6 +199,26 @@ def delete_account():
         db.session.rollback()
         return jsonify({"error": f"刪除失敗：{str(e)}"}), 500
     
+# 更新個人資料（包含 AI 小抄）
+@user_bp.route('/update_profile', methods=['POST'])
+def update_profile():
+    # 假設你有傳 user_id 過來 (實戰中可能是從 Token 抓)
+    user_id = request.form.get('user_id') 
+    new_cheat_sheet = request.form.get('cheat_sheet', '')
+
+    if not user_id:
+        return jsonify({'error': '缺少 user_id'}), 400
+
+    # 從資料庫找出這個人
+    user = User.query.get(user_id)
+    if user:
+        # 把 Flutter 傳來的小抄存進資料庫
+        user.ai_cheat_sheet = new_cheat_sheet
+        db.session.commit()
+        return jsonify({'message': 'AI 小抄更新成功！'})
+    else:
+        return jsonify({'error': '找不到該使用者'}), 404    
+
 # 抓取雷達圖與徽章
 @user_bp.route('/profile_data/<int:user_id>', methods=['GET'])
 def get_profile_data(user_id):

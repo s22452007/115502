@@ -15,6 +15,8 @@ class User(db.Model):
     japanese_level = db.Column(db.String(50), nullable=True)  # 儲存日語程度
     avatar = db.Column(db.Text, nullable=True)  # 用來存圖片的 Base64 字串
     
+    ai_cheat_sheet = db.Column(db.Text, nullable=True)
+
     j_pts = db.Column(db.Integer, default=0)         
     streak_days = db.Column(db.Integer, default=1)   
     last_login_date = db.Column(db.Date, nullable=True)

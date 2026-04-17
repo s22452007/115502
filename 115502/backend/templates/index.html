@@ -2,33 +2,51 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 管理後台</title>
+    <title>JLens Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root { --dark-green: #5b6b61; --mid-green: #8a9a90; --bg-green: #eff2f0; }
-        body { background-color: var(--bg-green); font-family: "微軟正黑體"; }
-        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card-header { background: var(--dark-green) !important; color: white; border-radius: 15px 15px 0 0 !important; font-weight: bold; }
-        .stat-card { background: white; border: 1px solid #d1d8d4; border-radius: 10px; padding: 20px; transition: 0.3s; }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(91,107,97,0.2); }
-        .btn-main { background: var(--dark-green); color: white; border: none; padding: 12px 25px; border-radius: 8px; text-decoration: none; }
-        .btn-main:hover { background: #4a574f; color: white; }
+        :root {
+            --snap-green-dark: #5c8364;   /* 截圖中的主按鈕綠 */
+            --snap-green-light: #dce7de;  /* 截圖中的相機背景淺綠 */
+            --snap-bg: #f4f7f5;           /* 極淺灰綠背景 */
+        }
+        body { background-color: var(--snap-bg); font-family: "微軟正黑體", sans-serif; color: #444; }
+        .card { border: none; border-radius: 20px; box-shadow: 0 8px 30px rgba(92, 131, 100, 0.08); }
+        .card-header { 
+            background-color: var(--snap-green-dark) !important; 
+            color: white !important; 
+            border-radius: 20px 20px 0 0 !important; 
+            font-weight: bold; padding: 20px; 
+        }
+        .stat-box { 
+            background: white; border-radius: 15px; padding: 25px; 
+            border: 2px solid var(--snap-green-light); transition: 0.3s;
+        }
+        .stat-box:hover { transform: translateY(-5px); background: var(--snap-green-light); }
+        .btn-snap { 
+            background-color: var(--snap-green-dark); color: white; 
+            border: none; border-radius: 50px; padding: 12px 30px; 
+            font-weight: 500; transition: 0.3s;
+        }
+        .btn-snap:hover { background-color: #4a6a51; color: white; box-shadow: 0 5px 15px rgba(92, 131, 100, 0.3); }
     </style>
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="mb-4" style="color: var(--dark-green);">✦ 系統管理儀表板</h1>
-        <div class="row mb-4 text-center">
-            <div class="col-md-4"><div class="stat-card"><h5>總使用者</h5><h2 style="color:var(--dark-green);">{{ user_count }}</h2></div></div>
-            <div class="col-md-4"><div class="stat-card"><h5>總照片數</h5><h2 style="color:var(--dark-green);">{{ photo_count }}</h2></div></div>
-            <div class="col-md-4"><div class="stat-card"><h5>教材單字數</h5><h2 style="color:var(--dark-green);">{{ vocab_count }}</h2></div></div>
+        <h2 class="mb-4" style="color: var(--snap-green-dark); font-weight: bold;">snap to manage</h2>
+        
+        <div class="row mb-5">
+            <div class="col-md-4"><div class="stat-box text-center"><h6>總使用者</h6><h2 style="color: var(--snap-green-dark);">{{ user_count }}</h2></div></div>
+            <div class="col-md-4"><div class="stat-box text-center"><h6>上傳照片</h6><h2 style="color: var(--snap-green-dark);">{{ photo_count }}</h2></div></div>
+            <div class="col-md-4"><div class="stat-box text-center"><h6>詞彙總量</h6><h2 style="color: var(--snap-green-dark);">{{ vocab_count }}</h2></div></div>
         </div>
+
         <div class="card">
-            <div class="card-header">管理功能導覽</div>
-            <div class="card-body">
+            <div class="card-header">✦ 管理員選單</div>
+            <div class="card-body p-4">
                 <div class="d-flex gap-3">
-                    <a href="/customer/list" class="btn btn-main">👤 使用者管理</a>
-                    <a href="/photo/list" class="btn btn-main" style="background: var(--mid-green);">🖼️ 照片管控</a>
+                    <a href="/customer/list" class="btn btn-snap">👤 帳號與點數管理</a>
+                    <a href="/photo/list" class="btn btn-snap" style="background-color: #8da994;">🖼️ 相簿照片監控</a>
                 </div>
             </div>
         </div>

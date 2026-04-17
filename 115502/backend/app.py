@@ -49,6 +49,7 @@ app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
 
 # 啟動時自動建立資料表
 with app.app_context():
+    db.drop_all()
     db.create_all()
 
 # ==========================================

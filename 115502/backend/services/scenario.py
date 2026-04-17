@@ -80,6 +80,9 @@ def analyze_scene():
                     kana=vocab_info.get('kana', ''),
                     meaning=vocab_info.get('meaning', ''),
                     sentence_basic=sentence.get('japanese', ''),
+                    sentence_inter=sentence.get('japanese_inter', ''),
+                    sentence_upper_inter=sentence.get('japanese_upper', ''),
+                    sentence_advanced=sentence.get('japanese_adv', '')
                 )
                 db.session.add(v)
                 db.session.flush() # 取得 v.id

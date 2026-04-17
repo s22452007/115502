@@ -195,7 +195,26 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
       children: List.generate(vocabs.length, (index) {
         final vocab = vocabs[index];
         // 對應第 n 個單字的例句 (防呆，確保不會超出陣列)
-        final sentence = index < sentences.length ? sentences[index] : null;
+        final baseSentence = index < sentences.length ? sentences[index] : null;
+        Map<String, String>? sentence;
+        if (baseSentence != null) {
+          final userLevel = Provider.of<UserProvider>(
+            context,
+            listen: false,
+          ).japaneseLevel;
+          String japanese = baseSentence['japanese'] ?? '';
+          if (userLevel == 'N3') {
+            japanese = baseSentence['japanese_inter'] ?? japanese;
+          } else if (userLevel == 'N2') {
+            japanese = baseSentence['japanese_upper'] ?? japanese;
+          } else if (userLevel == 'N1') {
+            japanese = baseSentence['japanese_adv'] ?? japanese;
+          }
+          sentence = {
+            'japanese': japanese,
+            'chinese': baseSentence['chinese'] ?? vocab['meaning'] ?? '',
+          };
+        }
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

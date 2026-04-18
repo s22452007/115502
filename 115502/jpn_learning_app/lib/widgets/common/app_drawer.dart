@@ -136,6 +136,20 @@ class AppDrawer extends StatelessWidget {
             },
           ),
 
+          ListTile(
+            leading: const Icon(Icons.groups_outlined),
+            title: const Text('我的學習小組', style: TextStyle(fontSize: 16)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ResultGalleryV2Screen(),
+                ),
+              );
+            },
+          ),
+
           // ListTile(
           //   leading: const Icon(Icons.person_add_outlined),
           //   title: const Text('新增好友', style: TextStyle(fontSize: 16)),

@@ -405,11 +405,11 @@ def search_friend():
     if not user:
         return jsonify({"error": "找不到此 ID 的用戶 🥲"}), 404
 
-    # 把找到的用戶資料回傳給手機 (因為資料庫目前沒有暱稱，我們先用 email 當作名字)
+    # 把找到的用戶資料回傳給手機
     return jsonify({
         "user_id": user.id,
         "email": user.email,
-        "nickname": user.username or user.email.split('@')[0],
+        "username": user.username,
         "friend_id": user.friend_id,
         "avatar": user.avatar
     }), 200

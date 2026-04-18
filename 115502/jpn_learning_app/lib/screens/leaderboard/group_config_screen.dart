@@ -140,13 +140,13 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
               subtitle: '計算全體成員拍照分析的總次數',
               value: 'scans',
             ),
-            const SizedBox(height: 12),
-            _buildTaskTypeOption(
-              icon: Icons.monetization_on,
-              title: '累積學習點數',
-              subtitle: '計算全體成員獲得的 J-Pts 總和',
-              value: 'points',
-            ),
+            // const SizedBox(height: 12),
+            // _buildTaskTypeOption(
+            //   icon: Icons.monetization_on,
+            //   title: '累積學習點數',
+            //   subtitle: '計算全體成員獲得的 J-Pts 總和',
+            //   value: 'points',
+            // ),
             const SizedBox(height: 12),
             _buildTaskTypeOption(
               icon: Icons.calendar_month,

@@ -146,6 +146,11 @@
             │   ├── scenario_card.dart   # 場景照片預覽小卡
             │   └── vocab_card.dart      # 單字清單條目元件
             │
+            ├── friends/                # 好友零件
+            │   ├── found_user_card.dart        # 搜尋到的用戶卡片 (含大頭貼邏輯)
+            │   ├── pending_request_card.dart   # 待確認的好友邀請卡片 (含大頭貼邏輯)
+            │   └── my_id_card.dart     # 我的專屬 ID 卡片
+            │
             └── dialogs/                 # 彈窗組件
                 ├── level_up_dialog.dart # 恭喜升級/獲得徽章的慶祝動畫彈窗
                 └── vocab_bottom_sheet.dart# 選擇資料夾收藏單字的底部選單

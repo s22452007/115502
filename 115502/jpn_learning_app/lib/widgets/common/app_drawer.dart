@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -143,9 +144,7 @@ class AppDrawer extends StatelessWidget {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const ResultGalleryV2Screen(),
-                ),
+                MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
               );
             },
           ),

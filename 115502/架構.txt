@@ -151,6 +151,17 @@
             │   ├── pending_request_card.dart   # 待確認的好友邀請卡片 (含大頭貼邏輯)
             │   └── my_id_card.dart     # 我的專屬 ID 卡片
             │
+            ├── study_group/                   # 學習小組專用零件包
+            │   ├── task_type_card.dart        # (設定頁) 任務類型選項卡片 (拍照/打卡)
+            │   ├── difficulty_button.dart     # (設定頁) 難度選擇按鈕 (輕鬆/標準/爆肝)
+            │   ├── empty_group_banner.dart    # (大廳頁) 「尚未加入小組」的插圖提示橫幅
+            │   ├── invites_status_card.dart   # (大廳頁) 「收到的小組邀請」狀態入口按鈕
+            │   ├── group_info_card.dart       # (首頁) 頂部小組名稱與頭像排排站
+            │   ├── goal_progress_card.dart    # (首頁) 中間進度條與達標的「領獎按鈕」
+            │   ├── ranking_list_card.dart     # (首頁) 底部本週貢獻排行榜名單
+            │   ├── invite_friend_card.dart    # (建立/邀請頁) 好友名單卡片 (打勾選取)
+            │   └── group_invite_card.dart     # (收件匣) 別人邀請我的卡片 (接受/拒絕)
+            │
             └── dialogs/                 # 彈窗組件
                 ├── level_up_dialog.dart # 恭喜升級/獲得徽章的慶祝動畫彈窗
                 └── vocab_bottom_sheet.dart# 選擇資料夾收藏單字的底部選單

@@ -61,32 +61,50 @@ def create_group():
     if GroupMember.query.filter_by(user_id=host_id).first():
         return jsonify({"error": "你已經加入過小組囉！"}), 400
         
-    # 建立小組
-    new_group = StudyGroup(name=group_name, host_id=host_id, goal_type=goal_type, goal_target=goal_target)
-    db.session.add(new_group)
-    db.session.flush() 
-    
-    # 把房主自己加入成員名單
-    host_member = GroupMember(group_id=new_group.id, user_id=host_id)
-    db.session.add(host_member)
-    
-    # 發送邀請給好友
-    for f_id in friend_ids:
-        friend_user = User.query.filter_by(friend_id=f_id).first()
-        if friend_user:
-            # 確認沒邀請過才發送
-            existing_invite = GroupInvite.query.filter_by(group_id=new_group.id, receiver_id=friend_user.id, status='pending').first()
-            if not existing_invite:
-                new_invite = GroupInvite(group_id=new_group.id, sender_id=host_id, receiver_id=friend_user.id)
-                db.session.add(new_invite)
-            
-    db.session.commit()
-    return jsonify({"message": "小組建立成功，已發送邀請給好友！", "group_id": new_group.id}), 201
+    try:
+        # 1. 建立小組主檔
+        new_group = StudyGroup(name=group_name, host_id=host_id, goal_type=goal_type, goal_target=goal_target)
+        db.session.add(new_group)
+        db.session.flush() 
+        
+        # 2. 把房主自己加入成員名單
+        # 建立小組的當下，進度直接算 1 天！
+        # 根據目標類型給予對應的初始進度
+        initial_logins = 1 if goal_type == 'logins' else 0
+        
+        host_member = GroupMember(
+            group_id=new_group.id, 
+            user_id=host_id,
+            group_logins=initial_logins # 給予 1 天的登入進度
+        )
+        db.session.add(host_member)
+        
+        # 同步更新小組的總進度 (這樣首頁進度條才不會是 0)
+        new_group.current_progress += initial_logins
 
-# 取得小組邀請
+        # 3. 發送邀請給好友
+        for f_id in friend_ids:
+            friend_user = User.query.filter_by(friend_id=f_id).first()
+            if friend_user:
+                existing_invite = GroupInvite.query.filter_by(group_id=new_group.id, receiver_id=friend_user.id, status='pending').first()
+                if not existing_invite:
+                    new_invite = GroupInvite(group_id=new_group.id, sender_id=host_id, receiver_id=friend_user.id)
+                    db.session.add(new_invite)
+                
+        db.session.commit()
+        return jsonify({"message": "小組建立成功，已發送邀請給好友！", "group_id": new_group.id}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"建立小組失敗: {str(e)}"}), 500
+
+
+# ==========================================
+# 取得小組邀請 (GET /invites/<user_id>)
+# ==========================================
 @group_bp.route('/invites/<int:user_id>', methods=['GET'])
 def get_group_invites(user_id):
-    # 找出所有寄給這個人，且狀態是 pending 的邀請
+    # 找出所有寄給我，且狀態是 pending 的邀請
     invites = GroupInvite.query.filter_by(receiver_id=user_id, status='pending').all()
     
     result = []

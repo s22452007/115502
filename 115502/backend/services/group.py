@@ -1,11 +1,12 @@
 from flask import Blueprint, request, jsonify
-
 from utils.db import db
 from models import User, StudyGroup, GroupMember, GroupInvite, Friendship
 
 group_bp = Blueprint('group', __name__)
 
-# 取得我的小組資料
+# ==========================================
+# 取得我的小組資料 (GET /my_group/<user_id>)
+# ==========================================
 @group_bp.route('/my_group/<int:user_id>', methods=['GET'])
 def get_my_group(user_id):
     # 找自己在哪個小組
@@ -21,12 +22,11 @@ def get_my_group(user_id):
     for m in members:
         u = User.query.get(m.user_id)
         if u:
-            # 把每個人的資料打包，這樣前端就可以顯示大家今天的進度了！
+            # 把每個人的資料打包，回傳給前端顯示
             member_data.append({
                 "user_id": u.id,
-                "nickname": u.email.split('@')[0],
+                "nickname": u.username or u.email.split('@')[0], # 優先顯示真實暱稱
                 "avatar": u.avatar,
-                # 我們不再抓 u.daily_scans，而是抓 m.group_scans (小組專屬紀錄)
                 "daily_scans": m.group_scans, 
                 "j_pts": m.group_points,             
                 "streak_days": m.group_logins, 
@@ -45,7 +45,10 @@ def get_my_group(user_id):
         "members": member_data
     }), 200
 
-# 創建小組
+
+# ==========================================
+# 創建小組 (POST /create)
+# ==========================================
 @group_bp.route('/create', methods=['POST'])
 def create_group():
     data = request.get_json()
@@ -116,12 +119,15 @@ def get_group_invites(user_id):
                 "invite_id": inv.id,
                 "group_id": group.id,
                 "group_name": group.name,
-                "inviter_name": sender.email.split('@')[0] # 取 Email 前半段當暱稱
+                "inviter_name": sender.username or sender.email.split('@')[0] # 優先顯示真實暱稱
             })
             
     return jsonify({"invites": result}), 200
 
-# 回覆小組邀請
+
+# ==========================================
+# 回覆小組邀請 (POST /respond_invite)
+# ==========================================
 @group_bp.route('/respond_invite', methods=['POST'])
 def respond_group_invite():
     data = request.get_json()
@@ -133,28 +139,50 @@ def respond_group_invite():
     if not invite or invite.receiver_id != user_id:
         return jsonify({"error": "找不到此邀請"}), 404
 
-    # 更改狀態
-    invite.status = action
-    
-    if action == 'accept':
-        # 檢查小組是不是已經滿 5 人了
-        current_members = GroupMember.query.filter_by(group_id=invite.group_id).count()
-        if current_members >= 5:
-            return jsonify({"error": "這個小組已經客滿了！"}), 400
+    try:
+        # 更改邀請狀態
+        invite.status = action
+        
+        if action == 'accept':
+            # 檢查小組是不是已經滿 5 人了
+            current_members = GroupMember.query.filter_by(group_id=invite.group_id).count()
+            if current_members >= 5:
+                return jsonify({"error": "這個小組已經客滿了！"}), 400
+                
+            # 檢查自己是不是已經在別的小組了
+            if GroupMember.query.filter_by(user_id=user_id).first():
+                return jsonify({"error": "你已經在其他小組中，無法重複加入！"}), 400
+
+            group = StudyGroup.query.get(invite.group_id)
+            if not group:
+                return jsonify({"error": "找不到該小組"}), 404
+
+            # 加入小組的當下，進度算 1 天！
+            initial_logins = 1 if group.goal_type == 'logins' else 0
+
+            # 正式寫入小組成員名單
+            new_member = GroupMember(
+                group_id=invite.group_id, 
+                user_id=user_id,
+                group_logins=initial_logins # 給予 1 天的登入進度
+            )
+            db.session.add(new_member)
             
-        # 檢查自己是不是已經在別的小組了
-        if GroupMember.query.filter_by(user_id=user_id).first():
-            return jsonify({"error": "你已經在其他小組中，無法重複加入！"}), 400
+            # 同步更新小組的總進度
+            group.current_progress += initial_logins
 
-        # 都沒問題，正式寫入小組成員名單！
-        new_member = GroupMember(group_id=invite.group_id, user_id=user_id)
-        db.session.add(new_member)
+        db.session.commit()
+        msg = "已成功加入小組！" if action == 'accept' else "已拒絕邀請"
+        return jsonify({"message": msg}), 200
 
-    db.session.commit()
-    msg = "已成功加入小組！" if action == 'accept' else "已拒絕邀請"
-    return jsonify({"message": msg}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"處理邀請失敗: {str(e)}"}), 500
 
-# 邀請好友進現有小組
+
+# ==========================================
+# 邀請好友進現有小組 (POST /invite_friends)
+# ==========================================
 @group_bp.route('/invite_friends', methods=['POST'])
 def invite_friends_to_group():
     data = request.get_json()
@@ -169,29 +197,35 @@ def invite_friends_to_group():
     if not group:
         return jsonify({"error": "找不到該小組"}), 404
 
-    invited_count = 0
-    for f_id in friend_ids:
-        friend_user = User.query.filter_by(friend_id=f_id).first()
-        if friend_user:
-            # 1. 檢查是否已經在小組內
-            is_member = GroupMember.query.filter_by(group_id=group_id, user_id=friend_user.id).first()
-            # 2. 檢查是否已經發過邀請 (且對方還沒按同意或拒絕)
-            is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=friend_user.id, status='pending').first()
+    try:
+        invited_count = 0
+        for f_id in friend_ids:
+            friend_user = User.query.filter_by(friend_id=f_id).first()
+            if friend_user:
+                # 檢查是否已在小組內或已被邀請
+                is_member = GroupMember.query.filter_by(group_id=group_id, user_id=friend_user.id).first()
+                is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=friend_user.id, status='pending').first()
 
-            # 如果他不在小組內，且還沒被邀請過，才發送邀請！
-            if not is_member and not is_invited:
-                new_invite = GroupInvite(group_id=group_id, sender_id=sender_id, receiver_id=friend_user.id)
-                db.session.add(new_invite)
-                invited_count += 1
+                if not is_member and not is_invited:
+                    new_invite = GroupInvite(group_id=group_id, sender_id=sender_id, receiver_id=friend_user.id)
+                    db.session.add(new_invite)
+                    invited_count += 1
 
-    db.session.commit()
-    return jsonify({"message": f"成功發送 {invited_count} 個邀請！"}), 200
+        db.session.commit()
+        return jsonify({"message": f"成功發送 {invited_count} 個邀請！"}), 200
 
-# 取得好友是否已加入小組的狀態
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"發送邀請失敗: {str(e)}"}), 500
+
+
+# ==========================================
+# 取得好友詳細狀態 (供拉人清單使用) (POST /friends_detailed_status)
+# ==========================================
 @group_bp.route('/friends_detailed_status', methods=['POST'])
 def get_friends_detailed_status():
     data = request.get_json()
-    group_id = data.get('group_id') # 可能是真實 ID，也可能是我們前端傳來的 -1
+    group_id = data.get('group_id') # 可能是真實 ID，也可能是新建小組傳來的 -1
     user_id = data.get('user_id')
 
     if not user_id:
@@ -206,31 +240,33 @@ def get_friends_detailed_status():
             if not f_user:
                 continue
                 
-            # 只要他在 GroupMember 表裡有紀錄，就代表他「已經有小組了」
+            # 判斷他是否已經有小組了
             has_group = GroupMember.query.filter_by(user_id=f_user.id).first() is not None
             
-            # 只有在有傳入真實 group_id 的情況下，才需要檢查是否被當前小組邀請中
+            # 判斷是否被當前小組邀請中
             is_invited = False
             if group_id and group_id != -1:
                 is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=f_user.id, status='pending').first() is not None
             
-            display_name = f_user.email.split('@')[0] if f_user.email else "未知好友"
+            display_name = f_user.username or f_user.email.split('@')[0] # 優先顯示真實暱稱
 
             detailed_friends.append({
                 'nickname': display_name, 
                 'friend_id': f_user.friend_id,
                 'avatar': f_user.avatar,
-                'has_group': has_group,  # 回傳 has_group 給前端
+                'has_group': has_group,  
                 'is_invited': is_invited, 
             })
 
         return jsonify({"friends": detailed_friends}), 200
 
     except Exception as e:
-        print("API 發生錯誤:", str(e)) 
-        return jsonify({"error": f"後端錯誤: {str(e)}"}), 500
+        return jsonify({"error": f"獲取好友狀態失敗: {str(e)}"}), 500
 
-# 退出/解散小組
+
+# ==========================================
+# 退出 / 解散小組 (POST /leave)
+# ==========================================
 @group_bp.route('/leave', methods=['POST'])
 def leave_group():
     data = request.get_json()
@@ -245,25 +281,29 @@ def leave_group():
         return jsonify({"error": "找不到該小組"}), 404
 
     try:
-        # 判斷是否為組長
         if group.host_id == user_id:
-            # 是組長：解散整個小組 (因為你有設定 cascade="all, delete-orphan"，這會連帶刪除成員名單)
+            # 是組長：解散整個小組
             db.session.delete(group)
             db.session.commit()
             return jsonify({"message": "身為組長的你退出了，小組已解散！"}), 200
         else:
-            # 是一般成員：單純刪除他的成員紀錄
+            # 是一般成員：退出小組
             member = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
             if member:
+                # 退出時，可以選擇把他的貢獻從總進度扣除 (根據你的遊戲規則決定)
+                group.current_progress -= (member.group_logins if group.goal_type == 'logins' else member.group_scans)
                 db.session.delete(member)
                 db.session.commit()
             return jsonify({"message": "已成功退出小組！"}), 200
             
     except Exception as e:
-        print("退出小組發生錯誤:", str(e))
-        return jsonify({"error": f"後端錯誤: {str(e)}"}), 500
+        db.session.rollback()
+        return jsonify({"error": f"退出小組失敗: {str(e)}"}), 500
 
-# 專屬領獎 API
+
+# ==========================================
+# 領取小組獎勵 (POST /claim_reward)
+# ==========================================
 @group_bp.route('/claim_reward', methods=['POST'])
 def claim_reward():
     data = request.get_json()
@@ -280,15 +320,15 @@ def claim_reward():
         return jsonify({"error": "任務尚未達成，無法領獎"}), 400
 
     try:
-        # 1. 發放點數給這個使用者！(按下去的這一刻才真的加錢)
+        # 發放點數
         user = User.query.get(user_id)
         user.j_pts += group.reward_points
 
-        # 2. 領完獎後，將他從小組名單中安全移除 (不會連帶刪除群組)
+        # 領完獎後安全移除
         db.session.delete(member)
         db.session.commit()
 
-        # 3. 檢查小組是不是空了？如果大家都領完退出了，才把整個小組徹底刪除
+        # 檢查小組是否空了，空了才徹底刪除
         remaining_members = GroupMember.query.filter_by(group_id=group_id).count()
         if remaining_members == 0:
             db.session.delete(group)
@@ -298,4 +338,4 @@ def claim_reward():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"後端錯誤: {str(e)}"}), 500
+        return jsonify({"error": f"領獎失敗: {str(e)}"}), 500

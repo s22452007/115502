@@ -46,15 +46,33 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
 
       if (mounted) {
         setState(() {
-          if (groupResult['has_group'] == true) {
+          // 🌟 攔截自動結算訊號
+          if (groupResult['just_expired'] == true) {
+            _groupData = null; 
+            Future.delayed(Duration.zero, () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  title: const Text('📜 上週結算通知', style: TextStyle(fontWeight: FontWeight.bold)),
+                  content: Text(groupResult['message'] ?? '', style: const TextStyle(fontSize: 16, height: 1.5)),
+                  actions: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('我知道了', style: TextStyle(color: Colors.white)),
+                    )
+                  ],
+                ),
+              );
+            });
+          } else if (groupResult['has_group'] == true) {
             _groupData = groupResult; 
           }
           
-          // 如果後端有傳回 invites 陣列，就存起來
           if (invitesResult.containsKey('invites') && invitesResult['invites'] is List) {
             _invites = invitesResult['invites'];
           }
-
           _isLoading = false;
         });
       }

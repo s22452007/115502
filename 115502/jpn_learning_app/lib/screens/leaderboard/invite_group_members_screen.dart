@@ -88,8 +88,32 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     }
   }
 
-  // 智慧判斷要「建立」還是「單純邀請」
   Future<void> _submitAction(int selectedCount) async {
+    final bool confirm = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('⚠️ 押金與額度提醒', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(
+          '每週的第一個小組為免費參加。\n\n如果您本週已經免費參加過其他小組，本次將會扣除 20 J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('先不要', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('確定繼續', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirm) return;
+
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 

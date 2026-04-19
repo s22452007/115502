@@ -6,6 +6,38 @@ group_bp = Blueprint('group', __name__)
 
 # ==========================================
 # 取得我的小組資料 (GET /my_group/<user_id>)
+# 🛠️ 輔助工具：時間與週次計算
+# ==========================================
+def get_current_year_week():
+    """取得現在是哪一年的第幾週 (例如：'2026-16')"""
+    now = datetime.now(timezone.utc)
+    year, week, _ = now.isocalendar()
+    return f"{year}-{week}"
+
+def get_next_sunday_end():
+    """取得這個星期日 23:59:59 的 UTC 時間"""
+    now = datetime.now(timezone.utc)
+    # weekday(): 禮拜一是 0，禮拜日是 6
+    days_until_sunday = 6 - now.weekday()
+    next_sunday = now + timedelta(days=days_until_sunday)
+    return next_sunday.replace(hour=23, minute=59, second=59, microsecond=0)
+
+def handle_deposit_and_free_quota(user):
+    """處理玩家的押金與免費額度"""
+    current_week = get_current_year_week()
+    is_free = (user.last_free_group_week != current_week)
+    
+    if not is_free:
+        # 第二團起，檢查餘額並扣除 20 點押金
+        if user.j_pts < 20:
+            return False, "點數不足 20 點，無法開啟額外小組對賭！"
+        user.j_pts -= 20
+    else:
+        # 免費團，更新他的免費額度使用紀錄
+        user.last_free_group_week = current_week
+        
+    return True, "OK"
+
 # ==========================================
 @group_bp.route('/my_group/<int:user_id>', methods=['GET'])
 def get_my_group(user_id):

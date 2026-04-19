@@ -21,6 +21,7 @@ class User(db.Model):
     streak_days = db.Column(db.Integer, default=1)   
     last_login_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_free_group_week = db.Column(db.String(10), nullable=True)  # 紀錄他上一次「免費」參加小組是哪一週 (格式如 '2026-15')
 
     # 今日拍照次數與最後拍照日期
     daily_scans = db.Column(db.Integer, default=0)
@@ -207,7 +208,8 @@ class StudyGroup(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     goal_type = db.Column(db.String(50), nullable=False, default='scans') 
     goal_target = db.Column(db.Integer, nullable=False, default=30)       
-    
+    expire_at = db.Column(db.DateTime, nullable=False)  # 紀錄這個小組何時到期 (週日 23:59)
+
     # === 獎勵機制專用 ===
     current_progress = db.Column(db.Integer, default=0) # 小組當前總進度
     reward_points = db.Column(db.Integer, default=50)   # 達標後，有貢獻的成員每人可獲得的點數 (j_pts)

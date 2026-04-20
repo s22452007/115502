@@ -334,14 +334,21 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
                           return ListTile(
                             leading: Icon(
                               isDefault ? Icons.star : Icons.folder,
-                              color: isDefault ? Colors.amber : const Color(0xFF8B6B9E),
+                              color: isDefault
+                                  ? Colors.amber
+                                  : const Color(0xFF8B6B9E),
                               size: 28,
                             ),
-                            title: Text(folder['name'] ?? '未命名', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            title: Text(
+                              folder['name'] ?? '未命名',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             subtitle: Text('已收錄 ${folder['count']} 個單字'),
                             onTap: () {
-                              Navigator.pop(sheetContext); 
-                              _executeCollection(userId, folder['id']); 
+                              Navigator.pop(sheetContext);
+                              _executeCollection(userId, folder['id']);
                             },
                           );
                         },

@@ -60,7 +60,11 @@ class ResultGalleryV2Screen extends StatelessWidget {
                     child: Text(
                       '還沒有解鎖任何場景喔！\n趕快去拍照探索吧！',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                        height: 1.5,
+                      ),
                     ),
                   );
                 }

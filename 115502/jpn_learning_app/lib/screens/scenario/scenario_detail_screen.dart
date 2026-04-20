@@ -6,7 +6,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
-class ScenarioDetailScreen extends StatelessWidget {
+class ScenarioDetailScreen extends StatefulWidget {
   final dynamic scene;
 
   const ScenarioDetailScreen({Key? key, required this.scene}) : super(key: key);

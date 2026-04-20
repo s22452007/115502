@@ -215,10 +215,13 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
 
     // 【情境 A】已經是黃星星 -> 執行「取消收藏」
     if (_isStarred) {
-      final success = await ApiClient.removeFavorite(widget.vocab['vocab_id'], userId);
-      
+      final success = await ApiClient.removeFavorite(
+        widget.vocab['vocab_id'],
+        userId,
+      );
+
       ScaffoldMessenger.of(context).clearSnackBars();
-      
+
       if (success) {
         setState(() => _isStarred = false); // 星星變回灰色
         ScaffoldMessenger.of(context).showSnackBar(

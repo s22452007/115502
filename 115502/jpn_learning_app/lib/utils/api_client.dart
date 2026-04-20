@@ -565,6 +565,21 @@ class ApiClient {
     }
   }
 
+  // 偷偷檢查這週是否還有免費小組額度
+  static Future<bool> checkFreeQuota(int userId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/group/check_quota/$userId'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['is_free'] ?? false;
+      }
+      return false; // 如果有問題，預設當作要扣錢 (比較安全)
+    } catch (e) {
+      print('檢查額度發生錯誤: $e');
+      return false;
+    }
+  }
+  
   // ==========================================
   // 📚 單字本與收藏夾相關
   // ==========================================

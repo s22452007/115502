@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>意見回饋管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f5; font-family: "微軟正黑體", sans-serif; }
+        .table thead { background-color: #5c8364; color: white; }
+        .type-tag {
+            background-color: #dce7de;
+            color: #5c8364;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+        }
+        .status-unreplied { color: #d9534f; font-weight: bold; }
+        .status-replied { color: #5c8364; font-weight: bold; }
+        .content-cell { max-width: 300px; white-space: pre-wrap; word-break: break-word; }
+        .btn-reply {
+            background-color: #5c8364;
+            color: white;
+            border: none;
+        }
+        .btn-reply:hover { background-color: #4a6a51; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 style="color: #5c8364;">💬 意見回饋管理</h3>
+            <a href="/" class="btn btn-sm btn-outline-secondary">返回儀表板</a>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>使用者</th>
+                            <th>類型</th>
+                            <th>內容</th>
+                            <th>官方回覆</th>
+                            <th>送出時間</th>
+                            <th>狀態</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in feedbacks %}
+                        <tr>
+                            <td>{{ f.id }}</td>
+                            <td>
+                                {{ f.username or '未設定' }}<br>
+                                <small class="text-muted">{{ f.email }}</small>
+                            </td>
+                            <td><span class="type-tag">{{ f.feedback_type }}</span></td>
+                            <td class="content-cell">{{ f.content }}</td>
+                            <td class="content-cell">
+                                {% if f.reply %}
+                                    {{ f.reply }}<br>
+                                    <small class="text-muted">{{ f.replied_at }}</small>
+                                {% else %}
+                                    <span class="text-muted">尚未回覆</span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ f.created_at }}</small></td>
+                            <td>
+                                {% if f.reply %}
+                                    <span class="status-replied">✓ 已回覆</span>
+                                {% else %}
+                                    <span class="status-unreplied">● 待回覆</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-reply" disabled>回覆</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">目前沒有任何回饋</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -216,7 +216,8 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Expanded(
+                                      Flexible(
+                                        // 使用 Flexible 讓字越長佔越多，但不強制佔滿。
                                         child: Text(
                                           scene['scene_name'], // 因為後端改了，這裡會自動印出 custom_title！
                                           style: const TextStyle(

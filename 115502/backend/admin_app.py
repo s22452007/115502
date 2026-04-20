@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
@@ -125,6 +126,27 @@ def feedback_list():
     feedbacks = conn.execute(query).fetchall()
     conn.close()
     return render_template('feedback/list.html', feedbacks=feedbacks)
+
+@app.route('/feedback/reply/<int:feedback_id>', methods=['POST'])
+def feedback_reply(feedback_id):
+    reply = request.form.get('reply', '').strip()
+    if not reply:
+        return redirect(url_for('feedback_list'))
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    conn = get_db_connection()
+    conn.execute('UPDATE feedback SET reply = ?, replied_at = ? WHERE id = ?',
+                 (reply, now, feedback_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('feedback_list'))
+
+@app.route('/feedback/delete/<int:feedback_id>', methods=['POST'])
+def feedback_delete(feedback_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM feedback WHERE id = ?', (feedback_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('feedback_list'))
 
 
 if __name__ == '__main__':

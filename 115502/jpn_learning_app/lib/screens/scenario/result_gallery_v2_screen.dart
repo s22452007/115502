@@ -21,7 +21,11 @@ class ResultGalleryV2Screen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           '我的單字探險',
-          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: AppColors.primary,
         elevation: 0,

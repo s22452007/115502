@@ -91,7 +91,10 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
               }
               if (snapshot.hasError) {
                 return const SliverToBoxAdapter(
-                  child: Padding(padding: EdgeInsets.all(50), child: Center(child: Text("載入單字失敗"))),
+                  child: Padding(
+                    padding: EdgeInsets.all(50),
+                    child: Center(child: Text("載入單字失敗")),
+                  ),
                 );
               }
 

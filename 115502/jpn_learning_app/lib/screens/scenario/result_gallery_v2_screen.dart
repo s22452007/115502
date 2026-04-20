@@ -99,7 +99,8 @@ class ResultGalleryV2Screen extends StatelessWidget {
                         child: Row(
                           children: [
                             Container(
-                              width: 60, height: 60,
+                              width: 60,
+                              height: 60,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(10),
                                 color: Colors.grey[200],

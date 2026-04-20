@@ -113,8 +113,12 @@ class ResultGalleryV2Screen extends StatelessWidget {
                                             ? scene['image_path']
                                             : '${ApiClient.baseUrl.replaceAll('/api', '')}/static/photos/${scene['image_path'].split('/').last}',
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => 
-                                            const Icon(Icons.broken_image, color: Colors.grey),
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Icon(
+                                                  Icons.broken_image,
+                                                  color: Colors.grey,
+                                                ),
                                       ),
                                     )
                                   : const Icon(Icons.image, color: Colors.grey),

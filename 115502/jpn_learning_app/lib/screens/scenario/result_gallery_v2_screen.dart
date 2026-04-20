@@ -42,8 +42,8 @@ class ResultGalleryV2Screen extends StatelessWidget {
                 }
                 if (snapshot.hasError) {
                   // 把錯誤訊息印在編輯器的終端機裡
-                  debugPrint('取得單字探險發生錯誤: ${snapshot.error}'); 
-                  
+                  debugPrint('取得單字探險發生錯誤: ${snapshot.error}');
+
                   // 並且也顯示在手機畫面上，方便我們看
                   return Center(
                     child: Padding(

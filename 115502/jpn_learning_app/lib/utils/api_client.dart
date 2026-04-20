@@ -764,10 +764,15 @@ class ApiClient {
   }
 
   // 取得「特定照片」解鎖的單字清單
-  static Future<List<dynamic>> getVocabsByPhoto(String imagePath, int userId) async {
+  static Future<List<dynamic>> getVocabsByPhoto(
+    String imagePath,
+    int userId,
+  ) async {
     // 記得將字串 encode，避免檔名有特殊字元
     final encodedPath = Uri.encodeComponent(imagePath);
-    final url = Uri.parse('$baseUrl/scenario/photo_vocabs?user_id=$userId&image_path=$encodedPath');
+    final url = Uri.parse(
+      '$baseUrl/scenario/photo_vocabs?user_id=$userId&image_path=$encodedPath',
+    );
     final response = await http.get(url);
 
     if (response.statusCode == 200) {

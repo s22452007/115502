@@ -305,10 +305,16 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
                   future: ApiClient.fetchUserFavorites(userId),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(padding: EdgeInsets.all(40.0), child: CircularProgressIndicator());
+                      return const Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(),
+                      );
                     }
                     if (snapshot.hasError) {
-                      return const Padding(padding: EdgeInsets.all(20.0), child: Text("載入資料夾失敗，請稍後再試"));
+                      return const Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Text("載入資料夾失敗，請稍後再試"),
+                      );
                     }
 
                     final data = snapshot.data ?? {};

@@ -162,7 +162,11 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
             // 如果真的沒有照片，才顯示原本預設的相機圖示
             : Container(
                 color: AppColors.primaryLighter,
-                child: const Icon(Icons.camera_alt, size: 80, color: Colors.white),
+                child: const Icon(
+                  Icons.camera_alt,
+                  size: 80,
+                  color: Colors.white,
+                ),
               ),
       ),
     );

@@ -929,6 +929,7 @@ class ApiClient {
     }
   }
 
+  // 重新命名照片標題 API
   // 領取小組獎勵 API
   static Future<Map<String, dynamic>> claimReward(
     int groupId,

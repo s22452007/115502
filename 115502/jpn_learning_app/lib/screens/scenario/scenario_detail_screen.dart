@@ -185,7 +185,11 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
           children: [
             Text(
               '在這個場景中識別出 ${vocabs.length} 個單字',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
             ),
             const SizedBox(height: 16),
             // 動態產生單字卡

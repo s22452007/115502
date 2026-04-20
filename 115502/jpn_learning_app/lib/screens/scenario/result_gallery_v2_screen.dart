@@ -32,8 +32,14 @@ class ResultGalleryV2Screen extends StatelessWidget {
       ),
       // 加入防呆：如果沒登入就擋下來
       body: userId == null
-          ? const Center(child: Text('請先登入才能查看單字探險喔！', style: TextStyle(fontSize: 16, color: Colors.grey)))
+          ? const Center(
+              child: Text(
+                '請先登入才能查看單字探險喔！',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
           : FutureBuilder<List<dynamic>>(
+              key: _futureKey, // 每次 Key 改變，這個 FutureBuilder 會重新執行
               // 傳入 limit: 999 這樣就能把所有場景都撈出來，不受首頁只撈3個的限制
               future: ApiClient.getUnlockedScenes(userId, limit: 999),
               builder: (context, snapshot) {

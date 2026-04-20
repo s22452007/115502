@@ -166,22 +166,22 @@ def google_login():
             user.avatar = avatar
 
     # ----- 登入天數與任務重置邏輯 -----
-        today = date.today()
-        
-        # 只要今天還沒登入過，馬拉松總天數就 +1
-        if user.last_login_date != today:
-            user.total_active_days = (user.total_active_days or 0) + 1
+    today = date.today()
 
-            # 接著算連續登入 (學習火種)
-            if user.last_login_date == today - timedelta(days=1):
-                # 狀況 B：昨天有登入，連勝 +1
-                user.streak_days += 1
-            else:
-                # 狀況 C：斷掉了，或是第一次登入，重置為 1
-                user.streak_days = 1
-                
-        # 把最後登入日期更新為今天
-        user.last_login_date = today
+    # 只要今天還沒登入過，馬拉松總天數就 +1
+    if user.last_login_date != today:
+        user.total_active_days = (user.total_active_days or 0) + 1
+
+        # 接著算連續登入 (學習火種)
+        if user.last_login_date == today - timedelta(days=1):
+            # 狀況 B：昨天有登入，連勝 +1
+            user.streak_days += 1
+        else:
+            # 狀況 C：斷掉了，或是第一次登入，重置為 1
+            user.streak_days = 1
+
+    # 把最後登入日期更新為今天
+    user.last_login_date = today
     
     if user.last_scan_date != today:
         user.daily_scans = 0

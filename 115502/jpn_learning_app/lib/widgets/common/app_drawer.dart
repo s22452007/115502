@@ -96,7 +96,9 @@ class AppDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isGuest ? '登入解鎖更多功能！' : userEmail,
+                  isGuest
+                      ? '登入解鎖更多功能！'
+                      : 'ID：${userProvider.friendId ?? '—'}',
                   style: const TextStyle(fontSize: 14, color: Colors.white70),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

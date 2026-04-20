@@ -133,11 +133,33 @@
         <main class="main-content">
             <h2 style="color: var(--snap-green-dark); font-weight: bold; margin: 0 0 28px;">snap to manage 儀表板</h2>
 
-            <div class="row mb-5 g-3">
-                <div class="col-md-4">
+            <!-- 使用者統計 -->
+            <h6 class="text-muted mb-2 fw-bold">📊 使用者</h6>
+            <div class="row mb-4 g-3">
+                <div class="col-md-6">
                     <div class="stat-box">
                         <h6 class="text-muted mb-1" style="font-size: 0.9rem;">總使用者</h6>
                         <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ user_count }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="stat-box">
+                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">
+                            <span style="display:inline-block;width:8px;height:8px;background:#28a745;border-radius:50%;margin-right:6px;"></span>
+                            今日活躍
+                        </h6>
+                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ today_active }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 內容統計 -->
+            <h6 class="text-muted mb-2 fw-bold">📚 內容</h6>
+            <div class="row mb-4 g-3">
+                <div class="col-md-4">
+                    <div class="stat-box">
+                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">教材單字</h6>
+                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ vocab_count }}</h3>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -148,8 +170,12 @@
                 </div>
                 <div class="col-md-4">
                     <div class="stat-box">
-                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">教材單字</h6>
-                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ vocab_count }}</h3>
+                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">意見回饋
+                            {% if feedback_pending > 0 %}
+                            <span class="ms-1" style="color:#d9534f; font-weight:bold;">（{{ feedback_pending }} 待回覆）</span>
+                            {% endif %}
+                        </h6>
+                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ feedback_total }}</h3>
                     </div>
                 </div>
             </div>

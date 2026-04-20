@@ -989,17 +989,20 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                           color: primaryGreen,
                         ),
                       ),
-                      const Spacer(),
-                      Text(
-                        fb['replied_at'] ?? '',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                      ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     fb['reply'],
-                    style: const TextStyle(fontSize: 14, color: textColor),
+                    style: const TextStyle(fontSize: 14, color: textColor, height: 1.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      fb['replied_at'] ?? '',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    ),
                   ),
                 ],
               ),

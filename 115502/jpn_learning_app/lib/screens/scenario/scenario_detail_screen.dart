@@ -529,9 +529,8 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
                         ],
                       ),
                     ),
-                  ],
-                ),
-              )).toList(),
+                  )
+                  .toList(),
             ),
           ),
         ],

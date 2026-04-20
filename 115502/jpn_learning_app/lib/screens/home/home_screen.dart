@@ -414,7 +414,10 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(
                 builder: (_) => const ResultGalleryV2Screen(),
               ), // 我的收藏
-            ).then((_) => _fetchAndCheckBadgeProgress()); // 回來時重新檢查！
+            ).then((_) {
+              _fetchAndCheckBadgeProgress(); // 回來時重新檢查！
+              _fetchRecentScenes(); // 更新標題，因為可能在收藏裡改了標題
+            });
           }
           if (i == 4) {
             Navigator.push(

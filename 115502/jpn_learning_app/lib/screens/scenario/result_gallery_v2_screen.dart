@@ -77,7 +77,8 @@ class ResultGalleryV2Screen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             // 把整個 scene 的 Map 傳給詳細頁面
-                            builder: (context) => ScenarioDetailScreen(scene: scene),
+                            builder: (context) =>
+                                ScenarioDetailScreen(scene: scene),
                           ),
                         );
                       },

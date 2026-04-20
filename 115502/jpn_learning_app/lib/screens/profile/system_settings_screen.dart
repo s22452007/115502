@@ -326,7 +326,11 @@ class _NotificationSettingsScreenState
           ),
         ),
         value: value,
-        activeColor: primaryGreen,
+        activeColor: Colors.white,
+        activeTrackColor: primaryGreen,
+        inactiveThumbColor: Colors.white,
+        inactiveTrackColor: const Color(0xFFBDBDBD),
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
         onChanged: onChanged,
       ),
     );

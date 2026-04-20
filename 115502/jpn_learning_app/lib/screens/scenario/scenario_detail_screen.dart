@@ -119,9 +119,23 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
         icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
+      actions: [
+        if (widget.scene['photo_id'] != null)
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            tooltip: '修改這張照片的名稱',
+            onPressed: () {
+              _showRenameDialog(
+                context,
+                widget.scene['photo_id'],
+                widget.scene['scene_name'],
+              );
+            },
+          ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
-          scene['scene_name'], // 這裡會完美顯示自訂的標題
+          widget.scene['scene_name'], // 這裡會完美顯示自訂的標題
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,

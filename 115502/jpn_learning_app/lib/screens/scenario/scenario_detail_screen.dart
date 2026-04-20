@@ -152,7 +152,11 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
                 // 防呆機制：如果照片被刪除了或網路不穩，就顯示破圖圖示，不會整個白畫面
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: AppColors.primaryLighter,
-                  child: const Icon(Icons.broken_image, size: 80, color: Colors.white),
+                  child: const Icon(
+                    Icons.broken_image,
+                    size: 80,
+                    color: Colors.white,
+                  ),
                 ),
               )
             // 如果真的沒有照片，才顯示原本預設的相機圖示

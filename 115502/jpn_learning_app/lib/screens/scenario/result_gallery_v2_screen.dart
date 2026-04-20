@@ -9,8 +9,64 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // 2. 匯入跳轉的相簿詳細頁面
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
 
-class ResultGalleryV2Screen extends StatelessWidget {
+class ResultGalleryV2Screen extends StatefulWidget {
   const ResultGalleryV2Screen({Key? key}) : super(key: key);
+
+  @override
+  State<ResultGalleryV2Screen> createState() => _ResultGalleryV2ScreenState();
+}
+
+class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
+  // 用來強迫 FutureBuilder 重新抓資料的 Key
+  Key _futureKey = UniqueKey();
+
+  Future<void> _showRenameDialog(
+    BuildContext context,
+    int photoId,
+    String currentName,
+  ) async {
+    final TextEditingController titleController = TextEditingController(
+      text: currentName,
+    );
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('修改照片名稱'),
+        content: TextField(
+          controller: titleController,
+          decoration: const InputDecoration(
+            labelText: '照片名稱',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newTitle = titleController.text.trim();
+              if (newTitle.isNotEmpty && newTitle != currentName) {
+                await ApiClient.renamePhoto(photoId, newTitle);
+              }
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('確認修改', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    // 對話框關閉後，重新載入清單
+    setState(() {
+      _futureKey = UniqueKey();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

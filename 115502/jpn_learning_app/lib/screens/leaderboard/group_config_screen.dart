@@ -111,7 +111,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             Text('決定你們小組這週要一起完成什麼任務', style: TextStyle(fontSize: 14, color: _subTextColor)),
             const SizedBox(height: 16),
             
-            // 🌟 使用抽離出來的積木
+            // 使用抽離出來的積木
             TaskTypeCard(
               icon: Icons.camera_alt,
               title: '探索新場景',
@@ -134,7 +134,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                // 🌟 使用抽離出來的積木
+                // 使用抽離出來的積木
                 Expanded(
                   child: DifficultyButton(
                     label: '輕鬆',

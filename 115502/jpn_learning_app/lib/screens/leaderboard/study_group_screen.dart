@@ -49,9 +49,15 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
 
       if (mounted) {
         setState(() {
-          // 🌟 攔截自動結算訊號
+          // 攔截自動結算訊號
           if (groupResult['just_expired'] == true) {
-            _groupData = null; 
+            _groupData = null;
+
+            // 如果有回傳最新的點數，立刻更新錢包！
+            if (groupResult.containsKey('new_j_pts')) {
+               context.read<UserProvider>().setJPts(groupResult['new_j_pts']);
+            }
+
             Future.delayed(Duration.zero, () {
               showDialog(
                 context: context,

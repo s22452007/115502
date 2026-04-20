@@ -104,7 +104,7 @@ def seed_data():
             # --- 第三階段：中級 (N3) ---
             QuizQuestion(stage="第三階段：中級", level_tag="N3", question="台湾の夏は気温が高いだけでなく、とても（　）です。", option_a="むしあつい", option_b="ものたりない", option_c="うっとうしい", option_d="やかましい", correct_answer="A"),
             QuizQuestion(stage="第三階段：中級", level_tag="N3", question="大阪で２ヶ月間（　）する予定なので、交通パスを買おうと思っています。", option_a="たいざい", option_b="そんざい", option_c="じゅうたい", option_d="きたい", correct_answer="A"),
-            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="このアプリの（　）を改善する必要があります。", option_a="きのう", option_b="きのう", option_c="せいのう", option_d="ぎのう", correct_answer="A"),
+            QuizQuestion(stage="第三階段：中級", level_tag="N3", question="このアプリの（　）を改善する必要があります。", option_a="機能", option_b="器能", option_c="性能", option_d="技能", correct_answer="A"),
             QuizQuestion(stage="第三階段：中級", level_tag="N3", question="異文化を（　）するために、大阪へ留学します。", option_a="たいけん", option_b="じっけん", option_c="けんさく", option_d="れんしゅう", correct_answer="A"),
             QuizQuestion(stage="第三階段：中級", level_tag="N3", question="毎日練習を（　）ことで、日本語が上手になります。", option_a="つづける", option_b="はじめる", option_c="おわる", option_d="わすれる", correct_answer="A"),
             QuizQuestion(stage="第三階段：中級", level_tag="N3", question="彼はいつも（　）に計画を立てます。", option_a="しんちょう", option_b="きんちょう", option_c="きちょう", option_d="じゅうだい", correct_answer="A"),

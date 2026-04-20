@@ -7,11 +7,11 @@ class ApiClient {
   // 動態判斷平台，自動切換對應的本地端 IP
   static String get baseUrl {
     if (kIsWeb) {
-      return 'http://127.0.0.1:5000/api';
+      return 'http://127.0.0.1:5050/api';
     } else if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000/api';
+      return 'http://10.0.2.2:5050/api';
     } else {
-      return 'http://127.0.0.1:5000/api';
+      return 'http://127.0.0.1:5050/api';
     }
   }
 

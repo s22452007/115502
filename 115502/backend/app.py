@@ -49,7 +49,7 @@ app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
 
 # 啟動時自動建立資料表 (如果還沒有的話)
 with app.app_context():
-    # db.drop_all()  <-- 🛑 絕對不能在 app.py 裡寫這行！
+    #db.drop_all()  # <-- 🛑 絕對不能在 app.py 裡寫這行！
     db.create_all()  # 只要保留這行就好，它會檢查「如果沒有表才建立」，不會蓋掉舊資料
 
 # ==========================================
@@ -79,4 +79,4 @@ if __name__ == '__main__':
     print(f"[Database] 資料庫已牢牢綁定於: {db_path}") 
 
     # 加上 host='0.0.0.0' 代表允許區域網路內的所有設備連線
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5050, debug=True)

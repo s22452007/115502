@@ -489,24 +489,42 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
-              children: _sentences.map((s) => Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
+              children: _sentences
+                  .map(
+                    (s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            s['level_name'] ?? s['level'] ?? '提示', // 找 level_name，找不到就找 level，再沒有就顯示'提示'
-                            style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)
+                          const Icon(
+                            Icons.volume_up,
+                            color: Colors.blueGrey,
+                            size: 20,
                           ),
-                          Text(
-                            s['text'] ?? '暫無例句', // 如果沒有句子，就顯示'暫無例句'
-                            style: const TextStyle(fontSize: 15, height: 1.4)
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s['level_name'] ??
+                                      s['level'] ??
+                                      '提示', // 找 level_name，找不到就找 level，再沒有就顯示'提示'
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  s['text'] ?? '暫無例句', // 如果沒有句子，就顯示'暫無例句'
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

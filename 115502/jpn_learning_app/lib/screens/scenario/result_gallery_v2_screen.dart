@@ -119,10 +119,10 @@ class ResultGalleryV2Screen extends StatelessWidget {
                                     )
                                   : const Icon(Icons.image, color: Colors.grey),
                             ),
-                            
+
                             // 解決太擠的問題：在這裡加入一個 16 像素的隱形空白寬度
                             const SizedBox(width: 16),
-                            
+
                             // 中間：標題與提示文字
                             Expanded(
                               child: Column(

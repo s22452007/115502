@@ -233,16 +233,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.white),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.person_outline, color: Colors.white),
+        //     onPressed: () => Navigator.push(
+        //       context,
+        //       MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        //     ),
+        //   ),
+        //   const SizedBox(width: 8),
+        // ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),

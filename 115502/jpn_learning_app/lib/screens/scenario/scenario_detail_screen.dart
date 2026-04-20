@@ -321,7 +321,9 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
                     final folders = data['favorites'] as List<dynamic>? ?? [];
 
                     return ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.4,
+                      ),
                       child: ListView.builder(
                         shrinkWrap: true,
                         itemCount: folders.length,

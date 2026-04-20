@@ -442,17 +442,23 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
               // 星星按鈕
               GestureDetector(
                 onTap: _toggleStar,
-                child: _isLoading 
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Icon(
-                      _isStarred ? Icons.star_rounded : Icons.star_border_rounded,
-                      color: _isStarred ? Colors.amber : Colors.grey.shade300,
-                      size: 40,
-                    ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _isStarred
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        color: _isStarred ? Colors.amber : Colors.grey.shade300,
+                        size: 40,
+                      ),
               ),
             ],
           ),
-          
+
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16.0),
             child: Divider(color: Color(0xFFEEEEEE), thickness: 1.5),

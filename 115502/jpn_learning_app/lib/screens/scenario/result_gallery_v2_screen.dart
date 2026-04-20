@@ -146,7 +146,11 @@ class ResultGalleryV2Screen extends StatelessWidget {
                             // 右側：日期 (動態從資料庫抓取)
                             Text(
                               scene['unlocked_at'],
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade400,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),

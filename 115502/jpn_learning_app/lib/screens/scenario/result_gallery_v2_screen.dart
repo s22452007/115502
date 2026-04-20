@@ -231,21 +231,24 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                                         ),
                                       ),
                                       if (scene['photo_id'] != null)
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.edit,
-                                            size: 20,
-                                            color: Colors.grey,
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 8.0,
                                           ),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          onPressed: () {
-                                            _showRenameDialog(
-                                              context,
-                                              scene['photo_id'],
-                                              scene['scene_name'],
-                                            );
-                                          },
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              _showRenameDialog(
+                                                context,
+                                                scene['photo_id'],
+                                                scene['scene_name'],
+                                              );
+                                            },
+                                            child: const Icon(
+                                              Icons.edit,
+                                              size: 18,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
                                         ),
                                     ],
                                   ),

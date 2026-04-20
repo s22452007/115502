@@ -6,134 +6,202 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
-        body { background-color: #f4f7f5; font-family: "微軟正黑體", sans-serif; }
-        .table thead { background-color: #5c8364; color: white; }
-        .type-tag {
-            background-color: #dce7de;
-            color: #5c8364;
+        :root {
+            --snap-green-dark: #5c8364;
+            --snap-green-light: #dce7de;
+            --snap-bg: #f4f7f5;
+        }
+        body { background-color: var(--snap-bg); font-family: "微軟正黑體", sans-serif; color: #444; }
+
+        .feedback-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ccc;
+        }
+        .feedback-card.unreplied { border-left-color: #d9534f; }
+        .feedback-card.replied { border-left-color: var(--snap-green-dark); }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .user-info {
             font-weight: bold;
-            padding: 4px 12px;
+            color: #333;
+            font-size: 1.05rem;
+        }
+        .user-info small { color: #999; font-weight: normal; margin-left: 8px; font-size: 0.85rem; }
+
+        .type-tag {
+            background-color: var(--snap-green-light);
+            color: var(--snap-green-dark);
+            font-weight: bold;
+            padding: 4px 14px;
             border-radius: 50px;
             font-size: 0.85rem;
         }
-        .status-unreplied { color: #d9534f; font-weight: bold; }
-        .status-replied { color: #5c8364; font-weight: bold; }
-        .content-cell { max-width: 280px; white-space: pre-wrap; word-break: break-word; }
-        .btn-reply {
-            background-color: #5c8364;
-            color: white;
-            border: none;
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: bold;
         }
-        .btn-reply:hover { background-color: #4a6a51; color: white; }
-        .modal-header-snap {
-            background-color: #5c8364;
-            color: white;
+        .status-unreplied { background-color: #fde2e2; color: #d9534f; }
+        .status-replied { background-color: var(--snap-green-light); color: var(--snap-green-dark); }
+
+        .content-box {
+            background-color: #fafafa;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+            line-height: 1.6;
         }
+        .reply-box {
+            background-color: #f0f7f1;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .reply-label {
+            color: var(--snap-green-dark);
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        .action-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
         .btn-snap {
-            background-color: #5c8364;
+            background-color: var(--snap-green-dark);
             color: white;
             border: none;
         }
         .btn-snap:hover { background-color: #4a6a51; color: white; }
+
+        .modal-header-snap { background-color: var(--snap-green-dark); color: white; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container mt-5" style="max-width: 900px;">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 style="color: #5c8364;">💬 意見回饋管理</h3>
             <a href="/" class="btn btn-sm btn-outline-secondary">返回儀表板</a>
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>使用者</th>
-                            <th>類型</th>
-                            <th>內容</th>
-                            <th>官方回覆</th>
-                            <th>送出時間</th>
-                            <th>狀態</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for f in feedbacks %}
-                        <tr>
-                            <td>{{ f.id }}</td>
-                            <td>
-                                {{ f.username or '未設定' }}<br>
-                                <small class="text-muted">{{ f.email }}</small>
-                            </td>
-                            <td><span class="type-tag">{{ f.feedback_type }}</span></td>
-                            <td class="content-cell">{{ f.content }}</td>
-                            <td class="content-cell">
-                                {% if f.reply %}
-                                    {{ f.reply }}<br>
-                                    <small class="text-muted">{{ f.replied_at }}</small>
-                                {% else %}
-                                    <span class="text-muted">尚未回覆</span>
-                                {% endif %}
-                            </td>
-                            <td><small>{{ f.created_at }}</small></td>
-                            <td>
-                                {% if f.reply %}
-                                    <span class="status-replied">✓ 已回覆</span>
-                                {% else %}
-                                    <span class="status-unreplied">● 待回覆</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-reply mb-1"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#replyModal{{ f.id }}">
-                                    {% if f.reply %}修改回覆{% else %}回覆{% endif %}
-                                </button>
-                                <form action="/feedback/delete/{{ f.id }}" method="POST"
-                                      onsubmit="return confirm('確定刪除此回饋？');" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
-                                </form>
-                            </td>
-                        </tr>
+        {% for f in feedbacks %}
+        <div class="feedback-card {% if f.reply %}replied{% else %}unreplied{% endif %}">
+            <!-- 最上面：使用者 + 類型 + 狀態 -->
+            <div class="card-header-row">
+                <div class="user-info">
+                    #{{ f.id }} · {{ f.username or '未設定' }}
+                    <small>{{ f.email }}</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="type-tag">{{ f.feedback_type }}</span>
+                    {% if f.reply %}
+                        <span class="status-badge status-replied">✓ 已回覆</span>
+                    {% else %}
+                        <span class="status-badge status-unreplied">● 待回覆</span>
+                    {% endif %}
+                </div>
+            </div>
 
-                        <!-- 回覆 Modal -->
-                        <div class="modal fade" id="replyModal{{ f.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <form action="/feedback/reply/{{ f.id }}" method="POST">
-                                        <div class="modal-header modal-header-snap">
-                                            <h5 class="modal-title">回覆回饋 #{{ f.id }}</h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">使用者內容：</label>
-                                                <div class="p-2 bg-light rounded" style="white-space: pre-wrap;">{{ f.content }}</div>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="form-label fw-bold">你的回覆：</label>
-                                                <textarea name="reply" class="form-control" rows="5" required>{{ f.reply or '' }}</textarea>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                                            <button type="submit" class="btn btn-snap">送出回覆</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
+            <!-- 使用者內容 -->
+            <div class="content-box">{{ f.content }}</div>
+
+            <div class="meta-row">
+                <span>送出時間</span>
+                <span>{{ f.created_at }}</span>
+            </div>
+
+            <!-- 官方回覆（若有） -->
+            {% if f.reply %}
+            <div class="mt-3">
+                <div class="reply-label">🎧 官方回覆</div>
+                <div class="reply-box">{{ f.reply }}</div>
+                <div class="meta-row">
+                    <span>回覆時間</span>
+                    <span>{{ f.replied_at }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 操作按鈕 -->
+            <div class="action-row">
+                <button type="button" class="btn btn-sm btn-snap"
+                        data-bs-toggle="modal"
+                        data-bs-target="#replyModal{{ f.id }}">
+                    {% if f.reply %}修改回覆{% else %}回覆{% endif %}
+                </button>
+                <form action="/feedback/delete/{{ f.id }}" method="POST"
+                      onsubmit="return confirm('確定刪除此回饋？');" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">目前沒有任何回饋</div>
+        {% endfor %}
+    </div>
+
+    <!-- 回覆 Modal -->
+    {% for f in feedbacks %}
+    <div class="modal fade" id="replyModal{{ f.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/feedback/reply/{{ f.id }}" method="POST">
+                    <div class="modal-header modal-header-snap">
+                        <h5 class="modal-title">回覆回饋 #{{ f.id }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">使用者內容：</label>
+                            <div class="p-2 bg-light rounded" style="white-space: pre-wrap;">{{ f.content }}</div>
                         </div>
-                        {% else %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">目前沒有任何回饋</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        <div class="mb-2">
+                            <label class="form-label fw-bold">你的回覆：</label>
+                            <textarea name="reply" class="form-control" rows="5" required>{{ f.reply or '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-snap">送出回覆</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+    {% endfor %}
 </body>
 </html>

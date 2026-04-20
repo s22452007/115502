@@ -143,11 +143,11 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
           ),
         ),
         // Image.network 抓取使用者的照片！
-        background: scene['image_path'] != null
+        background: widget.scene['image_path'] != null
             ? Image.network(
-                scene['image_path'].startsWith('http')
-                    ? scene['image_path']
-                    : '${ApiClient.baseUrl.replaceAll('/api', '')}/static/photos/${scene['image_path'].split('/').last}',
+                widget.scene['image_path'].startsWith('http')
+                    ? widget.scene['image_path']
+                    : '${ApiClient.baseUrl.replaceAll('/api', '')}/static/photos/${widget.scene['image_path'].split('/').last}',
                 fit: BoxFit.cover, // 讓照片完美填滿這個長方形區域
                 // 防呆機制：如果照片被刪除了或網路不穩，就顯示破圖圖示，不會整個白畫面
                 errorBuilder: (context, error, stackTrace) => Container(

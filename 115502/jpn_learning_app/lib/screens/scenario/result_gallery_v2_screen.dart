@@ -48,7 +48,10 @@ class ResultGalleryV2Screen extends StatelessWidget {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
-                      child: Text('載入失敗原因：\n${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                      child: Text(
+                        '載入失敗原因：\n${snapshot.error}',
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
                   );
                 }

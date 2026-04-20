@@ -45,8 +45,28 @@ def index():
     # 安全檢查 vocab 表
     vocab_exists = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='vocab'").fetchone()
     vocab_count = conn.execute('SELECT COUNT(*) FROM vocab').fetchone()[0] if vocab_exists else 0
+
+    # 今日活躍人數 (今天有登入過的)
+    from datetime import date
+    today_str = date.today().strftime('%Y-%m-%d')
+    today_active = conn.execute(
+        "SELECT COUNT(*) FROM user WHERE DATE(last_login_date) = ?", (today_str,)
+    ).fetchone()[0]
+
+    # 總回饋數 / 待回覆
+    feedback_total = conn.execute('SELECT COUNT(*) FROM feedback').fetchone()[0]
+    feedback_pending = conn.execute(
+        'SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""'
+    ).fetchone()[0]
+
     conn.close()
-    return render_template('index.html', user_count=user_count, photo_count=photo_count, vocab_count=vocab_count)
+    return render_template('index.html',
+                           user_count=user_count,
+                           photo_count=photo_count,
+                           vocab_count=vocab_count,
+                           today_active=today_active,
+                           feedback_total=feedback_total,
+                           feedback_pending=feedback_pending)
 
 # ==========================================
 # [使用者管理] 包含點數 (j_pts)

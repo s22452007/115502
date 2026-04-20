@@ -43,51 +43,60 @@ class RecentScenesList extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: List.generate(
-            recentScenes.length,
-            (index) {
-              final scene = recentScenes[index];
-              final isEven = index % 2 == 0;
+          children: List.generate(recentScenes.length, (index) {
+            final scene = recentScenes[index];
+            final isEven = index % 2 == 0;
 
-              return GestureDetector(
-                onTap: () => onShowVocabularyBottomSheet(scene),
-                child: Container(
-                  width: 160,
-                  margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isEven ? const Color(0xFFEBE8F2) : const Color(0xFFEAF4F6),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: isEven ? const Color(0xFF8B6B9E) : const Color(0xFF7FAFD0),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.train, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        scene['scene_name'] ?? '未知場景',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${scene['unlocked_at']} • ${scene['vocab_count']}個單字',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
+            return GestureDetector(
+              onTap: () => onShowVocabularyBottomSheet(scene),
+              child: Container(
+                width: 160,
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isEven
+                      ? const Color(0xFFEBE8F2)
+                      : const Color(0xFFEAF4F6),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              );
-            },
-          ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isEven
+                            ? const Color(0xFF8B6B9E)
+                            : const Color(0xFF7FAFD0),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.train,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      scene['scene_name'] ?? '未知場景',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${scene['unlocked_at']} • ${scene['vocab_count']}個單字',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );

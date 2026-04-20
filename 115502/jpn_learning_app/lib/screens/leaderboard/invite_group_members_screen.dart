@@ -5,7 +5,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
-// 🌟 匯入剛剛做好的積木
+// 匯入剛剛做好的積木
 import 'package:jpn_learning_app/widgets/study_group/invite_friend_card.dart';
 
 class InviteGroupMembersScreen extends StatefulWidget {
@@ -71,33 +71,44 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
   }
 
   Future<void> _submitAction(int selectedCount) async {
-    final bool confirm = await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('⚠️ 押金與額度提醒', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text(
-          '每週的第一個小組為免費參加。\n\n如果您本週已經免費參加過其他小組，本次將會扣除 20 J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('先不要', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('確定繼續', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    ) ?? false;
-
-    if (!confirm) return;
-
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
+
+    // 1. 先偷偷問後端：他這週還有免費額度嗎？
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('檢查額度中...')));
+    final bool isFree = await ApiClient.checkFreeQuota(userId);
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    }
+
+    // 2. 如果「不是」免費的，才跳出押金警告窗！
+    if (!isFree) {
+      final bool confirm = await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('⚠️ 押金與對賭提醒', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text(
+            '您本週的免費小組額度已用完。\n\n本次建立將會扣除 20 J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
+            style: TextStyle(height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('先不要', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('確定繼續', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ) ?? false;
+
+      // 如果玩家按了取消，就直接終止這個函式
+      if (!confirm) return;
+    }
 
     final selectedFriendIds = _friends
         .where((f) => f['invited'] == true)
@@ -237,7 +248,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final friend = _filteredFriends[index];
-                        // 🌟 使用抽離出來的積木
+                        // 使用抽離出來的積木
                         return InviteFriendCard(
                           friend: friend,
                           onToggleInvite: () {

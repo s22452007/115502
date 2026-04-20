@@ -228,7 +228,10 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
   Future<void> _fetchDetail() async {
     final userId = context.read<UserProvider>().userId;
     try {
-      final detail = await ApiClient.getVocabDetail(widget.vocab['vocab_id'], userId!);
+      final detail = await ApiClient.getVocabDetail(
+        widget.vocab['vocab_id'],
+        userId!,
+      );
       if (mounted) {
         setState(() {
           _isStarred = detail['is_favorited'] ?? false;

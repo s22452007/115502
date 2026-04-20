@@ -66,16 +66,25 @@ def get_my_group(user_id):
         for m in members:
             u = User.query.get(m.user_id)
             if u and is_success:
-                # 達標發放 30 點！(失敗就什麼都不發，押金已被沒收)
+                # 達標發放獎勵！(失敗就什麼都不發，押金已被沒收)
                 u.j_pts += group.reward_points 
                 
+        # 結算完畢後，抓取「當前打開畫面的這個人」的最新點數
+        current_user = User.query.get(user_id)
+        latest_pts = current_user.j_pts if current_user else 0
+
         # 解散小組 (Cascade 設定會一併刪除 GroupMember)
         reward_amount = group.reward_points # 先把獎勵點數記下來
         db.session.delete(group)
         db.session.commit()
         
         msg = f"🎉 上週小組挑戰成功！已發放 {reward_amount} 點！" if is_success else "💀 上週挑戰失敗，押金沒收！"
-        return jsonify({"has_group": False, "message": msg, "just_expired": True}), 200
+        return jsonify({
+            "has_group": False, 
+            "message": msg, 
+            "just_expired": True,
+            "new_j_pts": latest_pts # 新增：把結算後的最新餘額回傳給前端！
+        }), 200
     # -----------------------------------------------------
 
     # 抓取這個小組的所有成員
@@ -428,3 +437,17 @@ def claim_reward():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"領獎失敗: {str(e)}"}), 500
+    
+# ==========================================
+# 9. 檢查本週是否還有免費額度 (GET /check_quota/<user_id>)
+# ==========================================
+@group_bp.route('/check_quota/<int:user_id>', methods=['GET'])
+def check_quota(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到用戶"}), 404
+        
+    current_week = get_current_year_week()
+    is_free = (user.last_free_group_week != current_week)
+    
+    return jsonify({"is_free": is_free}), 200

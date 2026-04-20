@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>意見回饋管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body { background-color: #f4f7f5; font-family: "微軟正黑體", sans-serif; }
         .table thead { background-color: #5c8364; color: white; }
@@ -17,13 +18,23 @@
         }
         .status-unreplied { color: #d9534f; font-weight: bold; }
         .status-replied { color: #5c8364; font-weight: bold; }
-        .content-cell { max-width: 300px; white-space: pre-wrap; word-break: break-word; }
+        .content-cell { max-width: 280px; white-space: pre-wrap; word-break: break-word; }
         .btn-reply {
             background-color: #5c8364;
             color: white;
             border: none;
         }
         .btn-reply:hover { background-color: #4a6a51; color: white; }
+        .modal-header-snap {
+            background-color: #5c8364;
+            color: white;
+        }
+        .btn-snap {
+            background-color: #5c8364;
+            color: white;
+            border: none;
+        }
+        .btn-snap:hover { background-color: #4a6a51; color: white; }
     </style>
 </head>
 <body>
@@ -75,9 +86,45 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-reply" disabled>回覆</button>
+                                <button type="button" class="btn btn-sm btn-reply mb-1"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#replyModal{{ f.id }}">
+                                    {% if f.reply %}修改回覆{% else %}回覆{% endif %}
+                                </button>
+                                <form action="/feedback/delete/{{ f.id }}" method="POST"
+                                      onsubmit="return confirm('確定刪除此回饋？');" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
+                                </form>
                             </td>
                         </tr>
+
+                        <!-- 回覆 Modal -->
+                        <div class="modal fade" id="replyModal{{ f.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form action="/feedback/reply/{{ f.id }}" method="POST">
+                                        <div class="modal-header modal-header-snap">
+                                            <h5 class="modal-title">回覆回饋 #{{ f.id }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">使用者內容：</label>
+                                                <div class="p-2 bg-light rounded" style="white-space: pre-wrap;">{{ f.content }}</div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label fw-bold">你的回覆：</label>
+                                                <textarea name="reply" class="form-control" rows="5" required>{{ f.reply or '' }}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                            <button type="submit" class="btn btn-snap">送出回覆</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                         {% else %}
                         <tr>
                             <td colspan="8" class="text-center text-muted py-4">目前沒有任何回饋</td>

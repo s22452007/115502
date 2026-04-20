@@ -463,13 +463,23 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
             padding: EdgeInsets.symmetric(vertical: 16.0),
             child: Divider(color: Color(0xFFEEEEEE), thickness: 1.5),
           ),
-          
+
           // 下半部：詞彙說明與例句
-          const Text('詞彙說明', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333))),
+          const Text(
+            '詞彙說明',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF333333),
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(widget.vocab['meaning'], style: const TextStyle(fontSize: 16, color: Colors.grey)),
+          Text(
+            widget.vocab['meaning'],
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
+          ),
           const SizedBox(height: 16),
-          
+
           // 🌟 鷹架式例句區塊
           Container(
             width: double.infinity,

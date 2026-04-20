@@ -366,13 +366,19 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
 
   // 真正發送 API 把單字塞入指定資料夾的函式
   Future<void> _executeCollection(int userId, int? folderId) async {
-    final result = await ApiClient.collectVocab(userId, widget.vocab['vocab_id'], folderId: folderId);
-    
+    final result = await ApiClient.collectVocab(
+      userId,
+      widget.vocab['vocab_id'],
+      folderId: folderId,
+    );
+
     ScaffoldMessenger.of(context).clearSnackBars();
-    
+
     if (result.containsKey('error')) {
       // 顯示後端回傳的錯誤 (例如: 已經收藏過囉)
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result['error'])));
     } else {
       // 收藏成功，星星變黃色
       setState(() => _isStarred = true);

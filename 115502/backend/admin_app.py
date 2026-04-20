@@ -109,6 +109,24 @@ def delete_vocab(vocab_id):
     return redirect(url_for('vocab_list'))
 
 
+# ==========================================
+# [意見回饋管理]
+# ==========================================
+@app.route('/feedback/list')
+def feedback_list():
+    conn = get_db_connection()
+    query = '''
+        SELECT f.id, f.feedback_type, f.content, f.reply, f.replied_at, f.created_at,
+               u.username, u.email
+        FROM feedback f
+        LEFT JOIN user u ON f.user_id = u.id
+        ORDER BY f.created_at DESC
+    '''
+    feedbacks = conn.execute(query).fetchall()
+    conn.close()
+    return render_template('feedback/list.html', feedbacks=feedbacks)
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
 

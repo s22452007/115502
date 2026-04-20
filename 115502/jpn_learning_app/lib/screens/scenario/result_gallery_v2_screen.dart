@@ -138,7 +138,10 @@ class ResultGalleryV2Screen extends StatelessWidget {
                                   Text(
                                     // 讓提示文字顯示這張照片解鎖了幾個字
                                     '這張照片解鎖了 ${scene['vocab_count']} 個單字 >',
-                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade500,
+                                    ),
                                   ),
                                 ],
                               ),

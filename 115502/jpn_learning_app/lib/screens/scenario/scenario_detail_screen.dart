@@ -423,11 +423,18 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.vocab['kana'], style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                    Text(
+                      widget.vocab['kana'],
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       widget.vocab['word'],
-                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333),
+                      ),
                     ),
                   ],
                 ),

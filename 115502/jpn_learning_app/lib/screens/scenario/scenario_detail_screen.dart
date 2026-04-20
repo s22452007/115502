@@ -229,13 +229,15 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
             content: const Text('已取消收藏'),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('取消失敗，請稍後再試')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('取消失敗，請稍後再試')));
       }
       return; // 結束，不繼續往下彈出資料夾視窗
     }

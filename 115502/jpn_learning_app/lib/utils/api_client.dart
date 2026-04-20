@@ -779,7 +779,7 @@ class ApiClient {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return data['vocabs']; 
+      return data['vocabs'];
     } else {
       throw Exception('無法載入此照片的單字清單');
     }

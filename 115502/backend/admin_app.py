@@ -1,7 +1,24 @@
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
+
+
+def utc_to_tw(utc_str):
+    """把資料庫的 UTC 時間字串轉成台灣時間 (+8)"""
+    if not utc_str:
+        return ''
+    try:
+        # 支援帶微秒和不帶微秒的格式
+        for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
+            try:
+                dt = datetime.strptime(utc_str, fmt)
+                return (dt + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M')
+            except ValueError:
+                continue
+        return utc_str
+    except Exception:
+        return utc_str
 
 app = Flask(__name__)
 
@@ -125,6 +142,13 @@ def feedback_list():
     '''
     feedbacks = conn.execute(query).fetchall()
     conn.close()
+    # 把時間都轉成台灣時間
+    feedbacks = [
+        {**dict(f),
+         'created_at': utc_to_tw(f['created_at']),
+         'replied_at': utc_to_tw(f['replied_at']) if f['replied_at'] else None}
+        for f in feedbacks
+    ]
     return render_template('feedback/list.html', feedbacks=feedbacks)
 
 @app.route('/feedback/reply/<int:feedback_id>', methods=['POST'])

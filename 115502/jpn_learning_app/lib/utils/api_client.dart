@@ -930,6 +930,24 @@ class ApiClient {
   }
 
   // 重新命名照片標題 API
+  static Future<Map<String, dynamic>> renamePhoto(
+    int photoId,
+    String customTitle,
+  ) async {
+    final url = Uri.parse('$baseUrl/scenario/rename_photo');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'photo_id': photoId, 'custom_title': customTitle}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('修改照片名稱連線失敗: $e');
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 領取小組獎勵 API
   static Future<Map<String, dynamic>> claimReward(
     int groupId,

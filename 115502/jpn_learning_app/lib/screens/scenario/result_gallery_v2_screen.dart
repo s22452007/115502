@@ -153,7 +153,14 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                             builder: (context) =>
                                 ScenarioDetailScreen(scene: scene),
                           ),
-                        );
+                        ).then((_) {
+                          // 從詳細畫面返回時，重新整理清單
+                          if (mounted) {
+                            setState(() {
+                              _futureKey = UniqueKey();
+                            });
+                          }
+                        });
                       },
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 16),

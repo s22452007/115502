@@ -59,30 +59,49 @@ class AppDrawer extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // 換成帶有白框與專屬頭像的版本
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color.fromARGB(255, 74, 124, 89),
-            ),
-            accountName: Text(
-              isGuest ? '訪客' : userName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            accountEmail: Text(isGuest ? '登入解鎖更多功能！' : userEmail),
-            currentAccountPicture: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: CircleAvatar(
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
-                    ? (userAvatar.startsWith('http')
-                          ? NetworkImage(userAvatar)
-                          : MemoryImage(base64Decode(userAvatar))
-                                as ImageProvider)
-                    : NetworkImage(defaultAvatarUrl) as ImageProvider,
-              ),
+          // 自訂 Header，隨字體大小自動撐高
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+            color: const Color.fromARGB(255, 74, 124, 89),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: CircleAvatar(
+                    radius: 32,
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
+                        ? (userAvatar.startsWith('http')
+                              ? NetworkImage(userAvatar)
+                              : MemoryImage(base64Decode(userAvatar))
+                                    as ImageProvider)
+                        : NetworkImage(defaultAvatarUrl) as ImageProvider,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  isGuest ? '訪客' : userName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isGuest ? '登入解鎖更多功能！' : userEmail,
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
 

@@ -128,11 +128,39 @@ class ResultGalleryV2Screen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    scene['scene_name'], // 因為後端改了，這裡會自動印出 custom_title！
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis, // 如果標題太長會自動變成 ...
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          scene['scene_name'], // 因為後端改了，這裡會自動印出 custom_title！
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF333333),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow
+                                              .ellipsis, // 如果標題太長會自動變成 ...
+                                        ),
+                                      ),
+                                      if (scene['photo_id'] != null)
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            size: 20,
+                                            color: Colors.grey,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () {
+                                            _showRenameDialog(
+                                              context,
+                                              scene['photo_id'],
+                                              scene['scene_name'],
+                                            );
+                                          },
+                                        ),
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(

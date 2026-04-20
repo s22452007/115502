@@ -526,16 +526,20 @@ def submit_feedback():
 # 查詢使用者的歷史回饋
 @user_bp.route('/feedback/<int:user_id>', methods=['GET'])
 def get_feedbacks(user_id):
+    from datetime import timedelta
     feedbacks = Feedback.query.filter_by(user_id=user_id).order_by(Feedback.created_at.desc()).all()
     result = []
     for fb in feedbacks:
+        # UTC 轉台灣時間 (+8)
+        created_tw = (fb.created_at + timedelta(hours=8)) if fb.created_at else None
+        replied_tw = (fb.replied_at + timedelta(hours=8)) if fb.replied_at else None
         result.append({
             "id": fb.id,
             "feedback_type": fb.feedback_type,
             "content": fb.content,
             "reply": fb.reply,
-            "replied_at": fb.replied_at.strftime('%Y-%m-%d %H:%M') if fb.replied_at else None,
-            "created_at": fb.created_at.strftime('%Y-%m-%d %H:%M'),
+            "replied_at": replied_tw.strftime('%Y-%m-%d %H:%M') if replied_tw else None,
+            "created_at": created_tw.strftime('%Y-%m-%d %H:%M') if created_tw else None,
         })
     return jsonify({"feedbacks": result}), 200
 

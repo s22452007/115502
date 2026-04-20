@@ -76,11 +76,17 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
           _buildSliverAppBar(context),
           // 使用 FutureBuilder 撈出該場景底下所有的單字清單
           FutureBuilder<List<dynamic>>(
-            future: ApiClient.getVocabsByPhoto(scene['image_path'], userId!),
+            future: ApiClient.getVocabsByPhoto(
+              widget.scene['image_path'],
+              userId!,
+            ),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const SliverToBoxAdapter(
-                  child: Padding(padding: EdgeInsets.all(50), child: Center(child: CircularProgressIndicator())),
+                  child: Padding(
+                    padding: EdgeInsets.all(50),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
                 );
               }
               if (snapshot.hasError) {

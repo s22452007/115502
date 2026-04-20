@@ -12,6 +12,60 @@ class ScenarioDetailScreen extends StatelessWidget {
   const ScenarioDetailScreen({Key? key, required this.scene}) : super(key: key);
 
   @override
+  State<ScenarioDetailScreen> createState() => _ScenarioDetailScreenState();
+}
+
+class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
+  Future<void> _showRenameDialog(
+    BuildContext context,
+    int photoId,
+    String currentName,
+  ) async {
+    final TextEditingController titleController = TextEditingController(
+      text: currentName,
+    );
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('修改照片名稱'),
+        content: TextField(
+          controller: titleController,
+          decoration: const InputDecoration(
+            labelText: '照片名稱',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newTitle = titleController.text.trim();
+              if (newTitle.isNotEmpty && newTitle != currentName) {
+                await ApiClient.renamePhoto(photoId, newTitle);
+                // 直接更新本地圖鑑資料與重整畫面
+                if (mounted) {
+                  setState(() {
+                    widget.scene['scene_name'] = newTitle;
+                  });
+                }
+              }
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('確認修改', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final userId = context.read<UserProvider>().userId;
 

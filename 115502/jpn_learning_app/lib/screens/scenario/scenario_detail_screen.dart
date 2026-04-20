@@ -292,12 +292,15 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
           child: Padding(
             padding: const EdgeInsets.only(top: 20, bottom: 10),
             child: Column(
-              mainAxisSize: MainAxisSize.min, 
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('請選擇要加入的單字本', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  '請選擇要加入的單字本',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
-                
+
                 FutureBuilder<Map<String, dynamic>>(
                   future: ApiClient.fetchUserFavorites(userId),
                   builder: (context, snapshot) {

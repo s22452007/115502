@@ -387,7 +387,9 @@ class _VocabCardWidgetState extends State<_VocabCardWidget> {
           content: const Text('已成功加入單字本！⭐'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }

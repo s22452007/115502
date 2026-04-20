@@ -13,10 +13,12 @@ class RecentScenesList extends StatelessWidget {
   final void Function(dynamic) onShowVocabularyBottomSheet;
 
   /// 建構子
-  /// @param recentScenes 場景資料列表
-  /// @param isLoadingScenes 載入狀態
-  /// @param onShowVocabularyBottomSheet 點擊場景時的處理函式
-  const RecentScenesList({Key? key, required this.recentScenes, required this.isLoadingScenes, required this.onShowVocabularyBottomSheet}) : super(key: key);
+  const RecentScenesList({
+    Key? key,
+    required this.recentScenes,
+    required this.isLoadingScenes,
+    required this.onShowVocabularyBottomSheet,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

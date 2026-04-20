@@ -568,7 +568,9 @@ class ApiClient {
   // 偷偷檢查這週是否還有免費小組額度
   static Future<bool> checkFreeQuota(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/group/check_quota/$userId'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/group/check_quota/$userId'),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['is_free'] ?? false;

@@ -217,6 +217,63 @@ def user_list():
     return render_template('user/list.html', users=users)
 
 
+# ==========================================
+# [測驗題目管理]
+# ==========================================
+@app.route('/quiz/list')
+def quiz_list():
+    keyword = request.args.get('q', '').strip()
+    level = request.args.get('level', '').strip()
+
+    conn = get_db_connection()
+    sql = 'SELECT * FROM quiz_question WHERE 1=1'
+    params = []
+    if keyword:
+        sql += ' AND (question LIKE ? OR option_a LIKE ? OR option_b LIKE ? OR option_c LIKE ? OR option_d LIKE ?)'
+        kw = f'%{keyword}%'
+        params.extend([kw, kw, kw, kw, kw])
+    if level:
+        sql += ' AND level_tag = ?'
+        params.append(level)
+    sql += ' ORDER BY id DESC'
+
+    questions = conn.execute(sql, params).fetchall()
+    # 所有難度標籤（供篩選下拉）
+    levels = conn.execute('SELECT DISTINCT level_tag FROM quiz_question ORDER BY level_tag').fetchall()
+    conn.close()
+    return render_template('quiz/list.html',
+                           questions=questions,
+                           levels=[l['level_tag'] for l in levels],
+                           keyword=keyword,
+                           current_level=level)
+
+
+@app.route('/quiz/add', methods=['POST'])
+def quiz_add():
+    stage = request.form.get('stage', '').strip()
+    level_tag = request.form.get('level_tag', '').strip()
+    question = request.form.get('question', '').strip()
+    option_a = request.form.get('option_a', '').strip()
+    option_b = request.form.get('option_b', '').strip()
+    option_c = request.form.get('option_c', '').strip()
+    option_d = request.form.get('option_d', '').strip()
+    correct = request.form.get('correct_answer', '').strip().upper()
+
+    if not all([stage, level_tag, question, option_a, option_b, option_c, option_d, correct]):
+        return redirect(url_for('quiz_list'))
+    if correct not in ('A', 'B', 'C', 'D'):
+        return redirect(url_for('quiz_list'))
+
+    conn = get_db_connection()
+    conn.execute('''
+        INSERT INTO quiz_question (stage, level_tag, question, option_a, option_b, option_c, option_d, correct_answer)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (stage, level_tag, question, option_a, option_b, option_c, option_d, correct))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('quiz_list'))
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
 

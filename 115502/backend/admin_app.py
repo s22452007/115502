@@ -248,6 +248,42 @@ def quiz_list():
                            current_level=level)
 
 
+@app.route('/quiz/delete/<int:quiz_id>', methods=['POST'])
+def quiz_delete(quiz_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM quiz_question WHERE id = ?', (quiz_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('quiz_list'))
+
+
+@app.route('/quiz/edit/<int:quiz_id>', methods=['POST'])
+def quiz_edit(quiz_id):
+    stage = request.form.get('stage', '').strip()
+    level_tag = request.form.get('level_tag', '').strip()
+    question = request.form.get('question', '').strip()
+    option_a = request.form.get('option_a', '').strip()
+    option_b = request.form.get('option_b', '').strip()
+    option_c = request.form.get('option_c', '').strip()
+    option_d = request.form.get('option_d', '').strip()
+    correct = request.form.get('correct_answer', '').strip().upper()
+
+    if not all([stage, level_tag, question, option_a, option_b, option_c, option_d, correct]):
+        return redirect(url_for('quiz_list'))
+    if correct not in ('A', 'B', 'C', 'D'):
+        return redirect(url_for('quiz_list'))
+
+    conn = get_db_connection()
+    conn.execute('''
+        UPDATE quiz_question
+        SET stage=?, level_tag=?, question=?, option_a=?, option_b=?, option_c=?, option_d=?, correct_answer=?
+        WHERE id=?
+    ''', (stage, level_tag, question, option_a, option_b, option_c, option_d, correct, quiz_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('quiz_list'))
+
+
 @app.route('/quiz/add', methods=['POST'])
 def quiz_add():
     stage = request.form.get('stage', '').strip()

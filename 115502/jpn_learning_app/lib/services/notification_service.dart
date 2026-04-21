@@ -142,6 +142,44 @@ class NotificationService {
     );
   }
 
+  /// 使用者今天已學習 → 若每日提醒還沒發，就取消今天、改排明天
+  static Future<void> cancelDailyForToday() async {
+    final settings = await loadSettings();
+    if (!(settings['daily'] ?? true)) return; // 通知已關，不處理
+
+    final prefs = await SharedPreferences.getInstance();
+    final dailyHour = prefs.getInt(_keyDailyHour) ?? 8;
+    final dailyMinute = prefs.getInt(_keyDailyMinute) ?? 0;
+
+    final now = tz.TZDateTime.now(tz.local);
+    final todayNotif = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day, dailyHour, dailyMinute);
+
+    // 通知時間還沒到 → 取消今天的，直接排到明天
+    if (todayNotif.isAfter(now)) {
+      await _plugin.cancel(idDaily);
+      await _plugin.zonedSchedule(
+        idDaily,
+        '📚 每日學習提醒',
+        '今天還沒開始學日文，快來拍一張照片吧！',
+        todayNotif.add(const Duration(days: 1)),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    }
+    // 通知時間已過 → 代表通知早已發出，不需要處理
+  }
+
   static Future<void> _reschedule({
     required bool daily,
     required bool review,

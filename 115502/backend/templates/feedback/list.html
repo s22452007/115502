@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>意見回饋管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --snap-green-dark: #5c8364;
+            --snap-green-light: #dce7de;
+            --snap-bg: #f4f7f5;
+        }
+        body {
+            background-color: var(--snap-bg);
+            font-family: "微軟正黑體", sans-serif;
+            color: #444;
+            margin: 0;
+        }
+
+        /* ===== 左側選單 ===== */
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 220px;
+            background-color: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.04);
+            padding: 24px 0;
+            flex-shrink: 0;
+        }
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 12px;
+        }
+        .sidebar-logo .icon-box {
+            width: 36px;
+            height: 36px;
+            background-color: var(--snap-green-light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--snap-green-dark);
+            font-weight: bold;
+        }
+        .sidebar-logo .title {
+            color: var(--snap-green-dark);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: 0.2s;
+        }
+        .sidebar-menu a:hover {
+            background-color: var(--snap-bg);
+            color: var(--snap-green-dark);
+        }
+        .sidebar-menu a.active {
+            background-color: var(--snap-green-light);
+            color: var(--snap-green-dark);
+            font-weight: bold;
+            border-right: 4px solid var(--snap-green-dark);
+        }
+
+        /* ===== 主內容 ===== */
+        .main-content {
+            flex: 1;
+            padding: 40px 48px;
+            overflow-x: hidden;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+        .page-title {
+            color: var(--snap-green-dark);
+            font-weight: bold;
+            margin: 0;
+        }
+
+        /* ===== 回饋卡片 ===== */
+        .feedback-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ccc;
+        }
+        .feedback-card.unreplied { border-left-color: #d9534f; }
+        .feedback-card.replied { border-left-color: var(--snap-green-dark); }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .user-info {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.05rem;
+        }
+        .user-info small { color: #999; font-weight: normal; margin-left: 8px; font-size: 0.85rem; }
+
+        .type-tag {
+            background-color: var(--snap-green-light);
+            color: var(--snap-green-dark);
+            font-weight: bold;
+            padding: 4px 14px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .status-unreplied { background-color: #fde2e2; color: #d9534f; }
+        .status-replied { background-color: var(--snap-green-light); color: var(--snap-green-dark); }
+
+        .content-box {
+            background-color: #fafafa;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .reply-box {
+            background-color: #f0f7f1;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .reply-label {
+            color: var(--snap-green-dark);
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 8px;
+        }
+        .action-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn-snap {
+            background-color: var(--snap-green-dark);
+            color: white;
+            border: none;
+        }
+        .btn-snap:hover { background-color: #4a6a51; color: white; }
+        .modal-header-snap { background-color: var(--snap-green-dark); color: white; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- ========== 左側選單 ========== -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="icon-box">JL</div>
+                <div class="title">snap to manage</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/">🏠 儀表板</a></li>
+                <li><a href="/user/list">👤 使用者資料</a></li>
+                <li><a href="/customer/list">💰 點數管理</a></li>
+                <li><a href="/photo/list">🖼️ 照片管控</a></li>
+                <li><a href="/vocab/list">📖 教材單字管理</a></li>
+                <li><a href="/quiz/list">📝 測驗題目管理</a></li>
+                <li><a href="/feedback/list" class="active">💬 意見回饋</a></li>
+            </ul>
+        </aside>
+
+        <!-- ========== 主內容 ========== -->
+        <main class="main-content">
+            <div class="page-header">
+                <h3 class="page-title">💬 意見回饋管理</h3>
+            </div>
+
+            {% for f in feedbacks %}
+            <div class="feedback-card {% if f.reply %}replied{% else %}unreplied{% endif %}">
+                <div class="card-header-row">
+                    <div class="user-info">
+                        #{{ f.id }} · {{ f.username or '未設定' }}
+                        <small>{{ f.email }}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span class="type-tag">{{ f.feedback_type }}</span>
+                        {% if f.reply %}
+                            <span class="status-badge status-replied">✓ 已回覆</span>
+                        {% else %}
+                            <span class="status-badge status-unreplied">● 待回覆</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="content-box">{{ f.content }}</div>
+
+                <div class="meta-row">
+                    <span>送出時間</span>
+                    <span>{{ f.created_at }}</span>
+                </div>
+
+                {% if f.reply %}
+                <div class="mt-3">
+                    <div class="reply-label">🎧 官方回覆</div>
+                    <div class="reply-box">{{ f.reply }}</div>
+                    <div class="meta-row">
+                        <span>回覆時間</span>
+                        <span>{{ f.replied_at }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="action-row">
+                    <button type="button" class="btn btn-sm btn-snap"
+                            data-bs-toggle="modal"
+                            data-bs-target="#replyModal{{ f.id }}">
+                        {% if f.reply %}修改回覆{% else %}回覆{% endif %}
+                    </button>
+                    <form action="/feedback/delete/{{ f.id }}" method="POST"
+                          onsubmit="return confirm('確定刪除此回饋？');" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">目前沒有任何回饋</div>
+            {% endfor %}
+        </main>
+    </div>
+
+    <!-- 回覆 Modal -->
+    {% for f in feedbacks %}
+    <div class="modal fade" id="replyModal{{ f.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/feedback/reply/{{ f.id }}" method="POST">
+                    <div class="modal-header modal-header-snap">
+                        <h5 class="modal-title">回覆回饋 #{{ f.id }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">使用者內容：</label>
+                            <div class="p-2 bg-light rounded" style="white-space: pre-wrap;">{{ f.content }}</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-bold">你的回覆：</label>
+                            <textarea name="reply" class="form-control" rows="5" required>{{ f.reply or '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-snap">送出回覆</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</body>
+</html>

@@ -205,6 +205,7 @@ def get_unlocked_scenes(user_id):
         vocab_count = UserPhotoVocab.query.filter_by(photo_id=p.id).count()
         
         results.append({
+            "photo_id": p.id,
             "scene_id": p.scene_id if p.scene_id else 0, 
             "scene_name": p.custom_title or (p.scene.name if p.scene else "單字探險"),
             "icon_name": p.scene.icon_name if p.scene else "image",

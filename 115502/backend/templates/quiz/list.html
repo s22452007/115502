@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>測驗題目管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --snap-green-dark: #5c8364;
+            --snap-green-light: #dce7de;
+            --snap-bg: #f4f7f5;
+        }
+        body { background-color: var(--snap-bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+
+        /* 側邊欄 */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background-color: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; }
+        .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
+        .sidebar-logo .icon-box { width: 36px; height: 36px; background-color: var(--snap-green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--snap-green-dark); font-weight: bold; }
+        .sidebar-logo .title { color: var(--snap-green-dark); font-weight: bold; font-size: 1.1rem; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background-color: var(--snap-bg); color: var(--snap-green-dark); }
+        .sidebar-menu a.active { background-color: var(--snap-green-light); color: var(--snap-green-dark); font-weight: bold; border-right: 4px solid var(--snap-green-dark); }
+
+        .main-content { flex: 1; padding: 40px 48px; overflow-x: hidden; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .page-title { color: var(--snap-green-dark); font-weight: bold; margin: 0; }
+
+        /* 題目卡片 */
+        .quiz-card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+        .quiz-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .level-tag {
+            background-color: var(--snap-green-dark);
+            color: white;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+        .stage-tag {
+            background-color: var(--snap-green-light);
+            color: var(--snap-green-dark);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+        .id-tag {
+            color: #999;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+        .question-text {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .option-item {
+            padding: 8px 14px;
+            border: 1.5px solid #e5e5e5;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #555;
+        }
+        .option-item.correct {
+            background-color: #eaf5ea;
+            border-color: var(--snap-green-dark);
+            color: var(--snap-green-dark);
+            font-weight: bold;
+        }
+        .option-label {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            color: #888;
+            text-align: center;
+            line-height: 22px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
+        .option-item.correct .option-label {
+            background-color: var(--snap-green-dark);
+            color: white;
+        }
+
+        /* 按鈕 */
+        .btn-snap { background-color: var(--snap-green-dark); color: white; border: none; }
+        .btn-snap:hover { background-color: #4a6a51; color: white; }
+        .modal-header-snap { background-color: var(--snap-green-dark); color: white; }
+
+        .search-bar {
+            background: white;
+            border-radius: 14px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- 側邊欄 -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="icon-box">JL</div>
+                <div class="title">snap to manage</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/">🏠 儀表板</a></li>
+                <li><a href="/user/list">👤 使用者資料</a></li>
+                <li><a href="/customer/list">💰 點數管理</a></li>
+                <li><a href="/photo/list">🖼️ 照片管控</a></li>
+                <li><a href="/vocab/list">📖 教材單字管理</a></li>
+                <li><a href="/quiz/list" class="active">📝 測驗題目管理</a></li>
+                <li><a href="/feedback/list">💬 意見回饋</a></li>
+            </ul>
+        </aside>
+
+        <!-- 主內容 -->
+        <main class="main-content">
+            <div class="page-header">
+                <h3 class="page-title">📝 測驗題目管理</h3>
+                <div class="d-flex gap-2">
+                    <span class="text-muted align-self-center me-2">共 {{ questions|length }} 題</span>
+                    <button class="btn btn-snap" data-bs-toggle="modal" data-bs-target="#addModal">
+                        ➕ 新增題目
+                    </button>
+                </div>
+            </div>
+
+            <!-- 搜尋列 -->
+            <form method="GET" action="/quiz/list" class="search-bar">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <input type="text" name="q" value="{{ keyword }}" class="form-control"
+                               placeholder="搜尋題目或選項關鍵字...">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="level" class="form-select">
+                            <option value="">所有難度</option>
+                            {% for lv in levels %}
+                            <option value="{{ lv }}" {% if lv == current_level %}selected{% endif %}>{{ lv }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-snap flex-grow-1">搜尋</button>
+                        <a href="/quiz/list" class="btn btn-outline-secondary">清除</a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 題目列表 -->
+            {% for q in questions %}
+            <div class="quiz-card">
+                <div class="quiz-card-header">
+                    <span class="level-tag">{{ q.level_tag }}</span>
+                    <span class="stage-tag">{{ q.stage }}</span>
+                    <span class="id-tag">#{{ q.id }}</span>
+                </div>
+                <div class="question-text">{{ q.question }}</div>
+                <div class="options">
+                    {% for letter, text in [('A', q.option_a), ('B', q.option_b), ('C', q.option_c), ('D', q.option_d)] %}
+                    <div class="option-item {% if q.correct_answer == letter %}correct{% endif %}">
+                        <span class="option-label">{{ letter }}</span>{{ text }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                {% if keyword or current_level %}
+                    找不到符合條件的題目
+                {% else %}
+                    還沒有任何題目，點右上角「➕ 新增題目」開始建立
+                {% endif %}
+            </div>
+            {% endfor %}
+        </main>
+    </div>
+
+    <!-- 新增題目 Modal -->
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form action="/quiz/add" method="POST">
+                    <div class="modal-header modal-header-snap">
+                        <h5 class="modal-title">➕ 新增測驗題目</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">階段名稱</label>
+                                <input type="text" name="stage" class="form-control"
+                                       placeholder="例：第一階段：超級新手" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">難度標籤</label>
+                                <select name="level_tag" class="form-select" required>
+                                    <option value="N5">N5</option>
+                                    <option value="N4">N4</option>
+                                    <option value="N3">N3</option>
+                                    <option value="N2">N2</option>
+                                    <option value="N1">N1</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">題目</label>
+                                <textarea name="question" class="form-control" rows="2" required></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 A</label>
+                                <input type="text" name="option_a" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 B</label>
+                                <input type="text" name="option_b" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 C</label>
+                                <input type="text" name="option_c" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 D</label>
+                                <input type="text" name="option_d" class="form-control" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">正確答案</label>
+                                <div class="d-flex gap-3">
+                                    {% for letter in ['A', 'B', 'C', 'D'] %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="correct_answer"
+                                               id="ans{{ letter }}" value="{{ letter }}" required>
+                                        <label class="form-check-label" for="ans{{ letter }}">{{ letter }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-snap">新增題目</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -19,6 +19,7 @@ class NotificationService {
   static const _keyReview = 'notif_review';
   static const _keyStreak = 'notif_streak';
   static const _keyFriend = 'notif_friend';
+  static const _keyIsLoggedIn = 'notif_is_logged_in';
 
   static Future<void> init() async {
     tz.initializeTimeZones();
@@ -33,9 +34,20 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+
+    // App 啟動時依照目前設定重新排程一次
+    final settingsMap = await loadSettings();
+    final isLoggedIn = await getLoginStatus();
+
+    await _reschedule(
+      daily: settingsMap['daily'] ?? true,
+      review: settingsMap['review'] ?? true,
+      streak: settingsMap['streak'] ?? true,
+      isLoggedIn: isLoggedIn,
+    );
   }
 
-  // 讀取已儲存的設定
+  // 讀取已儲存的通知設定
   static Future<Map<String, bool>> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     return {
@@ -46,7 +58,28 @@ class NotificationService {
     };
   }
 
-  // 儲存設定並重新排程
+  // 讀取登入狀態
+  static Future<bool> getLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyIsLoggedIn) ?? false;
+  }
+
+  // 更新登入狀態，並重新排程通知
+  static Future<void> setLoginStatus(bool isLoggedIn) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyIsLoggedIn, isLoggedIn);
+
+    final settingsMap = await loadSettings();
+
+    await _reschedule(
+      daily: settingsMap['daily'] ?? true,
+      review: settingsMap['review'] ?? true,
+      streak: settingsMap['streak'] ?? true,
+      isLoggedIn: isLoggedIn,
+    );
+  }
+
+  // 儲存通知設定並重新排程
   static Future<void> saveSettings({
     required bool daily,
     required bool review,
@@ -58,13 +91,22 @@ class NotificationService {
     await prefs.setBool(_keyReview, review);
     await prefs.setBool(_keyStreak, streak);
     await prefs.setBool(_keyFriend, friend);
-    await _reschedule(daily: daily, review: review, streak: streak);
+
+    final isLoggedIn = await getLoginStatus();
+
+    await _reschedule(
+      daily: daily,
+      review: review,
+      streak: streak,
+      isLoggedIn: isLoggedIn,
+    );
   }
 
   static Future<void> _reschedule({
     required bool daily,
     required bool review,
     required bool streak,
+    required bool isLoggedIn,
   }) async {
     await _plugin.cancelAll();
 
@@ -88,7 +130,8 @@ class NotificationService {
       );
     }
 
-    if (streak) {
+    // 只有「未登入」時，才排連續登入提醒
+    if (streak && !isLoggedIn) {
       await _scheduleDailyAt(
         id: idStreak,
         title: '🔥 連續登入提醒',
@@ -115,6 +158,7 @@ class NotificationService {
       hour,
       minute,
     );
+
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }

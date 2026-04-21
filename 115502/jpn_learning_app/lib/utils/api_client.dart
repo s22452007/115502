@@ -568,7 +568,9 @@ class ApiClient {
   // 偷偷檢查這週是否還有免費小組額度
   static Future<bool> checkFreeQuota(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/group/check_quota/$userId'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/group/check_quota/$userId'),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['is_free'] ?? false;
@@ -579,7 +581,7 @@ class ApiClient {
       return false;
     }
   }
-  
+
   // ==========================================
   // 📚 單字本與收藏夾相關
   // ==========================================
@@ -764,15 +766,20 @@ class ApiClient {
   }
 
   // 取得「特定照片」解鎖的單字清單
-  static Future<List<dynamic>> getVocabsByPhoto(String imagePath, int userId) async {
+  static Future<List<dynamic>> getVocabsByPhoto(
+    String imagePath,
+    int userId,
+  ) async {
     // 記得將字串 encode，避免檔名有特殊字元
     final encodedPath = Uri.encodeComponent(imagePath);
-    final url = Uri.parse('$baseUrl/scenario/photo_vocabs?user_id=$userId&image_path=$encodedPath');
+    final url = Uri.parse(
+      '$baseUrl/scenario/photo_vocabs?user_id=$userId&image_path=$encodedPath',
+    );
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return data['vocabs']; 
+      return data['vocabs'];
     } else {
       throw Exception('無法載入此照片的單字清單');
     }
@@ -919,6 +926,25 @@ class ApiClient {
     } catch (e) {
       print('上傳圖片連線失敗: $e');
       return {'error': '網路連線失敗: $e'};
+    }
+  }
+
+  // 重新命名照片標題 API
+  static Future<Map<String, dynamic>> renamePhoto(
+    int photoId,
+    String customTitle,
+  ) async {
+    final url = Uri.parse('$baseUrl/scenario/rename_photo');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'photo_id': photoId, 'custom_title': customTitle}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('修改照片名稱連線失敗: $e');
+      return {'error': '網路連線失敗'};
     }
   }
 

@@ -86,17 +86,22 @@
         │   │   ├── naturalness_screen.dart# 評分：顯示對話自然度、重音與語法修正
         │   │   └── grammar_tip_screen.dart# 教學：針對該次練習出錯的文法進行小教學
         │   │        
-        │   ├── profile/                 # 4. 個人中心模組
-        │   │   ├── profile_screen.dart  # 個人主頁：能力雷達圖與徽章入口
-        │   │   ├── personal_info_screen.dart# 基本資料修改 (暱稱、大頭貼)
-        │   │   ├── change_password_screen.dart# 帳號安全：修改密碼
-        │   │   ├── system_settings_screen.dart# 系統設定：字體、通知開關
-        │   │   ├── photo_folder_v2_screen.dart# 我的單字探險：以拍照事件為主的圖鑑
-        │   │   ├── scenario_detail_screen.dart# 相簿詳細：看某張照片下辨識的所有字
-        │   │   ├── album_detail_screen.dart# 相簿分類詳細檢視頁面
-        │   │   ├── badge_library_screen.dart# 徽章庫：查看所有成就達成進度
-        │   │   └── vocab_detail_v2_screen.dart# 單字詳細：顯示例句、音檔與星星收藏
-        │   │
+        │   ├── profile/                             # 4. 個人中心模組
+        │   │   ├── profile_screen.dart              # 個人主頁：能力雷達圖、金幣與徽章入口
+        │   │   ├── personal_info_screen.dart        # 基本資料：修改暱稱、大頭貼
+        │   │   ├── change_password_screen.dart      # 帳號安全：修改密碼
+        │   │   ├── system_settings_screen.dart      # 系統設定：字體大小、意見回饋、通知開關
+        │   │   ├── badge_library_screen.dart        # 徽章庫：查看所有成就達成進度
+        │   │   │
+        │   │   │   # --- 收藏夾系統 (Favorites) ---
+        │   │   ├── photo_folder_v2_screen.dart      # 我的收藏夾首頁：顯示所有資料夾與統計
+        │   │   ├── folder_detail_screen.dart        # 新資料夾內容頁 (點進資料夾後的單字列表)
+        │   │   ├── single_vocab_detail_screen.dart  # 單一單字詳情 (從收藏點進去的精美字卡)
+        │   │   │
+        │   │   │   # --- 📸 拍照探險歷史 (應該歸類在 Scenario，但目前放在這) ---
+        │   │   ├── album_detail_screen.dart         # 相簿詳細：以「照片」為單位的檢視頁面
+        │   │   └── scenario_detail_screen.dart      # (同上) 類似的相簿/場景細節頁面
+        │   │   │
         │   ├── leaderboard/             # 5. 排行與小組模組
         │   │   ├── leaderboard_screen.dart# 總榜：顯示全體使用者的積分排行
         │   │   ├── study_group_home_screen.dart# 小組大廳：建立或加入學習小組
@@ -141,6 +146,9 @@
             │   ├── profile_header.dart  # 大頭貼與經驗值進度條
             │   ├── profile_radar_section.dart# 個人能力雷達圖卡片區塊
             │   └── profile_achievements_section.dart# 核心成就徽章展示區塊
+            │   │
+            │   └── folder/                          # 收藏夾專屬零件包
+            │       └── folder_card.dart             # 首頁的資料夾小卡片 (含重新命名/刪除功能)
             │
             ├── scenario/                # 情境零件
             │   ├── scenario_card.dart   # 場景照片預覽小卡

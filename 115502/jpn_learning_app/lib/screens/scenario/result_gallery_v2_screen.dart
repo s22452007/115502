@@ -9,8 +9,64 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // 2. 匯入跳轉的相簿詳細頁面
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
 
-class ResultGalleryV2Screen extends StatelessWidget {
+class ResultGalleryV2Screen extends StatefulWidget {
   const ResultGalleryV2Screen({Key? key}) : super(key: key);
+
+  @override
+  State<ResultGalleryV2Screen> createState() => _ResultGalleryV2ScreenState();
+}
+
+class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
+  // 用來強迫 FutureBuilder 重新抓資料的 Key
+  Key _futureKey = UniqueKey();
+
+  Future<void> _showRenameDialog(
+    BuildContext context,
+    int photoId,
+    String currentName,
+  ) async {
+    final TextEditingController titleController = TextEditingController(
+      text: currentName,
+    );
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('修改照片名稱'),
+        content: TextField(
+          controller: titleController,
+          decoration: const InputDecoration(
+            labelText: '照片名稱',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newTitle = titleController.text.trim();
+              if (newTitle.isNotEmpty && newTitle != currentName) {
+                await ApiClient.renamePhoto(photoId, newTitle);
+              }
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('確認修改', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    // 對話框關閉後，重新載入清單
+    setState(() {
+      _futureKey = UniqueKey();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +77,11 @@ class ResultGalleryV2Screen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           '我的單字探險',
-          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -32,8 +92,14 @@ class ResultGalleryV2Screen extends StatelessWidget {
       ),
       // 加入防呆：如果沒登入就擋下來
       body: userId == null
-          ? const Center(child: Text('請先登入才能查看單字探險喔！', style: TextStyle(fontSize: 16, color: Colors.grey)))
+          ? const Center(
+              child: Text(
+                '請先登入才能查看單字探險喔！',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
           : FutureBuilder<List<dynamic>>(
+              key: _futureKey, // 每次 Key 改變，這個 FutureBuilder 會重新執行
               // 傳入 limit: 999 這樣就能把所有場景都撈出來，不受首頁只撈3個的限制
               future: ApiClient.getUnlockedScenes(userId, limit: 999),
               builder: (context, snapshot) {
@@ -42,13 +108,16 @@ class ResultGalleryV2Screen extends StatelessWidget {
                 }
                 if (snapshot.hasError) {
                   // 把錯誤訊息印在編輯器的終端機裡
-                  debugPrint('取得單字探險發生錯誤: ${snapshot.error}'); 
-                  
+                  debugPrint('取得單字探險發生錯誤: ${snapshot.error}');
+
                   // 並且也顯示在手機畫面上，方便我們看
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
-                      child: Text('載入失敗原因：\n${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                      child: Text(
+                        '載入失敗原因：\n${snapshot.error}',
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
                   );
                 }
@@ -60,7 +129,11 @@ class ResultGalleryV2Screen extends StatelessWidget {
                     child: Text(
                       '還沒有解鎖任何場景喔！\n趕快去拍照探索吧！',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                        height: 1.5,
+                      ),
                     ),
                   );
                 }
@@ -77,9 +150,17 @@ class ResultGalleryV2Screen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             // 把整個 scene 的 Map 傳給詳細頁面
-                            builder: (context) => ScenarioDetailScreen(scene: scene),
+                            builder: (context) =>
+                                ScenarioDetailScreen(scene: scene),
                           ),
-                        );
+                        ).then((_) {
+                          // 從詳細畫面返回時，重新整理清單
+                          if (mounted) {
+                            setState(() {
+                              _futureKey = UniqueKey();
+                            });
+                          }
+                        });
                       },
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -99,7 +180,8 @@ class ResultGalleryV2Screen extends StatelessWidget {
                         child: Row(
                           children: [
                             Container(
-                              width: 60, height: 60,
+                              width: 60,
+                              height: 60,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(10),
                                 color: Colors.grey[200],
@@ -113,32 +195,71 @@ class ResultGalleryV2Screen extends StatelessWidget {
                                             ? scene['image_path']
                                             : '${ApiClient.baseUrl.replaceAll('/api', '')}/static/photos/${scene['image_path'].split('/').last}',
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => 
-                                            const Icon(Icons.broken_image, color: Colors.grey),
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Icon(
+                                                  Icons.broken_image,
+                                                  color: Colors.grey,
+                                                ),
                                       ),
                                     )
                                   : const Icon(Icons.image, color: Colors.grey),
                             ),
-                            
+
                             // 解決太擠的問題：在這裡加入一個 16 像素的隱形空白寬度
                             const SizedBox(width: 16),
-                            
+
                             // 中間：標題與提示文字
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    scene['scene_name'], // 因為後端改了，這裡會自動印出 custom_title！
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis, // 如果標題太長會自動變成 ...
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        // 使用 Flexible 讓字越長佔越多，但不強制佔滿。
+                                        child: Text(
+                                          scene['scene_name'], // 因為後端改了，這裡會自動印出 custom_title！
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF333333),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow
+                                              .ellipsis, // 如果標題太長會自動變成 ...
+                                        ),
+                                      ),
+                                      if (scene['photo_id'] != null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 8.0,
+                                          ),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              _showRenameDialog(
+                                                context,
+                                                scene['photo_id'],
+                                                scene['scene_name'],
+                                              );
+                                            },
+                                            child: const Icon(
+                                              Icons.edit,
+                                              size: 18,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     // 讓提示文字顯示這張照片解鎖了幾個字
                                     '這張照片解鎖了 ${scene['vocab_count']} 個單字 >',
-                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade500,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -146,7 +267,11 @@ class ResultGalleryV2Screen extends StatelessWidget {
                             // 右側：日期 (動態從資料庫抓取)
                             Text(
                               scene['unlocked_at'],
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade400,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),

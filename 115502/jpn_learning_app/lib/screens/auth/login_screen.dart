@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/services/auth_service.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
 
 // 4. 我們自己寫的畫面 (跳轉用)
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
@@ -98,6 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('username') && result['username'] != null) {
           context.read<UserProvider>().setUsername(result['username']);
         }
+
+        await NotificationService.setLoginStatus(true);
+        if (!mounted) return;
 
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(

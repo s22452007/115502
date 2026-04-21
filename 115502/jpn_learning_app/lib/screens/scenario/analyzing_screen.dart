@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/screens/scenario/scene_result_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
 
 // 2-2-2 AI 分析中
 class AnalyzingScreen extends StatefulWidget {
@@ -47,6 +48,8 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
             context.read<UserProvider>().setDailyScans(
               progressResult['daily_scans'],
             );
+            // 今天已學習，若每日提醒還沒發就跳過今天
+            await NotificationService.cancelDailyForToday();
           }
         }
 

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class SingleVocabDetailScreen extends StatefulWidget {
   final int vocabId;
@@ -27,11 +30,43 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
 
   bool _isStarred = true; 
 
-  void _toggleStar() {
-    setState(() => _isStarred = !_isStarred);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isStarred ? '已加入收藏' : '已取消收藏')),
-    );
+Future<void> _toggleStar() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    // 1. 樂觀 UI 更新：先讓星星變色
+    setState(() {
+      _isStarred = !_isStarred;
+    });
+
+    bool success = false;
+
+    // 2. 判斷是要「新增」還是「取消」，並呼叫你原本就寫好的 API
+    if (_isStarred) {
+      // 呼叫你的 collectVocab (注意參數順序：先 userId 再 vocabId)
+      final result = await ApiClient.collectVocab(userId, widget.vocabId);
+      success = !result.containsKey('error'); 
+    } else {
+      // 呼叫你的 removeFavorite (注意參數順序：先 vocabId 再 userId)
+      success = await ApiClient.removeFavorite(widget.vocabId, userId);
+    }
+
+    if (!mounted) return;
+
+    // 3. 處理結果
+    if (!success) {
+      // 如果後端報錯，把星星顏色退回去
+      setState(() {
+        _isStarred = !_isStarred;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('連線失敗，請稍後再試')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_isStarred ? '✅ 已加入收藏' : '❌ 已從收藏移除')),
+      );
+    }
   }
 
   void _playSound(String text) {

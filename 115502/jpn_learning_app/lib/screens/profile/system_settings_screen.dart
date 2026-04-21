@@ -184,6 +184,9 @@ class _NotificationSettingsScreenState
   bool streakReminder = true;
   bool friendNotification = false;
 
+  TimeOfDay _dailyTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay _reviewTime = const TimeOfDay(hour: 19, minute: 0);
+
   static const Color bgColor = Color(0xFFF3F4EF);
   static const Color primaryGreen = Color(0xFF5C8663);
   static const Color textColor = Color(0xFF3E3E3E);
@@ -196,12 +199,15 @@ class _NotificationSettingsScreenState
 
   Future<void> _loadSettings() async {
     final s = await NotificationService.loadSettings();
+    final t = await NotificationService.loadTimes();
     if (!mounted) return;
     setState(() {
       dailyReminder = s['daily']!;
       reviewReminder = s['review']!;
       streakReminder = s['streak']!;
       friendNotification = s['friend']!;
+      _dailyTime = TimeOfDay(hour: t['daily_hour']!, minute: t['daily_minute']!);
+      _reviewTime = TimeOfDay(hour: t['review_hour']!, minute: t['review_minute']!);
     });
   }
 
@@ -213,6 +219,42 @@ class _NotificationSettingsScreenState
       friend: friendNotification,
     );
   }
+
+  Future<void> _saveTimes() async {
+    await NotificationService.saveTimes(
+      dailyHour: _dailyTime.hour,
+      dailyMinute: _dailyTime.minute,
+      reviewHour: _reviewTime.hour,
+      reviewMinute: _reviewTime.minute,
+    );
+  }
+
+  Future<void> _pickTime({
+    required TimeOfDay current,
+    required ValueChanged<TimeOfDay> onPicked,
+  }) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: current,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: primaryGreen,
+            onSurface: textColor,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => onPicked(picked));
+      await _saveTimes();
+    }
+  }
+
+  String _fmtTime(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
 
   @override
   Widget build(BuildContext context) {
@@ -240,23 +282,33 @@ class _NotificationSettingsScreenState
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               children: [
-                _buildSwitchTile(
+                _buildTimedNotifTile(
                   title: '每日學習提醒',
-                  subtitle: '每天早上 8:00 提醒你開始學習',
+                  subtitle: '每天早上提醒你開始學習',
                   value: dailyReminder,
+                  time: _dailyTime,
                   onChanged: (value) {
                     setState(() => dailyReminder = value);
                     _save();
                   },
+                  onTimeTap: () => _pickTime(
+                    current: _dailyTime,
+                    onPicked: (t) => _dailyTime = t,
+                  ),
                 ),
-                _buildSwitchTile(
+                _buildTimedNotifTile(
                   title: '單字複習提醒',
-                  subtitle: '每天晚上 7:00 提醒你複習單字',
+                  subtitle: '每天提醒你複習單字',
                   value: reviewReminder,
+                  time: _reviewTime,
                   onChanged: (value) {
                     setState(() => reviewReminder = value);
                     _save();
                   },
+                  onTimeTap: () => _pickTime(
+                    current: _reviewTime,
+                    onPicked: (t) => _reviewTime = t,
+                  ),
                 ),
                 _buildSwitchTile(
                   title: '連續登入提醒',
@@ -280,6 +332,78 @@ class _NotificationSettingsScreenState
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTimedNotifTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required TimeOfDay time,
+    required ValueChanged<bool> onChanged,
+    required VoidCallback onTimeTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE7E7E7)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x07000000), blurRadius: 5, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        children: [
+          SwitchListTile(
+            contentPadding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+            title: Text(title,
+                style: const TextStyle(
+                    color: textColor, fontSize: 16, fontWeight: FontWeight.w600)),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(subtitle,
+                  style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12)),
+            ),
+            value: value,
+            activeColor: Colors.white,
+            activeTrackColor: primaryGreen,
+            inactiveThumbColor: Colors.white,
+            inactiveTrackColor: const Color(0xFFBDBDBD),
+            trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+            onChanged: onChanged,
+          ),
+          // 時間選擇列
+          InkWell(
+            onTap: value ? onTimeTap : null,
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  Icon(Icons.access_time_rounded,
+                      size: 15,
+                      color: value ? primaryGreen : const Color(0xFFBDBDBD)),
+                  const SizedBox(width: 6),
+                  Text(
+                    _fmtTime(time),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: value ? primaryGreen : const Color(0xFFBDBDBD),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    value ? '點擊修改時間' : '請先開啟通知',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

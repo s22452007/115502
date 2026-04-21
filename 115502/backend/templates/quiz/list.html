@@ -121,6 +121,7 @@
         }
 
         .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .card-action-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
     </style>
 </head>
 <body>
@@ -192,6 +193,17 @@
                     </div>
                     {% endfor %}
                 </div>
+                <div class="card-action-row">
+                    <button class="btn btn-sm btn-snap"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editModal{{ q.id }}">
+                        ✏️ 修改
+                    </button>
+                    <form action="/quiz/delete/{{ q.id }}" method="POST"
+                          onsubmit="return confirm('確定刪除這題嗎？');" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">🗑️ 刪除</button>
+                    </form>
+                </div>
             </div>
             {% else %}
             <div class="empty-state">
@@ -204,6 +216,79 @@
             {% endfor %}
         </main>
     </div>
+
+    <!-- 修改題目 Modals -->
+    {% for q in questions %}
+    <div class="modal fade" id="editModal{{ q.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form action="/quiz/edit/{{ q.id }}" method="POST">
+                    <div class="modal-header modal-header-snap">
+                        <h5 class="modal-title">✏️ 修改題目 #{{ q.id }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">階段名稱</label>
+                                <input type="text" name="stage" class="form-control"
+                                       value="{{ q.stage }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">難度標籤</label>
+                                <select name="level_tag" class="form-select" required>
+                                    {% for lv in ['N5', 'N4', 'N3', 'N2', 'N1'] %}
+                                    <option value="{{ lv }}" {% if q.level_tag == lv %}selected{% endif %}>{{ lv }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">題目</label>
+                                <textarea name="question" class="form-control" rows="2" required>{{ q.question }}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 A</label>
+                                <input type="text" name="option_a" class="form-control" value="{{ q.option_a }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 B</label>
+                                <input type="text" name="option_b" class="form-control" value="{{ q.option_b }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 C</label>
+                                <input type="text" name="option_c" class="form-control" value="{{ q.option_c }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">選項 D</label>
+                                <input type="text" name="option_d" class="form-control" value="{{ q.option_d }}" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">正確答案</label>
+                                <div class="d-flex gap-3">
+                                    {% for letter in ['A', 'B', 'C', 'D'] %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio"
+                                               name="correct_answer"
+                                               id="edit{{ q.id }}ans{{ letter }}"
+                                               value="{{ letter }}"
+                                               {% if q.correct_answer == letter %}checked{% endif %}
+                                               required>
+                                        <label class="form-check-label" for="edit{{ q.id }}ans{{ letter }}">{{ letter }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-snap">儲存修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 
     <!-- 新增題目 Modal -->
     <div class="modal fade" id="addModal" tabindex="-1">

@@ -14,12 +14,18 @@ class NotificationService {
   static const int idReview = 2;
   static const int idStreak = 3;
 
-  // SharedPreferences keys
+  // SharedPreferences keys — on/off toggles
   static const _keyDaily = 'notif_daily';
   static const _keyReview = 'notif_review';
   static const _keyStreak = 'notif_streak';
   static const _keyFriend = 'notif_friend';
   static const _keyIsLoggedIn = 'notif_is_logged_in';
+
+  // SharedPreferences keys — custom times
+  static const _keyDailyHour = 'notif_daily_hour';
+  static const _keyDailyMinute = 'notif_daily_minute';
+  static const _keyReviewHour = 'notif_review_hour';
+  static const _keyReviewMinute = 'notif_review_minute';
 
   static Future<void> init() async {
     tz.initializeTimeZones();
@@ -56,6 +62,40 @@ class NotificationService {
       'streak': prefs.getBool(_keyStreak) ?? true,
       'friend': prefs.getBool(_keyFriend) ?? false,
     };
+  }
+
+  // 讀取使用者設定的通知時間（預設值：每日 08:00，複習 19:00）
+  static Future<Map<String, int>> loadTimes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'daily_hour': prefs.getInt(_keyDailyHour) ?? 8,
+      'daily_minute': prefs.getInt(_keyDailyMinute) ?? 0,
+      'review_hour': prefs.getInt(_keyReviewHour) ?? 19,
+      'review_minute': prefs.getInt(_keyReviewMinute) ?? 0,
+    };
+  }
+
+  // 儲存使用者設定的通知時間並重新排程
+  static Future<void> saveTimes({
+    required int dailyHour,
+    required int dailyMinute,
+    required int reviewHour,
+    required int reviewMinute,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyDailyHour, dailyHour);
+    await prefs.setInt(_keyDailyMinute, dailyMinute);
+    await prefs.setInt(_keyReviewHour, reviewHour);
+    await prefs.setInt(_keyReviewMinute, reviewMinute);
+
+    final settingsMap = await loadSettings();
+    final isLoggedIn = await getLoginStatus();
+    await _reschedule(
+      daily: settingsMap['daily'] ?? true,
+      review: settingsMap['review'] ?? true,
+      streak: settingsMap['streak'] ?? true,
+      isLoggedIn: isLoggedIn,
+    );
   }
 
   // 讀取登入狀態
@@ -108,6 +148,12 @@ class NotificationService {
     required bool streak,
     required bool isLoggedIn,
   }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final dailyHour = prefs.getInt(_keyDailyHour) ?? 8;
+    final dailyMinute = prefs.getInt(_keyDailyMinute) ?? 0;
+    final reviewHour = prefs.getInt(_keyReviewHour) ?? 19;
+    final reviewMinute = prefs.getInt(_keyReviewMinute) ?? 0;
+
     await _plugin.cancelAll();
 
     if (daily) {
@@ -115,8 +161,8 @@ class NotificationService {
         id: idDaily,
         title: '📚 每日學習提醒',
         body: '今天還沒開始學日文，快來拍一張照片吧！',
-        hour: 8,
-        minute: 0,
+        hour: dailyHour,
+        minute: dailyMinute,
       );
     }
 
@@ -125,8 +171,8 @@ class NotificationService {
         id: idReview,
         title: '📝 單字複習提醒',
         body: '別忘了複習今天的單字，保持學習節奏！',
-        hour: 19,
-        minute: 0,
+        hour: reviewHour,
+        minute: reviewMinute,
       );
     }
 

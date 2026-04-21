@@ -231,8 +231,11 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">階段名稱</label>
-                                <input type="text" name="stage" class="form-control"
-                                       value="{{ q.stage }}" required>
+                                <select name="stage" class="form-select" required>
+                                    {% for s in ['第一階段：超級新手', '第二階段：初級', '第三階段：中級', '第四階段：高級'] %}
+                                    <option value="{{ s }}" {% if q.stage == s %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">難度標籤</label>
@@ -303,8 +306,12 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">階段名稱</label>
-                                <input type="text" name="stage" class="form-control"
-                                       placeholder="例：第一階段：超級新手" required>
+                                <select name="stage" class="form-select" required>
+                                    <option value="第一階段：超級新手">第一階段：超級新手</option>
+                                    <option value="第二階段：初級">第二階段：初級</option>
+                                    <option value="第三階段：中級">第三階段：中級</option>
+                                    <option value="第四階段：高級">第四階段：高級</option>
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">難度標籤</label>

@@ -174,6 +174,30 @@ print("✅ user 表徽章計數器擴充成功！")
 add_column("user", "notified_levels TEXT DEFAULT '{}'")
 print("✅ user 表徽章彈窗記憶擴充成功！")
 
+# ==========================================
+# 🤝 10. 升級 friendship (好友系統：新增暱稱/備註)
+# ==========================================
+try:
+    # 先確保 friendship 表存在 (萬一它還沒被建出來)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS friendship (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        friend_id INTEGER NOT NULL,
+        status VARCHAR(20) DEFAULT 'accepted',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id),
+        FOREIGN KEY(friend_id) REFERENCES user(id)
+    );
+    """)
+    
+    # 🌟 關鍵：幫 friendship 加上可以自訂的 nickname 欄位
+    add_column("friendship", "nickname VARCHAR(50)")
+    
+    print("✅ friendship 好友關係表 (含暱稱備註) 確認完畢！")
+except Exception as e:
+    print(f"⚠️ friendship 建立或升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

@@ -329,6 +329,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+      onTap: (i) {
+        if (i == 0) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const CameraScreen()),
+          );
+        } else if (i == 1) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+          );
+        } else if (i == 2) {
+          // 首頁用這個清空所有堆疊是正確的！
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+        } else if (i == 3) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+          );
+        }
+      },
     );
   }
 }

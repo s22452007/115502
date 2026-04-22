@@ -100,9 +100,15 @@ class _LoginScreenState extends State<LoginScreen> {
           context.read<UserProvider>().setUsername(result['username']);
         }
 
-        await NotificationService.setLoginStatus(true);
+        try {
+          await NotificationService.setLoginStatus(true);
+        } catch (e) {
+          debugPrint('推播狀態設定失敗 (網頁版正常現象): $e');
+        }
+
         if (!mounted) return;
 
+        // 有程度進首頁，沒程度去選程度
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(
             result['japanese_level'],
@@ -114,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            MaterialPageRoute(builder: (_) => const LevelSelectScreen()), // 👈 原本這裡寫成 HomeScreen，幫你改對了！
           );
         }
       } else {

@@ -72,6 +72,155 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     });
   }
 
+  // ==========================================
+  // 彈窗與設定邏輯區域
+  // ==========================================
+
+  // 1. 顯示底部動作選單 (Action Sheet)
+  void _showFriendActionSheet(dynamic friend) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent, // 透明背景以顯示圓角懸浮
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 上方白色區塊
+              Container(
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: const Center(child: Text('設定暱稱', style: TextStyle(fontSize: 18, color: Colors.black87))),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showEditNicknameDialog(friend);
+                      },
+                    ),
+                    const Divider(height: 1, color: Color(0xFFEAEAEA)),
+                    ListTile(
+                      title: const Center(child: Text('刪除好友', style: TextStyle(fontSize: 18, color: Colors.red))),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showDeleteFriendDialog(friend);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 下方白色區塊 (取消按鈕)
+              Container(
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  title: const Center(child: Text('取消', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87))),
+                  onTap: () => Navigator.pop(ctx),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. 設定暱稱的對話框
+  void _showEditNicknameDialog(dynamic friend) {
+    final friendId = friend['friend_id']?.toString() ?? '';
+    final oldNickname = friend['nickname']?.toString() ?? '';
+    final controller = TextEditingController(text: oldNickname);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('設定暱稱', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen, width: 2)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: _darkGreen),
+            onPressed: () async {
+              final newNickname = controller.text.trim();
+              if (newNickname.isEmpty) return;
+              Navigator.pop(ctx); 
+              
+              final userId = context.read<UserProvider>().userId;
+              if (userId != null) {
+                final res = await ApiClient.updateFriendNickname(userId, friendId, newNickname);
+                if (mounted) {
+                  if (res['error'] != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱已更新！')));
+                    _fetchFriends(); 
+                  }
+                }
+              }
+            },
+            child: const Text('儲存', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 3. 刪除好友的確認對話框
+  void _showDeleteFriendDialog(dynamic friend) {
+    final nickname = friend['nickname']?.toString() ?? 'Unknown';
+    final friendId = friend['friend_id']?.toString() ?? '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('刪除好友', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: Text('確定要刪除好友「$nickname」嗎？\n刪除後將無法恢復。', style: const TextStyle(height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx); 
+              
+              final userId = context.read<UserProvider>().userId;
+              if (userId != null) {
+                final res = await ApiClient.deleteFriend(userId, friendId);
+                if (mounted) {
+                  if (res['error'] != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已刪除好友')));
+                    _fetchFriends(); 
+                  }
+                }
+              }
+            },
+            child: const Text('確定刪除', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // UI 畫面建構
+  // ==========================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,89 +292,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             contentPadding: const EdgeInsets.symmetric(vertical: 16),
           ),
         ),
-      ),
-    );
-  }
-
-
-          // --- 右側的按鈕區 ---
-          Row(
-            children: [
-              // 聊天按鈕
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.chat_bubble_outline_rounded,
-                    color: Colors.black54,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    // 換成跳轉到真實的聊天畫面！
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          friendName: nickname, // 把這個朋友的名字傳過去
-                          // 如果他有真實頭像或是我們算出來的預設頭像，也傳過去
-                          friendAvatarUrl:
-                              (avatarBase64 != null && avatarBase64.isNotEmpty)
-                              ? null // 如果是 Base64 比較複雜，我們這邊先簡單處理，如果需要可以再改
-                              : defaultAvatarUrl,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              // 加入小組按鈕
-              Container(
-                decoration: BoxDecoration(
-                  color: isAdded ? Colors.red.shade50 : Colors.grey.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    isAdded ? Icons.group_remove : Icons.group_add,
-                    color: isAdded ? Colors.red.shade400 : _darkGreen,
-                    size: 24,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      if (isAdded) {
-                        // 移出小組
-                        _groupMembers.removeWhere(
-                          (m) => m['friend_id'] == friendId,
-                        );
-                      } else {
-                        // 加入小組 (最多5人)
-                        if (_groupMembers.length < 5) {
-                          _groupMembers.add({
-                            'nickname': nickname,
-                            'friend_id': friendId,
-                            'avatar':
-                                (avatarBase64 != null &&
-                                    avatarBase64.isNotEmpty)
-                                ? avatarBase64
-                                : defaultAvatarUrl,
-                          });
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('小組最多只能有5個人喔！')),
-                          );
-                        }
-                      }
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

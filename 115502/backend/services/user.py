@@ -495,6 +495,43 @@ def get_friends_list(user_id):
             
     return jsonify({"friends": result}), 200
 
+# 刪除好友 API
+@user_bp.route('/friend/delete', methods=['POST'])
+def delete_friend():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    target_friend_code = data.get('friend_id') # 👈 這是前端傳來的字串 ID (如 QZHPAREI)
+
+    if not user_id or not target_friend_code:
+        return jsonify({"error": "缺少必要參數"}), 400
+
+    try:
+        # 先用字串 ID 找出對方真正的資料庫「整數 ID」
+        target_user = User.query.filter_by(friend_id=target_friend_code).first()
+        if not target_user:
+            return jsonify({"error": "找不到該用戶"}), 404
+
+        target_user_id = target_user.id
+
+        # 用真正的整數 ID 去查 Friendship 表並刪除雙向關係
+        rel1 = Friendship.query.filter_by(user_id=user_id, friend_id=target_user_id).first()
+        rel2 = Friendship.query.filter_by(user_id=target_user_id, friend_id=user_id).first()
+
+        if not rel1 and not rel2:
+            return jsonify({"error": "找不到好友紀錄"}), 404
+
+        if rel1:
+            db.session.delete(rel1)
+        if rel2:
+            db.session.delete(rel2)
+
+        db.session.commit()
+        return jsonify({"message": "好友已成功刪除"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"刪除失敗: {str(e)}"}), 500
+
 # ==========================================
 # 意見回饋
 # ==========================================

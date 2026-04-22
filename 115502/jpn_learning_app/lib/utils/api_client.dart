@@ -410,6 +410,26 @@ class ApiClient {
     }
   }
 
+  // 刪除好友 API
+  static Future<Map<String, dynamic>> deleteFriend(
+    int userId,
+    String friendId,
+  ) async {
+    final url = Uri.parse('$baseUrl/user/friend/delete');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'friend_id': friendId,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
   // ==========================================
   // 🛡️ 學習小組 (公會) 系統相關
   // ==========================================

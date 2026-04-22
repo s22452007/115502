@@ -157,7 +157,8 @@
             ├── friends/                # 好友零件
             │   ├── found_user_card.dart        # 搜尋到的用戶卡片 (含大頭貼邏輯)
             │   ├── pending_request_card.dart   # 待確認的好友邀請卡片 (含大頭貼邏輯)
-            │   └── my_id_card.dart     # 我的專屬 ID 卡片
+            │   ├── my_id_card.dart            # 我的專屬 ID 卡片
+                └── friend_list_card.dart      # 我的好友列表專用卡片
             │
             ├── study_group/                   # 學習小組專用零件包
             │   ├── task_type_card.dart        # (設定頁) 任務類型選項卡片 (拍照/打卡)

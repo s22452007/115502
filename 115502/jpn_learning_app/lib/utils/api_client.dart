@@ -410,6 +410,29 @@ class ApiClient {
     }
   }
 
+  // 修改好友暱稱 API
+  static Future<Map<String, dynamic>> updateFriendNickname(
+    int userId,
+    String friendId,
+    String newNickname,
+  ) async {
+    final url = Uri.parse('$baseUrl/user/friend/update_nickname');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'friend_id': friendId,
+          'nickname': newNickname,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 刪除好友 API
   static Future<Map<String, dynamic>> deleteFriend(
     int userId,
@@ -430,6 +453,7 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+  
   // ==========================================
   // 🛡️ 學習小組 (公會) 系統相關
   // ==========================================

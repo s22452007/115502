@@ -532,6 +532,40 @@ def delete_friend():
         db.session.rollback()
         return jsonify({"error": f"刪除失敗: {str(e)}"}), 500
 
+
+# 修改好友暱稱 (備註) API
+@user_bp.route('/friend/update_nickname', methods=['POST'])
+def update_friend_nickname():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    target_friend_code = data.get('friend_id') # 👈 這是前端傳來的字串 ID
+    new_nickname = data.get('nickname')
+
+    if not user_id or not target_friend_code or not new_nickname:
+        return jsonify({"error": "缺少必要參數"}), 400
+
+    try:
+        # 先找出對方的整數 ID
+        target_user = User.query.filter_by(friend_id=target_friend_code).first()
+        if not target_user:
+            return jsonify({"error": "找不到該用戶"}), 404
+
+        # 用整數 ID 找出「你加他」的那條好友關係
+        friendship = Friendship.query.filter_by(user_id=user_id, friend_id=target_user.id).first()
+        
+        if not friendship:
+            return jsonify({"error": "找不到好友關係"}), 404
+            
+        # 將新的暱稱存入資料庫
+        friendship.nickname = new_nickname 
+        
+        db.session.commit()
+        return jsonify({"message": "暱稱已更新"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"更新失敗: {str(e)}"}), 500
+    
 # ==========================================
 # 意見回饋
 # ==========================================

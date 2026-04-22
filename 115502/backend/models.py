@@ -194,6 +194,7 @@ class Friendship(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     friend_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    nickname = db.Column(db.String(50), nullable=True)     # 幫朋友改名！
 
 
 # ==========================================

@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:flutter/foundation.dart'; // 為了使用 kIsWeb
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -28,6 +29,12 @@ class NotificationService {
   static const _keyReviewMinute = 'notif_review_minute';
 
   static Future<void> init() async {
+    // 如果是網頁版，就直接跳過推播初始化！
+    if (kIsWeb) {
+      debugPrint('網頁版環境，跳過本地推播初始化。');
+      return; 
+    }
+
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Taipei'));
 

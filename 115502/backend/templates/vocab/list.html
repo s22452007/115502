@@ -2,62 +2,155 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>教材單字管理</title>
+    <title>JLens 單字管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root { --snap-green-dark: #5c8364; --snap-green-light: #dce7de; }
-        body { background-color: #f4f7f5; font-family: "微軟正黑體"; text-align: left; }
-        .page-title { color: var(--snap-green-dark); font-weight: bold; text-align: left; }
-        .card { border: none; border-radius: 15px; overflow: hidden; }
-        .table thead { background-color: var(--snap-green-dark); color: white; }
-        .table tbody tr:hover { background-color: var(--snap-green-light); }
-        .scene-badge { background-color: var(--snap-green-light); color: var(--snap-green-dark); padding: 4px 12px; border-radius: 50px; font-weight: bold; font-size: 0.8rem; }
+        body { display: flex; background-color: #f4f7f5; margin: 0; }
+        .sidebar { width: 250px; background: white; min-height: 100vh; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+        .sidebar-logo { padding: 20px; font-weight: bold; font-size: 1.2rem; color: #5c8364; display: flex; align-items: center; gap: 10px; }
+        .icon-box { background: #e2ede5; padding: 5px 10px; border-radius: 8px; }
+        .sidebar-menu { list-style: none; padding: 0; display: flex; flex-direction: column; margin: 0; }
+        .sidebar-menu li a { display: block; padding: 15px 20px; color: #555; text-decoration: none; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background: #e2ede5; color: #5c8364; font-weight: bold; }
+        .main-content { flex: 1; padding: 40px; }
+        .btn-snap { background-color: #5c8364; color: white; border: none; }
+        .btn-snap:hover { background-color: #4a6b51; color: white; }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="mb-4">
-            <h3 class="page-title">📖 教材單字庫管理</h3>
-            <p class="text-muted">管理 App 內建的日語詞彙、假名及分級例句 。</p>
-            <a href="/" class="btn btn-sm btn-outline-secondary" style="border-radius: 50px;">返回儀表板</a>
+
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="icon-box">JL</div>
+            <div class="title">snap to manage</div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/">🏠 儀表板</a></li>
+            <li><a href="/user/list">👤 使用者資料</a></li>
+            <li><a href="/customer/list">💰 點數管理</a></li>
+            <li><a href="/photo/list">🖼️ 照片管控</a></li>
+            <li><a href="/vocab/list" class="active">📖 教材單字管理</a></li>
+            <li><a href="/quiz/list">📝 測驗題目管理</a></li>
+            <li><a href="/feedback/list">💬 意見回饋</a></li>
+            <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
+            <li><a href="{{ url_for('admin_logout') }}" style="color: #d9534f;">🚪 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 style="color: #333;">📖 教材單字庫管理</h3>
+            <button class="btn btn-snap" data-bs-toggle="modal" data-bs-target="#addModal">+ 新增單字</button>
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body p-0 text-start">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead style="background-color: #f8f9fa;">
                         <tr>
                             <th>ID</th>
-                            <th>單字 (漢字)</th>
-                            <th>假名 (拼音)</th>
-                            <th>中文解釋</th>
-                            <th>所屬場景</th>
-                            <th>操作</th>
+                            <th>單字 (Word)</th>
+                            <th>讀音 (Kana)</th>
+                            <th>中文意思</th>
+                            <th>等級</th>
+                            <th class="text-end">操作</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for v in vocabs %}
                         <tr>
                             <td>{{ v.id }}</td>
-                            <td class="fw-bold">{{ v.word }} </td>
-                            <td>{{ v.kana }} </td>
-                            <td>{{ v.meaning }} </td>
-                            <td><span class="scene-badge">{{ v.scene_name or '通用' }} </span></td>
-                            <td>
-                                <form action="/vocab/delete/{{ v.id }}" method="POST" onsubmit="return confirm('確定要刪除這個單字嗎？');" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 50px;">刪除</button>
+                            <td class="fw-bold">{{ v.word }}</td>
+                            <td>{{ v.kana }}</td>
+                            <td>{{ v.meaning }}</td>
+                            <td><span class="badge bg-secondary">{{ v.level }}</span></td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ v.id }}">編輯</button>
+                                <form action="{{ url_for('vocab_delete', id=v.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('確定要刪除這個單字嗎？');">刪除</button>
                                 </form>
                             </td>
                         </tr>
+
+                        <div class="modal fade" id="editModal{{ v.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form action="{{ url_for('vocab_edit', id=v.id) }}" method="POST">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">編輯單字</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <input type="text" name="word" class="form-control mb-3" value="{{ v.word }}" required>
+                                            <input type="text" name="kana" class="form-control mb-3" value="{{ v.kana }}">
+                                            <input type="text" name="meaning" class="form-control mb-3" value="{{ v.meaning }}" required>
+                                            <select name="level" class="form-select">
+                                                <option value="N5" {% if v.level == 'N5' %}selected{% endif %}>N5</option>
+                                                <option value="N4" {% if v.level == 'N4' %}selected{% endif %}>N4</option>
+                                                <option value="N3" {% if v.level == 'N3' %}selected{% endif %}>N3</option>
+                                                <option value="N2" {% if v.level == 'N2' %}selected{% endif %}>N2</option>
+                                                <option value="N1" {% if v.level == 'N1' %}selected{% endif %}>N1</option>
+                                            </select>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-snap">儲存變更</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">目前教材庫中尚無單字</td>
+                            <td colspan="6" class="text-center py-4 text-muted">目前資料庫中還沒有單字喔！快新增一個吧！</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+    </main>
+
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('vocab_add') }}" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" style="color: #5c8364;">新增教材單字</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">日文單字</label>
+                            <input type="text" name="word" class="form-control" placeholder="例：猫" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">讀音 (假名)</label>
+                            <input type="text" name="kana" class="form-control" placeholder="例：ねこ">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">中文意思</label>
+                            <input type="text" name="meaning" class="form-control" placeholder="例：貓咪" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">等級</label>
+                            <select name="level" class="form-select">
+                                <option value="N5">N5</option>
+                                <option value="N4">N4</option>
+                                <option value="N3">N3</option>
+                                <option value="N2">N2</option>
+                                <option value="N1">N1</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-snap">新增</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

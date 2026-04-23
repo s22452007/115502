@@ -7,6 +7,7 @@ from flask import session, flash, redirect, url_for, render_template, request
 from functools import wraps
 from utils.db import db
 from models import Admin
+from models import Admin, Vocab  # <--- 加上 Vocab
 
 
 def utc_to_tw(utc_str):
@@ -196,30 +197,6 @@ def delete_photo(photo_id):
 # ==========================================
 # [教材單字管理] 
 # ==========================================
-@app.route('/vocab/list')
-@admin_login_required
-def vocab_list():
-    conn = get_db_connection()
-    # 關聯查詢單字表與場景表，取得場景名稱 
-    query = '''
-        SELECT v.id, v.word, v.kana, v.meaning, s.name as scene_name, v.sentence_basic
-        FROM vocab v
-        LEFT JOIN scene s ON v.scene_id = s.id
-        ORDER BY v.id DESC
-    '''
-    vocabs = conn.execute(query).fetchall()
-    conn.close()
-    return render_template('vocab/list.html', vocabs=vocabs)
-
-@app.route('/vocab/delete/<int:vocab_id>', methods=['POST'])
-@admin_login_required
-def delete_vocab(vocab_id):
-    conn = get_db_connection()
-    # 執行刪除單字 
-    conn.execute('DELETE FROM vocab WHERE id = ?', (vocab_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('vocab_list'))
 
 
 # ==========================================
@@ -402,6 +379,54 @@ def quiz_add():
     conn.commit()
     conn.close()
     return redirect(url_for('quiz_list'))
+
+# ==========================================
+# 📖 模組：單字庫管理 (CRUD)
+# ==========================================
+
+# 1. 查 (Read) - 顯示單字列表
+@app.route('/vocab/list')
+@admin_login_required
+def vocab_list():
+    vocabs = Vocab.query.all()
+    return render_template('vocab/list.html', vocabs=vocabs)
+
+# 2. 增 (Create) - 新增單字
+@app.route('/vocab/add', methods=['POST'])
+@admin_login_required
+def vocab_add():
+    word = request.form.get('word')
+    kana = request.form.get('kana')
+    meaning = request.form.get('meaning')
+    level = request.form.get('level')
+    
+    new_vocab = Vocab(word=word, kana=kana, meaning=meaning, level=level)
+    db.session.add(new_vocab)
+    db.session.commit()
+    return redirect(url_for('vocab_list'))
+
+# 3. 改 (Update) - 編輯單字
+@app.route('/vocab/edit/<int:id>', methods=['POST'])
+@admin_login_required
+def vocab_edit(id):
+    vocab = Vocab.query.get_or_404(id)
+    vocab.word = request.form.get('word')
+    vocab.kana = request.form.get('kana')
+    vocab.meaning = request.form.get('meaning')
+    vocab.level = request.form.get('level')
+    
+    db.session.commit()
+    return redirect(url_for('vocab_list'))
+
+# 4. 刪 (Delete) - 刪除單字
+@app.route('/vocab/delete/<int:id>', methods=['POST'])
+@admin_login_required
+def vocab_delete(id):
+    vocab = Vocab.query.get_or_404(id)
+    db.session.delete(vocab)
+    db.session.commit()
+    return redirect(url_for('vocab_list'))
+
 
 
 if __name__ == '__main__':

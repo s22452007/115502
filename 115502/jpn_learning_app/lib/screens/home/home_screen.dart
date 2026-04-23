@@ -252,8 +252,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final userName = isGuest
         ? '訪客'
         : ((userProvider.username?.trim().isNotEmpty ?? false)
-            ? userProvider.username!.trim()
-            : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
+              ? userProvider.username!.trim()
+              : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
 
     final streakDays = userProvider.streakDays;
     final jPts = userProvider.jPts;
@@ -417,7 +417,6 @@ class _HomeScreenState extends State<HomeScreen> {
             //         ),
             //         child: StudyGroupCard(),
             //       ),
-
             const SizedBox(height: 20),
           ],
         ),
@@ -437,9 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const ManualSearchScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
             ).then((_) => _syncHomeData());
           }
 
@@ -453,9 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const ResultGalleryV2Screen(),
-              ),
+              MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
             ).then((_) => _syncHomeData());
           }
 

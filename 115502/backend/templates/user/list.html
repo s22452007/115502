@@ -157,7 +157,11 @@
         <div class="user-card">
             <!-- 頂部：頭像 + 名稱 + 操作 -->
             <div class="card-top">
+                {% if u.avatar %}
+                <img src="{{ u.avatar }}" class="avatar" style="object-fit:cover;">
+                {% else %}
                 <div class="avatar">{{ (u.username or u.email)[0]|upper }}</div>
+                {% endif %}
                 <div class="user-info">
                     <div class="user-name">
                         {{ u.username or '未設定暱稱' }}
@@ -181,7 +185,7 @@
                 <div class="meta-chip">好友ID：<span>{{ u.friend_id or '—' }}</span></div>
                 <div class="meta-chip">連續登入：<span>{{ u.streak_days or 0 }} 天</span></div>
                 <div class="meta-chip">註冊：<span>{{ u.created_at }}</span></div>
-                <div class="meta-chip">最後上線：
+                <div class="meta-chip">上次登入：
                     {% if u.last_seen_at %}
                     <span class="relative-time" data-time="{{ u.last_seen_at }}" title="{{ u.last_seen_at }}">{{ u.last_seen_at }}</span>
                     {% else %}

@@ -75,7 +75,8 @@ class AppDrawer extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 32,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
+                    backgroundImage:
+                        (userAvatar != null && userAvatar.isNotEmpty)
                         ? (userAvatar.startsWith('http')
                               ? NetworkImage(userAvatar)
                               : MemoryImage(base64Decode(userAvatar))
@@ -96,9 +97,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isGuest
-                      ? '登入解鎖更多功能！'
-                      : 'ID：${userProvider.friendId ?? '—'}',
+                  isGuest ? '登入解鎖更多功能！' : 'ID：${userProvider.friendId ?? '—'}',
                   style: const TextStyle(fontSize: 14, color: Colors.white70),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

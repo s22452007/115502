@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/utils/constants.dart'; // 確保這裡有引入你的 AppColors
 
 class ChatScreen extends StatefulWidget {
   final String friendName;

@@ -335,21 +335,33 @@ def get_friends_detailed_status():
     try:
         friendships = Friendship.query.filter_by(user_id=user_id).all()
         detailed_friends = []
+        
+        # 建立一個「已見過的好友 ID」集合，用來過濾髒資料！
+        seen_ids = set()
 
         for fs in friendships:
+            # 如果這個朋友已經處理過了，就直接跳過（去重複）
+            if fs.friend_id in seen_ids:
+                continue
+                
             f_user = User.query.get(fs.friend_id)
             if not f_user:
                 continue
+            
+            # 把處理過的朋友 ID 加進名單中
+            seen_ids.add(fs.friend_id)
                 
             has_group = GroupMember.query.filter_by(user_id=f_user.id).first() is not None
             is_invited = False
             if group_id and group_id != -1:
                 is_invited = GroupInvite.query.filter_by(group_id=group_id, receiver_id=f_user.id, status='pending').first() is not None
             
-            display_name = f_user.username or f_user.email.split('@')[0] 
+            # 取得原名
+            original_name = f_user.username or f_user.email.split('@')[0] 
 
             detailed_friends.append({
-                'nickname': display_name, 
+                'username': original_name,
+                'nickname': fs.nickname, 
                 'friend_id': f_user.friend_id,
                 'avatar': f_user.avatar,
                 'has_group': has_group,  
@@ -360,7 +372,6 @@ def get_friends_detailed_status():
 
     except Exception as e:
         return jsonify({"error": f"獲取好友狀態失敗: {str(e)}"}), 500
-
 
 # ==========================================
 # 7. 退出 / 解散小組 (POST /leave)

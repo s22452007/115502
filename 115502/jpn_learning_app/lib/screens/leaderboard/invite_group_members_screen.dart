@@ -51,7 +51,8 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
           if (result.containsKey('friends')) {
             _friends = (result['friends'] as List).map((f) {
               return {
-                'name': f['nickname']?.toString() ?? 'Unknown',
+                'username': f['username']?.toString(),
+                'nickname': f['nickname']?.toString(),
                 'id': f['friend_id']?.toString() ?? '',
                 'avatar': f['avatar']?.toString() ?? '',
                 'invited': false,
@@ -172,10 +173,13 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
   List<Map<String, dynamic>> get _filteredFriends {
     final keyword = _searchController.text.trim().toLowerCase();
     if (keyword.isEmpty) return _friends;
+    
     return _friends.where((friend) {
-      final name = friend['name'].toString().toLowerCase();
+      final originalName = friend['username']?.toString().toLowerCase() ?? '';
+      final nickname = friend['nickname']?.toString().toLowerCase() ?? '';
       final id = friend['id'].toString().toLowerCase();
-      return name.contains(keyword) || id.contains(keyword);
+      
+      return originalName.contains(keyword) || nickname.contains(keyword) || id.contains(keyword);
     }).toList();
   }
 

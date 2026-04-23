@@ -32,12 +32,23 @@ class InviteFriendCard extends StatelessWidget {
     const Color beige = Color(0xFFF6EBC7);
 
     final String avatarBase64 = friend['avatar']?.toString() ?? '';
-    final String nickname = friend['name']?.toString() ?? 'Unknown';
     final String friendId = friend['id']?.toString() ?? '未知ID';
+    
+    // 1. 取得名字資料 (與好友列表邏輯同步)
+    // 假設後端現在會傳來 username (原名) 和 nickname (備註)
+    final String originalName = friend['username']?.toString() ?? friend['name']?.toString() ?? '';
+    final String? customNickname = friend['nickname']?.toString();
 
-    final String bgColor = _getFixedColor(nickname);
+    // 2. 決定顯示名稱
+    final bool hasCustomNickname = customNickname != null && customNickname.trim().isNotEmpty;
+    final String displayName = hasCustomNickname ? customNickname : (originalName.isNotEmpty ? originalName : friendId);
+
+    // 3. 關鍵修復：頭貼專屬邏輯 (絕對恆定，綁定原名或 ID)
+    final String avatarText = originalName.isNotEmpty ? originalName : friendId;
+    final String bgColor = _getFixedColor(friendId);
+    
     final String defaultAvatarUrl =
-        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=$bgColor&color=fff';
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(avatarText)}&background=$bgColor&color=fff';
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -62,8 +73,16 @@ class InviteFriendCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(nickname, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textDark)),
+                // 主要顯示的名字
+                Text(displayName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textDark)),
                 const SizedBox(height: 4),
+                
+                // 如果有暱稱，淡淡顯示原名
+                if (hasCustomNickname && originalName.isNotEmpty) ...[
+                  Text('($originalName)', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                  const SizedBox(height: 2),
+                ],
+                
                 Text('@$friendId', style: const TextStyle(fontSize: 14, color: subText)),
               ],
             ),
@@ -74,6 +93,7 @@ class InviteFriendCard extends StatelessWidget {
     );
   }
 
+  // ... _buildActionButton 保持不變 ...
   Widget _buildActionButton(BuildContext context, Color lightGreen) {
     const Color subText = Color(0xFF6E6E6E);
 

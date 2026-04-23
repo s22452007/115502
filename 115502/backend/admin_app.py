@@ -217,8 +217,9 @@ def user_list():
     conn = get_db_connection()
     base_query = '''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
-               u.j_pts, u.streak_days, u.total_active_days, u.created_at,
-               u.last_login_date,
+               u.j_pts, u.streak_days, u.total_active_days,
+               DATE(u.created_at) as created_at,
+               u.last_seen_at,
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count
@@ -235,7 +236,7 @@ def user_list():
         users = conn.execute(base_query + 'ORDER BY u.created_at DESC').fetchall()
     conn.close()
     users = [
-        {**dict(u), 'created_at': utc_to_tw(u['created_at'])}
+        {**dict(u), 'last_seen_at': utc_to_tw(u['last_seen_at']) if u['last_seen_at'] else None}
         for u in users
     ]
     return render_template('user/list.html', users=users, keyword=keyword)

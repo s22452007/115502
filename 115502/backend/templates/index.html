@@ -114,11 +114,13 @@
 <body>
     <div class="layout">
         <!-- ========== 左側選單 ========== -->
-        <aside class="sidebar">
+      <aside class="sidebar">
+            
             <div class="sidebar-logo">
                 <div class="icon-box">JL</div>
                 <div class="title">snap to manage</div>
             </div>
+            
             <ul class="sidebar-menu">
                 <li><a href="/" class="active">🏠 儀表板</a></li>
                 <li><a href="/user/list">👤 使用者資料</a></li>
@@ -127,6 +129,13 @@
                 <li><a href="/vocab/list">📖 教材單字管理</a></li>
                 <li><a href="/quiz/list">📝 測驗題目管理</a></li>
                 <li><a href="/feedback/list">💬 意見回饋</a></li>
+                
+                <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
+                <li>
+                    <a href="{{ url_for('admin_logout') }}" style="color: #d9534f;">
+                        🚪 登出系統
+                    </a>
+                </li>
             </ul>
         </aside>
 
@@ -204,6 +213,7 @@
                         <a href="/feedback/list" class="btn-snap-unified">
                             💬 意見回饋
                         </a>
+                        
                     </div>
                 </div>
             </div>

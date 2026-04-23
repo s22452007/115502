@@ -213,8 +213,9 @@ def feedback_delete(feedback_id):
 # ==========================================
 @app.route('/user/list')
 def user_list():
+    keyword = request.args.get('q', '').strip()
     conn = get_db_connection()
-    query = '''
+    base_query = '''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
                u.j_pts, u.streak_days, u.total_active_days, u.created_at,
                u.last_login_date,
@@ -222,15 +223,22 @@ def user_list():
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count
         FROM user u
-        ORDER BY u.created_at DESC
     '''
-    users = conn.execute(query).fetchall()
+    if keyword:
+        query = base_query + '''
+            WHERE u.email LIKE ? OR u.username LIKE ? OR u.friend_id LIKE ?
+            ORDER BY u.created_at DESC
+        '''
+        pattern = f'%{keyword}%'
+        users = conn.execute(query, (pattern, pattern, pattern)).fetchall()
+    else:
+        users = conn.execute(base_query + 'ORDER BY u.created_at DESC').fetchall()
     conn.close()
     users = [
         {**dict(u), 'created_at': utc_to_tw(u['created_at'])}
         for u in users
     ]
-    return render_template('user/list.html', users=users)
+    return render_template('user/list.html', users=users, keyword=keyword)
 
 
 # ==========================================

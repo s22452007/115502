@@ -7,273 +7,210 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         :root {
-            --snap-green-dark: #5c8364;
-            --snap-green-light: #dce7de;
-            --snap-bg: #f4f7f5;
+            --green: #5c8364;
+            --green-light: #dce7de;
+            --bg: #f4f7f5;
         }
-        body {
-            background-color: var(--snap-bg);
-            font-family: "微軟正黑體", sans-serif;
-            color: #444;
-            margin: 0;
-        }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
 
-        /* ===== 左側選單 ===== */
+        /* ===== Sidebar ===== */
         .layout { display: flex; min-height: 100vh; }
-        .sidebar {
-            width: 220px;
-            background-color: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.04);
-            padding: 24px 0;
-            flex-shrink: 0;
-        }
-        .sidebar-logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0 20px 20px;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 12px;
-        }
-        .sidebar-logo .icon-box {
-            width: 36px; height: 36px;
-            background-color: var(--snap-green-light);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--snap-green-dark); font-weight: bold;
-        }
-        .sidebar-logo .title {
-            color: var(--snap-green-dark);
-            font-weight: bold; font-size: 1.1rem;
-        }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; }
+        .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
+        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green); font-weight: bold; }
+        .sidebar-logo .title { color: var(--green); font-weight: bold; font-size: 1.1rem; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
-        .sidebar-menu a {
-            display: flex; align-items: center; gap: 10px;
-            padding: 12px 20px; color: #666;
-            text-decoration: none; font-size: 0.95rem;
-            transition: 0.2s;
-        }
-        .sidebar-menu a:hover {
-            background-color: var(--snap-bg);
-            color: var(--snap-green-dark);
-        }
-        .sidebar-menu a.active {
-            background-color: var(--snap-green-light);
-            color: var(--snap-green-dark);
-            font-weight: bold;
-            border-right: 4px solid var(--snap-green-dark);
-        }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green); font-weight: bold; border-right: 4px solid var(--green); }
 
-        /* ===== 主內容 ===== */
+        /* ===== Main ===== */
         .main-content { flex: 1; padding: 40px 48px; overflow-x: hidden; }
-        .page-header {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 28px;
-        }
-        .page-title {
-            color: var(--snap-green-dark);
-            font-weight: bold; margin: 0;
-        }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .page-title { color: var(--green); font-weight: bold; margin: 0; }
 
-        /* ===== 使用者卡片 ===== */
+        /* ===== Search ===== */
+        .search-bar { background: white; border-radius: 14px; padding: 14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; }
+
+        /* ===== User Card ===== */
         .user-card {
             background: white;
             border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            padding: 20px 24px;
-            margin-bottom: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 14px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+        .user-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.09); }
+
+        .card-top {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 16px;
+            padding: 18px 24px 14px;
         }
-        .user-avatar {
-            width: 56px; height: 56px;
+        .avatar {
+            width: 52px; height: 52px;
             border-radius: 50%;
-            background-color: var(--snap-green-light);
-            color: var(--snap-green-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
+            background: var(--green-light);
+            color: var(--green);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; font-weight: bold;
             flex-shrink: 0;
         }
-        .user-main { flex: 1; min-width: 0; }
+        .user-info { flex: 1; min-width: 0; }
         .user-name {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 4px;
+            font-size: 1.05rem; font-weight: bold; color: #222;
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
         }
-        .user-email {
-            color: #888;
-            font-size: 0.88rem;
-            word-break: break-all;
+        .badge-id {
+            font-size: 0.72rem; font-weight: 600;
+            background: var(--green-light); color: var(--green);
+            padding: 2px 9px; border-radius: 50px;
         }
-        .user-meta {
+        .badge-level {
+            font-size: 0.72rem; font-weight: 600;
+            background: #fff3cd; color: #856404;
+            padding: 2px 9px; border-radius: 50px;
+        }
+        .user-email { color: #999; font-size: 0.85rem; margin-top: 2px; }
+
+        .card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+        /* ===== Stats row ===== */
+        .card-stats {
             display: flex;
-            gap: 20px;
-            margin-top: 10px;
+            border-top: 1px solid #f2f2f2;
+            background: #fafafa;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            border-right: 1px solid #f0f0f0;
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-val { font-size: 1.15rem; font-weight: bold; color: var(--green); }
+        .stat-lbl { font-size: 0.72rem; color: #aaa; margin-top: 2px; }
+
+        /* ===== Meta row ===== */
+        .card-meta {
+            display: flex;
+            gap: 0;
+            padding: 8px 24px 12px;
             flex-wrap: wrap;
-            font-size: 0.85rem;
-            color: #666;
+            gap: 6px 20px;
         }
-        .meta-item {
-            display: flex;
-            gap: 4px;
+        .meta-chip {
+            font-size: 0.8rem;
+            color: #888;
         }
-        .meta-item .label { color: #999; }
-        .meta-item .value { font-weight: bold; color: #555; }
+        .meta-chip span { color: #555; font-weight: 600; }
 
-        .stats-row {
-            display: flex;
-            gap: 24px;
-            flex-shrink: 0;
-            text-align: center;
-        }
-        .stat {
-            min-width: 55px;
-        }
-        .stat-num {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: var(--snap-green-dark);
-            line-height: 1;
-        }
-        .stat-label {
-            font-size: 0.75rem;
-            color: #999;
-            margin-top: 4px;
-        }
-
-        .user-actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .tag {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            background-color: var(--snap-green-light);
-            color: var(--snap-green-dark);
-        }
-
-        .btn-snap {
-            background-color: var(--snap-green-dark);
-            color: white;
-            border: none;
-        }
-        .btn-snap:hover { background-color: #4a6a51; color: white; }
-
-        .modal-header-snap { background-color: var(--snap-green-dark); color: white; }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
     </style>
 </head>
 <body>
-    <div class="layout">
-        <!-- ========== 左側選單 ========== -->
-        <aside class="sidebar">
-            <div class="sidebar-logo">
-                <div class="icon-box">JL</div>
-                <div class="title">snap to manage</div>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="/">🏠 儀表板</a></li>
-                <li><a href="/user/list" class="active">👤 使用者資料</a></li>
-                <li><a href="/customer/list">💰 點數管理</a></li>
-                <li><a href="/photo/list">🖼️ 照片管控</a></li>
-                <li><a href="/vocab/list">📖 教材單字管理</a></li>
-                <li><a href="/quiz/list">📝 測驗題目管理</a></li>
-                <li><a href="/feedback/list">💬 意見回饋</a></li>
-            </ul>
-        </aside>
+<div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="icon-box">JL</div>
+            <div class="title">snap to manage</div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/">🏠 儀表板</a></li>
+            <li><a href="/user/list" class="active">👤 使用者資料</a></li>
+            <li><a href="/customer/list">💰 點數管理</a></li>
+            <li><a href="/photo/list">🖼️ 照片管控</a></li>
+            <li><a href="/vocab/list">📖 教材單字管理</a></li>
+            <li><a href="/quiz/list">📝 測驗題目管理</a></li>
+            <li><a href="/feedback/list">💬 意見回饋</a></li>
+        </ul>
+    </aside>
 
-        <!-- ========== 主內容 ========== -->
-        <main class="main-content">
-            <div class="page-header">
-                <h3 class="page-title">👤 使用者資料管理</h3>
-                <span class="text-muted">共 {{ users|length }} 位使用者</span>
-            </div>
+    <!-- Main -->
+    <main class="main-content">
+        <div class="page-header">
+            <h3 class="page-title">👤 使用者資料管理</h3>
+            <span class="text-muted">共 {{ users|length }} 位使用者</span>
+        </div>
 
-            {% for u in users %}
-            <div class="user-card">
-                <!-- 頭像（顯示首字） -->
-                <div class="user-avatar">
-                    {{ (u.username or u.email)[0]|upper }}
+        <!-- 搜尋 -->
+        <form method="GET" action="/user/list" class="search-bar">
+            <div class="row g-2">
+                <div class="col-md-8">
+                    <input type="text" name="q" value="{{ keyword or '' }}" class="form-control"
+                           placeholder="搜尋姓名、Email 或 ID...">
                 </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn w-100" style="background:var(--green);color:white;">搜尋</button>
+                </div>
+                <div class="col-md-2">
+                    <a href="/user/list" class="btn btn-outline-secondary w-100">清除</a>
+                </div>
+            </div>
+        </form>
 
-                <!-- 主要資料 -->
-                <div class="user-main">
+        {% for u in users %}
+        <div class="user-card">
+            <!-- 頂部：頭像 + 名稱 + 操作 -->
+            <div class="card-top">
+                <div class="avatar">{{ (u.username or u.email)[0]|upper }}</div>
+                <div class="user-info">
                     <div class="user-name">
                         {{ u.username or '未設定暱稱' }}
-                        <span class="tag ms-2">#{{ u.id }}</span>
+                        <span class="badge-id">#{{ u.id }}</span>
+                        {% if u.japanese_level %}
+                        <span class="badge-level">{{ u.japanese_level }}</span>
+                        {% endif %}
                     </div>
                     <div class="user-email">{{ u.email }}</div>
-                    <div class="user-meta">
-                        <div class="meta-item">
-                            <span class="label">ID：</span>
-                            <span class="value">{{ u.friend_id or '—' }}</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="label">等級：</span>
-                            <span class="value">{{ u.japanese_level or '未設定' }}</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="label">連續登入：</span>
-                            <span class="value">{{ u.streak_days or 0 }} 天</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="label">註冊：</span>
-                            <span class="value">{{ u.created_at }}</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="label">最後上線：</span>
-                            <span class="value">{{ u.last_login_date or '從未登入' }}</span>
-                        </div>
-                    </div>
                 </div>
-
-                <!-- 統計數字 -->
-                <div class="stats-row">
-                    <div class="stat">
-                        <div class="stat-num">{{ u.j_pts or 0 }}</div>
-                        <div class="stat-label">J-Pts</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-num">{{ u.vocab_count }}</div>
-                        <div class="stat-label">單字</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-num">{{ u.folder_count }}</div>
-                        <div class="stat-label">資料夾</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-num">{{ u.friend_count }}</div>
-                        <div class="stat-label">好友</div>
-                    </div>
-                </div>
-
-                <!-- 操作 -->
-                <div class="user-actions">
+                <div class="card-actions">
                     <form action="/customer/delete/{{ u.id }}" method="POST"
-                          onsubmit="return confirm('確定刪除「{{ u.username or u.email }}」的帳號？\n所有資料將永久消失！');">
+                          onsubmit="return confirm('確定刪除「{{ u.username or u.email }}」？\n所有資料將永久消失！');">
                         <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
                     </form>
                 </div>
             </div>
-            {% else %}
-            <div class="empty-state">目前沒有任何使用者</div>
-            {% endfor %}
-        </main>
-    </div>
+
+            <!-- 中部：meta 資訊 -->
+            <div class="card-meta">
+                <div class="meta-chip">好友ID：<span>{{ u.friend_id or '—' }}</span></div>
+                <div class="meta-chip">連續登入：<span>{{ u.streak_days or 0 }} 天</span></div>
+                <div class="meta-chip">註冊：<span>{{ u.created_at }}</span></div>
+                <div class="meta-chip">最後上線：<span>{{ u.last_login_date or '從未登入' }}</span></div>
+            </div>
+
+            <!-- 底部：統計數字 -->
+            <div class="card-stats">
+                <div class="stat-item">
+                    <div class="stat-val">{{ u.j_pts or 0 }}</div>
+                    <div class="stat-lbl">J-Pts</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val">{{ u.vocab_count }}</div>
+                    <div class="stat-lbl">收藏單字</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val">{{ u.folder_count }}</div>
+                    <div class="stat-lbl">資料夾</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val">{{ u.friend_count }}</div>
+                    <div class="stat-lbl">好友</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val">{{ u.streak_days or 0 }}</div>
+                    <div class="stat-lbl">連續天數</div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">目前沒有任何使用者</div>
+        {% endfor %}
+    </main>
+</div>
 </body>
 </html>

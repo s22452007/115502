@@ -97,10 +97,10 @@ def get_my_group(user_id):
                 "user_id": u.id,
                 "nickname": u.username or u.email.split('@')[0], 
                 "avatar": u.avatar,
-                "daily_scans": m.group_scans, 
-                "j_pts": m.group_points,             
-                "streak_days": m.group_logins, 
-                "is_host": u.id == group.host_id
+                "is_host": u.id == group.host_id,
+                "group_scans": m.group_scans, 
+                "group_points": m.group_points,              
+                "group_logins": m.group_logins 
             })
             
     return jsonify({

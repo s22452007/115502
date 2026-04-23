@@ -92,23 +92,47 @@ class GoalProgressCard extends StatelessWidget {
                         TextButton(
                           child: const Text("太棒了！", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           onPressed: () async {
+                            // 1. 先顯示 Loading 狀態，去問後端是不是真的達標了
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('正在向伺服器驗證任務進度...'))
+                            );
+
                             final userId = context.read<UserProvider>().userId;
                             if (userId == null) return;
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('發送點數中...')));
+
+                            // 打 API 討獎勵
                             final result = await ApiClient.claimReward(groupId, userId);
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            
+
                             if (context.mounted) {
                               if (result.containsKey('error')) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+                                // 2. 後端無情打臉：顯示錯誤，絕對不開香檳
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(result['error']))
+                                );
                               } else {
+                                // 3. 後端認證成功：加點數，這時候才彈出慶祝對話框！🎉
                                 final userProvider = context.read<UserProvider>();
                                 userProvider.setJPts(userProvider.jPts + rewardPoints);
 
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? '成功領取獎勵！')));
-                                Navigator.of(ctx).pop(); 
-                                Navigator.of(context).pop(); 
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    title: const Text("🎉 恭喜達標！", style: TextStyle(fontWeight: FontWeight.bold)),
+                                    content: Text("你們小組超棒的！系統已將 $rewardPoints 點發送至你的錢包！\n\n領取後將退出小組，準備迎接下一個挑戰吧！", style: const TextStyle(fontSize: 16, height: 1.5)),
+                                    actions: [
+                                      TextButton(
+                                        child: const Text("太棒了！", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                        onPressed: () {
+                                          Navigator.of(ctx).pop(); // 關閉慶祝彈窗
+                                          Navigator.of(context).pop(); // 退出小組畫面，回到上一頁
+                                        },
+                                      )
+                                    ],
+                                  ),
+                                );
                               }
                             }
                           },

@@ -69,28 +69,34 @@ def login():
         # ----- 登入天數與任務重置邏輯 -----
         today = date.today()
         
-        # 只要今天還沒登入過，馬拉松總天數就 +1
-        if user.last_login_date != today:
+        # 先用一個變數記錄「這是不是他今天第一次登入？」
+        is_first_login_today = (user.last_login_date != today)
+        
+        if is_first_login_today:
+            # 1. 算個人的馬拉松與連勝天數
             user.total_active_days = (user.total_active_days or 0) + 1
 
-            # 接著算連續登入 (學習火種)
             if user.last_login_date == today - timedelta(days=1):
-                # 狀況 B：昨天有登入，連勝 +1
                 user.streak_days += 1
             else:
-                # 狀況 C：斷掉了，或是第一次登入，重置為 1
                 user.streak_days = 1
                 
-        # 把最後登入日期更新為今天
+            # 2. 算小組的貢獻 (確保一天只能加一次！)
+            member_record = GroupMember.query.filter_by(user_id=user.id).first()
+            if member_record:
+                member_record.group_logins += 1 # 個人對小組的貢獻 +1
+                
+                # 順便找出他們小組的資料
+                # 3. 如果小組這週的任務剛好是「登入 (logins)」，才幫小組總進度 +1
+                group = StudyGroup.query.get(member_record.group_id)
+                if group and group.goal_type == 'logins':
+                    group.current_progress += 1
+                    
+        # 不管是不是第一次登入，都要更新最後上線時間
         user.last_login_date = today
-        user.last_seen_at = datetime.utcnow()
-        
-        # 如果他有加入小組，就把小組的登入貢獻 +1
-        member_record = GroupMember.query.filter_by(user_id=user.id).first()
-        if member_record:
-            member_record.group_logins += 1
+        user.last_seen_at = datetime.now()
 
-        # 檢查並重置今日拍照次數 (如果是新的一天，就把次數歸零)
+        # 檢查並重置今日拍照次數
         if user.last_scan_date != today:
             user.daily_scans = 0
             user.last_scan_date = today

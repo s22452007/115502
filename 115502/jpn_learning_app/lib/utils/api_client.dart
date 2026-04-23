@@ -16,7 +16,7 @@ class ApiClient {
   }
 
   // ==========================================
-  // 🔐 登入與註冊相關
+  // 🔐 登入與註冊
   // ==========================================
 
   // 註冊 API
@@ -443,17 +443,14 @@ class ApiClient {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId,
-          'friend_id': friendId,
-        }),
+        body: jsonEncode({'user_id': userId, 'friend_id': friendId}),
       );
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': '網路連線失敗'};
     }
   }
-  
+
   // ==========================================
   // 🛡️ 學習小組 (公會) 系統相關
   // ==========================================

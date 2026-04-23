@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
 
 class ChatScreen extends StatefulWidget {
   final String friendName;

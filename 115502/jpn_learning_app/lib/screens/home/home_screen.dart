@@ -43,7 +43,6 @@ import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
 import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
-import 'package:jpn_learning_app/widgets/home/study_group_card.dart';
 
 /// 首頁畫面狀態管理類別
 /// 負責管理首頁的所有狀態和業務邏輯

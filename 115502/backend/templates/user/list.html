@@ -226,7 +226,7 @@
 <script>
 function relativeTime(dateStr) {
     const now = new Date();
-    const past = new Date(dateStr);
+    const past = new Date(dateStr + '+08:00');
     const diff = Math.floor((now - past) / 1000); // 秒
 
     if (diff < 60) return '剛剛';

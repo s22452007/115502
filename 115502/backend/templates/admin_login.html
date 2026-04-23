@@ -1,7 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 管理者登入</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f5; height: 100vh; display: flex; align-items: center; justify-content: center;}
+        .login-card { width: 100%; max-width: 400px; padding: 2rem; border-radius: 15px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .btn-snap { background-color: #5c8364; color: white; border: none; }
+        .btn-snap:hover { background-color: #4a6b51; color: white; }
+    </style>
+</head>
 <body>
-    <h1>這裡是管理員登入畫面</h1>
-    <a href="/">登入成功（點我跳轉到首頁）</a>
+    <div class="login-card">
+        <h3 class="text-center mb-4 fw-bold" style="color: #5c8364;">JLens Admin</h3>
+        {% if error %}
+        <div class="alert alert-danger py-2 text-center">{{ error }}</div>
+        {% endif %}
+        <form action="{{ url_for('admin_login') }}" method="POST">
+            <div class="mb-3">
+                <label class="form-label text-muted">管理員帳號</label>
+                <input type="text" name="username" class="form-control" required autofocus>
+            </div>
+            <div class="mb-4">
+                <label class="form-label text-muted">密碼</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-snap w-100 py-2 fw-bold">登入系統</button>
+        </form>
+    </div>
 </body>
 </html>

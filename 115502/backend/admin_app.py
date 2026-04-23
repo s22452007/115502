@@ -2,6 +2,11 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
+import os
+from flask import session, flash, redirect, url_for, render_template, request
+from functools import wraps
+from utils.db import db
+from models import Admin
 
 
 def utc_to_tw(utc_str):
@@ -22,6 +27,17 @@ def utc_to_tw(utc_str):
 
 app = Flask(__name__)
 
+app.secret_key = 'jlens_admin_secure_key_2024'
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+path1 = os.path.join(BASE_DIR, 'instance', 'jlens.db')
+path2 = os.path.join(BASE_DIR, 'jlens.db')
+DB_FILE_PATH = path1 if os.path.exists(path1) else path2
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_FILE_PATH
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 # ==========================================
 # 🚀 自動路徑偵測
 # ==========================================
@@ -35,43 +51,81 @@ def get_db_connection():
     return conn
 
 # ==========================================
-# [首頁] 儀表板
+# 🔐 1. 守門員：檢查是否登入
+# ==========================================
+def admin_login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_user' not in session:
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ==========================================
+# 🏠 2. 首頁導航 (解決無限迴圈的關鍵)
 # ==========================================
 @app.route('/')
-def index():
+def admin_root():
+    
+    return redirect(url_for('admin_login'))         # 沒登入就去登入頁
+
+# ==========================================
+# 🚪 3. 登入與登出系統
+# ==========================================
+@app.route('/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        admin = Admin.query.filter_by(username=username).first()
+        if admin and admin.check_password(password):
+            session['admin_user'] = admin.username
+            session.permanent = True
+            return redirect(url_for('admin_dashboard')) # 密碼正確去儀表板
+        else:
+            return render_template('admin_login.html', error="帳號或密碼錯誤")
+            
+    return render_template('admin_login.html')
+
+@app.route('/logout')
+def admin_logout():
+    session.clear()
+    return redirect(url_for('admin_login'))
+
+# ==========================================
+# 📊 4. 儀表板 (讀取您的 index.html)
+# ==========================================
+@app.route('/dashboard')
+@admin_login_required
+def admin_dashboard():
     conn = get_db_connection()
-    user_count = conn.execute('SELECT COUNT(*) FROM user').fetchone()[0]
-    photo_count = conn.execute('SELECT COUNT(*) FROM user_photo').fetchone()[0]
-    # 安全檢查 vocab 表
-    vocab_exists = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='vocab'").fetchone()
-    vocab_count = conn.execute('SELECT COUNT(*) FROM vocab').fetchone()[0] if vocab_exists else 0
-
-    # 今日活躍人數 (今天有登入過的)
-    from datetime import date
-    today_str = date.today().strftime('%Y-%m-%d')
-    today_active = conn.execute(
-        "SELECT COUNT(*) FROM user WHERE DATE(last_login_date) = ?", (today_str,)
-    ).fetchone()[0]
-
-    # 總回饋數 / 待回覆
-    feedback_total = conn.execute('SELECT COUNT(*) FROM feedback').fetchone()[0]
-    feedback_pending = conn.execute(
-        'SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""'
-    ).fetchone()[0]
-
+    try:
+        user_total = conn.execute('SELECT COUNT(*) FROM user').fetchone()[0]
+    except: user_total = 0
+    try:
+        quiz_total = conn.execute('SELECT COUNT(*) FROM quiz_question').fetchone()[0]
+    except: quiz_total = 0
+    try:
+        feedback_total = conn.execute('SELECT COUNT(*) FROM feedback').fetchone()[0]
+    except: feedback_total = 0
+    try:
+        photo_total = conn.execute('SELECT COUNT(*) FROM photo').fetchone()[0]
+    except: photo_total = 0
     conn.close()
-    return render_template('index.html',
-                           user_count=user_count,
-                           photo_count=photo_count,
-                           vocab_count=vocab_count,
-                           today_active=today_active,
-                           feedback_total=feedback_total,
-                           feedback_pending=feedback_pending)
-
+    
+    # 這裡渲染您的 index.html！
+    return render_template('index.html', 
+                           user_total=user_total, 
+                           quiz_total=quiz_total, 
+                           feedback_total=feedback_total, 
+                           feedback_pending=feedback_total,
+                           photo_total=photo_total)
 # ==========================================
 # [使用者管理] 包含點數 (j_pts)
 # ==========================================
 @app.route('/customer/list')
+@admin_login_required
 def customer_list():
     conn = get_db_connection()
     users = conn.execute('SELECT id, username, email, j_pts, created_at FROM user').fetchall()
@@ -79,6 +133,7 @@ def customer_list():
     return render_template('customer/list.html', customers=users)
 
 @app.route('/customer/adjust_pts/<int:user_id>', methods=['POST'])
+@admin_login_required
 def adjust_pts(user_id):
     amount = int(request.form.get('amount', 0))
     conn = get_db_connection()
@@ -88,6 +143,7 @@ def adjust_pts(user_id):
     return redirect(url_for('customer_list'))
 
 @app.route('/customer/delete/<int:user_id>', methods=['POST'])
+@admin_login_required
 def delete_user(user_id):
     conn = get_db_connection()
     # user_photo_vocab 依賴 user_photo，要先刪
@@ -114,6 +170,7 @@ def delete_user(user_id):
 # [照片管控]
 # ==========================================
 @app.route('/photo/list')
+@admin_login_required
 def photo_list():
     conn = get_db_connection()
     query = '''
@@ -127,6 +184,7 @@ def photo_list():
     return render_template('photo/list.html', photos=photos)
 
 @app.route('/photo/delete/<int:photo_id>', methods=['POST'])
+@admin_login_required
 def delete_photo(photo_id):
     conn = get_db_connection()
     conn.execute('DELETE FROM user_photo_vocab WHERE photo_id = ?', (photo_id,))
@@ -139,6 +197,7 @@ def delete_photo(photo_id):
 # [教材單字管理] 
 # ==========================================
 @app.route('/vocab/list')
+@admin_login_required
 def vocab_list():
     conn = get_db_connection()
     # 關聯查詢單字表與場景表，取得場景名稱 
@@ -153,6 +212,7 @@ def vocab_list():
     return render_template('vocab/list.html', vocabs=vocabs)
 
 @app.route('/vocab/delete/<int:vocab_id>', methods=['POST'])
+@admin_login_required
 def delete_vocab(vocab_id):
     conn = get_db_connection()
     # 執行刪除單字 
@@ -166,6 +226,7 @@ def delete_vocab(vocab_id):
 # [意見回饋管理]
 # ==========================================
 @app.route('/feedback/list')
+@admin_login_required
 def feedback_list():
     conn = get_db_connection()
     query = '''
@@ -187,6 +248,7 @@ def feedback_list():
     return render_template('feedback/list.html', feedbacks=feedbacks)
 
 @app.route('/feedback/reply/<int:feedback_id>', methods=['POST'])
+@admin_login_required
 def feedback_reply(feedback_id):
     reply = request.form.get('reply', '').strip()
     if not reply:
@@ -200,6 +262,7 @@ def feedback_reply(feedback_id):
     return redirect(url_for('feedback_list'))
 
 @app.route('/feedback/delete/<int:feedback_id>', methods=['POST'])
+@admin_login_required
 def feedback_delete(feedback_id):
     conn = get_db_connection()
     conn.execute('DELETE FROM feedback WHERE id = ?', (feedback_id,))
@@ -212,6 +275,7 @@ def feedback_delete(feedback_id):
 # [使用者資料] 新版：詳細資料 + 卡片式
 # ==========================================
 @app.route('/user/list')
+@admin_login_required
 def user_list():
     keyword = request.args.get('q', '').strip()
     conn = get_db_connection()
@@ -247,6 +311,7 @@ def user_list():
 # [測驗題目管理]
 # ==========================================
 @app.route('/quiz/list')
+@admin_login_required
 def quiz_list():
     keyword = request.args.get('q', '').strip()
     level = request.args.get('level', '').strip()
@@ -275,6 +340,7 @@ def quiz_list():
 
 
 @app.route('/quiz/delete/<int:quiz_id>', methods=['POST'])
+@admin_login_required
 def quiz_delete(quiz_id):
     conn = get_db_connection()
     conn.execute('DELETE FROM quiz_question WHERE id = ?', (quiz_id,))
@@ -284,6 +350,7 @@ def quiz_delete(quiz_id):
 
 
 @app.route('/quiz/edit/<int:quiz_id>', methods=['POST'])
+@admin_login_required
 def quiz_edit(quiz_id):
     stage = request.form.get('stage', '').strip()
     level_tag = request.form.get('level_tag', '').strip()
@@ -311,6 +378,7 @@ def quiz_edit(quiz_id):
 
 
 @app.route('/quiz/add', methods=['POST'])
+@admin_login_required
 def quiz_add():
     stage = request.form.get('stage', '').strip()
     level_tag = request.form.get('level_tag', '').strip()

@@ -1,5 +1,6 @@
 from utils.db import db
 from datetime import datetime, date
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # ==========================================
 # 👤 1. 核心使用者系統
@@ -257,3 +258,18 @@ class Feedback(db.Model):
     reply = db.Column(db.Text, nullable=True)
     replied_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# ==========================================
+# 🛡️ 系統管理者 (Admin) 資料表
+# ==========================================
+class Admin(db.Model):
+    __tablename__ = 'admin'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)

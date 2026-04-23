@@ -169,8 +169,7 @@
                         <span class="badge-level">{{ u.japanese_level }}</span>
                         {% endif %}
                     </div>
-                    <div class="user-email">{{ u.email }}</div>
-                    <div style="font-size:0.72rem;color:#ccc;margin-top:1px;">UID · {{ u.id }}</div>
+                    <div class="user-email">{{ u.email }} <span style="color:#ddd;">· #{{ u.id }}</span></div>
                 </div>
                 <div class="card-actions">
                     <form action="/customer/delete/{{ u.id }}" method="POST"

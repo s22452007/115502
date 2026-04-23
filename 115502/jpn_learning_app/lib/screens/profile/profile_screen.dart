@@ -21,7 +21,7 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'photo_folder_v2_screen.dart';
-import 'result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/profile/result_gallery_v2_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);

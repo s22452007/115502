@@ -44,20 +44,24 @@ class FriendListCard extends StatelessWidget {
     const statusText = '一起開心學日文 📚';
 
     // 1. 取得名字資料
-    // 假設你後端回傳的 JSON 裡，原名叫 'username' (或 'original_name')，你設定的備註叫 'nickname'
-    final String originalName = friend['username']?.toString() ?? friend['original_name']?.toString() ?? 'Unknown';
+    final String originalName = friend['username']?.toString() ?? friend['original_name']?.toString() ?? '';
     final String? customNickname = friend['nickname']?.toString();
 
-    // 2. 判斷邏輯：是否有自訂暱稱？
+    // 2. 判斷邏輯
     final bool hasCustomNickname = customNickname != null && customNickname.trim().isNotEmpty;
+    // 如果有自訂暱稱，主要顯示暱稱；如果沒有，就顯示原名；如果連原名都沒有，只好暫時顯示他的 ID
+    final String displayName = hasCustomNickname ? customNickname : (originalName.isNotEmpty ? originalName : friendId);
+
+    // 頭貼上的文字「永遠」只用原名或 ID，絕不使用會變動的備註(displayName)
+    final String avatarText = originalName.isNotEmpty ? originalName : friendId;
     
-    // 如果有自訂暱稱，主要顯示暱稱；如果沒有，就顯示原名
-    final String displayName = hasCustomNickname ? customNickname : originalName;
-
-    final String bgColor = _getFixedColor(displayName);
+    // 顏色也永遠綁定不變的 friendId
+    final String bgColor = _getFixedColor(friendId);
+    
+    // 這樣一來，這串網址對同一個好友永遠長得一模一樣，絕對不會重新下載跟閃爍！
     final String defaultAvatarUrl =
-        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&background=$bgColor&color=fff';
-
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(avatarText)}&background=$bgColor&color=fff';
+        
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -98,11 +102,11 @@ class FriendListCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
 
-                // 3. 如果有設定暱稱，底下多一行小小的灰字顯示「原名」
-                if (hasCustomNickname && originalName.isNotEmpty)...[
+                // 如果有設定暱稱，底下多一行淡淡的括號顯示「原名」
+                if (hasCustomNickname && originalName.isNotEmpty) ...[
                   Text(
                     '($originalName)', 
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13)
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13)
                   ),
                   const SizedBox(height: 2),
                 ],

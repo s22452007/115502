@@ -39,14 +39,24 @@ class FriendListCard extends StatelessWidget {
       );
     }
 
-    final nickname = friend['nickname']?.toString() ?? 'Unknown';
     final friendId = friend['friend_id']?.toString() ?? '尚未產生';
     final String? avatarBase64 = friend['avatar']?.toString();
     const statusText = '一起開心學日文 📚';
 
-    final String bgColor = _getFixedColor(nickname);
+    // 1. 取得名字資料
+    // 假設你後端回傳的 JSON 裡，原名叫 'username' (或 'original_name')，你設定的備註叫 'nickname'
+    final String originalName = friend['username']?.toString() ?? friend['original_name']?.toString() ?? 'Unknown';
+    final String? customNickname = friend['nickname']?.toString();
+
+    // 2. 判斷邏輯：是否有自訂暱稱？
+    final bool hasCustomNickname = customNickname != null && customNickname.trim().isNotEmpty;
+    
+    // 如果有自訂暱稱，主要顯示暱稱；如果沒有，就顯示原名
+    final String displayName = hasCustomNickname ? customNickname : originalName;
+
+    final String bgColor = _getFixedColor(displayName);
     final String defaultAvatarUrl =
-        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nickname)}&background=$bgColor&color=fff';
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&background=$bgColor&color=fff';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -81,10 +91,27 @@ class FriendListCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                // 主要顯示的名字 (字體較大、粗體)
+                Text(
+                  displayName, 
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)
+                ),
                 const SizedBox(height: 4),
-                Text('@$friendId', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+
+                // 3. 如果有設定暱稱，底下多一行小小的灰字顯示「原名」
+                if (hasCustomNickname && originalName.isNotEmpty)...[
+                  Text(
+                    '($originalName)', 
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13)
+                  ),
+                  const SizedBox(height: 2),
+                ],
+
+                // 顯示專屬 ID
+                Text('@$friendId', style: TextStyle(color: Colors.grey.shade400, fontSize: 13)),
                 const SizedBox(height: 8),
+
+                // 狀態標籤
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(

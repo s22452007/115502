@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime
+from unittest import result
 
 from flask import Blueprint, request, jsonify
 
@@ -484,13 +485,16 @@ def get_friends_list(user_id):
     for f in friendships:
         # 找出好友的詳細資料
         friend_user = User.query.get(f.friend_id)
-        if friend_user:
-            nickname = friend_user.username or friend_user.email.split('@')[0]
-            result.append({
-                "user_id": friend_user.id,
-                "nickname": nickname,
-                "friend_id": friend_user.friend_id,
-                "avatar": friend_user.avatar
+    if friend_user:
+        # 取得對方的真實本名 (如果沒設定 username，就拿 email 帳號代替)
+        original_name = friend_user.username or friend_user.email.split('@')[0]
+
+        result.append({
+            "user_id": friend_user.id,
+            "friend_id": friend_user.friend_id,
+            "avatar": friend_user.avatar,
+            "username": original_name, # 傳送原名
+            "nickname": f.nickname     # 傳送你在 Friendship 表格幫他取的備註 (如果沒取過，這裡會是 None)
             })
             
     return jsonify({"friends": result}), 200

@@ -157,7 +157,11 @@
         <div class="user-card">
             <!-- 頂部：頭像 + 名稱 + 操作 -->
             <div class="card-top">
+                {% if u.avatar %}
+                <img src="{{ u.avatar }}" class="avatar" style="object-fit:cover;">
+                {% else %}
                 <div class="avatar">{{ (u.username or u.email)[0]|upper }}</div>
+                {% endif %}
                 <div class="user-info">
                     <div class="user-name">
                         {{ u.username or '未設定暱稱' }}

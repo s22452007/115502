@@ -353,7 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           } else if (i == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const StudyGroupScreen()),
+              MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
             );
           }
         },

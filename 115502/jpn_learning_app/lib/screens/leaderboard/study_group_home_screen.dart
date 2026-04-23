@@ -33,15 +33,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
     final int rewardPoints = groupData['reward_points'] ?? 50;
     final int groupId = groupData['group_id'] ?? 0;
 
-    int currentTotal = 0;
-    for (var m in members) {
-      if (goalType == 'scans')
-        currentTotal += (m['daily_scans'] as int? ?? 0);
-      else if (goalType == 'points')
-        currentTotal += (m['j_pts'] as int? ?? 0);
-      else if (goalType == 'logins')
-        currentTotal += (m['streak_days'] as int? ?? 0);
-    }
+    final int currentTotal = groupData['current_progress'] as int? ?? 0;
 
     final double progress = (currentTotal / goalTarget).clamp(0.0, 1.0);
 

@@ -17,11 +17,12 @@ class RankingListCard extends StatelessWidget {
 
     final sortedMembers = List<dynamic>.from(members);
     
+    // 🌟 關鍵修復 1：排序時，讀取小組專屬的 group_ 系列變數
     sortedMembers.sort((a, b) {
       int valA = 0, valB = 0;
-      if (type == 'scans') { valA = a['daily_scans'] ?? 0; valB = b['daily_scans'] ?? 0; }
-      else if (type == 'points') { valA = a['j_pts'] ?? 0; valB = b['j_pts'] ?? 0; }
-      else if (type == 'logins') { valA = a['streak_days'] ?? 0; valB = b['streak_days'] ?? 0; }
+      if (type == 'scans') { valA = a['group_scans'] ?? 0; valB = b['group_scans'] ?? 0; }
+      else if (type == 'points') { valA = a['group_points'] ?? 0; valB = b['group_points'] ?? 0; }
+      else if (type == 'logins') { valA = a['group_logins'] ?? 0; valB = b['group_logins'] ?? 0; }
       return valB.compareTo(valA);
     });
 
@@ -44,10 +45,11 @@ class RankingListCard extends StatelessWidget {
             final item = sortedMembers[index];
             final nickname = item['nickname'] ?? 'Unknown';
             
+            // 🌟 關鍵修復 2：顯示分數時，也讀取 group_ 系列變數
             int score = 0;
-            if (type == 'scans') score = item['daily_scans'] ?? 0;
-            if (type == 'points') score = item['j_pts'] ?? 0;
-            if (type == 'logins') score = item['streak_days'] ?? 0;
+            if (type == 'scans') score = item['group_scans'] ?? 0;
+            if (type == 'points') score = item['group_points'] ?? 0;
+            if (type == 'logins') score = item['group_logins'] ?? 0;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),

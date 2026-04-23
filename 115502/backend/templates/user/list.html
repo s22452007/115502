@@ -235,6 +235,10 @@
                             <span class="label">註冊：</span>
                             <span class="value">{{ u.created_at }}</span>
                         </div>
+                        <div class="meta-item">
+                            <span class="label">最後上線：</span>
+                            <span class="value">{{ u.last_login_date or '從未登入' }}</span>
+                        </div>
                     </div>
                 </div>
 

@@ -26,7 +26,6 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // 4. 畫面路由 (Screens - 切換頁面用)
 // ==========================================
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';

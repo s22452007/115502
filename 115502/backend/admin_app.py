@@ -90,6 +90,21 @@ def adjust_pts(user_id):
 @app.route('/customer/delete/<int:user_id>', methods=['POST'])
 def delete_user(user_id):
     conn = get_db_connection()
+    # user_photo_vocab 依賴 user_photo，要先刪
+    conn.execute('''
+        DELETE FROM user_photo_vocab WHERE photo_id IN
+        (SELECT id FROM user_photo WHERE user_id = ?)
+    ''', (user_id,))
+    conn.execute('DELETE FROM user_photo WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_vocab WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_folder WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_ability WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_achievement WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM point_transaction WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM friendship WHERE user_id = ? OR friend_id = ?', (user_id, user_id))
+    conn.execute('DELETE FROM friend_request WHERE sender_id = ? OR receiver_id = ?', (user_id, user_id))
+    conn.execute('DELETE FROM group_member WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM feedback WHERE user_id = ?', (user_id,))
     conn.execute('DELETE FROM user WHERE id = ?', (user_id,))
     conn.commit()
     conn.close()
@@ -198,23 +213,33 @@ def feedback_delete(feedback_id):
 # ==========================================
 @app.route('/user/list')
 def user_list():
+    keyword = request.args.get('q', '').strip()
     conn = get_db_connection()
-    query = '''
+    base_query = '''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
-               u.j_pts, u.streak_days, u.total_active_days, u.created_at,
+               u.j_pts, u.streak_days, u.total_active_days,
+               DATE(u.created_at) as created_at,
+               u.last_seen_at,
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count
         FROM user u
-        ORDER BY u.created_at DESC
     '''
-    users = conn.execute(query).fetchall()
+    if keyword:
+        query = base_query + '''
+            WHERE u.email LIKE ? OR u.username LIKE ? OR u.friend_id LIKE ?
+            ORDER BY u.created_at DESC
+        '''
+        pattern = f'%{keyword}%'
+        users = conn.execute(query, (pattern, pattern, pattern)).fetchall()
+    else:
+        users = conn.execute(base_query + 'ORDER BY u.created_at DESC').fetchall()
     conn.close()
     users = [
-        {**dict(u), 'created_at': utc_to_tw(u['created_at'])}
+        {**dict(u), 'last_seen_at': utc_to_tw(u['last_seen_at']) if u['last_seen_at'] else None}
         for u in users
     ]
-    return render_template('user/list.html', users=users)
+    return render_template('user/list.html', users=users, keyword=keyword)
 
 
 # ==========================================

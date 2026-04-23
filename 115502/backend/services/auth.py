@@ -1,6 +1,6 @@
 # 1. Python 內建標準庫
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 # 2. 第三方套件 (Third-Party)
 from flask import Blueprint, request, jsonify
@@ -83,6 +83,7 @@ def login():
                 
         # 把最後登入日期更新為今天
         user.last_login_date = today
+        user.last_seen_at = datetime.now()
         
         # 如果他有加入小組，就把小組的登入貢獻 +1
         member_record = GroupMember.query.filter_by(user_id=user.id).first()
@@ -182,7 +183,8 @@ def google_login():
 
     # 把最後登入日期更新為今天
     user.last_login_date = today
-    
+    user.last_seen_at = datetime.now()
+
     if user.last_scan_date != today:
         user.daily_scans = 0
         user.last_scan_date = today

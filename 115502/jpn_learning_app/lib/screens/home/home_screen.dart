@@ -26,7 +26,6 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // 4. 畫面路由 (Screens - 切換頁面用)
 // ==========================================
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
@@ -44,7 +43,6 @@ import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
 import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
-import 'package:jpn_learning_app/widgets/home/study_group_card.dart';
 
 /// 首頁畫面狀態管理類別
 /// 負責管理首頁的所有狀態和業務邏輯
@@ -252,8 +250,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final userName = isGuest
         ? '訪客'
         : ((userProvider.username?.trim().isNotEmpty ?? false)
-            ? userProvider.username!.trim()
-            : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
+              ? userProvider.username!.trim()
+              : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
 
     final streakDays = userProvider.streakDays;
     final jPts = userProvider.jPts;
@@ -417,7 +415,6 @@ class _HomeScreenState extends State<HomeScreen> {
             //         ),
             //         child: StudyGroupCard(),
             //       ),
-
             const SizedBox(height: 20),
           ],
         ),
@@ -437,9 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const ManualSearchScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
             ).then((_) => _syncHomeData());
           }
 
@@ -453,9 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const ResultGalleryV2Screen(),
-              ),
+              MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
             ).then((_) => _syncHomeData());
           }
 

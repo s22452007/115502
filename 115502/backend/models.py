@@ -20,6 +20,7 @@ class User(db.Model):
     j_pts = db.Column(db.Integer, default=0)         
     streak_days = db.Column(db.Integer, default=1)   
     last_login_date = db.Column(db.Date, nullable=True)
+    last_seen_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_free_group_week = db.Column(db.String(10), nullable=True)  # 紀錄他上一次「免費」參加小組是哪一週 (格式如 '2026-15')
 

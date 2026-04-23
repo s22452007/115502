@@ -5,22 +5,17 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 
-import 'invite_group_members_screen.dart';
 import 'group_invites_screen.dart';
-import 'study_group_home_screen.dart'; 
+import 'study_group_home_screen.dart';
 import 'group_config_screen.dart';
-
 
 import 'package:jpn_learning_app/widgets/study_group/empty_group_banner.dart';
 import 'package:jpn_learning_app/widgets/study_group/invites_status_card.dart';
 
 class StudyGroupScreen extends StatefulWidget {
-  final bool showAppBar; 
+  final bool showAppBar;
 
-  const StudyGroupScreen({
-    Key? key, 
-    this.showAppBar = true,
-  }) : super(key: key);
+  const StudyGroupScreen({Key? key, this.showAppBar = true}) : super(key: key);
 
   @override
   State<StudyGroupScreen> createState() => _StudyGroupScreenState();
@@ -31,7 +26,7 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
 
   bool _isLoading = true;
   Map<String, dynamic>? _groupData;
-  List<dynamic> _invites = []; 
+  List<dynamic> _invites = [];
 
   @override
   void initState() {
@@ -55,31 +50,45 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
 
             // 如果有回傳最新的點數，立刻更新錢包！
             if (groupResult.containsKey('new_j_pts')) {
-               context.read<UserProvider>().setJPts(groupResult['new_j_pts']);
+              context.read<UserProvider>().setJPts(groupResult['new_j_pts']);
             }
 
             Future.delayed(Duration.zero, () {
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: const Text('📜 上週結算通知', style: TextStyle(fontWeight: FontWeight.bold)),
-                  content: Text(groupResult['message'] ?? '', style: const TextStyle(fontSize: 16, height: 1.5)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  title: const Text(
+                    '📜 上週結算通知',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  content: Text(
+                    groupResult['message'] ?? '',
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                  ),
                   actions: [
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('我知道了', style: TextStyle(color: Colors.white)),
-                    )
+                      child: const Text(
+                        '我知道了',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
                   ],
                 ),
               );
             });
           } else if (groupResult['has_group'] == true) {
-            _groupData = groupResult; 
+            _groupData = groupResult;
           }
-          
-          if (invitesResult.containsKey('invites') && invitesResult['invites'] is List) {
+
+          if (invitesResult.containsKey('invites') &&
+              invitesResult['invites'] is List) {
             _invites = invitesResult['invites'];
           }
           _isLoading = false;
@@ -94,7 +103,9 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return _buildWrapper(
-        child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
@@ -111,7 +122,7 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
   }
 
   Widget _buildWrapper({required Widget child}) {
-    if (!widget.showAppBar) return child; 
+    if (!widget.showAppBar) return child;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F2),
@@ -122,7 +133,10 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('學習小組', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          '學習小組',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: child,
@@ -138,14 +152,16 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
           // 🧱 積木 1：尚未加入小組橫幅
           const EmptyGroupBanner(),
           const SizedBox(height: 18),
-          
+
           SizedBox(
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary.withOpacity(0.9),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
               ),
               onPressed: () {
                 Navigator.push(
@@ -155,19 +171,30 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
               },
               child: const Text(
                 '建立小組並邀請好友',
-                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
-          
+
           const SizedBox(height: 22),
-          
+
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text('收到的小組邀請', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textDark)),
+            child: Text(
+              '收到的小組邀請',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: textDark,
+              ),
+            ),
           ),
           const SizedBox(height: 10),
-          
+
           // 🧱 積木 2：邀請狀態卡片
           InvitesStatusCard(
             invitesCount: _invites.length,

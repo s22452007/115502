@@ -94,7 +94,7 @@ def login():
                     
         # 不管是不是第一次登入，都要更新最後上線時間
         user.last_login_date = today
-        user.last_seen_at = datetime.now()
+        user.last_seen_at = datetime.utcnow()
 
         # 檢查並重置今日拍照次數
         if user.last_scan_date != today:

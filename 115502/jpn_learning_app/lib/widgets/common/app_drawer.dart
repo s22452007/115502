@@ -6,7 +6,6 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
-import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
@@ -18,48 +17,45 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ==========================================
+    // 1. 取得與整理使用者資料
+    // ==========================================
     final userProvider = context.watch<UserProvider>();
     final userAvatar = userProvider.avatar;
     final userEmail = userProvider.email ?? 'guest@example.com';
     final userName = userProvider.username ?? userEmail.split('@')[0];
+    final friendId = userProvider.friendId;
+    
+    final bool isGuest = userProvider.userId == null;
 
-    // 待確認的好友數量
-    final int pendingRequests = userProvider.pendingFriendRequests;
-
-    // 這裡判斷是否為訪客
-    final isGuest = userProvider.userId == null;
-
-    // 產生自己的專屬預設頭像網址
+    // ==========================================
+    // 2. 計算預設頭貼 (確保與好友列表顏色統一)
+    // ==========================================
     final List<String> colors = [
-      'E57373',
-      'F06292',
-      'BA68C8',
-      '9575CD',
-      '7986CB',
-      '64B5F6',
-      '4DD0E1',
-      '4DB6AC',
-      '81C784',
-      'AED581',
-      'FFB74D',
-      'FF8A65',
+      'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6',
+      '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65',
     ];
 
+    // 使用恆定不變的 friendId 來計算顏色，如果沒有 ID (訪客) 才退回使用名字
+    final String hashString = friendId?.toString() ?? userName;
     int hash = 0;
-    for (int i = 0; i < userName.length; i++) {
-      hash = (hash * 31 + userName.codeUnitAt(i)) & 0x7FFFFFFF;
+    for (int i = 0; i < hashString.length; i++) {
+      hash = (hash * 31 + hashString.codeUnitAt(i)) & 0x7FFFFFFF;
     }
-
     final String bgColor = colors[hash % colors.length];
 
+    // 頭貼的「文字」顯示名字，但「背景顏色」綁定絕對不變的 ID
     final String defaultAvatarUrl =
         'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=$bgColor&color=fff';
 
+    // ==========================================
+    // 3. 構建側邊欄 UI
+    // ==========================================
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // 自訂 Header，隨字體大小自動撐高
+          // --- 區塊 A：頂部個人資訊 Header ---
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
@@ -75,12 +71,10 @@ class AppDrawer extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 32,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage:
-                        (userAvatar != null && userAvatar.isNotEmpty)
+                    backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
                         ? (userAvatar.startsWith('http')
-                              ? NetworkImage(userAvatar)
-                              : MemoryImage(base64Decode(userAvatar))
-                                    as ImageProvider)
+                            ? NetworkImage(userAvatar)
+                            : MemoryImage(base64Decode(userAvatar)) as ImageProvider)
                         : NetworkImage(defaultAvatarUrl) as ImageProvider,
                   ),
                 ),
@@ -97,7 +91,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isGuest ? '登入解鎖更多功能！' : 'ID：${userProvider.friendId ?? '—'}',
+                  isGuest ? '登入解鎖更多功能！' : 'ID：${friendId ?? '—'}',
                   style: const TextStyle(fontSize: 14, color: Colors.white70),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -106,6 +100,7 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
 
+          // --- 區塊 B：主要功能導覽列 ---
           ListTile(
             leading: const Icon(Icons.home_outlined),
             title: const Text('回首頁', style: TextStyle(fontSize: 16)),
@@ -118,7 +113,6 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
-
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('個人檔案', style: TextStyle(fontSize: 16)),
@@ -130,7 +124,6 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
-
           ListTile(
             leading: const Icon(Icons.bookmark_border),
             title: const Text('我的單字探險', style: TextStyle(fontSize: 16)),
@@ -138,13 +131,10 @@ class AppDrawer extends StatelessWidget {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const ResultGalleryV2Screen(),
-                ),
+                MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
               );
             },
           ),
-
           ListTile(
             leading: const Icon(Icons.people_outline),
             title: const Text('好友', style: TextStyle(fontSize: 16)),
@@ -156,7 +146,6 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
-
           ListTile(
             leading: const Icon(Icons.groups_outlined),
             title: const Text('我的學習小組', style: TextStyle(fontSize: 16)),
@@ -168,36 +157,6 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
-
-          // ListTile(
-          //   leading: const Icon(Icons.person_add_outlined),
-          //   title: const Text('新增好友', style: TextStyle(fontSize: 16)),
-          //   // 如果數量大於 0 就畫出紅圈數字，否則顯示 null (隱藏)
-          //   trailing: pendingRequests > 0
-          //       ? Container(
-          //           padding: const EdgeInsets.all(6), // 控制紅點內部的空間
-          //           decoration: const BoxDecoration(
-          //             color: Colors.redAccent, // 經典的通知紅
-          //             shape: BoxShape.circle, // 圓形
-          //           ),
-          //           child: Text(
-          //             '$pendingRequests',
-          //             style: const TextStyle(
-          //               color: Colors.white,
-          //               fontSize: 12,
-          //               fontWeight: FontWeight.bold,
-          //             ),
-          //           ),
-          //         )
-          //       : null,
-          //   onTap: () {
-          //     Navigator.pop(context);
-          //     Navigator.push(
-          //       context,
-          //       MaterialPageRoute(builder: (_) => const AddFriendScreen()),
-          //     );
-          //   },
-          // ),
           ListTile(
             leading: const Icon(Icons.stars, color: Colors.orange),
             title: const Text(
@@ -219,6 +178,7 @@ class AppDrawer extends StatelessWidget {
 
           const Divider(),
 
+          // --- 區塊 C：系統設定與登出 ---
           ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: const Text('系統設定', style: TextStyle(fontSize: 16)),
@@ -227,15 +187,11 @@ class AppDrawer extends StatelessWidget {
               Future.delayed(Duration.zero, () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const SystemSettingsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const SystemSettingsScreen()),
                 );
               });
             },
           ),
-
-          // --- 修改後的 註冊/登入 或 登出 按鈕 ---
           ListTile(
             leading: Icon(
               isGuest ? Icons.login : Icons.logout,
@@ -249,17 +205,15 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
             onTap: () {
-              Navigator.pop(context); // 先收起側邊欄
+              Navigator.pop(context); 
 
               if (isGuest) {
-                // 訪客點擊：直接跳轉到登入畫面
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
                 );
               } else {
-                // 會員點擊：登出再跳轉到登入畫面
                 context.read<UserProvider>().logout();
                 Navigator.pushAndRemoveUntil(
                   context,

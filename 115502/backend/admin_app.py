@@ -90,6 +90,21 @@ def adjust_pts(user_id):
 @app.route('/customer/delete/<int:user_id>', methods=['POST'])
 def delete_user(user_id):
     conn = get_db_connection()
+    # user_photo_vocab 依賴 user_photo，要先刪
+    conn.execute('''
+        DELETE FROM user_photo_vocab WHERE photo_id IN
+        (SELECT id FROM user_photo WHERE user_id = ?)
+    ''', (user_id,))
+    conn.execute('DELETE FROM user_photo WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_vocab WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_folder WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_ability WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM user_achievement WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM point_transaction WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM friendship WHERE user_id = ? OR friend_id = ?', (user_id, user_id))
+    conn.execute('DELETE FROM friend_request WHERE sender_id = ? OR receiver_id = ?', (user_id, user_id))
+    conn.execute('DELETE FROM group_member WHERE user_id = ?', (user_id,))
+    conn.execute('DELETE FROM feedback WHERE user_id = ?', (user_id,))
     conn.execute('DELETE FROM user WHERE id = ?', (user_id,))
     conn.commit()
     conn.close()

@@ -183,7 +183,8 @@ def google_login():
 
     # 把最後登入日期更新為今天
     user.last_login_date = today
-    
+    user.last_seen_at = datetime.now()
+
     if user.last_scan_date != today:
         user.daily_scans = 0
         user.last_scan_date = today

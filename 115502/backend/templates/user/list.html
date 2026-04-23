@@ -108,6 +108,7 @@
         .meta-chip span { color: #555; font-weight: 600; }
 
         .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .relative-time { cursor: default; border-bottom: 1px dashed #ccc; }
     </style>
 </head>
 <body>
@@ -180,7 +181,13 @@
                 <div class="meta-chip">好友ID：<span>{{ u.friend_id or '—' }}</span></div>
                 <div class="meta-chip">連續登入：<span>{{ u.streak_days or 0 }} 天</span></div>
                 <div class="meta-chip">註冊：<span>{{ u.created_at }}</span></div>
-                <div class="meta-chip">最後上線：<span>{{ u.last_seen_at or '從未登入' }}</span></div>
+                <div class="meta-chip">最後上線：
+                    {% if u.last_seen_at %}
+                    <span class="relative-time" data-time="{{ u.last_seen_at }}" title="{{ u.last_seen_at }}">{{ u.last_seen_at }}</span>
+                    {% else %}
+                    <span>從未登入</span>
+                    {% endif %}
+                </div>
             </div>
 
             <!-- 底部：統計數字 -->
@@ -212,5 +219,23 @@
         {% endfor %}
     </main>
 </div>
+<script>
+function relativeTime(dateStr) {
+    const now = new Date();
+    const past = new Date(dateStr);
+    const diff = Math.floor((now - past) / 1000); // 秒
+
+    if (diff < 60) return '剛剛';
+    if (diff < 3600) return Math.floor(diff / 60) + ' 分鐘前';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' 小時前';
+    if (diff < 86400 * 30) return Math.floor(diff / 86400) + ' 天前';
+    if (diff < 86400 * 365) return Math.floor(diff / (86400 * 30)) + ' 個月前';
+    return Math.floor(diff / (86400 * 365)) + ' 年前';
+}
+
+document.querySelectorAll('.relative-time').forEach(el => {
+    el.textContent = relativeTime(el.dataset.time);
+});
+</script>
 </body>
 </html>

@@ -165,12 +165,11 @@
                 <div class="user-info">
                     <div class="user-name">
                         {{ u.username or '未設定暱稱' }}
-                        <span class="badge-id">#{{ u.id }}</span>
                         {% if u.japanese_level %}
                         <span class="badge-level">{{ u.japanese_level }}</span>
                         {% endif %}
                     </div>
-                    <div class="user-email">{{ u.email }}</div>
+                    <div class="user-email">{{ u.email }} <span style="color:#ddd;">· #{{ u.id }}</span></div>
                 </div>
                 <div class="card-actions">
                     <form action="/customer/delete/{{ u.id }}" method="POST"
@@ -226,7 +225,7 @@
 <script>
 function relativeTime(dateStr) {
     const now = new Date();
-    const past = new Date(dateStr);
+    const past = new Date(dateStr + '+08:00');
     const diff = Math.floor((now - past) / 1000); // 秒
 
     if (diff < 60) return '剛剛';

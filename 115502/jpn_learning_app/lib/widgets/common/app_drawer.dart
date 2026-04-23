@@ -6,7 +6,6 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
-import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
@@ -75,7 +74,8 @@ class AppDrawer extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 32,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
+                    backgroundImage:
+                        (userAvatar != null && userAvatar.isNotEmpty)
                         ? (userAvatar.startsWith('http')
                               ? NetworkImage(userAvatar)
                               : MemoryImage(base64Decode(userAvatar))
@@ -96,9 +96,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isGuest
-                      ? '登入解鎖更多功能！'
-                      : 'ID：${userProvider.friendId ?? '—'}',
+                  isGuest ? '登入解鎖更多功能！' : 'ID：${userProvider.friendId ?? '—'}',
                   style: const TextStyle(fontSize: 14, color: Colors.white70),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

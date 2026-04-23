@@ -166,6 +166,7 @@ except sqlite3.OperationalError as e:
 # ==========================================
 add_column("user", "total_active_days INTEGER DEFAULT 0")
 add_column("user", "total_scans INTEGER DEFAULT 0")
+add_column("user", "last_seen_at DATETIME")
 print("✅ user 表徽章計數器擴充成功！")
 
 # ==========================================

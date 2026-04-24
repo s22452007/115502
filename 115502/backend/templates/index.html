@@ -107,28 +107,6 @@
         .activity-name { font-weight: 600; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .activity-time { font-size: 0.75rem; color: #aaa; margin-top: 1px; }
 
-        /* ===== Quick Links ===== */
-        .quick-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            background: var(--bg);
-            border-radius: 10px;
-            text-decoration: none;
-            color: #444;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-            transition: 0.2s;
-            border: 1px solid transparent;
-        }
-        .quick-link:hover {
-            background: var(--green-light);
-            color: var(--green-accent);
-            border-color: var(--green-accent);
-        }
-        .quick-link:last-child { margin-bottom: 0; }
 
     </style>
 </head>
@@ -203,23 +181,30 @@
 
                 <!-- Right column -->
                 <div class="col-md-5">
-                    <!-- Quick Links -->
-                    <div class="panel mb-4">
-                        <div class="panel-header">⚡ 快速連結</div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            💬 待回覆回饋
+                            {% if feedback_pending > 0 %}
+                            <span style="margin-left:8px;background:rgba(255,255,255,0.2);font-size:0.75rem;padding:2px 8px;border-radius:50px;">{{ feedback_pending }} 筆</span>
+                            {% endif %}
+                        </div>
                         <div class="panel-body">
-                            <a href="/user/list" class="quick-link">👤 使用者資料管理</a>
-                            <a href="/customer/list" class="quick-link">💰 點數管理</a>
-                            <a href="/vocab/list" class="quick-link">📖 教材單字管理</a>
-                            <a href="/quiz/list" class="quick-link">📝 測驗題目管理</a>
-                            <a href="/feedback/list" class="quick-link">
-                                💬 意見回饋
-                                {% if feedback_pending > 0 %}
-                                <span style="margin-left:auto;background:#d9534f;color:white;font-size:0.72rem;padding:2px 8px;border-radius:50px;">{{ feedback_pending }} 待回覆</span>
-                                {% endif %}
-                            </a>
+                            {% if pending_feedbacks %}
+                                {% for f in pending_feedbacks %}
+                                <div class="activity-item">
+                                    <div class="activity-info">
+                                        <div class="activity-name">{{ f.username or f.email or '匿名' }}</div>
+                                        <div class="activity-time" style="color:#888;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ f.content }}</div>
+                                        <div class="activity-time">{{ f.created_at }}</div>
+                                    </div>
+                                    <a href="/feedback/list" style="flex-shrink:0;font-size:0.75rem;color:var(--green-accent);text-decoration:none;font-weight:600;">回覆 →</a>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">沒有待回覆的回饋 🎉</div>
+                            {% endif %}
                         </div>
                     </div>
-
                 </div>
             </div>
 

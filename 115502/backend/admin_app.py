@@ -135,6 +135,19 @@ def admin_dashboard():
             for u in recent_users
         ]
     except: recent_users = []
+    try:
+        pending_feedbacks = conn.execute(
+            '''SELECT f.id, f.feedback_type, f.content, f.created_at, u.username, u.email
+               FROM feedback f
+               LEFT JOIN user u ON f.user_id = u.id
+               WHERE f.reply IS NULL OR f.reply = ""
+               ORDER BY f.created_at DESC LIMIT 5'''
+        ).fetchall()
+        pending_feedbacks = [
+            {**dict(f), 'created_at': utc_to_tw(f['created_at'])}
+            for f in pending_feedbacks
+        ]
+    except: pending_feedbacks = []
     conn.close()
 
     return render_template('index.html',
@@ -144,7 +157,8 @@ def admin_dashboard():
                            today_active=today_active,
                            feedback_total=feedback_total,
                            feedback_pending=feedback_pending,
-                           recent_users=recent_users)
+                           recent_users=recent_users,
+                           pending_feedbacks=pending_feedbacks)
 # ==========================================
 # [使用者管理] 包含點數 (j_pts)
 # ==========================================

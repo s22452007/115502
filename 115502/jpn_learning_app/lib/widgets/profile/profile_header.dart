@@ -53,7 +53,7 @@ class ProfileHeader extends StatelessWidget {
                   radius: 40,
                   backgroundColor: const Color(0xFFC5E1A5),
                   backgroundImage: (userAvatar != null && userAvatar!.isNotEmpty)
-                      ? (userAvatar!.startsWith('http') ? NetworkImage(userAvatar!) : MemoryImage(base64Decode(userAvatar!)) as ImageProvider)
+                      ? (userAvatar!.startsWith('http') ? NetworkImage(userAvatar!) : MemoryImage(base64Decode(userAvatar!.split(",").last)) as ImageProvider)
                       : NetworkImage(defaultAvatarUrl) as ImageProvider,
                 ),
               ),

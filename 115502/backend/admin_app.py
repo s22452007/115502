@@ -126,6 +126,15 @@ def admin_dashboard():
             'SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""'
         ).fetchone()[0]
     except: feedback_pending = 0
+    try:
+        recent_users = conn.execute(
+            "SELECT username, email, last_seen_at FROM user ORDER BY last_seen_at DESC NULLS LAST LIMIT 5"
+        ).fetchall()
+        recent_users = [
+            {**dict(u), 'last_seen_at': utc_to_tw(u['last_seen_at']) if u['last_seen_at'] else '從未登入'}
+            for u in recent_users
+        ]
+    except: recent_users = []
     conn.close()
 
     return render_template('index.html',
@@ -134,7 +143,8 @@ def admin_dashboard():
                            vocab_count=vocab_count,
                            today_active=today_active,
                            feedback_total=feedback_total,
-                           feedback_pending=feedback_pending)
+                           feedback_pending=feedback_pending,
+                           recent_users=recent_users)
 # ==========================================
 # [使用者管理] 包含點數 (j_pts)
 # ==========================================

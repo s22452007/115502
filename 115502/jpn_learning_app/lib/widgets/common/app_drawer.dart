@@ -74,7 +74,7 @@ class AppDrawer extends StatelessWidget {
                     backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
                         ? (userAvatar.startsWith('http')
                             ? NetworkImage(userAvatar)
-                            : MemoryImage(base64Decode(userAvatar)) as ImageProvider)
+                            : MemoryImage(base64Decode(userAvatar.split(",").last)) as ImageProvider)
                         : NetworkImage(defaultAvatarUrl) as ImageProvider,
                   ),
                 ),

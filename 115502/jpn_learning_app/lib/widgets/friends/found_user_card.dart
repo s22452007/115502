@@ -50,7 +50,7 @@ class FoundUserCard extends StatelessWidget {
             backgroundImage: (avatarBase64 != null && avatarBase64.isNotEmpty)
                 ? (avatarBase64.startsWith('http')
                     ? NetworkImage(avatarBase64)
-                    : MemoryImage(base64Decode(avatarBase64)) as ImageProvider)
+                    : MemoryImage(base64Decode(avatarBase64.split(",").last)) as ImageProvider)
                 : NetworkImage(defaultAvatarUrl) as ImageProvider,
           ),
           const SizedBox(width: 12),

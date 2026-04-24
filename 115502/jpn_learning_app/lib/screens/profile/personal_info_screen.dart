@@ -161,7 +161,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     backgroundImage: (avatar != null && avatar.isNotEmpty)
                         ? (avatar.startsWith('http')
                             ? NetworkImage(avatar)
-                            : MemoryImage(base64Decode(avatar)) as ImageProvider)
+                            : MemoryImage(base64Decode(avatar.split(",").last)) as ImageProvider)
                         : NetworkImage(defaultAvatarUrl) as ImageProvider,
                   ),
                 ),

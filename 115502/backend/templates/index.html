@@ -84,7 +84,38 @@
         }
         .panel-body { padding: 16px 20px; }
 
-        /* ===== Activity list ===== */
+        /* ===== Timeline ===== */
+        .timeline { position: relative; padding: 4px 0; }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 17px;
+            top: 0; bottom: 0;
+            width: 2px;
+            background: #eee;
+        }
+        .tl-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 10px 0;
+            position: relative;
+        }
+        .tl-dot {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+        .tl-dot.login  { background: #d4edda; }
+        .tl-info { flex: 1; min-width: 0; padding-top: 2px; }
+        .tl-name { font-weight: 600; font-size: 0.9rem; color: #333; }
+        .tl-desc { font-size: 0.78rem; color: #aaa; margin-top: 2px; }
+
+        /* ===== Activity list (feedback panel) ===== */
         .activity-item {
             display: flex;
             align-items: center;
@@ -93,16 +124,6 @@
             border-bottom: 1px solid #f2f2f2;
         }
         .activity-item:last-child { border-bottom: none; }
-        .activity-avatar {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            background: var(--green-light);
-            color: var(--green-accent);
-            font-weight: bold;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
         .activity-info { flex: 1; min-width: 0; }
         .activity-name { font-weight: 600; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .activity-time { font-size: 0.75rem; color: #aaa; margin-top: 1px; }
@@ -156,22 +177,23 @@
         <!-- Body -->
         <div class="body-area">
             <div class="row g-4">
-                <!-- Recent Activity -->
+                <!-- Timeline -->
                 <div class="col-md-7">
                     <div class="panel">
-                        <div class="panel-header">🕐 最近登入</div>
+                        <div class="panel-header">🕐 最近動態</div>
                         <div class="panel-body">
                             {% if recent_users %}
+                            <div class="timeline">
                                 {% for u in recent_users %}
-                                <div class="activity-item">
-                                    <div class="activity-avatar">{{ (u.username or u.email)[0]|upper }}</div>
-                                    <div class="activity-info">
-                                        <div class="activity-name">{{ u.username or '未設定暱稱' }}</div>
-                                        <div class="activity-time">{{ u.email }}</div>
+                                <div class="tl-item">
+                                    <div class="tl-dot login">👤</div>
+                                    <div class="tl-info">
+                                        <div class="tl-name">{{ u.username or '未設定暱稱' }} 登入</div>
+                                        <div class="tl-desc">{{ u.email }} · {{ u.last_seen_at }}</div>
                                     </div>
-                                    <div style="font-size:0.78rem;color:#bbb;">{{ u.last_seen_at }}</div>
                                 </div>
                                 {% endfor %}
+                            </div>
                             {% else %}
                                 <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">尚無登入紀錄</div>
                             {% endif %}

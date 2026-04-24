@@ -100,28 +100,41 @@ def admin_logout():
 @app.route('/dashboard')
 @admin_login_required
 def admin_dashboard():
+    from datetime import date
     conn = get_db_connection()
     try:
-        user_total = conn.execute('SELECT COUNT(*) FROM user').fetchone()[0]
-    except: user_total = 0
+        user_count = conn.execute('SELECT COUNT(*) FROM user').fetchone()[0]
+    except: user_count = 0
     try:
-        quiz_total = conn.execute('SELECT COUNT(*) FROM quiz_question').fetchone()[0]
-    except: quiz_total = 0
+        photo_count = conn.execute('SELECT COUNT(*) FROM user_photo').fetchone()[0]
+    except: photo_count = 0
+    try:
+        vocab_exists = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='vocab'").fetchone()
+        vocab_count = conn.execute('SELECT COUNT(*) FROM vocab').fetchone()[0] if vocab_exists else 0
+    except: vocab_count = 0
+    try:
+        today_str = date.today().strftime('%Y-%m-%d')
+        today_active = conn.execute(
+            "SELECT COUNT(*) FROM user WHERE DATE(last_login_date) = ?", (today_str,)
+        ).fetchone()[0]
+    except: today_active = 0
     try:
         feedback_total = conn.execute('SELECT COUNT(*) FROM feedback').fetchone()[0]
     except: feedback_total = 0
     try:
-        photo_total = conn.execute('SELECT COUNT(*) FROM photo').fetchone()[0]
-    except: photo_total = 0
+        feedback_pending = conn.execute(
+            'SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""'
+        ).fetchone()[0]
+    except: feedback_pending = 0
     conn.close()
-    
-    # 這裡渲染您的 index.html！
-    return render_template('index.html', 
-                           user_total=user_total, 
-                           quiz_total=quiz_total, 
-                           feedback_total=feedback_total, 
-                           feedback_pending=feedback_total,
-                           photo_total=photo_total)
+
+    return render_template('index.html',
+                           user_count=user_count,
+                           photo_count=photo_count,
+                           vocab_count=vocab_count,
+                           today_active=today_active,
+                           feedback_total=feedback_total,
+                           feedback_pending=feedback_pending)
 # ==========================================
 # [使用者管理] 包含點數 (j_pts)
 # ==========================================

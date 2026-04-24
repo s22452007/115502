@@ -230,6 +230,11 @@
                                 <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">沒有待回覆的回饋 🎉</div>
                             {% endif %}
                         </div>
+                        {% if feedback_pending > 0 %}
+                        <div style="border-top:1px solid #f2f2f2;padding:10px 20px;text-align:center;">
+                            <a href="/feedback/list" style="font-size:0.82rem;color:var(--green-accent);text-decoration:none;font-weight:600;">查看全部 →</a>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

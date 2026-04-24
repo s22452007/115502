@@ -1,9 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class ProfileHeader extends StatelessWidget {
   final bool isGuest;
   final String userName;
+  final String? friendId; // 這個參數：為了給 UserAvatar 算顏色
   final String? userAvatar;
   final String rawLevel;
   final VoidCallback onAvatarTap;
@@ -14,6 +15,7 @@ class ProfileHeader extends StatelessWidget {
     Key? key,
     required this.isGuest,
     required this.userName,
+    this.friendId, 
     required this.userAvatar,
     required this.rawLevel,
     required this.onAvatarTap,
@@ -26,15 +28,8 @@ class ProfileHeader extends StatelessWidget {
     final textColor = const Color(0xFF333333);
     final primaryGreen = const Color.fromARGB(255, 74, 124, 89);
     
-    // 計算預設頭像顏色
-    final String safeName = userName.isEmpty ? 'Guest' : userName;
-    int hash = 0;
-    for (int i = 0; i < safeName.length; i++) {
-      hash = (hash * 31 + safeName.codeUnitAt(i)) & 0x7FFFFFFF;
-    }
-    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
-    final String bgColor = colors[hash % colors.length];
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(safeName)}&background=$bgColor&color=fff';
+    // 💡 我們已經把計算顏色的邏輯交給 UserAvatar 積木處理了，
+    // 所以這裡不需要再寫那些 hash 跟 colors 的陣列囉！
 
     return Row(
       children: [
@@ -43,20 +38,28 @@ class ProfileHeader extends StatelessWidget {
           child: Stack(
             alignment: Alignment.bottomRight,
             children: [
+              // 這是原本的白色邊框跟陰影
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 3))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1), 
+                      blurRadius: 8, 
+                      offset: const Offset(0, 3)
+                    )
+                  ],
                 ),
-                child: CircleAvatar(
-                  radius: 40,
-                  backgroundColor: const Color(0xFFC5E1A5),
-                  backgroundImage: (userAvatar != null && userAvatar!.isNotEmpty)
-                      ? (userAvatar!.startsWith('http') ? NetworkImage(userAvatar!) : MemoryImage(base64Decode(userAvatar!.split(",").last)) as ImageProvider)
-                      : NetworkImage(defaultAvatarUrl) as ImageProvider,
+                // 呼叫我們寫好的共用積木！
+                child: UserAvatar(
+                  avatarBase64: userAvatar,
+                  friendId: friendId,      // 傳入專屬 ID 確保顏色不變
+                  originalName: userName,  // 傳入名字當作預設文字
+                  radius: 40,              // 保持原本的 40 大小
                 ),
               ),
+              // 右下角的相機小圖示
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(

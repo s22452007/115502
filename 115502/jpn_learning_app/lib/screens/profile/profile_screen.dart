@@ -258,6 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         userProvider.username ??
                         userProvider.email?.split('@')[0] ??
                         'Guest',
+                    friendId: userProvider.friendId,
                     userAvatar: userProvider.avatar,
                     rawLevel: userProvider.japaneseLevel ?? '',
                     onAvatarTap: _pickAndUploadImage,

@@ -6,221 +6,239 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
-            --snap-green-dark: #5c8364;
-            --snap-green-light: #dce7de;
-            --snap-bg: #f4f7f5;
+            --green-dark: #2e4d35;
+            --green-mid: #4a7a54;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
         }
-        body {
-            background-color: var(--snap-bg);
-            font-family: "微軟正黑體", sans-serif;
-            color: #444;
-            margin: 0;
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+
+        /* ===== Sidebar ===== */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; }
+        .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
+        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green-accent); font-weight: bold; }
+        .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1.1rem; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+
+        /* ===== Main ===== */
+        .main-content { flex: 1; overflow-x: hidden; }
+
+        /* ===== Stats Banner ===== */
+        .stats-banner {
+            background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+            padding: 28px 48px;
+            display: flex;
+            gap: 0;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            padding: 0 16px;
+            border-right: 1px solid rgba(255,255,255,0.15);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-item .num {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1;
+        }
+        .stat-item .lbl {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.65);
+            margin-top: 6px;
+            letter-spacing: 0.5px;
+        }
+        .stat-item .dot {
+            display: inline-block;
+            width: 7px; height: 7px;
+            background: #6ee07a;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
         }
 
-        /* ===== 左側選單 ===== */
-        .layout { display: flex; min-height: 100vh; }
-        .sidebar {
-            width: 220px;
-            background-color: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.04);
-            padding: 24px 0;
+        /* ===== Body area ===== */
+        .body-area { padding: 32px 48px; }
+
+        /* ===== Cards ===== */
+        .panel {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 14px 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+            background: var(--green-dark);
+            letter-spacing: 0.5px;
+        }
+        .panel-body { padding: 16px 20px; }
+
+        /* ===== Activity list ===== */
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f2f2f2;
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: var(--green-light);
+            color: var(--green-accent);
+            font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem;
             flex-shrink: 0;
         }
-        .sidebar-logo {
+        .activity-info { flex: 1; min-width: 0; }
+        .activity-name { font-weight: 600; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .activity-time { font-size: 0.75rem; color: #aaa; margin-top: 1px; }
+
+        /* ===== Quick Links ===== */
+        .quick-link {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 0 20px 20px;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 12px;
-        }
-        .sidebar-logo .icon-box {
-            width: 36px; height: 36px;
-            background-color: var(--snap-green-light);
+            padding: 12px 14px;
+            background: var(--bg);
             border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--snap-green-dark); font-weight: bold;
-        }
-        .sidebar-logo .title {
-            color: var(--snap-green-dark);
-            font-weight: bold; font-size: 1.1rem;
-        }
-        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
-        .sidebar-menu a {
-            display: flex; align-items: center; gap: 10px;
-            padding: 12px 20px; color: #666;
-            text-decoration: none; font-size: 0.95rem;
-            transition: 0.2s;
-        }
-        .sidebar-menu a:hover {
-            background-color: var(--snap-bg);
-            color: var(--snap-green-dark);
-        }
-        .sidebar-menu a.active {
-            background-color: var(--snap-green-light);
-            color: var(--snap-green-dark);
-            font-weight: bold;
-            border-right: 4px solid var(--snap-green-dark);
-        }
-
-        /* ===== 主內容 ===== */
-        .main-content { flex: 1; padding: 40px 48px; overflow-x: hidden; }
-
-        /* 統計方塊 */
-        .stat-box {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            border: 2px solid var(--snap-green-light);
-            transition: 0.3s;
-            text-align: left;
-        }
-        .stat-box:hover {
-            transform: translateY(-5px);
-            border-color: var(--snap-green-dark);
-        }
-
-        /* 統一按鈕樣式 */
-        .btn-snap-unified {
-            background-color: var(--snap-green-dark);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 12px 30px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
             text-decoration: none;
+            color: #444;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            transition: 0.2s;
+            border: 1px solid transparent;
         }
-        .btn-snap-unified:hover {
-            background-color: #4a6a51;
-            color: white;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 15px rgba(92, 131, 100, 0.2);
+        .quick-link:hover {
+            background: var(--green-light);
+            color: var(--green-accent);
+            border-color: var(--green-accent);
         }
+        .quick-link:last-child { margin-bottom: 0; }
 
-        .card { border: none; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
-        .card-header {
-            background-color: var(--snap-green-dark) !important;
-            color: white !important;
-            border-radius: 20px 20px 0 0 !important;
-            font-weight: bold; padding: 20px;
-            letter-spacing: 1px;
-        }
+        /* ===== System state ===== */
+        .state-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f2f2f2; font-size: 0.85rem; }
+        .state-row:last-child { border-bottom: none; }
+        .badge-ok { background: #d4edda; color: #1a7a38; padding: 2px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="layout">
-        <!-- ========== 左側選單 ========== -->
-      <aside class="sidebar">
-            
-            <div class="sidebar-logo">
-                <div class="icon-box">JL</div>
-                <div class="title">snap to manage</div>
+<div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="icon-box">JL</div>
+            <div class="title">snap to manage</div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard" class="active">🏠 儀表板</a></li>
+            <li><a href="/user/list">👤 使用者資料</a></li>
+            <li><a href="/customer/list">💰 點數管理</a></li>
+            <li><a href="/photo/list">🖼️ 照片管控</a></li>
+            <li><a href="/vocab/list">📖 教材單字管理</a></li>
+            <li><a href="/quiz/list">📝 測驗題目管理</a></li>
+            <li><a href="/feedback/list">💬 意見回饋</a></li>
+            <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;">🚪 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+        <!-- Stats Banner -->
+        <div class="stats-banner">
+            <div class="stat-item">
+                <div class="num">{{ user_count }}</div>
+                <div class="lbl">總使用者</div>
             </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="/" class="active">🏠 儀表板</a></li>
-                <li><a href="/user/list">👤 使用者資料</a></li>
-                <li><a href="/customer/list">💰 點數管理</a></li>
-                <li><a href="/photo/list">🖼️ 照片管控</a></li>
-                <li><a href="/vocab/list">📖 教材單字管理</a></li>
-                <li><a href="/quiz/list">📝 測驗題目管理</a></li>
-                <li><a href="/feedback/list">💬 意見回饋</a></li>
-                
-                <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
-                <li>
-                    <a href="{{ url_for('admin_logout') }}" style="color: #d9534f;">
-                        🚪 登出系統
-                        
-                    </a>
-                </li>
-            </ul>
-        </aside>
-
-        <!-- ========== 主內容 ========== -->
-        <main class="main-content">
-            <h2 style="color: var(--snap-green-dark); font-weight: bold; margin: 0 0 28px;">snap to manage 儀表板</h2>
-
-            <!-- 使用者統計 -->
-            <h6 class="text-muted mb-2 fw-bold">📊 使用者</h6>
-            <div class="row mb-4 g-3">
-                <div class="col-md-6">
-                    <div class="stat-box">
-                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">總使用者</h6>
-                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ user_count }}</h3>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="stat-box">
-                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">
-                            <span style="display:inline-block;width:8px;height:8px;background:#28a745;border-radius:50%;margin-right:6px;"></span>
-                            今日活躍
-                        </h6>
-                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ today_active }}</h3>
-                    </div>
-                </div>
+            <div class="stat-item">
+                <div class="num">{{ today_active }}</div>
+                <div class="lbl"><span class="dot"></span>今日活躍</div>
             </div>
+            <div class="stat-item">
+                <div class="num">{{ vocab_count }}</div>
+                <div class="lbl">教材單字</div>
+            </div>
+            <div class="stat-item">
+                <div class="num" style="{% if feedback_pending > 0 %}color:#f5c542;{% endif %}">{{ feedback_pending }}</div>
+                <div class="lbl">待回覆回饋</div>
+            </div>
+        </div>
 
-            <!-- 內容統計 -->
-            <h6 class="text-muted mb-2 fw-bold">📚 內容</h6>
-            <div class="row mb-4 g-3">
-                <div class="col-md-4">
-                    <div class="stat-box">
-                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">教材單字</h6>
-                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ vocab_count }}</h3>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-box">
-                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">上傳照片</h6>
-                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ photo_count }}</h3>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-box">
-                        <h6 class="text-muted mb-1" style="font-size: 0.9rem;">意見回饋
-                            {% if feedback_pending > 0 %}
-                            <span class="ms-1" style="color:#d9534f; font-weight:bold;">（{{ feedback_pending }} 待回覆）</span>
+        <!-- Body -->
+        <div class="body-area">
+            <div class="row g-4">
+                <!-- Recent Activity -->
+                <div class="col-md-7">
+                    <div class="panel">
+                        <div class="panel-header">🕐 最近登入</div>
+                        <div class="panel-body">
+                            {% if recent_users %}
+                                {% for u in recent_users %}
+                                <div class="activity-item">
+                                    <div class="activity-avatar">{{ (u.username or u.email)[0]|upper }}</div>
+                                    <div class="activity-info">
+                                        <div class="activity-name">{{ u.username or '未設定暱稱' }}</div>
+                                        <div class="activity-time">{{ u.email }}</div>
+                                    </div>
+                                    <div style="font-size:0.78rem;color:#bbb;">{{ u.last_seen_at }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">尚無登入紀錄</div>
                             {% endif %}
-                        </h6>
-                        <h3 style="color: var(--snap-green-dark); font-weight: bold; margin: 0;">{{ feedback_total }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right column -->
+                <div class="col-md-5">
+                    <!-- Quick Links -->
+                    <div class="panel mb-4">
+                        <div class="panel-header">⚡ 快速連結</div>
+                        <div class="panel-body">
+                            <a href="/user/list" class="quick-link">👤 使用者資料管理</a>
+                            <a href="/customer/list" class="quick-link">💰 點數管理</a>
+                            <a href="/vocab/list" class="quick-link">📖 教材單字管理</a>
+                            <a href="/quiz/list" class="quick-link">📝 測驗題目管理</a>
+                            <a href="/feedback/list" class="quick-link">
+                                💬 意見回饋
+                                {% if feedback_pending > 0 %}
+                                <span style="margin-left:auto;background:#d9534f;color:white;font-size:0.72rem;padding:2px 8px;border-radius:50px;">{{ feedback_pending }} 待回覆</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- System States -->
+                    <div class="panel">
+                        <div class="panel-header">🖥️ 系統狀態</div>
+                        <div class="panel-body">
+                            <div class="state-row"><span>Database</span><span class="badge-ok">OK</span></div>
+                            <div class="state-row"><span>API Server</span><span class="badge-ok">OK</span></div>
+                            <div class="state-row"><span>Admin Panel</span><span class="badge-ok">OK</span></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card shadow">
-                <div class="card-header">
-                    ✦ 系統管理控制台
-                </div>
-                <div class="card-body p-4">
-                    <p class="text-muted mb-4" style="font-size: 1rem;">請選擇您要進行的管理項目：</p>
-
-                    <div class="d-flex flex-row flex-wrap gap-3">
-                        <a href="/user/list" class="btn-snap-unified">
-                            👤 使用者資料
-                        </a>
-                        <a href="/customer/list" class="btn-snap-unified">
-                            💰 點數管理
-                        </a>
-                        <a href="/photo/list" class="btn-snap-unified">
-                            🖼️ 照片管控
-                        </a>
-                        <a href="/vocab/list" class="btn-snap-unified">
-                            📖 教材單字
-                        </a>
-                        <a href="/feedback/list" class="btn-snap-unified">
-                            💬 意見回饋
-                        </a>
-                        
-                    </div>
-                </div>
-            </div>
-
-            <p class="mt-4 text-muted" style="font-size: 0.8rem;">© 2026 JLens Project Team. All rights reserved.</p>
-        </main>
-    </div>
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+        </div>
+    </main>
+</div>
 </body>
 </html>

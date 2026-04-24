@@ -186,7 +186,11 @@
                             <div class="timeline">
                                 {% for u in recent_users %}
                                 <div class="tl-item">
-                                    <div class="tl-dot login">👤</div>
+                                    {% if u.avatar %}
+                                    <img src="{{ u.avatar }}" class="tl-dot" style="object-fit:cover;">
+                                    {% else %}
+                                    <div class="tl-dot login" style="font-size:0.9rem;font-weight:bold;color:#4a7a54;">{{ (u.username or u.email)[0]|upper }}</div>
+                                    {% endif %}
                                     <div class="tl-info">
                                         <div class="tl-name">{{ u.username or '未設定暱稱' }} 登入</div>
                                         <div class="tl-desc">{{ u.email }} · {{ u.last_seen_at }}</div>

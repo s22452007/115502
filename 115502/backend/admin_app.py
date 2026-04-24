@@ -127,6 +127,11 @@ def admin_dashboard():
         ).fetchone()[0]
     except: feedback_pending = 0
     try:
+        new_users_today = conn.execute(
+            "SELECT COUNT(*) FROM user WHERE DATE(created_at) = ?", (today_str,)
+        ).fetchone()[0]
+    except: new_users_today = 0
+    try:
         recent_users = conn.execute(
             "SELECT username, email, avatar, last_seen_at FROM user ORDER BY last_seen_at DESC NULLS LAST LIMIT 5"
         ).fetchall()
@@ -158,7 +163,8 @@ def admin_dashboard():
                            feedback_total=feedback_total,
                            feedback_pending=feedback_pending,
                            recent_users=recent_users,
-                           pending_feedbacks=pending_feedbacks)
+                           pending_feedbacks=pending_feedbacks,
+                           new_users_today=new_users_today)
 # ==========================================
 # [使用者管理] 包含點數 (j_pts)
 # ==========================================

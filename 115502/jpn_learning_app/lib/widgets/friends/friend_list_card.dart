@@ -30,19 +30,10 @@ class FriendListCard extends StatelessWidget {
     const Color darkGreen = Color(0xFF4A7A4D);
     const Color lightGreen = Color(0xFFBFE1C3);
 
-    if (friend == null || friend is! Map) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        color: Colors.red.shade100,
-        child: Text('❌ 資料格式錯誤: $friend', style: const TextStyle(color: Colors.red)),
-      );
-    }
+    if (friend == null || friend is! Map) return const SizedBox();
 
     final friendId = friend['friend_id']?.toString() ?? '尚未產生';
     final String? avatarBase64 = friend['avatar']?.toString();
-    const statusText = '一起開心學日文 📚';
-
     // 1. 取得名字資料
     final String originalName = friend['username']?.toString() ?? friend['original_name']?.toString() ?? '';
     final String? customNickname = friend['nickname']?.toString();
@@ -52,7 +43,9 @@ class FriendListCard extends StatelessWidget {
     // 如果有自訂暱稱，主要顯示暱稱；如果沒有，就顯示原名；如果連原名都沒有，只好暫時顯示他的 ID
     final String displayName = hasCustomNickname ? customNickname : (originalName.isNotEmpty ? originalName : friendId);
 
-    // 頭貼上的文字「永遠」只用原名或 ID，絕不使用會變動的備註(displayName)
+    // 呼叫翻譯機，取得真實日語程度
+    final String statusText = _getDisplayLevel(friend['japanese_level']?.toString());
+
     final String avatarText = originalName.isNotEmpty ? originalName : friendId;
     
     // 顏色也永遠綁定不變的 friendId

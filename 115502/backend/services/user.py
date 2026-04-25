@@ -494,7 +494,8 @@ def get_friends_list(user_id):
             "friend_id": friend_user.friend_id,
             "avatar": friend_user.avatar,
             "username": original_name, # 傳送原名
-            "nickname": f.nickname     # 傳送你在 Friendship 表格幫他取的備註 (如果沒取過，這裡會是 None)
+            "nickname": f.nickname,     # 傳送你在 Friendship 表格幫他取的備註 (如果沒取過，這裡會是 None)
+            "japanese_level": friend_user.japanese_level
             })
             
     return jsonify({"friends": result}), 200

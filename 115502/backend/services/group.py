@@ -366,6 +366,7 @@ def get_friends_detailed_status():
                 'avatar': f_user.avatar,
                 'has_group': has_group,  
                 'is_invited': is_invited, 
+                'japanese_level': f_user.japanese_level
             })
 
         return jsonify({"friends": detailed_friends}), 200

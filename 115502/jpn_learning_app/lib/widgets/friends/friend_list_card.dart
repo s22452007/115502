@@ -12,21 +12,6 @@ class FriendListCard extends StatelessWidget {
     required this.onMoreTap,
   }) : super(key: key);
 
-  // 取得專屬固定顏色
-  String _getFixedColor(String name) {
-    final List<String> colors = [
-      'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB',
-      '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581',
-      'FFB74D', 'FF8A65',
-    ];
-    int hash = 0;
-    for (int i = 0; i < name.length; i++) {
-      hash = (hash * 31 + name.codeUnitAt(i)) & 0x7FFFFFFF;
-    }
-    return colors[hash % colors.length];
-  }
-
-
   @override
   Widget build(BuildContext context) {
     const Color darkGreen = Color(0xFF4A7A4D);
@@ -51,7 +36,7 @@ class FriendListCard extends StatelessWidget {
     final String avatarText = originalName.isNotEmpty ? originalName : friendId;
     
     // 顏色也永遠綁定不變的 friendId
-    final String bgColor = _getFixedColor(friendId);
+    final String bgColor = AppHelpers.getFixedColor(friendId);
     
     // 這樣一來，這串網址對同一個好友永遠長得一模一樣，絕對不會重新下載跟閃爍！
     final String defaultAvatarUrl =

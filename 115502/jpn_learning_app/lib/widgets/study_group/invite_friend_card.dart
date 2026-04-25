@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/helpers.dart';
 
 class InviteFriendCard extends StatelessWidget {
   final Map<String, dynamic> friend;
@@ -11,14 +12,6 @@ class InviteFriendCard extends StatelessWidget {
     required this.friend,
     required this.onToggleInvite,
   }) : super(key: key);
-
-  String _getFixedColor(String name) {
-    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
-    int hash = 0;
-    for (int i = 0; i < name.length; i++) { hash = (hash * 31 + name.codeUnitAt(i)) & 0x7FFFFFFF; }
-    return colors[hash % colors.length];
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +66,7 @@ class InviteFriendCard extends StatelessWidget {
                 Text('@$friendId', style: const TextStyle(fontSize: 14, color: subText)),
                 const SizedBox(height: 8),
                 
-                // 🌟 新增：把程度標籤也印在邀請卡片上！
+                // 把程度標籤也印在邀請卡片上！
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(8)),

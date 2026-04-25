@@ -123,14 +123,8 @@ class FriendListCard extends StatelessWidget {
                 // 狀態標籤
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: lightGreen.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    statusText,
-                    style: TextStyle(color: darkGreen, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+                  decoration: BoxDecoration(color: lightGreen.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+                  child: Text(statusText, style: const TextStyle(color: darkGreen, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

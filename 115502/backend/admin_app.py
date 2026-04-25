@@ -441,9 +441,17 @@ def vocab_add():
     word = request.form.get('word')
     kana = request.form.get('kana')
     meaning = request.form.get('meaning')
-    level = request.form.get('level')
     
-    new_vocab = Vocab(word=word, kana=kana, meaning=meaning, level=level)
+    # 💡 關鍵修正：因為您的模型規定 scene_id 不能是空的 (nullable=False)
+    # 這裡我們先預設給 1 (代表預設場景)，未來您可以再把「選擇場景」的功能加進前端！
+    scene_id = 1 
+
+    new_vocab = Vocab(
+        scene_id=scene_id, 
+        word=word, 
+        kana=kana, 
+        meaning=meaning
+    )
     db.session.add(new_vocab)
     db.session.commit()
     return redirect(url_for('vocab_list'))
@@ -456,11 +464,11 @@ def vocab_edit(id):
     vocab.word = request.form.get('word')
     vocab.kana = request.form.get('kana')
     vocab.meaning = request.form.get('meaning')
-    vocab.level = request.form.get('level')
+    
+    # 移除了原本會報錯的 vocab.level = ...
     
     db.session.commit()
     return redirect(url_for('vocab_list'))
-
 # 4. 刪 (Delete) - 刪除單字
 @app.route('/vocab/delete/<int:id>', methods=['POST'])
 @admin_login_required

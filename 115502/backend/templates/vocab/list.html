@@ -25,7 +25,7 @@
             <div class="title">snap to manage</div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="/">🏠 首頁</a></li>
+            <li><a href="/">🏠 儀表板</a></li>
             <li><a href="/user/list">👤 使用者資料</a></li>
             <li><a href="/customer/list">💰 點數管理</a></li>
             <li><a href="/photo/list">🖼️ 照片管控</a></li>
@@ -51,7 +51,6 @@
                     <span class="input-group-text bg-white text-muted border-end-0">🔍</span>
                     <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="搜尋日文、假名或中文...">
                 </div>
-                
                 <button class="btn btn-snap text-nowrap" data-bs-toggle="modal" data-bs-target="#addModal">+ 新增單字</button>
             </div>
         </div>
@@ -65,7 +64,6 @@
                             <th>單字 (Word)</th>
                             <th>讀音 (Kana)</th>
                             <th>中文意思</th>
-                            <th>等級</th>
                             <th class="text-end">操作</th>
                         </tr>
                     </thead>
@@ -76,7 +74,6 @@
                             <td class="fw-bold">{{ v.word }}</td>
                             <td>{{ v.kana }}</td>
                             <td>{{ v.meaning }}</td>
-                            <td><span class="badge bg-secondary">{{ v.level }}</span></td>
                             <td class="text-end">
                                 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ v.id }}">編輯</button>
                                 <form action="{{ url_for('vocab_delete', id=v.id) }}" method="POST" style="display:inline;">
@@ -94,16 +91,9 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <input type="text" name="word" class="form-control mb-3" value="{{ v.word }}" required>
-                                            <input type="text" name="kana" class="form-control mb-3" value="{{ v.kana }}">
-                                            <input type="text" name="meaning" class="form-control mb-3" value="{{ v.meaning }}" required>
-                                            <select name="level" class="form-select">
-                                                <option value="N5" {% if v.level == 'N5' %}selected{% endif %}>N5</option>
-                                                <option value="N4" {% if v.level == 'N4' %}selected{% endif %}>N4</option>
-                                                <option value="N3" {% if v.level == 'N3' %}selected{% endif %}>N3</option>
-                                                <option value="N2" {% if v.level == 'N2' %}selected{% endif %}>N2</option>
-                                                <option value="N1" {% if v.level == 'N1' %}selected{% endif %}>N1</option>
-                                            </select>
+                                            <input type="text" name="word" class="form-control mb-3" value="{{ v.word }}" placeholder="日文單字" required>
+                                            <input type="text" name="kana" class="form-control mb-3" value="{{ v.kana }}" placeholder="讀音(假名)" required>
+                                            <input type="text" name="meaning" class="form-control mb-3" value="{{ v.meaning }}" placeholder="中文意思" required>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="submit" class="btn btn-snap">儲存變更</button>
@@ -114,7 +104,7 @@
                         </div>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">目前資料庫中還沒有單字喔！快新增一個吧！</td>
+                            <td colspan="5" class="text-center py-4 text-muted">目前資料庫中還沒有單字喔！快新增一個吧！</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -138,21 +128,11 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small">讀音 (假名)</label>
-                            <input type="text" name="kana" class="form-control" placeholder="例：ねこ">
+                            <input type="text" name="kana" class="form-control" placeholder="例：ねこ" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small">中文意思</label>
                             <input type="text" name="meaning" class="form-control" placeholder="例：貓咪" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small">等級</label>
-                            <select name="level" class="form-select">
-                                <option value="N5">N5</option>
-                                <option value="N4">N4</option>
-                                <option value="N3">N3</option>
-                                <option value="N2">N2</option>
-                                <option value="N1">N1</option>
-                            </select>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -165,7 +145,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('searchInput');

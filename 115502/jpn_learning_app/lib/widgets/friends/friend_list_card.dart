@@ -25,6 +25,18 @@ class FriendListCard extends StatelessWidget {
     return colors[hash % colors.length];
   }
 
+  // 🌟 新增：日語程度翻譯機
+  String _getDisplayLevel(String? dbLevel) {
+    if (dbLevel == null || dbLevel.isEmpty) return '尚未設定等級 🌱';
+    switch (dbLevel) {
+      case 'N1': return 'N1 日語大師 🎓';
+      case 'N2': return 'N2 商務菁英 💼';
+      case 'N3': return 'N3 交流無礙 🗣️';
+      case 'N4': return 'N4 生活達人 🚶';
+      case 'N5': default: return 'N5 日語新手 🌱';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color darkGreen = Color(0xFF4A7A4D);

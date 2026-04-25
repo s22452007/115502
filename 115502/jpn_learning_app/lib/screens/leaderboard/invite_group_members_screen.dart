@@ -58,6 +58,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                 'invited': false,
                 'has_group': f['has_group'] ?? false,
                 'is_invited': f['is_invited'] ?? false,
+                'japanese_level': f['japanese_level']?.toString(),
               };
             }).toList();
           } else if (result.containsKey('error')) {

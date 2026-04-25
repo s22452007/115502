@@ -130,11 +130,11 @@
         │
         └── widgets/                     # 元件層 (Reusable Components)
             ├── common/                  # 通用零件
-            │   ├── app_bar_widget.dart  # 頂部統一樣式導航列
             │   ├── app_drawer.dart      # 側邊欄：跳轉各主要功能
             │   ├── bottom_nav_bar.dart  # 底部主導航列 (五大功能)
             │   ├── radar_chart.dart     # 五角能力分佈圖繪製元件
             │   ├── status_chip.dart     # 各類小標籤 (如等級、狀態)
+            │   ├── user_avatar.dart
             │   └── premium_locked_overlay.dart# 鎖定層：提示功能需付費解鎖
             │            
             ├── home/                    # 首頁零件

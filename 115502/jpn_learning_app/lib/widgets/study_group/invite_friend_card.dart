@@ -19,17 +19,6 @@ class InviteFriendCard extends StatelessWidget {
     return colors[hash % colors.length];
   }
 
-  // 日語程度翻譯機
-  String _getDisplayLevel(String? dbLevel) {
-    if (dbLevel == null || dbLevel.isEmpty) return '尚未設定等級 🌱';
-    switch (dbLevel) {
-      case 'N1': return '日語大師 🎓';
-      case 'N2': return '商務菁英 💼';
-      case 'N3': return '交流無礙 🗣️';
-      case 'N4': return '生活達人 🚶';
-      case 'N5': default: return '日語新手 🌱';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,10 +37,10 @@ class InviteFriendCard extends StatelessWidget {
     final String displayName = hasCustomNickname ? customNickname : (originalName.isNotEmpty ? originalName : friendId);
 
     // 呼叫翻譯機，取得真實日語程度
-    final String statusText = _getDisplayLevel(friend['japanese_level']?.toString());
+    final String statusText = AppHelpers.getDisplayLevel(friend['japanese_level']?.toString());
 
     final String avatarText = originalName.isNotEmpty ? originalName : friendId;
-    final String bgColor = _getFixedColor(friendId);
+    final String bgColor = AppHelpers.getFixedColor(friendId);
     final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(avatarText)}&background=$bgColor&color=fff';
 
     return Container(

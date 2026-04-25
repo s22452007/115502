@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
+import 'package:jpn_learning_app/utils/helpers.dart';
 
 class ProfileHeader extends StatelessWidget {
   final bool isGuest;
@@ -9,7 +10,6 @@ class ProfileHeader extends StatelessWidget {
   final String rawLevel;
   final VoidCallback onAvatarTap;
   final VoidCallback onNameTap;
-  final String Function(String?) getDisplayLevel;
 
   const ProfileHeader({
     Key? key,
@@ -20,7 +20,6 @@ class ProfileHeader extends StatelessWidget {
     required this.rawLevel,
     required this.onAvatarTap,
     required this.onNameTap,
-    required this.getDisplayLevel,
   }) : super(key: key);
 
   @override
@@ -97,7 +96,7 @@ class ProfileHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(isGuest ? '登入解鎖更多功能' : getDisplayLevel(rawLevel), style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              Text(isGuest ? '登入解鎖更多功能' : AppHelpers.getDisplayLevel(rawLevel), style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),

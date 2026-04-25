@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/helpers.dart'; 
 
 // UI 元件與其他畫面
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
@@ -42,24 +43,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==========================================
   // 邏輯函式區塊
   // ==========================================
-
-  // 將資料庫的 N 等級轉換為好聽的稱號
-  String _getDisplayLevel(String? dbLevel) {
-    if (dbLevel == null || dbLevel.isEmpty) return '尚未設定等級';
-    switch (dbLevel) {
-      case 'N1':
-        return '日語大師';
-      case 'N2':
-        return '商務菁英';
-      case 'N3':
-        return '交流無礙';
-      case 'N4':
-        return '生活達人';
-      case 'N5':
-      default:
-        return '日語新手';
-    }
-  }
 
   Future<void> _fetchData() async {
     final userId = context.read<UserProvider>().userId;
@@ -260,11 +243,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'Guest',
                     friendId: userProvider.friendId,
                     userAvatar: userProvider.avatar,
-                    rawLevel: userProvider.japaneseLevel ?? '',
+                    
+                    rawLevel: userProvider.japaneseLevel, 
+                    
                     onAvatarTap: _pickAndUploadImage,
                     onNameTap: _editNickname,
-                    getDisplayLevel: _getDisplayLevel,
-                  ),
+                    ),
                   const SizedBox(height: 32),
                   ProfileRadarSection(
                     isGuest: isGuest,

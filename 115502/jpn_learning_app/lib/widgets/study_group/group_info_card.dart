@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
+// 1. 記得引入我們的高級共用頭貼積木
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class GroupInfoCard extends StatelessWidget {
   final String groupName;
@@ -36,16 +37,28 @@ class GroupInfoCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (index) {
+              // 如果這個位置有真實成員，就畫他的頭貼
               if (index < members.length) {
+                final member = members[index];
+                
+                // 2. 取出該成員的資料 (我們剛才在後端 API 已經打包進去了)
+                final String friendId = member['friend_id']?.toString() ?? '';
+                final String originalName = member['username']?.toString() ?? member['nickname']?.toString() ?? '未知';
+                final String? avatarBase64 = member['avatar']?.toString();
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: CircleAvatar(
+                  // 3. 呼叫 UserAvatar，取代原本的 CircleAvatar！
+                  child: UserAvatar(
+                    avatarBase64: avatarBase64,
+                    friendId: friendId,
+                    originalName: originalName,
                     radius: 21,
-                    backgroundColor: AppColors.primaryLighter,
-                    child: Icon(Icons.person, color: AppColors.primary),
                   ),
                 );
-              } else {
+              } 
+              // 如果是空位，就畫灰色的 ➕ 號
+              else {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: const CircleAvatar(

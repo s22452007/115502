@@ -587,6 +587,23 @@ class ApiClient {
     }
   }
 
+  // 撤銷小組邀請
+  static Future<Map<String, dynamic>> cancelGroupInvite(int groupId, String receiverId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/cancel_invite'), 
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'group_id': groupId,
+          'receiver_id': receiverId, 
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗，請稍後再試'};
+    }
+  }
+
   // 退出/解散小組 API
   static Future<Map<String, dynamic>> leaveGroup(
     int groupId,

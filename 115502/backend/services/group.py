@@ -256,6 +256,37 @@ def get_group_invites(user_id):
     return jsonify({"invites": result}), 200
 
 # ==========================================
+# 撤銷小組邀請 (POST /cancel_invite)
+# ==========================================
+@group_bp.route('/cancel_invite', methods=['POST'])
+def cancel_invite():
+    data = request.get_json()
+    group_id = data.get('group_id')
+    receiver_id = data.get('receiver_id') # 被邀請人的 ID
+
+    if not group_id or not receiver_id:
+        return jsonify({"error": "缺少必要資訊"}), 400
+
+    try:
+        # 找出那筆還在 pending 的邀請紀錄
+        invite = GroupInvite.query.filter_by(
+            group_id=group_id, 
+            receiver_id=receiver_id, 
+            status='pending'
+        ).first()
+
+        if invite:
+            db.session.delete(invite)
+            db.session.commit()
+            return jsonify({"message": "已成功取消邀請"}), 200
+        else:
+            return jsonify({"error": "找不到該邀請紀錄，可能已被對方處理或刪除"}), 404
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"取消邀請失敗: {str(e)}"}), 500
+    
+# ==========================================
 # 4. 回覆小組邀請 (POST /respond_invite)
 # ==========================================
 @group_bp.route('/respond_invite', methods=['POST'])

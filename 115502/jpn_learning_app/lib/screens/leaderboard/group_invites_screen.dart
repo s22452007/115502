@@ -150,6 +150,7 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
                     return GroupInviteCard(
                       groupName: groupName,
                       inviterName: inviterName,
+                      inviterNickname: item['inviter_nickname']?.toString(),
                       inviterFriendId: item['inviter_friend_id']?.toString() ?? '',
                       inviterAvatar: item['inviter_avatar']?.toString(),
                       inviterLevelText: AppHelpers.getDisplayLevel(item['inviter_level']?.toString()),

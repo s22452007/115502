@@ -226,17 +226,21 @@ def get_group_invites(user_id):
             # 取得原名
             original_name = sender.username or sender.email.split('@')[0]
             
+            # 去 Friendship 表格查查看，接收者(你)有沒有幫發送者取過暱稱(備註)？
+            fs = Friendship.query.filter_by(user_id=user_id, friend_id=sender.id).first()
+            custom_nickname = fs.nickname if fs else None
+
             result.append({
                 "invite_id": inv.id,
                 "group_id": group.id,
                 "group_name": group.name,
-                "inviter_name": original_name,
-                "inviter_friend_id": sender.friend_id, # 邀請人的專屬 ID
-                "inviter_avatar": sender.avatar,       # 邀請人的頭貼
-                "inviter_level": sender.japanese_level # 邀請人的日語程度
+                "inviter_name": original_name,       # 原名
+                "inviter_nickname": custom_nickname, # 🌟 新增：打包專屬備註
+                "inviter_friend_id": sender.friend_id, 
+                "inviter_avatar": sender.avatar,       
+                "inviter_level": sender.japanese_level 
             })
     return jsonify({"invites": result}), 200
-
 
 # ==========================================
 # 4. 回覆小組邀請 (POST /respond_invite)

@@ -83,11 +83,11 @@ def get_my_group(user_id):
             "has_group": False, 
             "message": msg, 
             "just_expired": True,
-            "new_j_pts": latest_pts # 新增：把結算後的最新餘額回傳給前端！
+            "new_j_pts": latest_pts
         }), 200
     # -----------------------------------------------------
 
-    # 抓取這個小組的所有成員
+    # 1️⃣ 先抓取這個小組的「正式成員」
     members = GroupMember.query.filter_by(group_id=group.id).all()
     member_data = []
     for m in members:
@@ -95,7 +95,6 @@ def get_my_group(user_id):
         if u:
             # 取得原名
             original_name = u.username or u.email.split('@')[0]
-            
             member_data.append({
                 "user_id": u.id,
                 "friend_id": u.friend_id, # 傳送 ID 用來算顏色
@@ -108,7 +107,21 @@ def get_my_group(user_id):
                 "group_points": m.group_points,              
                 "group_logins": m.group_logins 
             })
+
+    # 2️⃣ 接著抓取這個小組「邀請中 (pending)」的名單 (這是我們新增的！)
+    pending_invites = GroupInvite.query.filter_by(group_id=group.id, status='pending').all()
+    pending_data = []
+    for inv in pending_invites:
+        u = User.query.get(inv.receiver_id)
+        if u:
+            original_name = u.username or u.email.split('@')[0]
+            pending_data.append({
+                "friend_id": u.friend_id,
+                "username": original_name,
+                "avatar": u.avatar
+            })
             
+    # 3️⃣ 兩邊都抓完之後，最後統一打包回傳！
     return jsonify({
         "has_group": True,
         "group_id": group.id,
@@ -117,9 +130,9 @@ def get_my_group(user_id):
         "goal_target": group.goal_target, 
         "current_progress": group.current_progress, 
         "reward_points": group.reward_points,       
-        "members": member_data
+        "members": member_data,              # 正式成員
+        "pending_invites": pending_data      # 把邀請中的名單也一起交給前端！
     }), 200
-
 
 # ==========================================
 # 2. 創建小組 (POST /create)
@@ -235,7 +248,7 @@ def get_group_invites(user_id):
                 "group_id": group.id,
                 "group_name": group.name,
                 "inviter_name": original_name,       # 原名
-                "inviter_nickname": custom_nickname, # 🌟 新增：打包專屬備註
+                "inviter_nickname": custom_nickname, # 打包專屬備註
                 "inviter_friend_id": sender.friend_id, 
                 "inviter_avatar": sender.avatar,       
                 "inviter_level": sender.japanese_level 

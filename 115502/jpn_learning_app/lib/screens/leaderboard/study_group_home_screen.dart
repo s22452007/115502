@@ -42,7 +42,11 @@ class StudyGroupHomeScreen extends StatelessWidget {
       child: Column(
         children: [
           // 🧱 積木 1：小組資訊
-          GroupInfoCard(groupName: groupName, members: members),
+          GroupInfoCard(
+            groupName: groupData['group_name'],
+            members: groupData['members'] ?? [],
+            pendingInvites: groupData['pending_invites'] ?? [], // 接住邀請中名單
+          ),
           const SizedBox(height: 16),
 
           // 🧱 積木 2：進度與領獎

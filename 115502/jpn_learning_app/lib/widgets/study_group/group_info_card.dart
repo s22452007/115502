@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-// 1. 記得引入我們的高級共用頭貼積木
+import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class GroupInfoCard extends StatelessWidget {
   final String groupName;
   final List<dynamic> members;
+  final List<dynamic> pendingInvites; // 1. 新增這個參數
 
   const GroupInfoCard({
     Key? key,
     required this.groupName,
     required this.members,
+    this.pendingInvites = const [], // 預設為空陣列
   }) : super(key: key);
 
   @override
@@ -21,7 +23,7 @@ class GroupInfoCard extends StatelessWidget {
     String hostName = '無';
     for (var m in members) {
       if (m['is_host'] == true) {
-        hostName = m['nickname'] ?? '未知';
+        hostName = m['nickname'] ?? m['username'] ?? '未知';
         break;
       }
     }
@@ -37,31 +39,43 @@ class GroupInfoCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (index) {
-              // 如果這個位置有真實成員，就畫他的頭貼
+              // 狀況 1：正式成員 (畫正常頭貼)
               if (index < members.length) {
                 final member = members[index];
-                
-                // 2. 取出該成員的資料 (我們剛才在後端 API 已經打包進去了)
-                final String friendId = member['friend_id']?.toString() ?? '';
-                final String originalName = member['username']?.toString() ?? member['nickname']?.toString() ?? '未知';
-                final String? avatarBase64 = member['avatar']?.toString();
-
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  // 3. 呼叫 UserAvatar，取代原本的 CircleAvatar！
                   child: UserAvatar(
-                    avatarBase64: avatarBase64,
-                    friendId: friendId,
-                    originalName: originalName,
+                    avatarBase64: member['avatar']?.toString(),
+                    friendId: member['friend_id']?.toString() ?? '',
+                    originalName: member['username']?.toString() ?? '未知',
                     radius: 21,
                   ),
                 );
               } 
-              // 如果是空位，就畫灰色的 ➕ 號
-              else {
+              // 狀況 2：邀請中的人 (畫半透明頭貼)
+              else if (index < members.length + pendingInvites.length) {
+                final pendingIndex = index - members.length;
+                final pendingUser = pendingInvites[pendingIndex];
+                
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: const CircleAvatar(
+                  // 用 Opacity 把他變半透明，暗示他還沒正式加入
+                  child: Opacity(
+                    opacity: 0.4, 
+                    child: UserAvatar(
+                      avatarBase64: pendingUser['avatar']?.toString(),
+                      friendId: pendingUser['friend_id']?.toString() ?? '',
+                      originalName: pendingUser['username']?.toString() ?? '未知',
+                      radius: 21,
+                    ),
+                  ),
+                );
+              } 
+              // 狀況 3：沒人邀的空位 (畫加號)
+              else {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: CircleAvatar(
                     radius: 21,
                     backgroundColor: Colors.white54,
                     child: Icon(Icons.add, color: Colors.black38),

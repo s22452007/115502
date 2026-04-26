@@ -248,24 +248,29 @@ def delete_photo(photo_id):
 @app.route('/feedback/list')
 @admin_login_required
 def feedback_list():
+    status = request.args.get('status', 'all')
     conn = get_db_connection()
-    query = '''
+    base = '''
         SELECT f.id, f.feedback_type, f.content, f.reply, f.replied_at, f.created_at,
                u.username, u.email
         FROM feedback f
         LEFT JOIN user u ON f.user_id = u.id
-        ORDER BY f.created_at DESC
     '''
+    if status == 'pending':
+        query = base + 'WHERE (f.reply IS NULL OR f.reply = "") ORDER BY f.created_at DESC'
+    elif status == 'replied':
+        query = base + 'WHERE f.reply IS NOT NULL AND f.reply != "" ORDER BY f.created_at DESC'
+    else:
+        query = base + 'ORDER BY f.created_at DESC'
     feedbacks = conn.execute(query).fetchall()
     conn.close()
-    # 把時間都轉成台灣時間
     feedbacks = [
         {**dict(f),
          'created_at': utc_to_tw(f['created_at']),
          'replied_at': utc_to_tw(f['replied_at']) if f['replied_at'] else None}
         for f in feedbacks
     ]
-    return render_template('feedback/list.html', feedbacks=feedbacks)
+    return render_template('feedback/list.html', feedbacks=feedbacks, status=status)
 
 @app.route('/feedback/reply/<int:feedback_id>', methods=['POST'])
 @admin_login_required

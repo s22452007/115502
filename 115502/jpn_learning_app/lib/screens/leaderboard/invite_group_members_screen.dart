@@ -171,6 +171,34 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     }
   }
 
+  // 取消邀請的動作
+  Future<void> _cancelInvite(String friendIdStr) async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null || widget.groupId == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await ApiClient.cancelGroupInvite(widget.groupId!, friendIdStr);
+
+      if (mounted) {
+        if (result.containsKey('error')) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已取消邀請')));
+          // 成功後，重新抓取名單，這樣按鈕就會變回綠色的「邀請」
+          await _fetchFriends(); 
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('取消失敗，請稍後再試')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   List<Map<String, dynamic>> get _filteredFriends {
     final keyword = _searchController.text.trim().toLowerCase();
     if (keyword.isEmpty) return _friends;
@@ -253,6 +281,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final friend = _filteredFriends[index];
+                        final String friendIdStr = friend['id'].toString();
                         // 使用抽離出來的積木
                         return InviteFriendCard(
                           friend: friend,
@@ -269,7 +298,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                                 }
                               }
                             });
-                          },
+                          },onCancelInvite: () => _cancelInvite(friendIdStr), 
                         );
                       },
                     ),

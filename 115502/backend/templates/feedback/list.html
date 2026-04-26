@@ -218,6 +218,23 @@
         <main class="main-content">
             <div class="page-header">
                 <h3 class="page-title">💬 意見回饋管理</h3>
+                <div style="display:flex;gap:6px;">
+                    <a href="/feedback/list?status=all"
+                       style="padding:6px 16px;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
+                              {% if status == 'all' %}background:var(--snap-green-dark);color:white;{% else %}background:white;color:#888;border:1px solid #ddd;{% endif %}">
+                        全部
+                    </a>
+                    <a href="/feedback/list?status=pending"
+                       style="padding:6px 16px;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
+                              {% if status == 'pending' %}background:#d9534f;color:white;{% else %}background:white;color:#888;border:1px solid #ddd;{% endif %}">
+                        待回覆
+                    </a>
+                    <a href="/feedback/list?status=replied"
+                       style="padding:6px 16px;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
+                              {% if status == 'replied' %}background:var(--snap-green-dark);color:white;{% else %}background:white;color:#888;border:1px solid #ddd;{% endif %}">
+                        已回覆
+                    </a>
+                </div>
             </div>
 
             {% for f in feedbacks %}

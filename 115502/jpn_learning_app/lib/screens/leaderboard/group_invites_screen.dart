@@ -6,6 +6,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 
 // 匯入剛剛做好的積木
 import 'package:jpn_learning_app/widgets/study_group/group_invite_card.dart';
+import 'package:jpn_learning_app/utils/helpers.dart';
 
 class GroupInvitesScreen extends StatefulWidget {
   const GroupInvitesScreen({Key? key}) : super(key: key);
@@ -149,6 +150,10 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
                     return GroupInviteCard(
                       groupName: groupName,
                       inviterName: inviterName,
+                      inviterFriendId: item['inviter_friend_id']?.toString() ?? '',
+                      inviterAvatar: item['inviter_avatar']?.toString(),
+                      inviterLevelText: AppHelpers.getDisplayLevel(item['inviter_level']?.toString()),
+                      
                       onAccept: () => _respondToInvite(inviteId, 'accept', groupName),
                       onReject: () => _respondToInvite(inviteId, 'reject', groupName),
                     );

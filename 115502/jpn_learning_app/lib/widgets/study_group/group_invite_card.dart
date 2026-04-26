@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+// 引入共用積木
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class GroupInviteCard extends StatelessWidget {
   final String groupName;
   final String inviterName;
+  // 新增這三個參數來接後端傳來的新資料
+  final String inviterFriendId;
+  final String? inviterAvatar;
+  final String inviterLevelText; // 這個是在外層先用 AppHelpers 翻譯好的
+  
   final VoidCallback onAccept;
   final VoidCallback onReject;
 
@@ -11,6 +18,9 @@ class GroupInviteCard extends StatelessWidget {
     Key? key,
     required this.groupName,
     required this.inviterName,
+    required this.inviterFriendId,
+    required this.inviterAvatar,
+    required this.inviterLevelText,
     required this.onAccept,
     required this.onReject,
   }) : super(key: key);
@@ -21,6 +31,7 @@ class GroupInviteCard extends StatelessWidget {
     const Color subText = Color(0xFF6E6E6E);
     const Color lightGreen = Color(0xFFEAF3E3);
     const Color beige = Color(0xFFF6EBC7);
+    const Color darkGreen = Color(0xFF4A7A4D);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -32,23 +43,35 @@ class GroupInviteCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            groupName,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: textDark,
-            ),
+          // 小組名稱
+          Text(groupName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textDark)),
+          const SizedBox(height: 12),
+          
+          // 全新設計：邀請人資訊列 (頭貼 + 名字 + 標籤)
+          Row(
+            children: [
+              UserAvatar(
+                avatarBase64: inviterAvatar,
+                friendId: inviterFriendId,
+                originalName: inviterName,
+                radius: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('邀請人：$inviterName', style: const TextStyle(fontSize: 14, color: subText, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
+                    Text(inviterLevelText, style: TextStyle(fontSize: 11, color: darkGreen, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            '邀請人：$inviterName',
-            style: const TextStyle(
-              fontSize: 14,
-              color: subText,
-            ),
-          ),
-          const SizedBox(height: 14),
+          
+          const SizedBox(height: 16),
+          // 下方的接受拒絕按鈕
           Row(
             children: [
               Expanded(

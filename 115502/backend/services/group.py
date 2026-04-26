@@ -223,11 +223,17 @@ def get_group_invites(user_id):
         group = StudyGroup.query.get(inv.group_id)
         sender = User.query.get(inv.sender_id)
         if group and sender:
+            # 取得原名
+            original_name = sender.username or sender.email.split('@')[0]
+            
             result.append({
                 "invite_id": inv.id,
                 "group_id": group.id,
                 "group_name": group.name,
-                "inviter_name": sender.username or sender.email.split('@')[0]
+                "inviter_name": original_name,
+                "inviter_friend_id": sender.friend_id, # 邀請人的專屬 ID
+                "inviter_avatar": sender.avatar,       # 邀請人的頭貼
+                "inviter_level": sender.japanese_level # 邀請人的日語程度
             })
     return jsonify({"invites": result}), 200
 

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
-// 匯入剛剛做好的積木
+// 匯入自訂的 UI 積木
 import 'package:jpn_learning_app/widgets/study_group/invite_friend_card.dart';
 
 class InviteGroupMembersScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class InviteGroupMembersScreen extends StatefulWidget {
     this.goalType,
     this.goalTarget,
   }) : super(key: key);
+
   @override
   State<InviteGroupMembersScreen> createState() => _InviteGroupMembersScreenState();
 }
@@ -39,6 +41,11 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     _fetchFriends();
   }
 
+  // ==========================================
+  // 📡 API 呼叫區塊
+  // ==========================================
+
+  // 1. 抓取好友名單與邀請狀態
   Future<void> _fetchFriends() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
@@ -55,9 +62,9 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                 'nickname': f['nickname']?.toString(),
                 'id': f['friend_id']?.toString() ?? '',
                 'avatar': f['avatar']?.toString() ?? '',
-                'invited': false,
+                'invited': false, // 畫面上的「已選取」狀態 (預設 false)
                 'has_group': f['has_group'] ?? false,
-                'is_invited': f['is_invited'] ?? false,
+                'is_invited': f['is_invited'] ?? false, // 後端傳來的「已發送邀請」狀態
                 'japanese_level': f['japanese_level']?.toString(),
               };
             }).toList();
@@ -72,52 +79,86 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     }
   }
 
+  // 2. 取消邀請的動作
+  Future<void> _cancelInvite(String friendIdStr) async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null || widget.groupId == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await ApiClient.cancelGroupInvite(widget.groupId!, friendIdStr);
+
+      if (mounted) {
+        if (result.containsKey('error')) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已取消邀請')));
+          // 成功取消後，重新抓取名單更新畫面狀態
+          await _fetchFriends(); 
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('取消失敗，請稍後再試')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // 3. 送出按鈕動作 (建立小組 OR 邀請加入現有小組)
   Future<void> _submitAction(int selectedCount) async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
-    // 1. 先偷偷問後端：他這週還有免費額度嗎？
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('檢查額度中...')));
-    final bool isFree = await ApiClient.checkFreeQuota(userId);
-    if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    }
+    // 先判斷是不是「建立小組」
+    final isCreating = widget.groupId == null;
 
-    // 2. 如果「不是」免費的，才跳出押金警告窗！
-    if (!isFree) {
-      final bool confirm = await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('⚠️ 押金與對賭提醒', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: const Text(
-            '您本週的免費小組額度已用完。\n\n本次建立將會扣除 20 J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
-            style: TextStyle(height: 1.5),
+    // 如果是建立小組，才需要檢查免費額度跟收押金
+    if (isCreating) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('檢查額度中...')));
+      final bool isFree = await ApiClient.checkFreeQuota(userId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+
+      // 如果「不是」免費的，跳出押金警告窗
+      if (!isFree) {
+        final bool confirm = await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('⚠️ 押金與對賭提醒', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: const Text(
+              '您本週的免費小組額度已用完。\n\n本次建立將會扣除 20 J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
+              style: TextStyle(height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('先不要', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('確定繼續', style: TextStyle(color: Colors.white)),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('先不要', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('確定繼續', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ) ?? false;
+        ) ?? false;
 
-      // 如果玩家按了取消，就直接終止這個函式
-      if (!confirm) return;
+        if (!confirm) return; // 玩家按取消就終止
+      }
     }
 
+    // --- 準備發送 API ---
     final selectedFriendIds = _friends
         .where((f) => f['invited'] == true)
         .map((f) => f['id'].toString())
         .toList();
 
-    final isCreating = widget.groupId == null;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(isCreating ? '正在建立小組中...' : '正在發送邀請...')),
     );
@@ -125,6 +166,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     Map<String, dynamic> result;
 
     if (isCreating) {
+      // 執行建立小組 API
       final finalGroupName = widget.newGroupName ?? '日語學習小隊';
       final finalGoalType = widget.goalType ?? 'scans';
       final finalGoalTarget = widget.goalTarget ?? 30;
@@ -137,25 +179,29 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
         finalGoalTarget,
       );
     } else {
+      // 執行單純邀請 API
       result = await ApiClient.inviteToExistingGroup(widget.groupId!, userId, selectedFriendIds);
     }
 
+    // --- 處理 API 回傳結果 ---
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       if (result.containsKey('error')) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
       } else {
-        // 更新錢包餘額
+        // 如果有扣款，更新錢包餘額
         if (result.containsKey('new_j_pts')) {
            context.read<UserProvider>().setJPts(result['new_j_pts']);
         }
 
         if (!isCreating) {
+          // 單純邀請的成功畫面
           final successMessage = result['message'] ?? '邀請已順利送出！';
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
-          Navigator.pop(context);
+          Navigator.pop(context); 
         } else {
+          // 建立小組的成功畫面
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('小組建立成功！')));
           Navigator.of(context).popUntil((route) => route.isFirst);
           Future.delayed(const Duration(milliseconds: 150), () {
@@ -171,34 +217,11 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     }
   }
 
-  // 取消邀請的動作
-  Future<void> _cancelInvite(String friendIdStr) async {
-    final userId = context.read<UserProvider>().userId;
-    if (userId == null || widget.groupId == null) return;
+  // ==========================================
+  // 🔍 邏輯運算區塊
+  // ==========================================
 
-    setState(() => _isLoading = true);
-
-    try {
-      final result = await ApiClient.cancelGroupInvite(widget.groupId!, friendIdStr);
-
-      if (mounted) {
-        if (result.containsKey('error')) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已取消邀請')));
-          // 成功後，重新抓取名單，這樣按鈕就會變回綠色的「邀請」
-          await _fetchFriends(); 
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('取消失敗，請稍後再試')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
+  // 本地搜尋過濾器
   List<Map<String, dynamic>> get _filteredFriends {
     final keyword = _searchController.text.trim().toLowerCase();
     if (keyword.isEmpty) return _friends;
@@ -211,6 +234,10 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
       return originalName.contains(keyword) || nickname.contains(keyword) || id.contains(keyword);
     }).toList();
   }
+
+  // ==========================================
+  // 🎨 UI 渲染區塊
+  // ==========================================
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +282,7 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : Column(
               children: [
+                // 搜尋列
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
                   child: TextField(
@@ -271,6 +299,8 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
+                
+                // 列表區塊
                 if (_friends.isEmpty)
                   const Expanded(child: Center(child: Text('目前還沒有好友可以邀請喔！', style: TextStyle(color: subText, fontSize: 16))))
                 else
@@ -282,7 +312,8 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                       itemBuilder: (context, index) {
                         final friend = _filteredFriends[index];
                         final String friendIdStr = friend['id'].toString();
-                        // 使用抽離出來的積木
+                        
+                        // 渲染好友卡片積木
                         return InviteFriendCard(
                           friend: friend,
                           onToggleInvite: () {
@@ -298,7 +329,9 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                                 }
                               }
                             });
-                          },onCancelInvite: () => _cancelInvite(friendIdStr), 
+                          },
+                          // 綁定取消邀請邏輯
+                          onCancelInvite: () => _cancelInvite(friendIdStr), 
                         );
                       },
                     ),

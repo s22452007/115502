@@ -93,10 +93,16 @@ def get_my_group(user_id):
     for m in members:
         u = User.query.get(m.user_id)
         if u:
+            # 取得原名
+            original_name = u.username or u.email.split('@')[0]
+            
             member_data.append({
                 "user_id": u.id,
-                "nickname": u.username or u.email.split('@')[0], 
+                "friend_id": u.friend_id, # 傳送 ID 用來算顏色
+                "username": original_name, # 傳送原名
+                "nickname": original_name, # 注意：排行榜通常不顯示備註，直接顯示原名即可。如果要顯示備註，需要再去查 Friendship 表
                 "avatar": u.avatar,
+                "japanese_level": u.japanese_level, # 打包日語程度
                 "is_host": u.id == group.host_id,
                 "group_scans": m.group_scans, 
                 "group_points": m.group_points,              

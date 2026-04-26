@@ -262,16 +262,22 @@ def get_group_invites(user_id):
 def cancel_invite():
     data = request.get_json()
     group_id = data.get('group_id')
-    receiver_id = data.get('receiver_id') # 被邀請人的 ID
+    friend_id_str = data.get('receiver_id') # 前端傳來的是字串 ID (例如 97WBADI1)
 
-    if not group_id or not receiver_id:
+    if not group_id or not friend_id_str:
         return jsonify({"error": "缺少必要資訊"}), 400
 
     try:
-        # 找出那筆還在 pending 的邀請紀錄
+        # 先用字串 ID 找出這位使用者的真實資料庫 ID
+        target_user = User.query.filter_by(friend_id=friend_id_str).first()
+        
+        if not target_user:
+            return jsonify({"error": "找不到該使用者資料"}), 404
+
+        # 用真實的整數 target_user.id 去尋找邀請紀錄
         invite = GroupInvite.query.filter_by(
             group_id=group_id, 
-            receiver_id=receiver_id, 
+            receiver_id=target_user.id, # 這裡換成整數 ID 啦！
             status='pending'
         ).first()
 

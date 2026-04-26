@@ -591,7 +591,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> cancelGroupInvite(int groupId, String receiverId) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/cancel_invite'), 
+        Uri.parse('$baseUrl/group/cancel_invite'), 
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'group_id': groupId,

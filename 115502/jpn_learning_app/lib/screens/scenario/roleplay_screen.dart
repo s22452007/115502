@@ -23,7 +23,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     super.initState();
     // 🌟 2. 完美的冷啟動：一進畫面馬上給一句溫暖的歡迎詞，讓畫面不空白！
     _messages.add({
-      'text': '歡迎來到「${widget.topicTitle}」！小精靈正在趕來的路上，請稍等一下喔...✨',
+      'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨',
       'isUserMessage': false,
     });
   }

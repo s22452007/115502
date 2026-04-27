@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/route_observer.dart';
 
 // ==========================================
 // 3. 狀態管理 (Providers)

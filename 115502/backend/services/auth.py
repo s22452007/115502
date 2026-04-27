@@ -77,7 +77,7 @@ def login():
             user.total_active_days = (user.total_active_days or 0) + 1
 
             if user.last_login_date == today - timedelta(days=1):
-                user.streak_days += 1
+                user.streak_days = (user.streak_days or 0) + 1
             else:
                 user.streak_days = 1
 

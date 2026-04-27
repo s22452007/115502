@@ -248,3 +248,25 @@ def get_vocabs_by_photo():
             })
             
     return jsonify({"vocabs": results}), 200
+
+@scenario_bp.route('/rename_photo', methods=['POST'])
+def rename_photo():
+    """
+    更新使用者自訂照片名稱
+    """
+    from utils.db import db
+    data = request.json
+    photo_id = data.get('photo_id')
+    new_title = data.get('custom_title')
+    
+    if not photo_id or not new_title:
+        return jsonify({'error': '缺少 photo_id 或 custom_title'}), 400
+        
+    photo = UserPhoto.query.get(photo_id)
+    if not photo:
+        return jsonify({'error': '找不到照片'}), 404
+        
+    photo.custom_title = new_title
+    db.session.commit()
+    
+    return jsonify({'message': '修改成功', 'custom_title': new_title}), 200

@@ -9,6 +9,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
+import 'package:jpn_learning_app/utils/route_observer.dart';
 import 'firebase_options.dart'; //不一定要使用
 
 List<CameraDescription> cameras = [];

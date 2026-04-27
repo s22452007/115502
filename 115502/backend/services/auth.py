@@ -80,7 +80,7 @@ def login():
                 user.streak_days += 1
             else:
                 user.streak_days = 1
-                
+
             # 2. 算小組的貢獻 (確保一天只能加一次！)
             member_record = GroupMember.query.filter_by(user_id=user.id).first()
             if member_record:

@@ -128,21 +128,22 @@
         .activity-name { font-weight: 600; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .activity-time { font-size: 0.75rem; color: #aaa; margin-top: 1px; }
 
-
     </style>
 </head>
 <body>
 <div class="layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="icon-box">JL</div>
             <div class="title">snap to manage</div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="/dashboard">🏠 首頁</a></li>
+            <li><a href="/dashboard" class="active">🏠 首頁</a></li>
             <li><a href="/user/list">👤 使用者資料</a></li>
             <li><a href="/customer/list">💰 點數管理</a></li>
+            
+            <li><a href="/purchase/list">🛒 購買紀錄</a></li>
+            
             <li><a href="/photo/list">🖼️ 照片管控</a></li>
             <li><a href="/vocab/list">📖 教材單字管理</a></li>
             <li><a href="/quiz/list">📝 測驗題目管理</a></li>
@@ -152,9 +153,7 @@
         </ul>
     </aside>
 
-    <!-- Main -->
     <main class="main-content">
-        <!-- Stats Banner -->
         <div class="stats-banner">
             <div class="stat-item">
                 <div class="num">{{ user_count }}</div>
@@ -174,10 +173,8 @@
             </div>
         </div>
 
-        <!-- Body -->
         <div class="body-area">
             <div class="row g-4">
-                <!-- Timeline -->
                 <div class="col-md-7">
                     <div class="panel">
                         <div class="panel-header">🕐 最近動態</div>
@@ -205,7 +202,6 @@
                     </div>
                 </div>
 
-                <!-- Right column -->
                 <div class="col-md-5">
                     <div class="panel">
                         <div class="panel-header">

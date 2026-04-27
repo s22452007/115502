@@ -54,7 +54,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   int _currentIndex = 2; // 預設停留在首頁
   int? _lastUserId; // 追蹤登入狀態變化用
 

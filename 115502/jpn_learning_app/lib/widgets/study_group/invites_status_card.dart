@@ -39,7 +39,7 @@ class InvitesStatusCard extends StatelessWidget {
       );
     }
 
-    // 情況 B：有邀請，顯示黃色可點擊卡片
+    // 情況 B：有邀請，顯示綠色可點擊卡片
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
@@ -47,7 +47,7 @@ class InvitesStatusCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF6EBC7),
+          color: const Color(0xFFF1F8E9),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -57,7 +57,10 @@ class InvitesStatusCard extends StatelessWidget {
               backgroundColor: Colors.white,
               child: Text(
                 '$invitesCount',
-                style: const TextStyle(color: Color(0xFF4E8B4C), fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  color: Color(0xFF4E8B4C),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -65,9 +68,19 @@ class InvitesStatusCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('你有待處理的邀請', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textDark)),
+                  const Text(
+                    '你有待處理的邀請',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: textDark,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('點擊查看誰邀請了你進入小組', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+                  Text(
+                    '點擊查看誰邀請了你進入小組',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                  ),
                 ],
               ),
             ),

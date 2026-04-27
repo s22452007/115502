@@ -6,7 +6,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { display: flex; background-color: #f4f7f5; margin: 0; }
-        .sidebar { width: 250px; background: white; min-height: 100vh; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+        .sidebar { width: 250px; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.05); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar-logo { padding: 20px; font-weight: bold; font-size: 1.2rem; color: #5c8364; display: flex; align-items: center; gap: 10px; }
         .icon-box { background: #e2ede5; padding: 5px 10px; border-radius: 8px; }
         .sidebar-menu { list-style: none; padding: 0; display: flex; flex-direction: column; margin: 0; }
@@ -25,7 +25,7 @@
             <div class="title">snap to manage</div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="/">🏠 儀表板</a></li>
+            <li><a href="/dashboard">🏠 儀表板</a></li>
             <li><a href="/user/list">👤 使用者資料</a></li>
             <li><a href="/customer/list">💰 點數管理</a></li>
             <li><a href="/photo/list">🖼️ 照片管控</a></li>

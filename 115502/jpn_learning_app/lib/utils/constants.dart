@@ -12,7 +12,7 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF);
   static const Color gold = Color(0xFF88741F);
 
-  // --- 🌟 新增：首頁與解鎖卡片專用色 ---
+  // --- 新增：首頁與解鎖卡片專用色 ---
   static const Color accentGreen = Color(0xFF6AA86B); // 首頁目標卡片、去登入按鈕
   static const Color cardPurple = Color(0xFF856DA0); // 一蘭拉麵卡片 Icon 底色
   static const Color cardBlue = Color(0xFF85B8D6); // 新宿車站卡片 Icon 底色

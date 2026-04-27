@@ -133,7 +133,7 @@ def admin_dashboard():
     except: new_users_today = 0
     try:
         recent_users = conn.execute(
-            "SELECT username, email, avatar, last_seen_at FROM user ORDER BY last_seen_at DESC NULLS LAST LIMIT 5"
+            "SELECT username, email, avatar, last_seen_at FROM user ORDER BY last_seen_at IS NULL, last_seen_at DESC LIMIT 5"
         ).fetchall()
         recent_users = [
             {**dict(u), 'last_seen_at': utc_to_tw(u['last_seen_at']) if u['last_seen_at'] else '從未登入'}
@@ -304,12 +304,18 @@ def feedback_delete(feedback_id):
 def user_list():
     keyword = request.args.get('q', '').strip()
     conn = get_db_connection()
-    base_query = '''
+
+    # 檢查 last_seen_at 欄位是否存在
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(user)").fetchall()]
+    has_last_seen = 'last_seen_at' in cols
+    last_seen_col = 'u.last_seen_at' if has_last_seen else 'NULL as last_seen_at'
+
+    base_query = f'''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
                u.j_pts, u.streak_days, u.total_active_days,
                u.avatar,
                DATE(u.created_at) as created_at,
-               u.last_seen_at,
+               {last_seen_col},
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count

@@ -81,6 +81,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    // 訂閱 routeObserver 以監聽頁面返回
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+
     final currentUserId = Provider.of<UserProvider>(context).userId;
 
     if (_lastUserId != currentUserId) {

@@ -39,7 +39,7 @@ class InvitesStatusCard extends StatelessWidget {
       );
     }
 
-    // 情況 B：有邀請，顯示黃色可點擊卡片
+    // 情況 B：有邀請，顯示綠色可點擊卡片
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,

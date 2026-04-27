@@ -4,7 +4,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 
 import 'package:jpn_learning_app/widgets/profile/folder/folder_card.dart';
-import 'folder_detail_screen.dart'; 
+import 'folder_detail_screen.dart';
 
 class PhotoFolderV2Screen extends StatefulWidget {
   const PhotoFolderV2Screen({Key? key}) : super(key: key);
@@ -51,7 +51,10 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('新增收藏夾', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '新增收藏夾',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -92,7 +95,10 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('編輯名稱', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '編輯名稱',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -127,7 +133,10 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('確認刪除', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+        title: const Text(
+          '確認刪除',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+        ),
         content: Text('確定要刪除「${folder['name']}」嗎？\n裡面的單字會移回預設相簿。'),
         actions: [
           TextButton(
@@ -158,12 +167,20 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: textColor, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: textColor,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           '我的收藏夾',
-          style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -177,44 +194,49 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
       body: isGuest
           ? _buildGuestView()
           : _isLoading
-              ? const Center(child: CircularProgressIndicator(color: primaryGreen))
-              : RefreshIndicator(
-                  onRefresh: _loadFolders,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _buildStatsCard(),
-                      const SizedBox(height: 20),
-                      if (_folders.isEmpty)
-                        _buildEmptyState()
-                      else
-                        // 使用抽離出去的 FolderCard 積木
-                        ..._folders.map((f) => FolderCard(
-                              folder: f,
-                              onTap: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => FolderDetailScreen(
-                                      folderId: f['id'],
-                                      folderName: f['name'] ?? '預設相簿',
-                                      allFolders: _folders,
-                                    ),
-                                  ),
-                                );
-                                _loadFolders(); 
-                              },
-                              onRename: _showRenameFolderDialog,
-                              onDelete: _showDeleteFolderDialog,
-                            )),
-                    ],
-                  ),
-                ),
+          ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+          : RefreshIndicator(
+              onRefresh: _loadFolders,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildStatsCard(),
+                  const SizedBox(height: 20),
+                  if (_folders.isEmpty)
+                    _buildEmptyState()
+                  else
+                    // 使用抽離出去的 FolderCard 積木
+                    ..._folders.map(
+                      (f) => FolderCard(
+                        folder: f,
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FolderDetailScreen(
+                                folderId: f['id'],
+                                folderName: f['name'] ?? '預設相簿',
+                                allFolders: _folders,
+                              ),
+                            ),
+                          );
+                          _loadFolders();
+                        },
+                        onRename: _showRenameFolderDialog,
+                        onDelete: _showDeleteFolderDialog,
+                      ),
+                    ),
+                ],
+              ),
+            ),
     );
   }
 
   Widget _buildStatsCard() {
-    final totalVocabs = _folders.fold<int>(0, (sum, f) => sum + ((f['count'] ?? 0) as int));
+    final totalVocabs = _folders.fold<int>(
+      0,
+      (sum, f) => sum + ((f['count'] ?? 0) as int),
+    );
     final folderCount = _folders.where((f) => f['is_default'] != true).length;
 
     return Container(
@@ -292,10 +314,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12),
         ),
       ],
     );
@@ -347,7 +366,11 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
           const SizedBox(height: 24),
           const Text(
             '登入即可使用收藏夾功能',
-            style: TextStyle(fontSize: 18, color: textColor, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 18,
+              color: textColor,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

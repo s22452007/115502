@@ -21,12 +21,6 @@ def add_column(table, column_def):
 print("開始執行資料庫升級...")
 
 # ==========================================
-# 0. 升級 user
-# ==========================================
-add_column("user", "max_streak_days INTEGER DEFAULT 1")
-print("✅ user 欄位確認完畢")
-
-# ==========================================
 # 1. 升級 group_member
 # ==========================================
 add_column("group_member", "group_scans INTEGER DEFAULT 0")

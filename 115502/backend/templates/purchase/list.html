@@ -7,12 +7,14 @@
     <style>
         :root { --snap-green-dark: #5c8364; --snap-green-light: #dce7de; }
         body { display: flex; background-color: #f4f7f5; margin: 0; min-height: 100vh; font-family: "微軟正黑體"; }
-        .sidebar { width: 250px; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.05); position: sticky; top: 0; height: 100vh; }
-        .sidebar-logo { padding: 20px; font-weight: bold; font-size: 1.2rem; color: var(--snap-green-dark); display: flex; align-items: center; gap: 10px; }
-        .icon-box { background: var(--snap-green-light); padding: 5px 10px; border-radius: 8px; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+        .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
+        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--snap-green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--snap-green-dark); font-weight: bold; }
+        .sidebar-logo .title { color: var(--snap-green-dark); font-weight: bold; font-size: 1.1rem; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
-        .sidebar-menu li a { display: block; padding: 15px 20px; color: #555; text-decoration: none; }
-        .sidebar-menu li a:hover, .sidebar-menu li a.active { background: var(--snap-green-light); color: var(--snap-green-dark); font-weight: bold; }
+        .sidebar-menu li a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu li a:hover { background: #f4f7f5; color: var(--snap-green-dark); }
+        .sidebar-menu li a.active { background: var(--snap-green-light); color: var(--snap-green-dark); font-weight: bold; border-right: 4px solid var(--snap-green-dark); }
         .main-content { flex: 1; padding: 40px; }
         .card { border: none; border-radius: 15px; overflow: hidden; }
         .table thead { background-color: var(--snap-green-dark); color: white; }
@@ -22,9 +24,12 @@
 <body>
 
     <aside class="sidebar">
-        <div class="sidebar-logo"><div class="icon-box">JL</div><div>snap to manage</div></div>
+        <div class="sidebar-logo">
+            <div class="icon-box">JL</div>
+            <div class="title">snap to manage</div>
+        </div>
         <ul class="sidebar-menu">
-            <li><a href="/dashboard">🏠 儀表板</a></li>
+            <li><a href="/dashboard">🏠 首頁</a></li>
             <li><a href="/user/list">👤 使用者資料</a></li>
             <li><a href="/customer/list">💰 點數管理</a></li>
             <li><a href="/purchase/list" class="active">🛒 購買紀錄</a></li>

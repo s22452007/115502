@@ -15,7 +15,7 @@
 
         /* ===== Sidebar ===== */
         .layout { display: flex; min-height: 100vh; }
-        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
         .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green); font-weight: bold; }
         .sidebar-logo .title { color: var(--green); font-weight: bold; font-size: 1.1rem; }
@@ -127,6 +127,8 @@
             <li><a href="/vocab/list">📖 教材單字管理</a></li>
             <li><a href="/quiz/list">📝 測驗題目管理</a></li>
             <li><a href="/feedback/list">💬 意見回饋</a></li>
+            <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
+            <li><a href="/logout" style="color:#d9534f;">🚪 登出系統</a></li>
         </ul>
     </aside>
 

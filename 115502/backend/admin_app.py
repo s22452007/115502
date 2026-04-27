@@ -179,7 +179,10 @@ def customer_list():
 @app.route('/customer/adjust_pts/<int:user_id>', methods=['POST'])
 @admin_login_required
 def adjust_pts(user_id):
-    amount = int(request.form.get('amount', 0))
+    try:
+        amount = int(request.form.get('amount', 0))
+    except (ValueError, TypeError):
+        return redirect(url_for('customer_list'))
     conn = get_db_connection()
     conn.execute('UPDATE user SET j_pts = j_pts + ? WHERE id = ?', (amount, user_id))
     conn.commit()

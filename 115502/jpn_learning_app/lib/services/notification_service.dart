@@ -32,7 +32,7 @@ class NotificationService {
     // 如果是網頁版，就直接跳過推播初始化！
     if (kIsWeb) {
       debugPrint('網頁版環境，跳過本地推播初始化。');
-      return; 
+      return;
     }
 
     tz.initializeTimeZones();

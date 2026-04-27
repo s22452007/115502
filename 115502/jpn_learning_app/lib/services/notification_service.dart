@@ -45,7 +45,8 @@ class NotificationService {
     // 請求通知權限
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
 
     // App 啟動時依照目前設定重新排程一次

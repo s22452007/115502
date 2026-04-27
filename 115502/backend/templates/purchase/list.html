@@ -5,26 +5,53 @@
     <title>JLens 購買紀錄管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root { --snap-green-dark: #5c8364; --snap-green-light: #dce7de; }
-        body { display: flex; background-color: #f4f7f5; margin: 0; min-height: 100vh; font-family: "微軟正黑體"; }
-        .sidebar { width: 250px; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.05); position: sticky; top: 0; height: 100vh; }
-        .sidebar-logo { padding: 20px; font-weight: bold; font-size: 1.2rem; color: var(--snap-green-dark); display: flex; align-items: center; gap: 10px; }
-        .icon-box { background: var(--snap-green-light); padding: 5px 10px; border-radius: 8px; }
+        /* ===== 完全同步 index.html 的色彩與基礎設定 ===== */
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+
+        /* ===== 完全同步 index.html 的 Sidebar ===== */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
+        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green-accent); font-weight: bold; }
+        .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1.1rem; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
-        .sidebar-menu li a { display: block; padding: 15px 20px; color: #555; text-decoration: none; }
-        .sidebar-menu li a:hover, .sidebar-menu li a.active { background: var(--snap-green-light); color: var(--snap-green-dark); font-weight: bold; }
-        .main-content { flex: 1; padding: 40px; }
-        .card { border: none; border-radius: 15px; overflow: hidden; }
-        .table thead { background-color: var(--snap-green-dark); color: white; }
-        .badge-pts { background-color: var(--snap-green-light); color: var(--snap-green-dark); font-weight: bold; padding: 5px 12px; border-radius: 8px; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+
+        /* ===== Main Content & Body Area ===== */
+        .main-content { flex: 1; overflow-x: hidden; }
+        .body-area { padding: 32px 48px; }
+        .page-title-box { margin-bottom: 24px; }
+        .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
+
+        /* ===== 卡片與表格樣式 ===== */
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .panel-header { padding: 14px 20px; font-weight: bold; font-size: 0.95rem; color: white; background: var(--green-dark); letter-spacing: 0.5px; }
+        .badge-pts { background-color: var(--green-light); color: var(--green-accent); font-weight: bold; padding: 5px 12px; border-radius: 8px; font-size: 0.85rem;}
+        .table > :not(caption) > * > * { padding: 16px 20px; border-bottom-color: #f4f7f5; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.9rem; }
     </style>
 </head>
 <body>
+<div class="layout">
 
     <aside class="sidebar">
-        <div class="sidebar-logo"><div class="icon-box">JL</div><div>snap to manage</div></div>
+        <div class="sidebar-logo">
+            <div class="icon-box">JL</div>
+            <div class="title">snap to manage</div>
+        </div>
         <ul class="sidebar-menu">
-            <li><a href="/dashboard">🏠 儀表板</a></li>
+            <li><a href="/dashboard">🏠 首頁</a></li>
             <li><a href="/user/list">👤 使用者資料</a></li>
             <li><a href="/customer/list">💰 點數管理</a></li>
             <li><a href="/purchase/list" class="active">🛒 購買紀錄</a></li>
@@ -33,52 +60,62 @@
             <li><a href="/quiz/list">📝 測驗題目管理</a></li>
             <li><a href="/feedback/list">💬 意見回饋</a></li>
             <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color: #d9534f;">🚪 登出系統</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;">🚪 登出系統</a></li>
         </ul>
     </aside>
 
     <main class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 style="color: var(--snap-green-dark); font-weight: bold;">🛒 購買紀錄管理</h3>
-            <span class="text-muted">追蹤所有 PointTransaction 交易紀錄</span>
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
-                        <tr>
-                            <th>單號</th>
-                            <th>購買人</th>
-                            <th>購買點數</th>
-                            <th>實收金額</th>
-                            <th>付款方式</th>
-                            <th>交易時間</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in purchases %}
-                        <tr>
-                            <td><small class="text-muted">#{{ p.id }}</small></td>
-                            <td>
-                                <div class="fw-bold">{{ p.username or '未設定名稱' }}</div>
-                                <div class="small text-muted">{{ p.email }}</div>
-                            </td>
-                            <td><span class="badge-pts">{{ p.points }} J-Pts</span></td>
-                            <td class="fw-bold text-success">NT$ {{ p.price }}</td>
-                            <td>
-                                <span class="badge bg-secondary">{{ p.payment_method or '系統紀錄' }}</span>
-                            </td>
-                            <td><small class="text-muted">{{ p.created_at }}</small></td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="6" class="text-center py-5 text-muted">目前尚無點數交易紀錄。</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="body-area">
+            
+            <div class="page-title-box d-flex justify-content-between align-items-end">
+                <div>
+                    <h3 class="page-title">🛒 購買紀錄管理</h3>
+                    <div class="text-muted small mt-1">追蹤所有 PointTransaction 交易紀錄</div>
+                </div>
             </div>
+
+            <div class="panel">
+                <div class="panel-header">💰 交易明細</div>
+                <div class="p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>單號</th>
+                                <th>購買人</th>
+                                <th>購買點數</th>
+                                <th>實收金額</th>
+                                <th>付款方式</th>
+                                <th>交易時間</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in purchases %}
+                            <tr>
+                                <td><span class="text-muted small">#{{ p.id }}</span></td>
+                                <td>
+                                    <div class="fw-bold" style="color: #333; font-size: 0.95rem;">{{ p.username or '未設定名稱' }}</div>
+                                    <div class="small text-muted">{{ p.email }}</div>
+                                </td>
+                                <td><span class="badge-pts">{{ p.points }} J-Pts</span></td>
+                                <td class="fw-bold text-success">NT$ {{ p.price }}</td>
+                                <td>
+                                    <span class="badge bg-secondary" style="font-weight: 500;">{{ p.payment_method or '系統紀錄' }}</span>
+                                </td>
+                                <td><small class="text-muted">{{ p.created_at }}</small></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-center py-5 text-muted">目前尚無點數交易紀錄。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
         </div>
     </main>
 
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

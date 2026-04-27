@@ -133,7 +133,7 @@ def admin_dashboard():
     except: new_users_today = 0
     try:
         recent_users = conn.execute(
-            "SELECT username, email, avatar, last_seen_at FROM user ORDER BY last_seen_at DESC NULLS LAST LIMIT 5"
+            "SELECT username, email, avatar, last_seen_at FROM user ORDER BY last_seen_at IS NULL, last_seen_at DESC LIMIT 5"
         ).fetchall()
         recent_users = [
             {**dict(u), 'last_seen_at': utc_to_tw(u['last_seen_at']) if u['last_seen_at'] else '從未登入'}

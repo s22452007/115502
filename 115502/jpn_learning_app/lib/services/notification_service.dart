@@ -152,6 +152,8 @@ class NotificationService {
 
   /// 使用者今天已學習 → 若每日提醒還沒發，就取消今天、改排明天
   static Future<void> cancelDailyForToday() async {
+    if (kIsWeb) return;
+
     final settings = await loadSettings();
     if (!(settings['daily'] ?? true)) return; // 通知已關，不處理
 

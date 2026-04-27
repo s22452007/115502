@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/route_observer.dart';
 
 // ==========================================
 // 3. 狀態管理 (Providers)
@@ -53,7 +54,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   int _currentIndex = 2; // 預設停留在首頁
   int? _lastUserId; // 追蹤登入狀態變化用
 
@@ -80,6 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    // 訂閱 routeObserver 以監聽頁面返回
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+
     final currentUserId = Provider.of<UserProvider>(context).userId;
 
     if (_lastUserId != currentUserId) {
@@ -89,6 +93,18 @@ class _HomeScreenState extends State<HomeScreen> {
         _syncHomeData();
       });
     }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // 當從其他頁面返回到首頁時，自動刷新資料
+    _syncHomeData();
   }
 
   Future<void> _syncHomeData() async {

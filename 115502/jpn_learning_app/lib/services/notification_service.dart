@@ -163,7 +163,13 @@ class NotificationService {
 
     final now = tz.TZDateTime.now(tz.local);
     final todayNotif = tz.TZDateTime(
-        tz.local, now.year, now.month, now.day, dailyHour, dailyMinute);
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      dailyHour,
+      dailyMinute,
+    );
 
     // 通知時間還沒到 → 取消今天的，直接排到明天
     if (todayNotif.isAfter(now)) {

@@ -210,6 +210,33 @@ def delete_user(user_id):
     conn.close()
     return redirect(url_for('customer_list'))
 
+
+@app.route('/purchase/list')
+# 如果您有登入驗證，請記得加上您的裝飾器，例如 @admin_login_required
+def purchase_list():
+    conn = get_db_connection()
+    
+    # 這裡直接去抓您資料庫裡原有的 point_transaction 表格
+    query = '''
+        SELECT p.id, p.points, p.price, p.payment_method, p.created_at,
+               u.username, u.email
+        FROM point_transaction p
+        LEFT JOIN user u ON p.user_id = u.id
+        ORDER BY p.created_at DESC
+    '''
+    
+    try:
+        records = conn.execute(query).fetchall()
+        # 將 SQLite 的 Row 物件轉換成字典，方便前端讀取
+        purchases = [dict(r) for r in records]
+    except Exception as e:
+        print(f"查詢購買紀錄失敗：{e}")
+        purchases = []
+        
+    conn.close()
+    
+    # 將資料送到我們剛剛建立的 templates/purchase/list.html
+    return render_template('purchase/list.html', purchases=purchases)
 # ==========================================
 # [照片管控]
 # ==========================================
@@ -493,5 +520,6 @@ def vocab_delete(id):
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
+
 
 

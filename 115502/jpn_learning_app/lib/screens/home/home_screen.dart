@@ -95,6 +95,18 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     }
   }
 
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // 當從其他頁面返回到首頁時，自動刷新資料
+    _syncHomeData();
+  }
+
   Future<void> _syncHomeData() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;

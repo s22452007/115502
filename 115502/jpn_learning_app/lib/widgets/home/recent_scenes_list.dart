@@ -22,6 +22,7 @@ class RecentScenesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 這是用來強制重新整理快取的註解
     if (isLoadingScenes) {
       return const Center(
         child: Padding(

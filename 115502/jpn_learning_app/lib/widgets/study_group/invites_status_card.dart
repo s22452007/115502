@@ -47,7 +47,7 @@ class InvitesStatusCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF6EBC7),
+          color: const Color(),  #0xFFF6EBC7
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(

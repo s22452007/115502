@@ -62,6 +62,7 @@ class JpnLearningApp extends StatelessWidget {
           PointerDeviceKind.trackpad,
         },
       ),
+      navigatorObservers: [routeObserver],
       builder: (context, child) {
         final isLoggedIn = context.watch<UserProvider>().userId != null;
         final fontScale = isLoggedIn

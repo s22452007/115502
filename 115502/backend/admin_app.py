@@ -312,7 +312,9 @@ def user_list():
 
     base_query = f'''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
-               u.j_pts, u.streak_days, u.total_active_days,
+               u.j_pts,
+               CASE WHEN u.last_login_date >= DATE('now', '-1 day') THEN u.streak_days ELSE 0 END as streak_days,
+               u.total_active_days,
                u.avatar,
                DATE(u.created_at) as created_at,
                {last_seen_col},

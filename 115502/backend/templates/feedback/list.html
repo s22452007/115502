@@ -50,7 +50,8 @@
             display: flex; align-items: center; justify-content: center;
             color: var(--snap-green-dark); font-weight: bold;
         }
-        .sidebar-logo .title { color: var(--snap-green-dark); font-weight: bold; font-size: 1.1rem; }
+        .sidebar-logo .title { color: var(--snap-green-dark); font-weight: bold; font-size: 1rem; line-height: 1.2; }
+        .sidebar-logo .subtitle { color: #aaa; font-size: 0.7rem; margin-top: 2px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
         .sidebar-menu a {
             display: flex; align-items: center; gap: 10px;
@@ -130,7 +131,7 @@
         <aside class="sidebar">
             <div class="sidebar-logo">
                 <div class="icon-box">JL</div>
-                <div class="title">snap to manage</div>
+                <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
             </div>
             <ul class="sidebar-menu">
                 <li><a href="/dashboard">🏠 首頁</a></li>

@@ -20,7 +20,8 @@
         .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
         .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green-accent); font-weight: bold; }
-        .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1.1rem; }
+        .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1rem; line-height: 1.2; }
+        .sidebar-logo .subtitle { color: #aaa; font-size: 0.7rem; margin-top: 2px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
         .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
         .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
@@ -135,7 +136,7 @@
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="icon-box">JL</div>
-            <div class="title">snap to manage</div>
+            <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
         </div>
         <ul class="sidebar-menu">
             <li><a href="/dashboard" class="active">🏠 首頁</a></li>

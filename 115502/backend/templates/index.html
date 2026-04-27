@@ -17,7 +17,7 @@
 
         /* ===== Sidebar ===== */
         .layout { display: flex; min-height: 100vh; }
-        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
         .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green-accent); font-weight: bold; }
         .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1.1rem; }
@@ -140,7 +140,7 @@
             <div class="title">snap to manage</div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="/dashboard" class="active">🏠 首頁</a></li>
+            <li><a href="/dashboard">🏠 儀表板</a></li>
             <li><a href="/user/list">👤 使用者資料</a></li>
             <li><a href="/customer/list">💰 點數管理</a></li>
             <li><a href="/photo/list">🖼️ 照片管控</a></li>

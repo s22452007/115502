@@ -29,6 +29,10 @@
             box-shadow: 2px 0 10px rgba(0,0,0,0.04);
             padding: 24px 0;
             flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
         }
         .sidebar-logo {
             display: flex;
@@ -204,13 +208,15 @@
                 <div class="title">snap to manage</div>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="/">🏠 首頁</a></li>
+                <li><a href="/dashboard">🏠 儀表板</a></li>
                 <li><a href="/user/list">👤 使用者資料</a></li>
                 <li><a href="/customer/list">💰 點數管理</a></li>
                 <li><a href="/photo/list">🖼️ 照片管控</a></li>
                 <li><a href="/vocab/list">📖 教材單字管理</a></li>
                 <li><a href="/quiz/list">📝 測驗題目管理</a></li>
                 <li><a href="/feedback/list" class="active">💬 意見回饋</a></li>
+            <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
+            <li><a href="/logout" style="color:#d9534f;">🚪 登出系統</a></li>
             </ul>
         </aside>
 

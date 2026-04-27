@@ -202,6 +202,8 @@ class NotificationService {
     required bool streak,
     required bool isLoggedIn,
   }) async {
+    if (kIsWeb) return;
+
     final prefs = await SharedPreferences.getInstance();
     final dailyHour = prefs.getInt(_keyDailyHour) ?? 8;
     final dailyMinute = prefs.getInt(_keyDailyMinute) ?? 0;

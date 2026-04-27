@@ -10,7 +10,11 @@
             --snap-green-dark: #5c8364;
             --snap-green-light: #dce7de;
             --snap-bg: #f4f7f5;
+            --snap-danger: #d9534f;
+            --snap-text-muted: #888;
+            --snap-border: #ddd;
         }
+
         body {
             background-color: var(--snap-bg);
             font-family: "微軟正黑體", sans-serif;
@@ -18,11 +22,8 @@
             margin: 0;
         }
 
-        /* ===== 左側選單 ===== */
-        .layout {
-            display: flex;
-            min-height: 100vh;
-        }
+        /* ===== 佈局與選單 (保留並優化) ===== */
+        .layout { display: flex; min-height: 100vh; }
         .sidebar {
             width: 220px;
             background-color: white;
@@ -43,40 +44,20 @@
             margin-bottom: 12px;
         }
         .sidebar-logo .icon-box {
-            width: 36px;
-            height: 36px;
+            width: 36px; height: 36px;
             background-color: var(--snap-green-light);
             border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--snap-green-dark);
-            font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--snap-green-dark); font-weight: bold;
         }
-        .sidebar-logo .title {
-            color: var(--snap-green-dark);
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
+        .sidebar-logo .title { color: var(--snap-green-dark); font-weight: bold; font-size: 1.1rem; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
         .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 20px;
-            color: #666;
-            text-decoration: none;
-            font-size: 0.95rem;
-            transition: 0.2s;
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 20px; color: #666; text-decoration: none;
+            font-size: 0.95rem; transition: 0.2s;
         }
-        .sidebar-menu a:hover {
-            background-color: var(--snap-bg);
-            color: var(--snap-green-dark);
-        }
+        .sidebar-menu a:hover { background-color: var(--snap-bg); color: var(--snap-green-dark); }
         .sidebar-menu a.active {
             background-color: var(--snap-green-light);
             color: var(--snap-green-dark);
@@ -84,124 +65,68 @@
             border-right: 4px solid var(--snap-green-dark);
         }
 
-        /* ===== 主內容 ===== */
-        .main-content {
-            flex: 1;
-            padding: 40px 48px;
-            overflow-x: hidden;
-        }
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 28px;
-        }
-        .page-title {
-            color: var(--snap-green-dark);
-            font-weight: bold;
-            margin: 0;
-        }
+        /* ===== 主內容區 ===== */
+        .main-content { flex: 1; padding: 40px 48px; overflow-x: hidden; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+        .page-title { color: var(--snap-green-dark); font-weight: bold; margin: 0; }
 
-        /* ===== 回饋卡片 ===== */
-        .feedback-card {
+        /* ===== 狀態篩選按鈕 (新增) ===== */
+        .filter-group { display: flex; gap: 6px; }
+        .btn-filter {
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            padding: 20px 24px;
-            margin-bottom: 20px;
-            border-left: 5px solid #ccc;
+            color: var(--snap-text-muted);
+            border: 1px solid var(--snap-border);
+            transition: all 0.2s ease;
         }
-        .feedback-card.unreplied { border-left-color: #d9534f; }
-        .feedback-card.replied { border-left-color: var(--snap-green-dark); }
-
-        .card-header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .user-info {
-            font-weight: bold;
-            color: #333;
-            font-size: 1.05rem;
-        }
-        .user-info small { color: #999; font-weight: normal; margin-left: 8px; font-size: 0.85rem; }
-
-        .type-tag {
-            background-color: var(--snap-green-light);
-            color: var(--snap-green-dark);
-            font-weight: bold;
-            padding: 4px 14px;
-            border-radius: 50px;
-            font-size: 0.85rem;
-        }
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 50px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-        .status-unreplied { background-color: #fde2e2; color: #d9534f; }
-        .status-replied { background-color: var(--snap-green-light); color: var(--snap-green-dark); }
-
-        .content-box {
-            background-color: #fafafa;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-            white-space: pre-wrap;
-            line-height: 1.6;
-        }
-        .reply-box {
-            background-color: #f0f7f1;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-            white-space: pre-wrap;
-            line-height: 1.6;
-        }
-        .reply-label {
-            color: var(--snap-green-dark);
-            font-weight: bold;
-            font-size: 0.9rem;
-            margin-bottom: 6px;
-        }
-        .meta-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.85rem;
-            color: #999;
-            margin-top: 8px;
-        }
-        .action-row {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .btn-snap {
-            background-color: var(--snap-green-dark);
+        .btn-filter:hover { border-color: #bbb; color: #555; }
+        
+        /* 選中狀態：綠色 (全部、已回覆) */
+        .btn-filter.active-success {
+            background: var(--snap-green-dark);
             color: white;
-            border: none;
+            border-color: var(--snap-green-dark);
         }
+        /* 選中狀態：紅色 (待回覆) */
+        .btn-filter.active-danger {
+            background: var(--snap-danger);
+            color: white;
+            border-color: var(--snap-danger);
+        }
+
+        /* ===== 回饋卡片與其餘樣式 (保留) ===== */
+        .feedback-card {
+            background: white; border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 20px 24px; margin-bottom: 20px; border-left: 5px solid #ccc;
+        }
+        .feedback-card.unreplied { border-left-color: var(--snap-danger); }
+        .feedback-card.replied { border-left-color: var(--snap-green-dark); }
+        .card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .user-info { font-weight: bold; color: #333; font-size: 1.05rem; }
+        .user-info small { color: #999; font-weight: normal; margin-left: 8px; font-size: 0.85rem; }
+        .type-tag { background-color: var(--snap-green-light); color: var(--snap-green-dark); font-weight: bold; padding: 4px 14px; border-radius: 50px; font-size: 0.85rem; }
+        .status-badge { padding: 4px 12px; border-radius: 50px; font-size: 0.85rem; font-weight: bold; }
+        .status-unreplied { background-color: #fde2e2; color: var(--snap-danger); }
+        .status-replied { background-color: var(--snap-green-light); color: var(--snap-green-dark); }
+        .content-box, .reply-box { border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; white-space: pre-wrap; line-height: 1.6; }
+        .content-box { background-color: #fafafa; }
+        .reply-box { background-color: #f0f7f1; }
+        .reply-label { color: var(--snap-green-dark); font-weight: bold; font-size: 0.9rem; margin-bottom: 6px; }
+        .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #999; margin-top: 8px; }
+        .action-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+        .btn-snap { background-color: var(--snap-green-dark); color: white; border: none; }
         .btn-snap:hover { background-color: #4a6a51; color: white; }
         .modal-header-snap { background-color: var(--snap-green-dark); color: white; }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
     </style>
 </head>
 <body>
     <div class="layout">
-
-        <!-- ========== 左側選單 ========== -->
         <aside class="sidebar">
             <div class="sidebar-logo">
                 <div class="icon-box">JL</div>
@@ -215,29 +140,25 @@
                 <li><a href="/vocab/list">📖 教材單字管理</a></li>
                 <li><a href="/quiz/list">📝 測驗題目管理</a></li>
                 <li><a href="/feedback/list" class="active">💬 意見回饋</a></li>
-            <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;">🚪 登出系統</a></li>
+                <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
+                <li><a href="{{ url_for('admin_logout') }}" style="color:var(--snap-danger);">🚪 登出系統</a></li>
             </ul>
         </aside>
 
-        <!-- ========== 主內容 ========== -->
         <main class="main-content">
             <div class="page-header">
                 <h3 class="page-title">💬 意見回饋管理</h3>
-                <div style="display:flex;gap:6px;">
+                <div class="filter-group">
                     <a href="/feedback/list?status=all"
-                       style="padding:6px 16px;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                              {% if status == 'all' %}background:var(--snap-green-dark);color:white;{% else %}background:white;color:#888;border:1px solid #ddd;{% endif %}">
+                       class="btn-filter {% if status == 'all' %}active-success{% endif %}">
                         全部
                     </a>
                     <a href="/feedback/list?status=pending"
-                       style="padding:6px 16px;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                              {% if status == 'pending' %}background:#d9534f;color:white;{% else %}background:white;color:#888;border:1px solid #ddd;{% endif %}">
+                       class="btn-filter {% if status == 'pending' %}active-danger{% endif %}">
                         待回覆
                     </a>
                     <a href="/feedback/list?status=replied"
-                       style="padding:6px 16px;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                              {% if status == 'replied' %}background:var(--snap-green-dark);color:white;{% else %}background:white;color:#888;border:1px solid #ddd;{% endif %}">
+                       class="btn-filter {% if status == 'replied' %}active-success{% endif %}">
                         已回覆
                     </a>
                 </div>
@@ -296,7 +217,6 @@
         </main>
     </div>
 
-    <!-- 回覆 Modal -->
     {% for f in feedbacks %}
     <div class="modal fade" id="replyModal{{ f.id }}" tabindex="-1">
         <div class="modal-dialog">

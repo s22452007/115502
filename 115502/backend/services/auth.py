@@ -80,7 +80,9 @@ def login():
                 user.streak_days += 1
             else:
                 user.streak_days = 1
-                
+            if user.streak_days > (user.max_streak_days or 1):
+                user.max_streak_days = user.streak_days
+
             # 2. 算小組的貢獻 (確保一天只能加一次！)
             member_record = GroupMember.query.filter_by(user_id=user.id).first()
             if member_record:
@@ -186,6 +188,8 @@ def google_login():
         else:
             # 狀況 C：斷掉了，或是第一次登入，重置為 1
             user.streak_days = 1
+        if user.streak_days > (user.max_streak_days or 1):
+            user.max_streak_days = user.streak_days
 
     # 把最後登入日期更新為今天
     user.last_login_date = today

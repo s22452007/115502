@@ -19,7 +19,7 @@ class User(db.Model):
     ai_cheat_sheet = db.Column(db.Text, nullable=True)
 
     j_pts = db.Column(db.Integer, default=0)         
-    streak_days = db.Column(db.Integer, default=1)   
+    streak_days = db.Column(db.Integer, default=1)
     last_login_date = db.Column(db.Date, nullable=True)
     last_seen_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

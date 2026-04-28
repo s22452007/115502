@@ -42,15 +42,15 @@ class User(db.Model):
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)
     abilities = db.relationship('UserAbility', backref='user', uselist=False, lazy=True) # 一對一關聯
 
-# 使用者能力值表 (UserAbility) - 雷達圖專用
-class UserAbility(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    listening = db.Column(db.Float, default=0.2)  # 預設 0.2 (滿分 1.0)
-    reading = db.Column(db.Float, default=0.2)
-    writing = db.Column(db.Float, default=0.2)
-    culture = db.Column(db.Float, default=0.2)
-    speaking = db.Column(db.Float, default=0.2)
+# # 使用者能力值表 (UserAbility) - 雷達圖專用
+# class UserAbility(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+#     listening = db.Column(db.Float, default=0.2)  # 預設 0.2 (滿分 1.0)
+#     reading = db.Column(db.Float, default=0.2)
+#     writing = db.Column(db.Float, default=0.2)
+#     culture = db.Column(db.Float, default=0.2)
+#     speaking = db.Column(db.Float, default=0.2)
 
 
 # ==========================================

@@ -486,9 +486,7 @@ def get_friends_list(user_id):
         # 找出好友的詳細資料
         friend_user = User.query.get(f.friend_id)
         if friend_user:
-        # 取得對方的真實本名 (如果沒設定 username，就拿 email 帳號代替)
-        original_name = friend_user.username or friend_user.email.split('@')[0]
-
+            original_name = friend_user.username or friend_user.email.split('@')[0]
             result.append({
                 "user_id": friend_user.id,
                 "friend_id": friend_user.friend_id,

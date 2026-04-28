@@ -230,8 +230,7 @@ def purchase_list():
     
     try:
         records = conn.execute(query).fetchall()
-        # 將 SQLite 的 Row 物件轉換成字典，方便前端讀取
-        purchases = [dict(r) for r in records]
+        purchases = [{**dict(r), 'created_at': utc_to_tw(r['created_at'])} for r in records]
     except Exception as e:
         print(f"查詢購買紀錄失敗：{e}")
         purchases = []

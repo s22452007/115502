@@ -269,9 +269,13 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               ),
-              onPressed: selectedCount == 0 ? null : () => _submitAction(selectedCount),
+              // 把 null 判斷拿掉，永遠都可以按！
+              onPressed: () => _submitAction(selectedCount),
               child: Text(
-                isCreating ? '確認建立小組 ($selectedCount 位)' : '發送邀請 ($selectedCount 位)',
+                // 根據選擇人數，動態改變按鈕文字
+                isCreating 
+                    ? (selectedCount == 0 ? '建立個人挑戰 🔥' : '確認建立小組 ($selectedCount 位)')
+                    : (selectedCount == 0 ? '略過邀請' : '發送邀請 ($selectedCount 位)'),
                 style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
               ),
             ),

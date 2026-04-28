@@ -30,13 +30,13 @@ def handle_deposit_and_free_quota(user):
     if not is_free:
         # 第二團起，檢查餘額並扣除 20 點押金
         if user.j_pts < 20:
-            return False, "點數不足 20 點，無法開啟額外小組對賭！"
+            return False, "點數不足 20 點，無法開啟額外小組對賭！", False
         user.j_pts -= 20
+        return True, "OK", True  # 付了押金
     else:
         # 免費團，更新他的免費額度使用紀錄
         user.last_free_group_week = current_week
-        
-    return True, "OK"
+        return True, "OK", False # 使用免費額度
 
 
 # ==========================================
@@ -51,7 +51,7 @@ def get_my_group(user_id):
     group = StudyGroup.query.get(member_record.group_id)
     
     # -----------------------------------------------------
-    # 懶惰結算系統 (Lazy Evaluation)：時間到了嗎？
+    # 終極清道夫 (Lazy Evaluation)：時間到了嗎？
     # -----------------------------------------------------
     now = datetime.now(timezone.utc)
     # SQLite 拿出來的時間沒有時區，要手動幫它掛上 UTC 以便比較
@@ -65,20 +65,20 @@ def get_my_group(user_id):
         members = GroupMember.query.filter_by(group_id=group.id).all()
         for m in members:
             u = User.query.get(m.user_id)
-            if u and is_success:
-                # 達標發放獎勵！(失敗就什麼都不發，押金已被沒收)
-                u.j_pts += group.reward_points 
+            if u and is_success and not m.has_claimed:
+                # 達標發放獎勵！加回押金
+                total_reward = group.reward_points + (20 if m.paid_deposit else 0)
+                u.j_pts += total_reward 
                 
         # 結算完畢後，抓取「當前打開畫面的這個人」的最新點數
         current_user = User.query.get(user_id)
         latest_pts = current_user.j_pts if current_user else 0
 
         # 解散小組 (Cascade 設定會一併刪除 GroupMember)
-        reward_amount = group.reward_points # 先把獎勵點數記下來
         db.session.delete(group)
         db.session.commit()
         
-        msg = f"🎉 上週小組挑戰成功！已發放 {reward_amount} 點！" if is_success else "💀 上週挑戰失敗，押金沒收！"
+        msg = f"📜 上週結算：挑戰成功！獎勵已自動匯入錢包！" if is_success else "💀 結算：上週挑戰失敗，押金已被沒收！"
         return jsonify({
             "has_group": False, 
             "message": msg, 
@@ -99,7 +99,7 @@ def get_my_group(user_id):
                 "user_id": u.id,
                 "friend_id": u.friend_id, # 傳送 ID 用來算顏色
                 "username": original_name, # 傳送原名
-                "nickname": original_name, # 注意：排行榜通常不顯示備註，直接顯示原名即可。如果要顯示備註，需要再去查 Friendship 表
+                "nickname": original_name, # 注意：排行榜通常不顯示備註，直接顯示原名即可
                 "avatar": u.avatar,
                 "japanese_level": u.japanese_level, # 打包日語程度
                 "is_host": u.id == group.host_id,
@@ -108,7 +108,7 @@ def get_my_group(user_id):
                 "group_logins": m.group_logins 
             })
 
-    # 2️⃣ 接著抓取這個小組「邀請中 (pending)」的名單 (這是我們新增的！)
+    # 2️⃣ 接著抓取這個小組「邀請中 (pending)」的名單
     pending_invites = GroupInvite.query.filter_by(group_id=group.id, status='pending').all()
     pending_data = []
     for inv in pending_invites:
@@ -131,7 +131,8 @@ def get_my_group(user_id):
         "current_progress": group.current_progress, 
         "reward_points": group.reward_points,       
         "members": member_data,              # 正式成員
-        "pending_invites": pending_data      # 把邀請中的名單也一起交給前端！
+        "pending_invites": pending_data,     # 把邀請中的名單也一起交給前端！
+        "has_claimed": member_record.has_claimed # 傳遞此用戶是否已領獎！
     }), 200
 
 # ==========================================
@@ -157,7 +158,7 @@ def create_group():
         return jsonify({"error": "找不到用戶"}), 404
 
     # 檢查押金與額度
-    success, msg = handle_deposit_and_free_quota(user)
+    success, msg, paid_deposit = handle_deposit_and_free_quota(user)
     if not success:
         return jsonify({"error": msg}), 400
 
@@ -199,7 +200,8 @@ def create_group():
         host_member = GroupMember(
             group_id=new_group.id, 
             user_id=host_id,
-            group_logins=initial_logins
+            group_logins=initial_logins,
+            paid_deposit=paid_deposit # 紀錄是否付了押金！
         )
         db.session.add(host_member)
         new_group.current_progress += initial_logins
@@ -311,6 +313,7 @@ def respond_group_invite():
     try:
         invite.status = action
         if action == 'accept':
+            # 防呆：小組滿 5 人不准進！
             current_members = GroupMember.query.filter_by(group_id=invite.group_id).count()
             if current_members >= 5:
                 return jsonify({"error": "這個小組已經客滿了！"}), 400
@@ -322,8 +325,12 @@ def respond_group_invite():
             if not group:
                 return jsonify({"error": "找不到該小組"}), 404
 
+            # 防白嫖：如果小組已經達標，鎖定車門！
+            if group.current_progress >= group.goal_target:
+                return jsonify({"error": "該小組已達成目標，目前鎖定加入喔！"}), 400
+
             # 加入也需要檢查押金與額度
-            success, msg = handle_deposit_and_free_quota(user)
+            success, msg, paid_deposit = handle_deposit_and_free_quota(user)
             if not success:
                 return jsonify({"error": msg}), 400
 
@@ -331,7 +338,8 @@ def respond_group_invite():
             new_member = GroupMember(
                 group_id=invite.group_id, 
                 user_id=user_id,
-                group_logins=initial_logins
+                group_logins=initial_logins,
+                paid_deposit=paid_deposit # 紀錄是否付了押金！
             )
             db.session.add(new_member)
             group.current_progress += initial_logins
@@ -364,6 +372,10 @@ def invite_friends_to_group():
     group = StudyGroup.query.get(group_id)
     if not group:
         return jsonify({"error": "找不到該小組"}), 404
+
+    # 防白嫖：如果小組已經達標，不准再發邀請拉人！
+    if group.current_progress >= group.goal_target:
+        return jsonify({"error": "小組已達標，無法再發送邀請！"}), 400
 
     try:
         invited_count = 0
@@ -441,40 +453,15 @@ def get_friends_detailed_status():
         return jsonify({"error": f"獲取好友狀態失敗: {str(e)}"}), 500
 
 # ==========================================
-# 7. 退出 / 解散小組 (POST /leave)
+# 7. 退出 / 解散小組 (POST /leave) -> 被焊死了！
 # ==========================================
 @group_bp.route('/leave', methods=['POST'])
 def leave_group():
-    data = request.get_json()
-    group_id = data.get('group_id')
-    user_id = data.get('user_id')
-
-    if not group_id or not user_id:
-        return jsonify({"error": "缺少必要資訊"}), 400
-
-    group = StudyGroup.query.get(group_id)
-    if not group:
-        return jsonify({"error": "找不到該小組"}), 404
-
-    try:
-        if group.host_id == user_id:
-            db.session.delete(group)
-            db.session.commit()
-            return jsonify({"message": "身為組長的你退出了，小組已解散！(押金不會退還喔)"}), 200
-        else:
-            member = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
-            if member:
-                group.current_progress -= (member.group_logins if group.goal_type == 'logins' else member.group_scans)
-                db.session.delete(member)
-                db.session.commit()
-            return jsonify({"message": "已成功退出小組！(押金不會退還喔)"}), 200
-            
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"退出小組失敗: {str(e)}"}), 500
+    # 為了防止舊版 App 呼叫，直接擋下來
+    return jsonify({"error": "一週鎖定模式，挑戰結算前無法退出喔！"}), 400
 
 # ==========================================
-# 8. 手動領取小組獎勵 (提早達標專用) (POST /claim_reward)
+# 8. 手動各自領取獎勵 (POST /claim_reward)
 # ==========================================
 @group_bp.route('/claim_reward', methods=['POST'])
 def claim_reward():
@@ -485,32 +472,37 @@ def claim_reward():
     group = StudyGroup.query.get(group_id)
     member = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
 
-    # 1. 基本防呆檢查
     if not group or not member:
         return jsonify({"error": "找不到小組或你已不在小組中"}), 404
 
-    # 2. 檢查是否真的達標了
     if group.current_progress < group.goal_target:
         return jsonify({"error": "任務尚未達成，還不能領獎喔！"}), 400
 
     try:
-        # 3. 發放點數給這個使用者！
-        user = User.query.get(user_id)
-        user.j_pts += group.reward_points
+        # 計算總獎勵 = 預設獎勵 + (若有付押金則退還 20 點)
+        total_reward = group.reward_points + (20 if member.paid_deposit else 0)
 
-        # 4. 關鍵：領完獎後，將他從小組名單中安全移除
-        # 注意：我們「不」扣除 group.current_progress！
-        # 因為這是他努力過的痕跡，保留進度讓剩下的隊友也能領獎。
+        user = User.query.get(user_id)
+        user.j_pts += total_reward
+
+        # 領完獎後，直接把這個人從小組刪除 (順利畢業)
+        # 注意：我們「絕對不」扣除 group.current_progress，讓留下來的隊友依然能領獎！
         db.session.delete(member)
         db.session.commit()
 
-        # 5. 檢查小組是不是空了？如果大家都領完退出了，才把整個小組徹底刪除
+        # 檢查是不是所有人都領完結業了？
+        # 如果小組空了，代表大家都領完了，這組才真正解散清除！
         remaining_members = GroupMember.query.filter_by(group_id=group_id).count()
         if remaining_members == 0:
-            db.session.delete(group)
+            db.session.delete(group) # 清除這個空蕩蕩的小組
             db.session.commit()
 
-        return jsonify({"message": f"太棒了！提早達標，成功領取 {group.reward_points} 點！🎉"}), 200
+        msg = f"太棒了！成功領取 {group.reward_points} 點"
+        if member.paid_deposit:
+            msg += " (含退還 20 點押金)"
+        msg += "！你已順利結業！"
+
+        return jsonify({"message": msg, "new_j_pts": user.j_pts}), 200
 
     except Exception as e:
         db.session.rollback()

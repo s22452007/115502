@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
 from utils.auth_helper import generate_friend_id
 from models import (
-    User, UserAbility, UserAchievement, Achievement, 
+    User, UserAchievement, Achievement, 
     UserVocab, UserFolder, FriendRequest, Friendship, 
     StudyGroup, GroupMember, GroupInvite
 )

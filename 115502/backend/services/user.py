@@ -10,7 +10,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
 from models import (
-    User, UserAbility, UserAchievement, UserVocab, UserFolder, UserVocab,
+    User, UserAchievement, UserVocab, UserFolder, UserVocab,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
     Feedback, PointTransaction, Vocab
 )
@@ -170,7 +170,7 @@ def delete_account():
 
     try:
         # 刪除相關資料
-        UserAbility.query.filter_by(user_id=user_id).delete()
+        # UserAbility.query.filter_by(user_id=user_id).delete()
         UserAchievement.query.filter_by(user_id=user_id).delete()
         UserVocab.query.filter_by(user_id=user_id).delete()
         UserFolder.query.filter_by(user_id=user_id).delete()

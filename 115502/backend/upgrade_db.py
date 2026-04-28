@@ -197,14 +197,24 @@ try:
     );
     """)
     
-    # 🌟 關鍵：幫 friendship 加上可以自訂的 nickname 欄位
+    # 幫 friendship 加上可以自訂的 nickname 欄位
     add_column("friendship", "nickname VARCHAR(50)")
     
     print("✅ friendship 好友關係表 (含暱稱備註) 確認完畢！")
 except Exception as e:
     print(f"⚠️ friendship 建立或升級警告：{e}")
 
-# 儲存並關閉
+# ==========================================
+# 🗑️ 11. 清除舊版能力值系統 (UserAbility)
+# ==========================================
+try:
+    # 執行 DROP TABLE 語法，如果表格存在就直接刪除
+    cursor.execute("DROP TABLE IF EXISTS user_ability;")
+    print("✅ user_ability 資料表已成功移除！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user_ability 移除警告：{e}")
+
+# 儲存並關閉 (這兩行原本就有，加在它們上面就好)
 conn.commit()
 conn.close()
 

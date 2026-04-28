@@ -40,7 +40,7 @@ class User(db.Model):
     # 使用者單字紀錄（解鎖 / 收藏）
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)
-    abilities = db.relationship('UserAbility', backref='user', uselist=False, lazy=True) # 一對一關聯
+#   abilities = db.relationship('UserAbility', backref='user', uselist=False, lazy=True) # 一對一關聯
 
 # # 使用者能力值表 (UserAbility) - 雷達圖專用
 # class UserAbility(db.Model):

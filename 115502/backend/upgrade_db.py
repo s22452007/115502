@@ -26,6 +26,11 @@ print("開始執行資料庫升級...")
 add_column("group_member", "group_scans INTEGER DEFAULT 0")
 add_column("group_member", "group_points INTEGER DEFAULT 0")
 add_column("group_member", "group_logins INTEGER DEFAULT 0")
+
+# 各自領獎與押金機制欄位
+add_column("group_member", "has_claimed BOOLEAN DEFAULT 0")
+add_column("group_member", "paid_deposit BOOLEAN DEFAULT 0")
+
 print("✅ group_member 欄位確認完畢")
 
 # ==========================================

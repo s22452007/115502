@@ -216,8 +216,7 @@ class StudyGroup(db.Model):
     # === 獎勵機制專用 ===
     current_progress = db.Column(db.Integer, default=0) # 小組當前總進度
     reward_points = db.Column(db.Integer, default=50)   # 達標後，有貢獻的成員每人可獲得的點數 (j_pts)
-    is_reward_claimed = db.Column(db.Boolean, default=False) # 本次目標是否已經發放過獎勵 (防重複發放)
-
+    
     # 關聯：一個小組可以有多個成員
     members = db.relationship('GroupMember', backref='group', lazy=True, cascade="all, delete-orphan")
     invites = db.relationship('GroupInvite', backref='group', lazy=True, cascade="all, delete-orphan")
@@ -234,6 +233,9 @@ class GroupMember(db.Model):
     group_points = db.Column(db.Integer, default=0) # 加入小組後的獲得點數
     group_logins = db.Column(db.Integer, default=0) # 加入小組後的登入天數
 
+    has_claimed = db.Column(db.Boolean, default=False)  # 是否已領取獎勵
+    paid_deposit = db.Column(db.Boolean, default=False) # 加入時是否有付 20 點押金
+   
 # 小組邀請表 (GroupInvite)
 class GroupInvite(db.Model):
     id = db.Column(db.Integer, primary_key=True)

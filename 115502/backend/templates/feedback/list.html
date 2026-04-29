@@ -157,7 +157,7 @@
                     </a>
                     <a href="/feedback/list?status=pending"
                        class="btn-filter {% if status == 'pending' %}active-danger{% endif %}">
-                        待回覆
+                        待回覆{% if pending_count > 0 %} <span style="background:{% if status == 'pending' %}rgba(255,255,255,0.3){% else %}#d9534f{% endif %};color:white;border-radius:50px;padding:1px 7px;font-size:0.75rem;margin-left:2px;">{{ pending_count }}</span>{% endif %}
                     </a>
                     <a href="/feedback/list?status=replied"
                        class="btn-filter {% if status == 'replied' %}active-success{% endif %}">

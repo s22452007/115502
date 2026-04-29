@@ -19,14 +19,6 @@ class GroupInfoCard extends StatelessWidget {
     const Color subText = Color(0xFF6E6E6E);
     const Color cardColor = Color(0xFFE8DCAA);
 
-    String hostName = '無';
-    for (var m in members) {
-      if (m['is_host'] == true) {
-        hostName = m['nickname'] ?? m['username'] ?? '未知';
-        break;
-      }
-    }
-
     // 處理下方的提示文字：如果有邀請中的人，就明確寫出來
     String memberCountText = '成員 ${members.length}/5';
     if (pendingInvites.isNotEmpty) {
@@ -74,7 +66,6 @@ class GroupInfoCard extends StatelessWidget {
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  // 使用 Stack 來把小圖示疊在頭貼右下角
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -83,12 +74,10 @@ class GroupInfoCard extends StatelessWidget {
                         child: UserAvatar(
                           avatarBase64: pendingUser['avatar']?.toString(),
                           friendId: pendingUser['friend_id']?.toString() ?? '',
-                          originalName:
-                              pendingUser['username']?.toString() ?? '未知',
+                          originalName: pendingUser['username']?.toString() ?? '未知',
                           radius: 21,
                         ),
                       ),
-                      // 新增：右下角的等待中 (時鐘) 徽章
                       Positioned(
                         right: -2,
                         bottom: -2,
@@ -97,16 +86,9 @@ class GroupInfoCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.grey.shade300,
-                              width: 1,
-                            ),
+                            border: Border.all(color: Colors.grey.shade300, width: 1),
                           ),
-                          child: const Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: Colors.orange,
-                          ),
+                          child: const Icon(Icons.access_time, size: 12, color: Colors.orange),
                         ),
                       ),
                     ],
@@ -127,10 +109,9 @@ class GroupInfoCard extends StatelessWidget {
             }),
           ),
           const SizedBox(height: 12),
-          // 把更新後的文字顯示在這裡
           Text(
-            '$memberCountText ・ 組長：$hostName',
-            style: const TextStyle(fontSize: 14, color: subText),
+            '$memberCountText ・ 一週鎖定挑戰中 🔒',
+            style: const TextStyle(fontSize: 14, color: subText, fontWeight: FontWeight.bold),
           ),
         ],
       ),

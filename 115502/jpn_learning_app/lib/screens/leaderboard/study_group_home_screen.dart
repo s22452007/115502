@@ -3,13 +3,10 @@ import 'package:provider/provider.dart';
 
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/invite_group_members_screen.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/utils/api_client.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
-
 import 'package:jpn_learning_app/widgets/study_group/group_info_card.dart';
 import 'package:jpn_learning_app/widgets/study_group/goal_progress_card.dart';
 import 'package:jpn_learning_app/widgets/study_group/ranking_list_card.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class StudyGroupHomeScreen extends StatelessWidget {
   final Map<String, dynamic> groupData;
@@ -34,7 +31,6 @@ class StudyGroupHomeScreen extends StatelessWidget {
     final int groupId = groupData['group_id'] ?? 0;
 
     final int currentTotal = groupData['current_progress'] as int? ?? 0;
-
     final double progress = (currentTotal / goalTarget).clamp(0.0, 1.0);
 
     Widget bodyContent = SingleChildScrollView(
@@ -45,7 +41,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
           GroupInfoCard(
             groupName: groupData['group_name'],
             members: groupData['members'] ?? [],
-            pendingInvites: groupData['pending_invites'] ?? [], // 接住邀請中名單
+            pendingInvites: groupData['pending_invites'] ?? [], 
           ),
           const SizedBox(height: 16),
 
@@ -114,13 +110,9 @@ class StudyGroupHomeScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                       ),
                     ),
-                    child: Text(
+                    child: const Text(
                       '邀請成員',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: TextStyle(color: AppColors.primary, fontSize: 17, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -152,88 +144,11 @@ class StudyGroupHomeScreen extends StatelessWidget {
         ),
         title: Text(
           groupName,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white),
-            tooltip: '退出小組',
-            onPressed: () =>
-                _showLeaveGroupDialog(context, groupData['group_id']),
-          ),
-        ],
+        // 退出按鈕已經被消滅了！這裡不留任何後路！
       ),
       body: bodyContent,
-    );
-  }
-
-  void _showLeaveGroupDialog(BuildContext context, dynamic groupId) {
-    if (groupId == null) return;
-    final int validGroupId = groupId as int;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          '退出小組',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: const Text('確定要退出這個學習小組嗎？\n\n⚠️ 如果你是組長，退出將會直接解散整個小組喔！'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              '取消',
-              style: TextStyle(color: subText, fontSize: 16),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0XFFFFAFAB),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-
-              final userId = context.read<UserProvider>().userId;
-              if (userId == null) return;
-
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('正在處理中...')));
-              final result = await ApiClient.leaveGroup(validGroupId, userId);
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                if (result.containsKey('error')) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(result['error'])));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'] ?? '已退出小組')),
-                  );
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
-              }
-            },
-            child: const Text(
-              '確定退出',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

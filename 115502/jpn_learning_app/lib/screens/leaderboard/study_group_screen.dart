@@ -11,6 +11,7 @@ import 'group_config_screen.dart';
 
 import 'package:jpn_learning_app/widgets/study_group/empty_group_banner.dart';
 import 'package:jpn_learning_app/widgets/study_group/invites_status_card.dart';
+import 'package:jpn_learning_app/widgets/study_group/rules_card.dart'; 
 
 class StudyGroupScreen extends StatefulWidget {
   final bool showAppBar;
@@ -152,6 +153,8 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
           // 🧱 積木 1：尚未加入小組橫幅
           const EmptyGroupBanner(),
           const SizedBox(height: 18),
+
+          const RulesCard(),
 
           SizedBox(
             width: double.infinity,

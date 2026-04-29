@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 
-// 匯入剛剛做好的積木
 import 'package:jpn_learning_app/widgets/study_group/group_invite_card.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
 
@@ -46,45 +45,47 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
   }
 
   // 📤 發送同意或拒絕的請求
-  // 📤 發送同意或拒絕的請求
   Future<void> _respondToInvite(int inviteId, String action, String groupName) async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
-    // 如果他按下「接受」，先檢查額度
+    // 如果他按下「接受」，進行雙重防呆 (免費/付費都要警告鎖定機制)
     if (action == 'accept') {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('檢查額度中...')));
       final bool isFree = await ApiClient.checkFreeQuota(userId);
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-      // 如果「不是」免費的，才跳出警告！
-      if (!isFree) {
-        final bool confirm = await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('⚠️ 押金與對賭提醒', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: const Text(
-              '您本週的免費小組額度已用完。\n\n本次接受邀請將會扣除 20 J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要加入嗎？',
-              style: TextStyle(height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('先不要', style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('確定扣除並加入', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        ) ?? false;
-
-        // 如果玩家按了「先不要」取消，就直接終止
-        if (!confirm) return;
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
+
+      // 根據免費或付費，給予不同的警告內容
+      final String dialogTitle = isFree ? '🎯 學習挑戰確認' : '⚠️ 押金與對賭提醒';
+      final String dialogContent = isFree
+          ? '本週首次加入免費！\n\n⚠️ 注意：這是一場為期至本週日結算的挑戰，一旦加入，直到結算前都絕對無法中途退出喔！準備好要一起學習了嗎？'
+          : '您本週的免費小組額度已用完。\n\n本次加入將扣除 20 J-Pts 作為對賭押金（達標後退還）。\n\n⚠️ 注意：一旦加入，直到本週日結算前絕對無法中途退出！確定要繼續嗎？';
+      final String confirmButtonText = isFree ? '確定加入' : '確定扣除並加入';
+
+      final bool confirm = await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(dialogTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+          content: Text(dialogContent, style: const TextStyle(height: 1.5)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('先不要', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(confirmButtonText, style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ) ?? false;
+
+      // 如果玩家按了「先不要」取消，就直接終止
+      if (!confirm) return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -99,6 +100,11 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
         // 如果滿人或錢不夠被後端擋下來，會顯示在這裡！
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
       } else {
+        // 如果有扣款，更新前端錢包
+        if (result.containsKey('new_j_pts')) {
+           context.read<UserProvider>().setJPts(result['new_j_pts']);
+        }
+
         final actionText = action == 'accept' ? '已接受' : '已拒絕';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$actionText「$groupName」的邀請')));
 
@@ -146,7 +152,6 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
                     final groupName = item['group_name'] ?? '未知小組';
                     final inviterName = item['inviter_name'] ?? '未知';
 
-                    // 使用抽離出來的積木
                     return GroupInviteCard(
                       groupName: groupName,
                       inviterName: inviterName,
@@ -154,7 +159,6 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
                       inviterFriendId: item['inviter_friend_id']?.toString() ?? '',
                       inviterAvatar: item['inviter_avatar']?.toString(),
                       inviterLevelText: AppHelpers.getDisplayLevel(item['inviter_level']?.toString()),
-                      
                       onAccept: () => _respondToInvite(inviteId, 'accept', groupName),
                       onReject: () => _respondToInvite(inviteId, 'reject', groupName),
                     );

@@ -292,6 +292,9 @@ def feedback_list():
     else:
         query = base + 'ORDER BY f.created_at DESC'
     feedbacks = conn.execute(query).fetchall()
+    pending_count = conn.execute(
+        'SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""'
+    ).fetchone()[0]
     conn.close()
     feedbacks = [
         {**dict(f),
@@ -299,7 +302,7 @@ def feedback_list():
          'replied_at': utc_to_tw(f['replied_at']) if f['replied_at'] else None}
         for f in feedbacks
     ]
-    return render_template('feedback/list.html', feedbacks=feedbacks, status=status)
+    return render_template('feedback/list.html', feedbacks=feedbacks, status=status, pending_count=pending_count)
 
 @app.route('/feedback/reply/<int:feedback_id>', methods=['POST'])
 @admin_login_required

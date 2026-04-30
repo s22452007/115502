@@ -94,6 +94,29 @@ def admin_logout():
     session.clear()
     return redirect(url_for('admin_login'))
 
+@app.route('/admin/change_password', methods=['GET', 'POST'])
+@admin_login_required
+def change_password():
+    error = None
+    success = None
+    if request.method == 'POST':
+        current = request.form.get('current_password', '')
+        new_pw = request.form.get('new_password', '')
+        confirm = request.form.get('confirm_password', '')
+        admin = Admin.query.filter_by(username=session['admin_user']).first()
+        if not admin.check_password(current):
+            error = '目前密碼錯誤'
+        elif new_pw != confirm:
+            error = '新密碼與確認密碼不一致'
+        elif len(new_pw) < 6:
+            error = '密碼至少需要 6 個字元'
+        else:
+            admin.set_password(new_pw)
+            db.session.commit()
+            success = '密碼已成功更新'
+    return render_template('admin/change_password.html', error=error, success=success,
+                           admin_user=session.get('admin_user'))
+
 # ==========================================
 # 📊 4. 儀表板 (讀取您的 index.html)
 # ==========================================

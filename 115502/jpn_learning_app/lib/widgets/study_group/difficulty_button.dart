@@ -4,7 +4,7 @@ class DifficultyButton extends StatelessWidget {
   final String label;
   final int value;
   final String unit;
-  final int rewardPoints; // 用來接收獎勵點數
+  final int rewardPoints;
   final Color activeColor;
   final bool isSelected;
   final VoidCallback onTap;
@@ -25,15 +25,25 @@ class DifficultyButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutBack, // 加入 Q 彈的動畫曲線
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor : const Color(0xFFF9F9F9),
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? activeColor : const Color(0xFFF5F6F8), // 未選中時改用帶點藍灰的高級灰
+          borderRadius: BorderRadius.circular(20), // 圓角加大，更現代
           border: Border.all(
-            color: isSelected ? activeColor : Colors.transparent,
+            color: isSelected ? activeColor : Colors.grey.shade200,
             width: 2,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withOpacity(0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -41,8 +51,8 @@ class DifficultyButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                fontWeight: FontWeight.w800, // 標題加粗
                 color: isSelected ? Colors.white : const Color(0xFF333333),
               ),
             ),
@@ -50,26 +60,38 @@ class DifficultyButton extends StatelessWidget {
             Text(
               '$value $unit',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : const Color(0xFF888888),
+                color: isSelected ? Colors.white.withOpacity(0.8) : const Color(0xFF888888),
               ),
             ),
-            const SizedBox(height: 8),
-            // 超吸睛的獎勵標籤！
+            const SizedBox(height: 14), // 拉開一點呼吸空間
+            
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withOpacity(0.25) : Colors.amber.shade100,
-                borderRadius: BorderRadius.circular(8),
+                // 選中時用「黑色微透明」壓暗底色，對比度更好；未選中時用極淡的橘黃色
+                color: isSelected ? Colors.black.withOpacity(0.12) : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                '🏆 $rewardPoints 點',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.amber.shade800,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.stars_rounded, // 拔掉 Emoji，改用清爽的金幣/星星 Icon
+                    size: 14,
+                    color: isSelected ? Colors.yellowAccent.shade100 : Colors.orange.shade600,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '+$rewardPoints 點', // 加上 "+" 號更有獲得感
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? Colors.white : Colors.orange.shade700,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

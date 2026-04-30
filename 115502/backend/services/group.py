@@ -169,20 +169,20 @@ def create_group():
         if goal_type == 'scans':
             # 📸 拍照任務 (輕鬆15次 / 標準30次 / 爆肝50次)
             if goal_target <= 15:
-                calculated_reward = 20
+                calculated_reward = 30
             elif goal_target <= 30:
-                calculated_reward = 40
+                calculated_reward = 50
             else:
-                calculated_reward = 80
+                calculated_reward = 100
                 
         elif goal_type == 'logins':
             # 📅 登入任務 (輕鬆15天 / 標準25天 / 爆肝35天)
             if goal_target <= 15:
-                calculated_reward = 20
+                calculated_reward = 30
             elif goal_target <= 25:
-                calculated_reward = 40
+                calculated_reward = 50
             else:
-                calculated_reward = 80
+                calculated_reward = 100
 
         # 建立小組，並計算結算日
         new_group = StudyGroup(

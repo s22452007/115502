@@ -23,12 +23,11 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   final Color _cardColor = const Color(0xFFF9F9F9);
 
   Map<String, dynamic> _getDifficultyConfig() {
-    if (_selectedTaskType == 'points') {
-      return {'unit': '點', 'easy': 500, 'normal': 1000, 'hard': 2000};
-    } else if (_selectedTaskType == 'logins') {
-      return {'unit': '天', 'easy': 15, 'normal': 25, 'hard': 35};
+    if (_selectedTaskType == 'logins') {
+      return {'unit': '天', 'easy': 15, 'normal': 25, 'hard': 35, 'r_easy': 30, 'r_normal': 50, 'r_hard': 100};
     } else {
-      return {'unit': '次', 'easy': 15, 'normal': 30, 'hard': 50};
+      // scans 和其他預設
+      return {'unit': '次', 'easy': 15, 'normal': 30, 'hard': 50, 'r_easy': 30, 'r_normal': 50, 'r_hard': 100};
     }
   }
 
@@ -68,9 +67,16 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   Widget build(BuildContext context) {
     final config = _getDifficultyConfig();
     final String unit = config['unit'];
+    
+    // 數值
     final int easyVal = config['easy'];
     final int normalVal = config['normal'];
     final int hardVal = config['hard'];
+    
+    // 獎勵
+    final int rEasy = config['r_easy'];
+    final int rNormal = config['r_normal'];
+    final int rHard = config['r_hard'];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -111,7 +117,6 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             Text('決定你們小組這週要一起完成什麼任務', style: TextStyle(fontSize: 14, color: _subTextColor)),
             const SizedBox(height: 16),
             
-            // 使用抽離出來的積木
             TaskTypeCard(
               icon: Icons.camera_alt,
               title: '探索新場景',
@@ -134,34 +139,36 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                // 使用抽離出來的積木
                 Expanded(
                   child: DifficultyButton(
                     label: '輕鬆',
                     value: easyVal,
                     unit: unit,
+                    rewardPoints: rEasy, // 🌟 傳入獎勵點數
                     activeColor: const Color(0XFFC6DB76),
                     isSelected: _selectedTarget == easyVal,
                     onTap: () => setState(() => _selectedTarget = easyVal),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: DifficultyButton(
                     label: '標準',
                     value: normalVal,
                     unit: unit,
+                    rewardPoints: rNormal, // 🌟 傳入獎勵點數
                     activeColor: const Color(0XFFFFD568),
                     isSelected: _selectedTarget == normalVal,
                     onTap: () => setState(() => _selectedTarget = normalVal),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: DifficultyButton(
                     label: '爆肝',
                     value: hardVal,
                     unit: unit,
+                    rewardPoints: rHard, // 🌟 傳入獎勵點數
                     activeColor: const Color(0XFFFFAFAB),
                     isSelected: _selectedTarget == hardVal,
                     onTap: () => setState(() => _selectedTarget = hardVal),

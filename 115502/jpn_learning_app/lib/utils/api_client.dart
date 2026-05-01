@@ -661,7 +661,7 @@ class ApiClient {
   }
 
   // 建立自訂資料夾 API
-  static Future<Map<String, dynamic>> createFolder(
+  static Future<int?> createFolder(
     int userId,
     String folderName,
   ) async {
@@ -672,9 +672,18 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'name': folderName}),
       );
-      return jsonDecode(response.body);
+      
+      final data = jsonDecode(response.body);
+      
+      // 成功時 (後端回傳 201)，回傳新建立的資料夾 ID
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return data['folder_id']; 
+      } else {
+        // 失敗時 (例如同名)，丟出錯誤讓 UI 捕捉
+        throw Exception(data['error'] ?? '建立失敗');
+      }
     } catch (e) {
-      return {'error': '網路連線失敗'};
+      throw Exception('網路連線失敗或伺服器異常');
     }
   }
 

@@ -258,12 +258,11 @@ class _VocabCardState extends State<VocabCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFFE6EBE1), 
-        // 圓潤的對話框邊角
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), 
         titlePadding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
         contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         title: const Text(
-          '新增收藏夾', // 改為圖一的文案
+          '新增收藏夾',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24,
@@ -273,9 +272,9 @@ class _VocabCardState extends State<VocabCard> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: const TextStyle(fontSize: 18), // 讓輸入的字體稍微大一點點，更好看
+          style: const TextStyle(fontSize: 18),
           decoration: InputDecoration(
-            hintText: '輸入資料夾名稱', // 改為圖一的文案
+            hintText: '輸入資料夾名稱',
             hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 18),
             filled: false,
             enabledBorder: const UnderlineInputBorder(
@@ -299,32 +298,44 @@ class _VocabCardState extends State<VocabCard> {
           const SizedBox(width: 8),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              // 4. 換上圖一那種溫和的抹茶綠色按鈕
               backgroundColor: const Color(0xFF6CA86B), 
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20), // 圓角按鈕
+                borderRadius: BorderRadius.circular(20), 
               ),
-              elevation: 0, // 扁平化，拔掉厚重的陰影
+              elevation: 0, 
             ),
             onPressed: () async {
               final folderName = controller.text.trim();
               if (folderName.isNotEmpty) {
-                Navigator.pop(ctx); 
+                Navigator.pop(ctx); // 1. 先關閉輸入框
                 
-                // ⚠️ 備忘：未來這裡要串接「建立資料夾 API」
-                /*
+                // 2. 顯示過渡狀態，讓玩家知道系統正在做事
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('正在建立「$folderName」...'), 
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+
+                // 呼叫 API 建立新資料夾
                 try {
                   final newFolderId = await ApiClient.createFolder(userId, folderName);
+                  
+                  // 4. 建立成功拿到 ID 後，立刻把這個單字「收藏」進去！
                   if (newFolderId != null) {
-                    _executeCollection(userId, newFolderId);
+                    await _executeCollection(userId, newFolderId);
                   }
-                } catch (e) { ... }
-                */
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('已建立「$folderName」並收藏！🚀')),
-                );
+                } catch (e) {
+                  // 如果發生錯誤 (例如名稱重複)，顯示乾淨的錯誤訊息
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().replaceAll('Exception: ', '')),
+                      backgroundColor: Colors.red.shade400,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               }
             },
             child: const Text(

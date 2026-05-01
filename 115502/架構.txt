@@ -98,10 +98,6 @@
         │   │   ├── folder_detail_screen.dart        # 新資料夾內容頁 (點進資料夾後的單字列表)
         │   │   ├── single_vocab_detail_screen.dart  # 單一單字詳情 (從收藏點進去的精美字卡)
         │   │   │
-        │   │   │   # --- 📸 拍照探險歷史 (應該歸類在 Scenario，但目前放在這) ---
-        │   │   ├── album_detail_screen.dart         # 相簿詳細：以「照片」為單位的檢視頁面
-        │   │   └── scenario_detail_screen.dart      # (同上) 類似的相簿/場景細節頁面
-        │   │   │
         │   ├── leaderboard/             # 5. 排行與小組模組
         │   │   ├── leaderboard_screen.dart# 總榜：顯示全體使用者的積分排行
         │   │   ├── study_group_home_screen.dart# 小組大廳：建立或加入學習小組

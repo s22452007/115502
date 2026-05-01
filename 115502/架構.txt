@@ -147,7 +147,6 @@
             │       └── folder_card.dart             # 首頁的資料夾小卡片 (含重新命名/刪除功能)
             │
             ├── scenario/                # 情境零件
-            │   ├── scenario_card.dart   # 場景照片預覽小卡
             │   └── vocab_card.dart      # 單字清單條目元件
             │
             ├── friends/                # 好友零件

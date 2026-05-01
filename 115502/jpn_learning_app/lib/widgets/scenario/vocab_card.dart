@@ -76,48 +76,89 @@ class _VocabCardState extends State<VocabCard> {
       return; 
     }
 
-    // 【情境 B】加入收藏 (彈出資料夾視窗)
+    // 【情境 B】加入收藏 (彈出高質感資料夾視窗)
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true, // 讓內容多時可以自然延展
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)), // 圓角加大更圓潤
       ),
       builder: (BuildContext sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.only(top: 20, bottom: 10),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24), // 增加四周呼吸感
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 1. 頂部拖拉指示條 (小灰線)
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // 2. 標題設計
                 const Text(
                   '請選擇要加入的單字本',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF333333)),
+                ),
+                const SizedBox(height: 20),
+
+                // 3. 「建立新單字本」按鈕 (高質感卡片風)
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showCreateFolderDialog(userId);
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.08), // 柔和的微透明綠底
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.add, color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text(
+                          '建立新單字本',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(height: 1),
 
-                // 建立新單字本按鈕
-                ListTile(
-                  leading: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                  title: const Text(
-                    '建立新單字本',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext); // 先關閉底部選單
-                    _showCreateFolderDialog(userId); // 呼叫彈出輸入框的函式
-                  },
-                ),
-                const Divider(height: 1),
-
+                // 4. 資料夾列表
                 FutureBuilder<Map<String, dynamic>>(
                   future: ApiClient.fetchUserFavorites(userId),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Padding(
                         padding: EdgeInsets.all(40.0),
-                        child: CircularProgressIndicator(color: AppColors.primary),
+                        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
                       );
                     }
                     if (snapshot.hasError) {
@@ -132,30 +173,67 @@ class _VocabCardState extends State<VocabCard> {
 
                     return ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.4,
+                        maxHeight: MediaQuery.of(context).size.height * 0.45,
                       ),
-                      child: ListView.builder(
+                      child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: folders.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12), // 用留白取代死板的黑線
                         itemBuilder: (context, index) {
                           final folder = folders[index];
                           final isDefault = folder['is_default'] == true;
 
-                          return ListTile(
-                            leading: Icon(
-                              isDefault ? Icons.star : Icons.folder,
-                              color: isDefault ? Colors.amber : const Color(0xFF8B6B9E),
-                              size: 28,
-                            ),
-                            title: Text(
-                              folder['name'] ?? '未命名',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text('已收錄 ${folder['count']} 個單字'),
+                          return InkWell(
                             onTap: () {
                               Navigator.pop(sheetContext);
                               _executeCollection(userId, folder['id']);
                             },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9F9F9),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  // 圓形背景 Icon
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: isDefault ? Colors.amber.withOpacity(0.15) : const Color(0xFF8B6B9E).withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      isDefault ? Icons.star_rounded : Icons.folder_rounded,
+                                      color: isDefault ? Colors.amber.shade600 : const Color(0xFF8B6B9E),
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // 標題與數量
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          folder['name'] ?? '未命名',
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '已收錄 ${folder['count']} 個單字',
+                                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // 箭頭引導
+                                  Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+                                ],
+                              ),
+                            ),
                           );
                         },
                       ),
@@ -179,30 +257,55 @@ class _VocabCardState extends State<VocabCard> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('建立新單字本', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFFE6EBE1), 
+        // 圓潤的對話框邊角
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), 
+        titlePadding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        title: const Text(
+          '新增收藏夾', // 改為圖一的文案
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            color: Color(0xFF1D1D1D),
+          ),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
+          style: const TextStyle(fontSize: 18), // 讓輸入的字體稍微大一點點，更好看
           decoration: InputDecoration(
-            hintText: '請輸入單字本名稱',
-            filled: true,
-            fillColor: Colors.grey.shade100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            hintText: '輸入資料夾名稱', // 改為圖一的文案
+            hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 18),
+            filled: false,
+            enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey),
             ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFF333333), width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
           ),
         ),
+        actionsPadding: const EdgeInsets.only(right: 24, bottom: 24),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              '取消',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+            ),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              // 4. 換上圖一那種溫和的抹茶綠色按鈕
+              backgroundColor: const Color(0xFF6CA86B), 
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20), // 圓角按鈕
+              ),
+              elevation: 0, // 扁平化，拔掉厚重的陰影
             ),
             onPressed: () async {
               final folderName = controller.text.trim();
@@ -220,11 +323,14 @@ class _VocabCardState extends State<VocabCard> {
                 */
 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('前端 UI 完成！準備串接建立「$folderName」的 API 🚀')),
+                  SnackBar(content: Text('已建立「$folderName」並收藏！🚀')),
                 );
               }
             },
-            child: const Text('建立並收藏', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              '建立並收藏',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ),
         ],
       ),

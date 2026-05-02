@@ -88,7 +88,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('建立學習小組 (1/2)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('建立學習小組', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),

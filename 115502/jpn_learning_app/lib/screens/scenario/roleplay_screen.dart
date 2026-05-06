@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert'; // 🌟 新增：用來解析未來後端回傳的 JSON
 import 'package:jpn_learning_app/utils/api_client.dart';
 
 class RoleplayScreen extends StatefulWidget {
@@ -15,24 +16,31 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
 
-  // 🌟 1. 新增狀態：用來記錄 AI 是不是正在打字！
   bool _isTyping = false;
+
+  // 🌟 功能 2：假名標音開關狀態
+  bool _showFurigana = false;
+
+  // 🌟 功能 4：快捷回覆籌碼資料
+  List<String> _quickReplies = [];
 
   @override
   void initState() {
     super.initState();
-    // 🌟 2. 完美的冷啟動：一進畫面馬上給一句溫暖的歡迎詞，讓畫面不空白！
     _messages.add({
       'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
       'isUserMessage': false,
+      'furiganaText': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', // 未來後端可提供標音版本
     });
+
+    // 模擬：一進來先給幾個快捷選項
+    _quickReplies = ['幫我開場', '請問規則是什麼？'];
   }
 
   Future<void> _triggerAIOpening() async {
     setState(() {
       _isTyping = true;
-    }); // 👈 1. 開始轉圈圈
-
+    });
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(
@@ -47,19 +55,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
       if (response.statusCode == 200 && mounted) {
         setState(() {
-          // 👈 2. 把開場白加進去
           _messages.add({'text': response.body, 'isUserMessage': false});
         });
       }
     } catch (e) {
       print('開場請求發生錯誤: $e');
     } finally {
-      // 🌟 3. 強制關閉轉圈圈！
-      if (mounted) {
+      if (mounted)
         setState(() {
           _isTyping = false;
         });
-      }
     }
   }
 
@@ -69,7 +74,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
-      _isTyping = true; // 👈 1. 開始轉圈圈
+      _isTyping = true;
+      _quickReplies.clear(); // 🌟 發送訊息後清空快捷鍵
     });
 
     _controller.clear();
@@ -87,22 +93,88 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       );
 
       if (response.statusCode == 200 && mounted) {
-        final aiReply = response.body;
+        /* 
+          🌟 這裡未來需要配合後端改為解析 JSON 
+          目前先寫死模擬資料，讓你看 UI 效果
+          Map<String, dynamic> data = json.decode(response.body);
+        */
+
         setState(() {
-          // 👈 2. 這裡只要專心把訊息加進去就好
-          _messages.add({'text': aiReply, 'isUserMessage': false});
+          _messages.add({
+            'text': response.body, // 正常 API 回覆
+            'isUserMessage': false,
+            // 🌟 模擬功能 3：語法糾正 (未來從 data['correction'] 取得)
+            'correction': text.contains('錯') ? '剛剛的句子動詞變化有點小問題喔！建議改成...' : null,
+          });
+
+          // 🌟 模擬功能 4：更新快捷選項 (未來從 data['quick_replies'] 取得)
+          _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
         });
       }
     } catch (e) {
       print('發送請求時發生錯誤: $e');
     } finally {
-      // 🌟 3. 終極保險機制：不管成功還是失敗，最後一定強制關閉轉圈圈！
-      if (mounted) {
+      if (mounted)
         setState(() {
           _isTyping = false;
         });
-      }
     }
+  }
+
+  // 🌟 功能 1：顯示單句點擊操作的 Bottom Sheet
+  void _showBottomSheetOptions(BuildContext context, String messageText) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: const Text(
+                  '針對此句的操作',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.translate, color: AppColors.primary),
+                title: const Text('翻譯成中文'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  // TODO: 呼叫翻譯功能或顯示翻譯 UI
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.volume_up, color: AppColors.primary),
+                title: const Text('播放語音 (TTS)'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  // TODO: 呼叫 flutter_tts 播放
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.bookmark_add,
+                  color: AppColors.primary,
+                ),
+                title: const Text('收藏此句'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  // TODO: 呼叫後端 API 存入單字本或收藏庫
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('已加入收藏！')));
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -124,6 +196,26 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        // 🌟 功能 2：假名標音切換按鈕
+        actions: [
+          Row(
+            children: [
+              const Text(
+                'ふりがな',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              Switch(
+                value: _showFurigana,
+                activeColor: AppColors.primary,
+                onChanged: (val) {
+                  setState(() {
+                    _showFurigana = val;
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -133,13 +225,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               itemCount: _messages.length,
               itemBuilder: (ctx, i) {
                 final msg = _messages[i];
-
-                // 🌟 4. 這裡就是無敵防護罩！
                 bool isUserMessage = msg['isUserMessage'] ?? false;
-                String messageText = msg['text'] ?? ''; // 防止文字是 null 導致當機
+                String messageText = msg['text'] ?? '';
+                String? correction = msg['correction']; // 🌟 檢查是否有語法糾正
 
                 return Align(
-                  // 👇 下面全部改用安全的 isUserMessage 變數來判斷！
                   alignment: isUserMessage
                       ? Alignment.centerRight
                       : Alignment.centerLeft,
@@ -148,7 +238,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (!isUserMessage) ...[
-                        CircleAvatar(
+                        const CircleAvatar(
                           radius: 16,
                           backgroundColor: AppColors.primaryLighter,
                           child: Icon(
@@ -159,29 +249,83 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                         ),
                         const SizedBox(width: 8),
                       ],
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.65,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isUserMessage
-                              ? AppColors.primary
-                              : AppColors.primaryLighter,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          messageText, // 👈 顯示安全的文字
-                          style: TextStyle(
-                            color: isUserMessage
-                                ? Colors.white
-                                : AppColors.textDark,
-                            fontSize: 15,
-                          ),
+
+                      // 🌟 外層包一個 Flexible 避免超出邊界
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: isUserMessage
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
+                          children: [
+                            // 🌟 功能 3：如果有語法糾正，顯示提示卡片
+                            if (correction != null && !isUserMessage)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.orange.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.lightbulb,
+                                      color: Colors.orange,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        correction,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.orange.shade800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            // 🌟 功能 1：加上 GestureDetector 實現點擊選單
+                            GestureDetector(
+                              onTap: () {
+                                if (!isUserMessage) {
+                                  _showBottomSheetOptions(context, messageText);
+                                }
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isUserMessage
+                                      ? AppColors.primary
+                                      : AppColors.primaryLighter,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  // 🌟 配合功能 2：如果未來有 furiganaText 欄位且開關打開，就顯示標音版文字
+                                  (_showFurigana &&
+                                          msg.containsKey('furiganaText'))
+                                      ? msg['furiganaText']
+                                      : messageText,
+                                  style: TextStyle(
+                                    color: isUserMessage
+                                        ? Colors.white
+                                        : AppColors.textDark,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -190,14 +334,13 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               },
             ),
           ),
-          // 🌟 5. 這裡就是畫出「正在思考中...」的地方！
           if (_isTyping)
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 12,
                     height: 12,
                     child: CircularProgressIndicator(
@@ -217,41 +360,84 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 ],
               ),
             ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.mic, color: AppColors.primary),
-                  onPressed: () {},
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onSubmitted: (_) => _sendMessage(),
-                    decoration: InputDecoration(
-                      hintText: '輸入日文...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
+
+          // 🌟 底部區域包裝在一起
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 🌟 功能 4：快捷回覆籌碼
+              if (_quickReplies.isNotEmpty)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    children: _quickReplies
+                        .map(
+                          (reply) => Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ActionChip(
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: AppColors.primary),
+                              label: Text(
+                                reply,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              onPressed: () {
+                                _controller.text = reply;
+                                _sendMessage();
+                              },
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send, color: AppColors.primary),
-                  onPressed: _sendMessage,
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-              ],
-            ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.mic, color: AppColors.primary),
+                      onPressed: () {},
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        onSubmitted: (_) => _sendMessage(),
+                        decoration: InputDecoration(
+                          hintText: '輸入日文...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.send, color: AppColors.primary),
+                      onPressed: _sendMessage,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

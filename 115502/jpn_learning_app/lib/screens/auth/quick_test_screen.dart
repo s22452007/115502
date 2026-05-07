@@ -22,7 +22,6 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
-  // 🌟 絕對同步參數：1:1 移植自 LevelSelectScreen
   static const _syncDuration = Duration(milliseconds: 280); 
   static const _syncCurve = Curves.easeOutCubic; 
 
@@ -94,7 +93,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
         elevation: 0,
         leading: const BackButton(color: Colors.black87),
         centerTitle: true,
-        title: Text('程度測驗', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('程度測驗', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: SafeArea(
         child: Padding(
@@ -115,83 +114,33 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
               const SizedBox(height: 32),
 
               Expanded(
-                child: ListView(
+                child: ListView.builder(
+                  // 🌟 關鍵修正 1：關閉裁剪，允許內容在放大時稍微超出邊界而不被切斷
+                  clipBehavior: Clip.none, 
                   physics: const BouncingScrollPhysics(),
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          currentQ['context'] ?? '',
-                          style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '第 ${_currentIndex + 1} 題',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      currentQ['question'],
-                      style: const TextStyle(
-                        fontSize: 24, 
-                        fontWeight: FontWeight.w900, 
-                        color: Colors.black87, 
-                        height: 1.4,
-                        fontFamily: '微軟正黑體',
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // 選項區塊
-                    ...List.generate(displayOptions.length, (index) {
-                      return RepaintBoundary(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _buildExactSameCard(
-                            index: index,
-                            text: displayOptions[index],
-                            isSelected: _selectedAnswerIndex == index,
-                            isOptionE: (index == 4),
-                          ),
-                        ),
+                  itemCount: displayOptions.length,
+                  itemBuilder: (context, index) {
+                    // 把原本題目區塊放在 ListView 的 Header（這裡簡化處理直接加在 item 裡）
+                    if (index == 0) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildContextTag(currentQ['context'] ?? ''),
+                          const SizedBox(height: 20),
+                          _buildQuestionHeader(),
+                          const SizedBox(height: 12),
+                          _buildQuestionText(currentQ['question']),
+                          const SizedBox(height: 32),
+                          _buildOptionItem(index, displayOptions[index]),
+                        ],
                       );
-                    }),
-                  ],
+                    }
+                    return _buildOptionItem(index, displayOptions[index]);
+                  },
                 ),
               ),
 
-              // 底部行動按鈕
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: AnimatedContainer(
-                  duration: _syncDuration,
-                  curve: _syncCurve,
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: _selectedAnswerIndex != null ? _nextQuestion : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      elevation: _selectedAnswerIndex != null ? 4 : 0,
-                    ),
-                    child: Text(
-                      _currentIndex == _questions.length - 1 ? '完成測驗' : '下一題',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體'),
-                    ),
-                  ),
-                ),
-              ),
+              _buildBottomButton(),
             ],
           ),
         ),
@@ -199,7 +148,72 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
     );
   }
 
-  // 🌟 1:1 移植自 LevelSelectScreen 的卡片邏輯
+  // --- 輔助 UI 元件 ---
+
+  Widget _buildContextTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text, style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildQuestionHeader() {
+    return Text(
+      '第 ${_currentIndex + 1} 題',
+      style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+    );
+  }
+
+  Widget _buildQuestionText(String question) {
+    return Text(
+      question,
+      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black87, height: 1.4, fontFamily: '微軟正黑體'),
+    );
+  }
+
+  Widget _buildOptionItem(int index, String text) {
+    return Padding(
+      // 🌟 關鍵修正 2：增加外邊距 (Margin)，讓卡片放大時有空間，不影響上下卡片
+      padding: const EdgeInsets.symmetric(vertical: 8), 
+      child: _buildExactSameCard(
+        index: index,
+        text: text,
+        isSelected: _selectedAnswerIndex == index,
+        isOptionE: (index == 4),
+      ),
+    );
+  }
+
+  Widget _buildBottomButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: AnimatedContainer(
+        duration: _syncDuration,
+        curve: _syncCurve,
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: _selectedAnswerIndex != null ? _nextQuestion : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            disabledBackgroundColor: Colors.grey.shade300,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            elevation: _selectedAnswerIndex != null ? 4 : 0,
+          ),
+          child: Text(
+            _currentIndex == _questions.length - 1 ? '完成測驗' : '下一題',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體'),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildExactSameCard({
     required int index,
     required String text,
@@ -212,7 +226,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
       onTap: () => setState(() => _selectedAnswerIndex = index),
       child: AnimatedScale(
         duration: _syncDuration,
-        scale: isSelected ? 1.015 : 1.0, // 與第一頁完全一致的 1.5% 縮放
+        scale: isSelected ? 1.015 : 1.0,
         curve: _syncCurve,
         child: AnimatedContainer(
           duration: _syncDuration,
@@ -221,7 +235,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
           padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 24),
           decoration: BoxDecoration(
             color: isSelected ? activeColor.withOpacity(0.08) : Colors.white,
-            borderRadius: BorderRadius.circular(24), // 統一圓角為 24
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isSelected ? activeColor : Colors.black.withOpacity(0.08),
               width: isSelected ? 2.0 : 1.0,

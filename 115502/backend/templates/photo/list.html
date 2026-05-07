@@ -2,50 +2,48 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 照片管控</title>
+    <title>JLens 照片管控管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        /* --- 基礎佈局樣式 --- */
         :root {
-            --snap-green-dark: #5c8364;
-            --snap-green-light: #dce7de;
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
         }
-        body { display: flex; background-color: #f4f7f5; margin: 0; min-height: 100vh; font-family: "微軟正黑體"; }
-        
-        /* 側邊欄樣式 */
-        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
-        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--snap-green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--snap-green-dark); font-weight: bold; }
-        .sidebar-logo .title { color: var(--snap-green-dark); font-weight: bold; font-size: 1rem; line-height: 1.2; }
+        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green-accent); font-weight: bold; }
+        .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1rem; line-height: 1.2; }
         .sidebar-logo .subtitle { color: #aaa; font-size: 0.7rem; margin-top: 2px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
-        .sidebar-menu li a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
-        .sidebar-menu li a:hover { background: #f4f7f5; color: var(--snap-green-dark); }
-        .sidebar-menu li a.active { background: var(--snap-green-light); color: var(--snap-green-dark); font-weight: bold; border-right: 4px solid var(--snap-green-dark); }
-        
-        /* 主要內容區樣式 */
-        .main-content { flex: 1; padding: 40px; }
-        .page-title { color: var(--snap-green-dark); font-weight: bold; }
-        
-        /* --- 保留您原本的照片表格專屬樣式 --- */
-        .card { border: none; border-radius: 15px; overflow: hidden; }
-        .table thead { background-color: var(--snap-green-dark); color: white; }
-        .table tbody tr:hover { background-color: var(--snap-green-light); }
-        
-        .scene-badge { 
-            background-color: var(--snap-green-light); 
-            color: var(--snap-green-dark); 
-            padding: 5px 12px; border-radius: 50px; font-size: 0.85rem; font-weight: bold;
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .main-content { flex: 1; overflow-x: hidden; }
+        .body-area { padding: 32px 48px; }
+        .page-title-box { margin-bottom: 24px; }
+        .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .panel-header { padding: 14px 20px; font-weight: bold; font-size: 0.95rem; color: white; background: var(--green-dark); letter-spacing: 0.5px; }
+        .table > :not(caption) > * > * { padding: 16px 20px; border-bottom-color: #f4f7f5; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.9rem; }
+        .scene-badge { background-color: var(--green-light); color: var(--green-accent); font-weight: bold; padding: 4px 12px; border-radius: 8px; font-size: 0.8rem; }
+        .img-preview { 
+            width: 70px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #eee;
+            transition: 0.2s; cursor: pointer;
         }
-        
-        .btn-outline-danger { 
-            border-color: #e0a4a4; color: #b85c5c; border-radius: 50px; 
-        }
-        .btn-outline-danger:hover { background-color: #b85c5c; color: white; }
+        .img-preview:hover { transform: scale(1.15); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
     </style>
 </head>
 <body>
-
+<div class="layout">
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="icon-box">JL</div>
@@ -62,54 +60,61 @@
             <li><a href="/feedback/list">💬 意見回饋</a></li>
             <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
             <li><a href="/admin/change_password">🔑 修改密碼</a></li>
-            <li><a href="{{ url_for('admin_logout') }}" style="color: #d9534f;">🚪 登出系統</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;">🚪 登出系統</a></li>
         </ul>
     </aside>
 
     <main class="main-content">
-        
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="page-title">🖼️ 相簿照片監控</h3>
-        </div>
+        <div class="body-area">
+            <div class="page-title-box">
+                <h3 class="page-title">🖼️ 照片管控管理</h3>
+                <div class="text-muted small mt-1">審核與維護系統內的所有影像資源，確保內容品質與安全</div>
+            </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>上傳者</th>
-                            <th>分類場景</th>
-                            <th>自訂相簿標題</th>
-                            <th>上傳時間</th>
-                            <th>強制管理</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in photos %}
-                        <tr>
-                            <td>{{ p.id }}</td>
-                            <td class="fw-bold">{{ p.username or '未知使用者' }}</td>
-                            <td><span class="scene-badge">{{ p.scene_name or '未分類' }}</span></td>
-                            <td>{{ p.custom_title or '（無標題）' }}</td>
-                            <td><small class="text-muted">{{ p.created_at }}</small></td>
-                            <td>
-                                <form action="/photo/delete/{{ p.id }}" method="POST" onsubmit="return confirm('警告：確定要永久刪除這張照片嗎？');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger px-3">強制刪除</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">目前尚無照片上傳紀錄</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="panel">
+                <div class="panel-header">📸 影像紀錄明細</div>
+                <div class="p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">ID</th>
+                                <th style="width: 100px;">預覽</th>
+                                <th>上傳者</th>
+                                <th>場景/標題</th>
+                                <th>上傳時間</th>
+                                <th class="text-center" style="width: 100px;">管理</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in photos %}
+                            <tr>
+                                <td><span class="text-muted small">#{{ p.id }}</span></td>
+                                <td>
+                                    <img src="{{ url_for('static', filename='uploads/' + p.image_path) }}" class="img-preview" alt="照片縮圖">
+                                </td>
+                                <td>
+                                    <div class="fw-bold" style="color: #333; font-size: 0.9rem;">{{ p.username or '未知使用者' }}</div>
+                                </td>
+                                <td>
+                                    <div><span class="scene-badge">{{ p.scene_name or '未分類' }}</span></div>
+                                    <div class="small text-muted mt-1">{{ p.custom_title or '（無標題）' }}</div>
+                                </td>
+                                <td><small class="text-muted">{{ p.created_at }}</small></td>
+                                <td class="text-center">
+                                    <form action="/photo/delete/{{ p.id }}" method="POST" onsubmit="return confirm('確定要刪除這張照片嗎？');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger px-3" style="border-radius: 8px;">刪除</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-center py-5 text-muted">目前尚無照片上傳紀錄。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</div>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import 'dart:ui'; // 🌟 必備：用於毛玻璃效果 (ImageFilter)
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -16,10 +16,8 @@ class QuickTestScreen extends StatefulWidget {
 class _QuickTestScreenState extends State<QuickTestScreen> {
   int _currentIndex = 0;
   int? _selectedAnswerIndex;
-  
   List<dynamic> _questions = [];
   final List<bool> _results = [];
-  
   bool _isLoading = true;
   bool _isSubmitting = false;
 
@@ -44,7 +42,6 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
   Future<void> _nextQuestion() async {
     if (_selectedAnswerIndex == null) return;
-
     bool isCorrect = false;
     if (_selectedAnswerIndex != 4) {
       isCorrect = (_selectedAnswerIndex == _questions[_currentIndex]['correctIndex']);
@@ -87,22 +84,21 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true, // 🌟 讓內容延伸到 AppBar 後方以實現毛玻璃一體感
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: const BackButton(color: Colors.black87),
-        centerTitle: true,
-        title: const Text('程度測驗', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
-      ),
-      body: Stack( // 🌟 使用 Stack 實現固定層級
+      // 🌟 移除 Scaffold 原生的 AppBar，改用 Stack 自定義
+      body: Stack(
         children: [
           // 1. 底層：可滾動內容
-          SafeArea(
+          Positioned.fill(
             child: ListView.builder(
               clipBehavior: Clip.none, 
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.only(left: 32, right: 32, top: 40, bottom: 100), // 🌟 頂部預留空間給固定進度條
+              // 🌟 頂部預留空間包含：狀態欄 + 自定義 Header 高度
+              padding: EdgeInsets.only(
+                left: 32, 
+                right: 32, 
+                top: MediaQuery.of(context).padding.top + 100, 
+                bottom: 120
+              ), 
               itemCount: displayOptions.length + 1,
               itemBuilder: (context, index) {
                 if (index == 0) {
@@ -132,25 +128,46 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
             ),
           ),
 
-          // 2. 頂層：毛玻璃固定進度條
+          // 2. 頂層：整合式毛玻璃 Header (AppBar + ProgressBar)
           Positioned(
-            top: MediaQuery.of(context).padding.top + 56, // 🌟 避開狀態欄與 AppBar 高度
+            top: 0,
             left: 0,
             right: 0,
             child: ClipRect(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // 🌟 毛玻璃模糊強度
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  color: AppColors.background.withOpacity(0.7), // 🌟 半透明背景
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: (_currentIndex + 1) / _questions.length,
-                      minHeight: 6,
-                      backgroundColor: Colors.grey.shade200.withOpacity(0.5),
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
+                  color: AppColors.background.withOpacity(0.8),
+                  padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top), // 🌟 避開狀態欄
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // --- 自定義 AppBar 部分 ---
+                      SizedBox(
+                        height: 56,
+                        child: NavigationToolbar(
+                          leading: IconButton(
+                            icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black87),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          centerMiddle: true,
+                          middle: const Text('程度測驗', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
+                        ),
+                      ),
+                      // --- 進度條部分 ---
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(32, 0, 32, 16),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: (_currentIndex + 1) / _questions.length,
+                            minHeight: 6,
+                            backgroundColor: Colors.grey.shade200.withOpacity(0.5),
+                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -158,18 +175,13 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
           ),
 
           // 3. 底部按鈕
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildFixedBottomButton(),
-          ),
+          Positioned(bottom: 0, left: 0, right: 0, child: _buildFixedBottomButton()),
         ],
       ),
     );
   }
 
-  // --- UI 組件 ---
+  // --- UI 組件與卡片邏輯 (保持 Commit 20 的優化) ---
 
   Widget _buildContextTag(String text) {
     return Container(
@@ -186,7 +198,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.background.withOpacity(0), AppColors.background],
+          colors: [AppColors.background.withOpacity(0), AppColors.background.withOpacity(0.9), AppColors.background],
         ),
       ),
       child: AnimatedContainer(

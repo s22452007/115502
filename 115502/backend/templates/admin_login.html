@@ -11,29 +11,32 @@
         .btn-snap { background-color: #5c8364; color: white; border: none; }
         .btn-snap:hover { background-color: #4a6b51; color: white; }
         
-        /* 🌟 無縫輸入框的關鍵 CSS */
-        
-        /* 1. 下拉選單與輸入框的一般 Focus 效果 */
+        /* 🌟 下拉選單與輸入框的 Focus 效果 */
         .form-select:focus, .form-control:focus {
             border-color: #5c8364;
             box-shadow: 0 0 0 0.25rem rgba(92, 131, 100, 0.25);
-            z-index: 2; /* 確保光暈蓋在邊框上 */
+            z-index: 2;
         }
 
-        /* 2. 移除密碼框的右邊框 */
+        /* 🌟 自定義小字體選單樣式 */
+        .form-select-custom {
+            font-size: 0.9rem;       /* 調小字體 */
+            padding: 0.5rem 0.75rem;  /* 縮減上下左右間距，讓框框變矮一點 */
+        }
+
+        /* 無縫密碼框設計 */
         #adminPassword {
             border-right: none;
+            font-size: 0.9rem;       /* 確保密碼框字體也保持一致 */
         }
 
-        /* 3. 移除眼睛按鈕的左邊框，並讓背景保持白色 */
         #togglePassword {
             border-left: none;
             background-color: #fff;
-            border-color: #dee2e6; /* 保持跟 Bootstrap 預設邊框顏色一致 */
+            border-color: #dee2e6;
             color: #000;
         }
 
-        /* 4. 當輸入框被點擊時，讓旁邊的按鈕也跟著變色（視覺一體化） */
         #adminPassword:focus + #togglePassword {
             border-color: #5c8364;
         }
@@ -55,7 +58,7 @@
             
             <div class="mb-3">
                 <label class="form-label text-muted fw-bold">選擇管理者身分</label>
-                <select name="username" class="form-select form-select-lg" required autofocus>
+                <select name="username" class="form-select form-select-custom" required autofocus>
                     <option value="" disabled selected>請選擇您的帳號...</option>
                     <option value="11156001">11156001 (組員)</option>
                     <option value="11156006">11156006 (組員)</option>

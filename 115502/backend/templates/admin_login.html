@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>JLens 管理者登入</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { background-color: #f4f7f5; height: 100vh; display: flex; align-items: center; justify-content: center;}
         .login-card { width: 100%; max-width: 400px; padding: 2rem; border-radius: 15px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -50,7 +51,7 @@
                 <div class="input-group">
                     <input type="password" name="password" id="adminPassword" class="form-control" placeholder="預設密碼同帳號" required>
                     <button class="btn btn-outline-secondary" type="button" id="togglePassword" style="border-color: #dce7de; color: #5c8364;">
-                        <span id="eyeIcon">🙈</span>
+                        <i id="eyeIcon" class="bi bi-eye-slash"></i>
                     </button>
                 </div>
             </div>
@@ -72,11 +73,15 @@
                     if (currentType === 'password') {
                         // 切換為顯示密碼
                         passwordInput.setAttribute('type', 'text');
-                        eyeIcon.textContent = '👁️'; // 顯示內容，切換為睜眼
+                        // 🌟 切換成「睜眼」圖示
+                        eyeIcon.classList.remove('bi-eye-slash');
+                        eyeIcon.classList.add('bi-eye');
                     } else {
                         // 切換為隱藏密碼
                         passwordInput.setAttribute('type', 'password');
-                        eyeIcon.textContent = '🙈'; // 隱藏內容，切換為閉眼
+                        // 🌟 切換成「閉眼斜線」圖示
+                        eyeIcon.classList.remove('bi-eye');
+                        eyeIcon.classList.add('bi-eye-slash');
                     }
                 });
             }

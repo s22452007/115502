@@ -15,6 +15,10 @@
             border-color: #5c8364;
             box-shadow: 0 0 0 0.25rem rgba(92, 131, 100, 0.25);
         }
+        /* 🌟 微調眼睛按鈕的滑鼠懸停效果 */
+        #togglePassword:hover {
+            background-color: #f4f7f5;
+        }
     </style>
 </head>
 <body>
@@ -41,11 +45,18 @@
             
             <div class="mb-4">
                 <label class="form-label text-muted fw-bold">密碼</label>
-                <input type="password" name="password" class="form-control form-control-lg" placeholder="預設密碼同帳號" required>
+                <div class="input-group">
+                    <input type="password" name="password" id="adminPassword" class="form-control" placeholder="請輸入密碼" required>
+                    <button class="btn btn-outline-secondary" type="button" id="togglePassword" style="border-color: #dce7de; color: #5c8364;">
+                        <span id="eyeIcon">👁️</span>
+                    </button>
+                </div>
             </div>
             
             <button type="submit" class="btn btn-snap w-100 py-2 fw-bold fs-5">登入系統</button>
         </form>
     </div>
+
+    
 </body>
 </html>

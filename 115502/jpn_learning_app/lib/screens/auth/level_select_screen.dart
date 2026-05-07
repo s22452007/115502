@@ -26,7 +26,6 @@ import 'package:jpn_learning_app/screens/home/home_screen.dart';
 // ==========================================
 import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 
-// 🌟 Commit 2 改動：將 StatelessWidget 改為 StatefulWidget 以管理選取狀態
 class LevelSelectScreen extends StatefulWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
 
@@ -35,160 +34,148 @@ class LevelSelectScreen extends StatefulWidget {
 }
 
 class _LevelSelectScreenState extends State<LevelSelectScreen> {
-  // 🌟 追蹤目前選中的索引 (0: 新手, 1: 基礎)
   int? _selectedIndex;
+
+  // 🌟 將執行邏輯封裝，讓程式碼更乾淨
+  Future<void> _handleNavigation() async {
+    if (_selectedIndex == 0) {
+      // 邏輯 1：新手路徑
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: const Text('正在為您設定新手模式...'), backgroundColor: AppColors.primary),
+      );
+
+      final currentUserId = context.read<UserProvider>().userId;
+      if (currentUserId != null) {
+        await ApiClient.updateLevel(currentUserId, 'N5');
+      }
+
+      if (!context.mounted) return;
+      context.read<UserProvider>().setJapaneseLevel('N5');
+      await LevelUpDialog.show(context, badgeId: 'level_01', level: 1);
+
+      if (context.mounted) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      }
+    } else {
+      // 邏輯 2：測驗路徑
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const QuickTestScreen()));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-                const Text(
-                  'WELCOME TO J-LENS',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                    letterSpacing: 2.0,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  '請選擇您的\n日文學習起點',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black87,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              const Text(
+                'WELCOME TO J-LENS',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 2.0),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '請選擇您的\n日文學習起點',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black87, height: 1.2),
+              ),
+              const SizedBox(height: 48),
 
-                // --- 卡片 1：我是新手 ---
-                _buildModernCard(
-                  index: 0,
-                  title: '我是日文新手',
-                  subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
-                  activeColor: AppColors.primary,
-                  onTap: () async {
-                    setState(() => _selectedIndex = 0); // 🌟 更新狀態
-                    
-                    // 執行原本的邏輯
-                    final currentUserId = context.read<UserProvider>().userId;
-                    if (currentUserId != null) {
-                      await ApiClient.updateLevel(currentUserId, 'N5');
-                    }
-                    if (!context.mounted) return;
-                    context.read<UserProvider>().setJapaneseLevel('N5');
-                    await LevelUpDialog.show(context, badgeId: 'level_01', level: 1);
-                    if (context.mounted) {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-                    }
-                  },
-                ),
-                
-                const SizedBox(height: 24),
+              // --- 選項 1 ---
+              _buildModernCard(
+                index: 0,
+                title: '我是日文新手',
+                subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
+                activeColor: AppColors.primary,
+              ),
+              
+              const SizedBox(height: 20),
 
-                // --- 卡片 2：我已經有基礎了 ---
-                _buildModernCard(
-                  index: 1,
-                  title: '我已經有基礎了',
-                  subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
-                  activeColor: const Color(0xFF444444),
-                  onTap: () {
-                    setState(() => _selectedIndex = 1); // 🌟 更新狀態
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const QuickTestScreen()));
-                  },
+              // --- 選項 2 ---
+              _buildModernCard(
+                index: 1,
+                title: '我已經有基礎了',
+                subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
+                activeColor: const Color(0xFF444444),
+              ),
+
+              const Spacer(), // 🌟 自動撐開空間，將按鈕推到底部
+
+              // --- 🌟 Commit 3 重頭戲：底部確認按鈕 ---
+              SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  onPressed: _selectedIndex != null ? _handleNavigation : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    _selectedIndex == null ? '請選擇一個起點' : '開始體驗',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                const SizedBox(height: 40),
-              ],
-            ),
+              ),
+              const SizedBox(height: 10),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // ==========================================
-  // 🎨 Commit 2 重頭戲：支援動態選取狀態的卡片
-  // ==========================================
   Widget _buildModernCard({
     required int index,
     required String title,
     required String subtitle,
     required Color activeColor,
-    required VoidCallback onTap,
   }) {
-    // 🌟 判斷目前是否被選中
     bool isSelected = _selectedIndex == index;
 
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 300),
-        // 🌟 未選中且已有其他卡片被選中時，變淡
-        opacity: (_selectedIndex != null && !isSelected) ? 0.5 : 1.0,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              // 🌟 選中時邊框變粗
-              left: BorderSide(color: isSelected ? activeColor : Colors.grey.shade300, width: isSelected ? 8 : 4),
-              top: BorderSide(color: isSelected ? activeColor.withOpacity(0.1) : Colors.grey.shade200, width: 1),
-              right: BorderSide(color: isSelected ? activeColor.withOpacity(0.1) : Colors.grey.shade200, width: 1),
-              bottom: BorderSide(color: isSelected ? activeColor.withOpacity(0.1) : Colors.grey.shade200, width: 1),
+      onTap: () => setState(() => _selectedIndex = index), // 🌟 點擊僅負責切換狀態
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.transparent,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected ? activeColor.withOpacity(0.15) : Colors.black.withOpacity(0.03),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            )
+          ],
+        ),
+        child: Row( // 🌟 稍微調整內部排版，加入選中勾選視覺
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isSelected ? activeColor : Colors.black87)),
+                  const SizedBox(height: 8),
+                  Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5)),
+                ],
+              ),
             ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: isSelected ? activeColor.withOpacity(0.1) : Colors.black.withOpacity(0.02),
-                blurRadius: isSelected ? 20 : 10,
-                offset: const Offset(0, 8),
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 22, 
-                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold, 
-                  color: isSelected ? activeColor : Colors.black87,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 15, 
-                  color: isSelected ? activeColor.withOpacity(0.7) : Colors.black.withOpacity(0.6),
-                  height: 1.6,
-                ),
-              ),
-            ],
-          ),
+            if (isSelected) 
+              Icon(Icons.check_circle, color: activeColor, size: 28),
+          ],
         ),
       ),
     );

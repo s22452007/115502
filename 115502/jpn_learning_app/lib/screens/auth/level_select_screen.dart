@@ -39,7 +39,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 統一樣式：確保兩行字完全重合
     const TextStyle titleStyle = TextStyle(
       fontSize: 32, 
       fontWeight: FontWeight.w900, 
@@ -53,7 +52,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, // 🌟 核心：全部靠左
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
               const Text(
@@ -67,7 +66,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 🌟 恢復完美的左對齊標題區塊 🌟
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -77,7 +75,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
 
               const SizedBox(height: 20),
-              // 裝飾綠條
               Container(
                 width: 45,
                 height: 5,
@@ -88,7 +85,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 48),
 
-              _buildFluidCard(
+              // 🌟 呼叫緩動優化後的卡片
+              _buildUltraFluidCard(
                 index: 0,
                 title: '我是日文新手',
                 subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
@@ -96,7 +94,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               
               const SizedBox(height: 24),
 
-              _buildFluidCard(
+              _buildUltraFluidCard(
                 index: 1,
                 title: '我已經有基礎了',
                 subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
@@ -104,9 +102,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
+              // 底部按鈕動畫也同步微調
               AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutCubic,
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeInOutQuart,
                 width: double.infinity,
                 height: 62,
                 child: ElevatedButton(
@@ -132,17 +131,19 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     );
   }
 
-  Widget _buildFluidCard({required int index, required String title, required String subtitle}) {
+  // 🌟 核心：極致緩動卡片組件
+  Widget _buildUltraFluidCard({required int index, required String title, required String subtitle}) {
     bool isSelected = _selectedIndex == index;
+
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 400),
-        scale: isSelected ? 1.02 : 1.0,
-        curve: Curves.easeOutBack,
+        duration: const Duration(milliseconds: 600), // 🌟 縮放時間拉長
+        scale: isSelected ? 1.03 : 1.0,
+        curve: Curves.easeOutBack, 
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.fastOutSlowIn,
+          duration: const Duration(milliseconds: 800), // 🌟 顏色與邊框過渡大幅延長
+          curve: Curves.easeInOutQuint, // 🌟 採用極致平滑的五次方緩動曲線
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -150,12 +151,12 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.05),
-              width: isSelected ? 2.5 : 1.0,
+              width: isSelected ? 2.8 : 1.0, // 選中時邊框稍厚，強化體感
             ),
             boxShadow: [
               BoxShadow(
-                color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.black.withOpacity(0.02),
-                blurRadius: 15,
+                color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.black.withOpacity(0.02),
+                blurRadius: isSelected ? 20 : 10,
                 offset: const Offset(0, 8),
               )
             ],
@@ -186,8 +187,13 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   ],
                 ),
               ),
-              if (isSelected) 
-                Icon(Icons.check_circle, color: AppColors.primary, size: 30),
+              // 勾選圖示的出現在 AnimatedSwitcher 下也會變慢
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: isSelected 
+                  ? Icon(Icons.check_circle, color: AppColors.primary, size: 30, key: ValueKey('on_$index'))
+                  : SizedBox(width: 30, key: ValueKey('off_$index')),
+              ),
             ],
           ),
         ),

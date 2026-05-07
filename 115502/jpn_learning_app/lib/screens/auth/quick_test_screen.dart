@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart'; // 🌟 引入 AppColors
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/auth/test_result_screen.dart';
 
@@ -15,20 +16,18 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
   int _currentIndex = 0;
   int? _selectedAnswerIndex;
   
-  // 改為空陣列，等待 API 載入
   List<dynamic> _questions = [];
   final List<bool> _results = [];
   
-  bool _isLoading = true; // 狀態：是否正在載入題目
-  bool _isSubmitting = false; // 狀態：是否正在結算成績
+  bool _isLoading = true;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    _loadQuestionsFromDB(); // 畫面初始化時去撈題目
+    _loadQuestionsFromDB();
   }
 
-  // 呼叫 API 拿題目
   Future<void> _loadQuestionsFromDB() async {
     final questions = await ApiClient.fetchQuizQuestions();
     if (mounted) {
@@ -36,10 +35,9 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
         _questions = questions;
         _isLoading = false;
       });
-      
       if (_questions.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('題庫載入失敗，請確認已執行 seed.py 並重啟後端')),
+          const SnackBar(content: Text('題庫載入失敗，請確認已執行 seed.py')),
         );
       }
     }
@@ -51,7 +49,6 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
       return;
     }
 
-    // 防猜機制：選了索引 4 (即選項 E) 直接視為錯誤
     bool isCorrect = false;
     if (_selectedAnswerIndex != 4) {
       isCorrect = (_selectedAnswerIndex == _questions[_currentIndex]['correctIndex']);
@@ -64,12 +61,9 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
         _selectedAnswerIndex = null;
       });
     } else {
-      // 測驗結束，打後端 API 進行 Fail-Stop 判定
       setState(() => _isSubmitting = true);
-      
       final currentUserId = context.read<UserProvider>().userId ?? 1;
       final response = await ApiClient.submitQuizResults(currentUserId, _results);
-      
       final levelCode = response['level'] ?? 'N5';
       
       if (context.mounted) {
@@ -84,17 +78,24 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 載入中或結算中，顯示轉圈圈
+    // --- 載入與結算畫面優化 ---
     if (_isLoading || _isSubmitting || _questions.isEmpty) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background, // 🌟 統一背景色
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: Colors.green),
-              const SizedBox(height: 16),
-              Text(_isSubmitting ? 'AI 正在為您判定程度...' : '正在為您抽取專屬題庫...'),
+              const CircularProgressIndicator(color: AppColors.primary),
+              const SizedBox(height: 24),
+              Text(
+                _isSubmitting ? 'AI 正在為您判定程度...' : '正在抽取專屬題庫...',
+                style: const TextStyle(
+                  color: AppColors.primary, 
+                  fontWeight: FontWeight.bold,
+                  fontFamily: '微軟正黑體'
+                ),
+              ),
             ],
           ),
         ),
@@ -102,78 +103,62 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
     }
 
     final currentQ = _questions[_currentIndex];
-    
-    // 【防猜機制】動態在結尾加上選項 E
-    // 注意：因為資料庫傳來的 options 是 List<dynamic>，要先轉型再添加
     final List<String> displayOptions = List<String>.from(currentQ['options']);
     displayOptions.add('E. 我還沒學過這個');
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background, // 🌟 統一背景色
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: const BackButton(color: Colors.black87),
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 32), // 🌟 統一 32 邊距
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, // 🌟 改為左對齊
             children: [
+              const SizedBox(height: 8),
+              
+              // 🌟 自定義線條進度條
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: (_currentIndex + 1) / _questions.length,
+                  minHeight: 6,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+
+              // 🌟 這裡暫時保留舊有的 UI 結構，下個 Commit 會處理問題與選項的樣式
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 24),
-                      Text('程度測驗 (${_currentIndex + 1}/${_questions.length})', 
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)
+                      Text(
+                        '第 ${_currentIndex + 1} 題 / 共 ${_questions.length} 題',
+                        style: const TextStyle(fontSize: 16, color: AppColors.primary, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 24),
-                      
-                      // 顯示由資料庫傳來的 context (例如：第一階段：超級新手 (N5))
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.green),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          currentQ['context'] ?? '',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
+                      const SizedBox(height: 20),
+                      Text(
+                        currentQ['question'],
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
                       ),
-                      const SizedBox(height: 24),
-
-                      Text(currentQ['question'], textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, height: 1.5)),
                       const SizedBox(height: 32),
-
+                      
+                      // 原始選項按鈕 (Commit 3 會重構)
                       ...List.generate(displayOptions.length, (index) {
-                        final isSelected = _selectedAnswerIndex == index;
-                        final isOptionE = (index == 4); 
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: InkWell(
-                            onTap: () => setState(() => _selectedAnswerIndex = index),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                              decoration: BoxDecoration(
-                                color: isSelected 
-                                    ? (isOptionE ? Colors.grey.shade400 : Colors.green.withOpacity(0.6)) 
-                                    : (isOptionE ? Colors.grey.shade100 : Colors.green.withOpacity(0.1)),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? (isOptionE ? Colors.grey.shade600 : Colors.green) : Colors.transparent,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Text(
-                                displayOptions[index],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: isOptionE && !isSelected ? Colors.grey.shade600 : (isSelected ? Colors.white : Colors.black87),
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              ),
-                            ),
+                        return ListTile(
+                          title: Text(displayOptions[index]),
+                          leading: Radio<int>(
+                            value: index,
+                            groupValue: _selectedAnswerIndex,
+                            onChanged: (val) => setState(() => _selectedAnswerIndex = val),
                           ),
                         );
                       }),
@@ -181,17 +166,17 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                   ),
                 ),
               ),
+
+              // 原始按鈕 (Commit 4 會重構)
               ElevatedButton(
                 onPressed: _nextQuestion,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: AppColors.primary,
                 ),
-                child: Text(_currentIndex == _questions.length - 1 ? '完成測驗' : '下一題', 
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
-                ),
+                child: Text(_currentIndex == _questions.length - 1 ? '完成測驗' : '下一題'),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

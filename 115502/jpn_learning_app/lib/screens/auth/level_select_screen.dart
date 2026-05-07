@@ -43,47 +43,46 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32), // 🌟 稍微加寬邊距，讓對齊線更明顯
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
           child: Column(
-            // 🌟 核心：確保 Column 內所有組件從左側 0 座標開始
+            // 🌟 核心：確保所有子元件在 Column 中絕對靠左
             crossAxisAlignment: CrossAxisAlignment.start, 
             children: [
               const SizedBox(height: 20),
               const Text(
                 'WELCOME TO J-LENS',
-                textAlign: TextAlign.left, // 🌟 強制文字內部左對齊
                 style: TextStyle(
                   fontSize: 13, 
                   fontWeight: FontWeight.bold, 
                   color: AppColors.primary, 
-                  letterSpacing: 1.5
+                  letterSpacing: 2.0
                 ),
               ),
               const SizedBox(height: 16),
-              // 🌟 這裡做了換行優化與強制左對齊
+              // 🌟 完美對齊的兩行標題
               const Text(
-                '請選擇您的\n日文學習起點',
-                textAlign: TextAlign.left, // 🌟 關鍵修正：確保兩行文字的起點完全重合
+                '請選擇你的\n日文學習起點',
+                textAlign: TextAlign.left, // 🌟 強制文字塊內部左對齊
                 style: TextStyle(
                   fontSize: 32, 
                   fontWeight: FontWeight.w900, 
                   color: Colors.black87, 
-                  height: 1.25, 
+                  height: 1.3, // 稍微增加行高，讓兩行字更有設計感
                 ),
               ),
               const SizedBox(height: 20),
-              // 🌟 裝飾條：確保寬度從左側出發
+              // 裝飾用小綠條：寬度起點現在會與標題的第一個字完美重合
               Container(
                 width: 45,
                 height: 5,
                 decoration: BoxDecoration(
                   color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(2.5),
                 ),
               ),
               const SizedBox(height: 48),
 
-              // 下方的卡片與按鈕保持原本的流暢邏輯...
+              // 卡片部分
               _buildFluidCard(
                 index: 0,
                 title: '我是日文新手',
@@ -100,6 +99,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
+              // 底部按鈕
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOutCubic,
@@ -128,7 +128,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     );
   }
 
-  // 🌟 卡片內部也同步強化左對齊
   Widget _buildFluidCard({required int index, required String title, required String subtitle}) {
     bool isSelected = _selectedIndex == index;
 
@@ -162,11 +161,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             children: [
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // 🌟 確保卡片內文字也是絕對左對齊
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 20, 
                         fontWeight: FontWeight.bold, 
@@ -176,7 +174,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     const SizedBox(height: 10),
                     Text(
                       subtitle,
-                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 14, 
                         color: isSelected ? AppColors.primary.withOpacity(0.8) : Colors.black54, 

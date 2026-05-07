@@ -17,9 +17,9 @@ class LevelSelectScreen extends StatefulWidget {
 class _LevelSelectScreenState extends State<LevelSelectScreen> {
   int? _selectedIndex;
 
-  // 🌟 極速響應參數：低於 200ms 達到即時體感 🌟
-  static const _fastDuration = Duration(milliseconds: 180); 
-  static const _snapCurve = Curves.easeOut; // 快速且直接
+  // 🌟 黃金比例參數：280ms 是兼顧流暢與速度的最優解 🌟
+  static const _goldenDuration = Duration(milliseconds: 280); 
+  static const _smoothCurve = Curves.easeOutCubic; // 🌟 快速開始但優雅結束
 
   Future<void> _handleNavigation() async {
     if (_selectedIndex == 0) {
@@ -83,7 +83,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 48),
 
-              _buildFastCard(
+              _buildGoldenCard(
                 index: 0,
                 title: '我是日文新手',
                 subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
@@ -91,7 +91,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               
               const SizedBox(height: 24),
 
-              _buildFastCard(
+              _buildGoldenCard(
                 index: 1,
                 title: '我已經有基礎了',
                 subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
@@ -99,10 +99,9 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
-              // 底部按鈕也同步變快
               AnimatedContainer(
-                duration: _fastDuration,
-                curve: _snapCurve,
+                duration: _goldenDuration,
+                curve: _smoothCurve,
                 width: double.infinity,
                 height: 62,
                 child: ElevatedButton(
@@ -125,18 +124,18 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     );
   }
 
-  Widget _buildFastCard({required int index, required String title, required String subtitle}) {
+  Widget _buildGoldenCard({required int index, required String title, required String subtitle}) {
     bool isSelected = _selectedIndex == index;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 100), // 🌟 極速縮放
-        scale: isSelected ? 1.01 : 1.0,
-        curve: _snapCurve,
+        duration: _goldenDuration,
+        scale: isSelected ? 1.015 : 1.0, // 🌟 稍微調整為 1.5% 的縮放，回饋感更適中
+        curve: _smoothCurve,
         child: AnimatedContainer(
-          duration: _fastDuration,
-          curve: _snapCurve,
+          duration: _goldenDuration,
+          curve: _smoothCurve,
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -148,7 +147,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.black.withOpacity(0.02),
+                color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.black.withOpacity(0.02),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               )
@@ -161,8 +160,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AnimatedDefaultTextStyle(
-                      duration: _fastDuration,
-                      curve: _snapCurve,
+                      duration: _goldenDuration,
+                      curve: _smoothCurve,
                       style: TextStyle(
                         fontSize: 20, 
                         fontWeight: FontWeight.bold, 
@@ -173,8 +172,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     ),
                     const SizedBox(height: 10),
                     AnimatedDefaultTextStyle(
-                      duration: _fastDuration,
-                      curve: _snapCurve,
+                      duration: _goldenDuration,
+                      curve: _smoothCurve,
                       style: TextStyle(
                         fontSize: 14, 
                         fontFamily: '微軟正黑體',
@@ -187,8 +186,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                 ),
               ),
               AnimatedOpacity(
-                duration: _fastDuration,
-                curve: _snapCurve,
+                duration: _goldenDuration,
+                curve: _smoothCurve,
                 opacity: isSelected ? 1.0 : 0.0,
                 child: Icon(Icons.check_circle, color: AppColors.primary, size: 28),
               ),

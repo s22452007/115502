@@ -57,6 +57,20 @@
         </form>
     </div>
 
-    
+    <script>
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const passwordInput = document.getElementById('adminPassword');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            // 判斷目前的類型，如果是 password 就改成 text，反之亦然
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.textContent = '🙈'; // 變成閉眼
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.textContent = '👁️'; // 變成睜眼
+            }
+        });
+    </script>
 </body>
 </html>

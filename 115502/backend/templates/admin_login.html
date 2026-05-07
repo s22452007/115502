@@ -10,14 +10,16 @@
         .btn-snap { background-color: #5c8364; color: white; border: none; }
         .btn-snap:hover { background-color: #4a6b51; color: white; }
         
-        /* 🌟 新增：讓下拉選單與輸入框點擊時，外框發出 JLens 專屬綠色光暈 */
+        /* 讓下拉選單與輸入框點擊時，外框發出 JLens 專屬綠色光暈 */
         .form-select:focus, .form-control:focus {
             border-color: #5c8364;
             box-shadow: 0 0 0 0.25rem rgba(92, 131, 100, 0.25);
         }
-        /* 🌟 微調眼睛按鈕的滑鼠懸停效果 */
+
+        /* 眼睛按鈕的滑鼠懸停效果 */
         #togglePassword:hover {
-            background-color: #f4f7f5;
+            background-color: #f8f9fa;
+            border-color: #5c8364;
         }
     </style>
 </head>
@@ -46,9 +48,9 @@
             <div class="mb-4">
                 <label class="form-label text-muted fw-bold">密碼</label>
                 <div class="input-group">
-                    <input type="password" name="password" id="adminPassword" class="form-control" placeholder="請輸入密碼" required>
+                    <input type="password" name="password" id="adminPassword" class="form-control" placeholder="預設密碼同帳號" required>
                     <button class="btn btn-outline-secondary" type="button" id="togglePassword" style="border-color: #dce7de; color: #5c8364;">
-                        <span id="eyeIcon">👁️</span>
+                        <span id="eyeIcon">🙈</span>
                     </button>
                 </div>
             </div>
@@ -63,22 +65,20 @@
             const passwordInput = document.getElementById('adminPassword');
             const eyeIcon = document.getElementById('eyeIcon');
 
-            // 確保三個元素都有順利抓到才執行
             if (toggleBtn && passwordInput && eyeIcon) {
                 toggleBtn.addEventListener('click', function () {
-                    // 取得目前的輸入框類型
                     const currentType = passwordInput.getAttribute('type');
                     
                     if (currentType === 'password') {
+                        // 切換為顯示密碼
                         passwordInput.setAttribute('type', 'text');
-                        eyeIcon.textContent = '🙈'; // 切換成閉眼
+                        eyeIcon.textContent = '👁️'; // 顯示內容，切換為睜眼
                     } else {
+                        // 切換為隱藏密碼
                         passwordInput.setAttribute('type', 'password');
-                        eyeIcon.textContent = '👁️'; // 切換成睜眼
+                        eyeIcon.textContent = '🙈'; // 隱藏內容，切換為閉眼
                     }
                 });
-            } else {
-                console.error("⚠️ 找不到密碼欄位或按鈕，請檢查 HTML 標籤的 ID 設定。");
             }
         });
     </script>

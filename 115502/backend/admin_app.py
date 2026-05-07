@@ -73,19 +73,33 @@ def admin_root():
 # ==========================================
 # 🚪 3. 登入與登出系統
 # ==========================================
+# ==========================================
+# 🚪 3. 登入與登出系統
+# ==========================================
 @app.route('/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
+        # 現在 username 會接收到我們下拉選單選到的學號 (例如 "11156001")
         username = request.form.get('username')
         password = request.form.get('password')
         
+        # 增加終端機的登入紀錄 (方便您增加 Commit 內容)
+        print(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] 登入嘗試: 管理員 {username}")
+        
         admin = Admin.query.filter_by(username=username).first()
+        
         if admin and admin.check_password(password):
+            # 登入成功，將重要資訊寫入 Session
             session['admin_user'] = admin.username
+            session['admin_id'] = admin.id
+            session['role'] = admin.role # 🌟 確保這行有加上，這樣才能分辨 super_admin
             session.permanent = True
+            
+            print(f"✅ 登入成功: {username} (權限: {admin.role})")
             return redirect(url_for('admin_dashboard')) # 密碼正確去儀表板
         else:
-            return render_template('admin_login.html', error="帳號或密碼錯誤")
+            print(f"❌ 登入失敗: {username} (密碼錯誤)")
+            return render_template('admin_login.html', error="密碼錯誤，請重新輸入")
             
     return render_template('admin_login.html')
 

@@ -43,37 +43,39 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32), // 🌟 稍微加寬邊距，讓對齊線更明顯
           child: Column(
-            // 🌟 關鍵：確保所有內容靠左對齊
+            // 🌟 核心：確保 Column 內所有組件從左側 0 座標開始
             crossAxisAlignment: CrossAxisAlignment.start, 
             children: [
               const SizedBox(height: 20),
               const Text(
                 'WELCOME TO J-LENS',
+                textAlign: TextAlign.left, // 🌟 強制文字內部左對齊
                 style: TextStyle(
-                  fontSize: 14, 
+                  fontSize: 13, 
                   fontWeight: FontWeight.bold, 
                   color: AppColors.primary, 
-                  letterSpacing: 2.0
+                  letterSpacing: 1.5
                 ),
               ),
-              const SizedBox(height: 12),
-              // 🌟 這裡就是你要求的雙行靠左標題
+              const SizedBox(height: 16),
+              // 🌟 這裡做了換行優化與強制左對齊
               const Text(
                 '請選擇您的\n日文學習起點',
+                textAlign: TextAlign.left, // 🌟 關鍵修正：確保兩行文字的起點完全重合
                 style: TextStyle(
                   fontSize: 32, 
                   fontWeight: FontWeight.w900, 
                   color: Colors.black87, 
-                  height: 1.2, // 🌟 微調行高，避免兩行分太開
+                  height: 1.25, 
                 ),
               ),
-              const SizedBox(height: 16),
-              // 裝飾用小綠條，強調左對齊的視覺線
+              const SizedBox(height: 20),
+              // 🌟 裝飾條：確保寬度從左側出發
               Container(
-                width: 40,
-                height: 4,
+                width: 45,
+                height: 5,
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(2),
@@ -81,6 +83,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 48),
 
+              // 下方的卡片與按鈕保持原本的流暢邏輯...
               _buildFluidCard(
                 index: 0,
                 title: '我是日文新手',
@@ -97,20 +100,19 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
-              // 底部行動按鈕
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOutCubic,
                 width: double.infinity,
-                height: 60,
+                height: 62,
                 child: ElevatedButton(
                   onPressed: _selectedIndex != null ? _handleNavigation : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor: Colors.grey.shade300,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: _selectedIndex != null ? 4 : 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    elevation: _selectedIndex != null ? 6 : 0,
                   ),
                   child: Text(
                     _selectedIndex == null ? '請選擇一個起點' : '開始體驗',
@@ -126,12 +128,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     );
   }
 
-  // 流暢卡片組件 (延用上一個 Commit 的流暢效果)
-  Widget _buildFluidCard({
-    required int index,
-    required String title,
-    required String subtitle,
-  }) {
+  // 🌟 卡片內部也同步強化左對齊
+  Widget _buildFluidCard({required int index, required String title, required String subtitle}) {
     bool isSelected = _selectedIndex == index;
 
     return GestureDetector(
@@ -141,10 +139,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
         scale: isSelected ? 1.02 : 1.0,
         curve: Curves.easeOutBack,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 450),
+          duration: const Duration(milliseconds: 400),
           curve: Curves.fastOutSlowIn,
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
             borderRadius: BorderRadius.circular(24),
@@ -154,8 +152,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.black.withOpacity(0.02),
-                blurRadius: isSelected ? 25 : 10,
+                color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.black.withOpacity(0.02),
+                blurRadius: 15,
                 offset: const Offset(0, 8),
               )
             ],
@@ -164,37 +162,32 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             children: [
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start, // 🌟 確保卡片內文字也是絕對左對齊
                   children: [
                     Text(
                       title,
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 20, 
                         fontWeight: FontWeight.bold, 
                         color: isSelected ? AppColors.primary : Colors.black87
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Text(
-                      subtitle, 
+                      subtitle,
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 14, 
-                        color: isSelected ? AppColors.primary.withOpacity(0.7) : Colors.black54, 
+                        color: isSelected ? AppColors.primary.withOpacity(0.8) : Colors.black54, 
                         height: 1.5
-                      )
+                      ),
                     ),
                   ],
                 ),
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return ScaleTransition(scale: animation, child: child);
-                },
-                child: isSelected
-                  ? Icon(Icons.check_circle, color: AppColors.primary, size: 32, key: ValueKey('icon_$index'))
-                  : const SizedBox(width: 32, key: ValueKey('empty')),
-              ),
+              if (isSelected) 
+                Icon(Icons.check_circle, color: AppColors.primary, size: 30),
             ],
           ),
         ),

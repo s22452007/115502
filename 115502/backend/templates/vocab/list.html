@@ -2,25 +2,55 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 單字管理</title>
+    <title>JLens 教材單字管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        body { display: flex; background-color: #f4f7f5; margin: 0; }
-        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+
+        /* 側邊欄樣式 */
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
-        .sidebar-logo .icon-box { width: 36px; height: 36px; background: #dce7de; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #5c8364; font-weight: bold; }
-        .sidebar-logo .title { color: #5c8364; font-weight: bold; font-size: 1rem; line-height: 1.2; }
+        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green-accent); font-weight: bold; }
+        .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1rem; line-height: 1.2; }
         .sidebar-logo .subtitle { color: #aaa; font-size: 0.7rem; margin-top: 2px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
-        .sidebar-menu li a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
-        .sidebar-menu li a:hover { background: #f4f7f5; color: #5c8364; }
-        .sidebar-menu li a.active { background: #dce7de; color: #5c8364; font-weight: bold; border-right: 4px solid #5c8364; }
-        .main-content { flex: 1; padding: 40px; }
-        .btn-snap { background-color: #5c8364; color: white; border: none; }
-        .btn-snap:hover { background-color: #4a6b51; color: white; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+
+        /* 主內容區樣式 */
+        .main-content { flex: 1; overflow-x: hidden; }
+        .body-area { padding: 32px 48px; }
+        .page-title-box { margin-bottom: 24px; }
+        .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
+
+        /* 面板設計 */
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .panel-header { padding: 14px 20px; font-weight: bold; font-size: 0.95rem; color: white; background: var(--green-dark); letter-spacing: 0.5px; }
+        
+        /* 表格樣式 */
+        .table > :not(caption) > * > * { padding: 16px 20px; border-bottom-color: #f4f7f5; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.9rem; }
+        
+        /* 搜尋與按鈕樣式 */
+        .search-input { border-radius: 8px; border: 1px solid #ddd; padding: 0.5rem 1rem; font-size: 0.9rem; width: 250px; }
+        .btn-snap { background-color: var(--green-accent); color: white; border: none; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .btn-snap:hover { background-color: var(--green-dark); color: white; }
     </style>
 </head>
 <body>
+<div class="layout">
 
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -36,95 +66,102 @@
             <li><a href="/vocab/list" class="active">📖 教材單字管理</a></li>
             <li><a href="/quiz/list">📝 測驗題目管理</a></li>
             <li><a href="/feedback/list">💬 意見回饋</a></li>
-            
             <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
-            <li>
-                <a href="/admin/change_password">🔑 修改密碼</a></li>
-            <li><a href="{{ url_for('admin_logout') }}" style="color: #d9534f;">🚪 登出系統</a>
-            </li>
+            <li><a href="/admin/change_password">🔑 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;">🚪 登出系統</a></li>
         </ul>
     </aside>
 
     <main class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 style="color: #333;">📖 教材單字庫管理</h3>
+        <div class="body-area">
             
-            <div class="d-flex gap-3 align-items-center">
-                <div class="input-group" style="width: 220px;">
-                    <span class="input-group-text bg-white text-muted border-end-0">🔍</span>
-                    <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="搜尋日文、假名或中文...">
+            <div class="page-title-box d-flex justify-content-between align-items-end">
+                <div>
+                    <h3 class="page-title">📖 教材單字庫管理</h3>
+                    <div class="text-muted small mt-1">維護系統單字庫，包含日文單字、假名讀音與中文釋義</div>
                 </div>
-                <button class="btn btn-snap text-nowrap" data-bs-toggle="modal" data-bs-target="#addModal">+ 新增單字</button>
+                <div class="d-flex gap-2">
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋單字、假名或意思...">
+                    <button class="btn btn-snap px-3" data-bs-toggle="modal" data-bs-target="#addModal">
+                        <i class="bi bi-plus-lg me-1"></i> 新增單字
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead style="background-color: #f8f9fa;">
-                        <tr>
-                            <th>ID</th>
-                            <th>單字 (Word)</th>
-                            <th>讀音 (Kana)</th>
-                            <th>中文意思</th>
-                            <th class="text-end">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vocabTableBody">
-                        {% for v in vocabs %}
-                        <tr>
-                            <td>{{ v.id }}</td>
-                            <td class="fw-bold">{{ v.word }}</td>
-                            <td>{{ v.kana }}</td>
-                            <td>{{ v.meaning }}</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ v.id }}">編輯</button>
-                                <form action="{{ url_for('vocab_delete', id=v.id) }}" method="POST" style="display:inline;">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('確定要刪除這個單字嗎？');">刪除</button>
-                                </form>
-                            </td>
-                        </tr>
-
-                        <div class="modal fade" id="editModal{{ v.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <form action="{{ url_for('vocab_edit', id=v.id) }}" method="POST">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">編輯單字</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <input type="text" name="word" class="form-control mb-3" value="{{ v.word }}" placeholder="日文單字" required>
-                                            <input type="text" name="kana" class="form-control mb-3" value="{{ v.kana }}" placeholder="讀音(假名)" required>
-                                            <input type="text" name="meaning" class="form-control mb-3" value="{{ v.meaning }}" placeholder="中文意思" required>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="submit" class="btn btn-snap">儲存變更</button>
-                                        </div>
-                                    </form>
+            <div class="panel">
+                <div class="panel-header">📚 單字資料清單</div>
+                <div class="p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">ID</th>
+                                <th>日文單字 (Word)</th>
+                                <th>讀音 (Kana)</th>
+                                <th>中文意思</th>
+                                <th class="text-center" style="width: 150px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vocabTableBody">
+                            {% for v in vocabs %}
+                            <tr>
+                                <td><span class="text-muted small">#{{ v.id }}</span></td>
+                                <td><div class="fw-bold" style="color: #333; font-size: 1rem;">{{ v.word }}</div></td>
+                                <td><span class="badge bg-light text-dark border">{{ v.kana }}</span></td>
+                                <td>{{ v.meaning }}</td>
+                                <td class="text-center">
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ v.id }}" style="border-radius: 8px;">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <form action="{{ url_for('vocab_delete', id=v.id) }}" method="POST" onsubmit="return confirm('確定刪除這個單字嗎？');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 8px;">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <div class="modal fade" id="editModal{{ v.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content" style="border-radius: 16px;">
+                                        <form action="{{ url_for('vocab_edit', id=v.id) }}" method="POST">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title fw-bold" style="color: var(--green-accent);">編輯單字</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body p-4">
+                                                <input type="text" name="word" class="form-control mb-3" value="{{ v.word }}" placeholder="日文單字" required>
+                                                <input type="text" name="kana" class="form-control mb-3" value="{{ v.kana }}" placeholder="讀音(假名)" required>
+                                                <input type="text" name="meaning" class="form-control mb-3" value="{{ v.meaning }}" placeholder="中文意思" required>
+                                            </div>
+                                            <div class="modal-footer border-0">
+                                                <button type="submit" class="btn btn-snap w-100 py-2">儲存變更</button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">目前資料庫中還沒有單字喔！快新增一個吧！</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">目前資料庫中尚無單字紀錄。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
         </div>
     </main>
 
     <div class="modal fade" id="addModal" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content">
+            <div class="modal-content" style="border-radius: 16px;">
                 <form action="{{ url_for('vocab_add') }}" method="POST">
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold" style="color: #5c8364;">新增教材單字</h5>
+                        <h5 class="modal-title fw-bold" style="color: var(--green-accent);">新增教材單字</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label text-muted small">日文單字</label>
                             <input type="text" name="word" class="form-control" placeholder="例：猫" required>
@@ -138,38 +175,33 @@
                             <input type="text" name="meaning" class="form-control" placeholder="例：貓咪" required>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
-                        <button type="submit" class="btn btn-snap">新增</button>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-snap w-100 py-2">確認新增</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('searchInput');
-            const tableBody = document.getElementById('vocabTableBody');
-            
-            searchInput.addEventListener('keyup', function() {
-                const filterText = this.value.toLowerCase();
-                const rows = tableBody.querySelectorAll('tr');
+</div>
 
-                rows.forEach(row => {
-                    const tdElements = row.querySelectorAll('td');
-                    if(tdElements.length > 1) {
-                        const rowText = row.textContent.toLowerCase();
-                        if (rowText.includes(filterText)) {
-                            row.style.display = '';
-                        } else {
-                            row.style.display = 'none';
-                        }
-                    }
-                });
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 保持搜尋功能運作
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        const tableBody = document.getElementById('vocabTableBody');
+        
+        searchInput.addEventListener('keyup', function() {
+            const filterText = this.value.toLowerCase();
+            const rows = tableBody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                row.style.display = rowText.includes(filterText) ? '' : 'none';
             });
         });
-    </script>
+    });
+</script>
 </body>
 </html>

@@ -9,24 +9,42 @@
         .login-card { width: 100%; max-width: 400px; padding: 2rem; border-radius: 15px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .btn-snap { background-color: #5c8364; color: white; border: none; }
         .btn-snap:hover { background-color: #4a6b51; color: white; }
+        
+        /* 🌟 新增：讓下拉選單與輸入框點擊時，外框發出 JLens 專屬綠色光暈 */
+        .form-select:focus, .form-control:focus {
+            border-color: #5c8364;
+            box-shadow: 0 0 0 0.25rem rgba(92, 131, 100, 0.25);
+        }
     </style>
 </head>
 <body>
     <div class="login-card">
         <h3 class="text-center mb-4 fw-bold" style="color: #5c8364;">JLens Admin</h3>
+        
         {% if error %}
         <div class="alert alert-danger py-2 text-center">{{ error }}</div>
         {% endif %}
+        
         <form action="{{ url_for('admin_login') }}" method="POST">
+            
             <div class="mb-3">
-                <label class="form-label text-muted">管理員帳號</label>
-                <input type="text" name="username" class="form-control" required autofocus>
+                <label class="form-label text-muted fw-bold">選擇管理者身分</label>
+                <select name="username" class="form-select form-select-lg" required autofocus>
+                    <option value="" disabled selected>請選擇您的帳號...</option>
+                    <option value="11156001">11156001 (組員)</option>
+                    <option value="11156006">11156006 (組員)</option>
+                    <option value="11156015">11156015 (組員)</option>
+                    <option value="11156039">11156039 (組員)</option>
+                    <option value="11156047">11156047 (組員)</option>
+                </select>
             </div>
+            
             <div class="mb-4">
-                <label class="form-label text-muted">密碼</label>
-                <input type="password" name="password" class="form-control" required>
+                <label class="form-label text-muted fw-bold">密碼</label>
+                <input type="password" name="password" class="form-control form-control-lg" placeholder="預設密碼同帳號" required>
             </div>
-            <button type="submit" class="btn btn-snap w-100 py-2 fw-bold">登入系統</button>
+            
+            <button type="submit" class="btn btn-snap w-100 py-2 fw-bold fs-5">登入系統</button>
         </form>
     </div>
 </body>

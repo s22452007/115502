@@ -22,7 +22,6 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
-  // 🌟 統一動畫參數：與程度選擇頁面保持一致
   static const _syncDuration = Duration(milliseconds: 280);
   static const _syncCurve = Curves.easeOutCubic;
 
@@ -39,19 +38,11 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
         _questions = questions;
         _isLoading = false;
       });
-      if (_questions.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('題庫載入失敗，請確認已執行 seed.py')),
-        );
-      }
     }
   }
 
   Future<void> _nextQuestion() async {
-    if (_selectedAnswerIndex == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請選擇一個答案喔！')));
-      return;
-    }
+    if (_selectedAnswerIndex == null) return;
 
     bool isCorrect = false;
     if (_selectedAnswerIndex != 4) {
@@ -114,12 +105,11 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-              
+              // 1. 進度條
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
@@ -129,11 +119,12 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                   valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
-              
               const SizedBox(height: 32),
 
+              // 2. 題目區
               Expanded(
                 child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -149,35 +140,25 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-
                       Text(
                         '第 ${_currentIndex + 1} 題',
                         style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
-
                       Text(
                         currentQ['question'],
-                        style: const TextStyle(
-                          fontSize: 24, 
-                          fontWeight: FontWeight.w900, 
-                          color: Colors.black87,
-                          height: 1.4,
-                        ),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black87, height: 1.4),
                       ),
                       const SizedBox(height: 32),
                       
-                      // 🌟 Commit 3 核心：帶有動畫的選項卡片
+                      // 3. 選項列表
                       ...List.generate(displayOptions.length, (index) {
-                        final isSelected = _selectedAnswerIndex == index;
-                        final isOptionE = (index == 4);
-
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _buildSyncedOptionCard(
                             text: displayOptions[index],
-                            isSelected: isSelected,
-                            isOptionE: isOptionE,
+                            isSelected: _selectedAnswerIndex == index,
+                            isOptionE: (index == 4),
                             onTap: () => setState(() => _selectedAnswerIndex = index),
                           ),
                         );
@@ -187,16 +168,29 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                 ),
               ),
 
-              // 底部按鈕 (下個 Commit 將重構)
-              ElevatedButton(
-                onPressed: _nextQuestion,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: AppColors.primary,
-                ),
-                child: Text(_currentIndex == _questions.length - 1 ? '完成測驗' : '下一題'),
-              ),
               const SizedBox(height: 20),
+
+              // 🌟 Commit 4 核心：統一規格之底部行動按鈕
+              AnimatedContainer(
+                duration: _syncDuration,
+                curve: _syncCurve,
+                width: double.infinity,
+                height: 62,
+                child: ElevatedButton(
+                  onPressed: _selectedAnswerIndex != null ? _nextQuestion : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    elevation: _selectedAnswerIndex != null ? 4 : 0,
+                  ),
+                  child: Text(
+                    _currentIndex == _questions.length - 1 ? '完成測驗' : '下一題',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體'),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -204,14 +198,12 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
     );
   }
 
-  // 🌟 核心組件：與程度選擇頁面完全同步的選項卡片
   Widget _buildSyncedOptionCard({
     required String text,
     required bool isSelected,
     required bool isOptionE,
     required VoidCallback onTap,
   }) {
-    // 針對「防猜選項 E」使用灰色調，其餘使用品牌綠
     final activeColor = isOptionE ? Colors.grey.shade600 : AppColors.primary;
 
     return GestureDetector(

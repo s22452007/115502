@@ -1,98 +1,100 @@
 // ==========================================
-// 1. 系統內建與第三方套件 (Core & Packages)
+// 1. 系統內建與第三方套件
 // ==========================================
-import 'package:flutter/material.dart';          // Flutter 核心 Material 設計元件庫
-import 'package:provider/provider.dart';         // 狀態管理套件 (負責呼叫 context.read)
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 // ==========================================
-// 2. 本地端服務與工具 (Local Services & Utils)
+// 2. 本地端服務與工具
 // ==========================================
-import 'package:jpn_learning_app/utils/api_client.dart';       // 負責與後端 Flask API 溝通的工具類別
-import 'package:jpn_learning_app/utils/constants.dart';        // 🎨 引入 APP 統一色系設定 (AppColors)
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 // ==========================================
 // 3. 狀態提供者 (Providers)
 // ==========================================
-import 'package:jpn_learning_app/providers/user_provider.dart';// 提供全域的使用者資料 (如 userId, japaneseLevel)
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 // ==========================================
 // 4. 畫面路由跳轉 (Screens)
 // ==========================================
-import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart'; // 10 題快速測驗畫面
-import 'package:jpn_learning_app/screens/home/home_screen.dart';       // APP 主要首頁畫面
+import 'package:jpn_learning_app/screens/auth/quick_test_screen.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 // ==========================================
-// 5. 獨立 UI 元件與彈出視窗 (Widgets & Dialogs)
+// 5. 獨立 UI 元件與彈出視窗
 // ==========================================
-import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart'; // 🎉 迎新禮包！華麗的徽章升級慶祝彈窗
+import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 
-/// **[程度選擇畫面 (Level Select Screen)]**
-/// 位於註冊後 / 登入後的第一個破冰畫面。
-/// 提供使用者兩個選項：「我是新手」或「我已經有基礎了」。
 class LevelSelectScreen extends StatelessWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 🎨 使用朋友設定的 APP 統一背景色
-      backgroundColor: AppColors.background, 
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView( 
+        child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center, // 置中對齊，看起來更穩重
+              crossAxisAlignment: CrossAxisAlignment.start, // 🌟 統一改為左對齊，更有專業感
               children: [
                 const SizedBox(height: 20),
                 const Text(
-                  '歡迎來到 J-Lens',
+                  'WELCOME TO J-LENS',
                   style: TextStyle(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold, 
-                    color: Colors.black87,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                    letterSpacing: 2.0,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 const Text(
-                  '請選擇您的日文學習起點',
+                  '請選擇您的\n日文學習起點',
                   style: TextStyle(
-                    fontSize: 16, 
-                    color: Colors.black54,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 裝飾用小綠條
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(height: 48),
 
                 // --- 卡片 1：我是新手 ---
-                _buildFlatCard(
+                _buildModernCard(
                   context: context,
                   title: '我是日文新手',
-                  subtitle: '從五十音開始打穩基礎\n適合完全沒學過日文的你',
-                  icon: Icons.spa_outlined, // 使用空心圖示更輕量
+                  subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
                   mainColor: AppColors.primary,
                   onTap: () async {
-                    // 1. 顯示提示字 (套用朋友的 UI 顏色)
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text('正在為您設定新手模式...'),
-                        backgroundColor: AppColors.primary, 
+                        backgroundColor: AppColors.primary,
                       ),
                     );
 
-                    // 2. 更新後端與 Provider 的等級資料
                     final currentUserId = context.read<UserProvider>().userId;
                     if (currentUserId != null) {
                       await ApiClient.updateLevel(currentUserId, 'N5');
                     }
 
-                    // 確認畫面還在，更新 Provider 狀態
                     if (!context.mounted) return;
                     context.read<UserProvider>().setJapaneseLevel('N5');
-
-                    // 3. 噴發迎新彈窗！(這就是被朋友不小心刪掉的靈魂邏輯，幫你加回來了)
                     await LevelUpDialog.show(context, badgeId: 'level_01', level: 1);
 
-                    // 4. 彈窗關閉後，正式帶使用者進首頁
                     if (context.mounted) {
                       Navigator.pushReplacement(
                         context,
@@ -102,24 +104,22 @@ class LevelSelectScreen extends StatelessWidget {
                   },
                 ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // --- 卡片 2：我已經有基礎了 ---
-                _buildFlatCard(
+                _buildModernCard(
                   context: context,
-                  title: '我已經有點基礎',
-                  subtitle: '進行 10 題快速測驗\nAI 將為您量身打造專屬起點',
-                  icon: Icons.school_outlined, 
-                  mainColor: AppColors.primary,
+                  title: '我已經有基礎了',
+                  subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
+                  mainColor: const Color(0xFF444444), // 使用深灰色區隔選項
                   onTap: () {
-                    // 若有基礎，則跳轉至「10題快速測驗」畫面進行程度判定
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const QuickTestScreen()),
                     );
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -129,57 +129,58 @@ class LevelSelectScreen extends StatelessWidget {
   }
 
   // ==========================================
-  // 🎨 乾淨扁平化卡片 UI 元件 (符合 App 風格)
+  // 🎨 Commit 1 重頭戲：無圖示極簡卡片元件
   // ==========================================
-  Widget _buildFlatCard({
+  Widget _buildModernCard({
     required BuildContext context,
     required String title,
     required String subtitle,
-    required IconData icon,
     required Color mainColor,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16), // 圓角保持與其他按鈕一致
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
         decoration: BoxDecoration(
-          color: Colors.white, // 卡片底色改為純白，在米白背景上會有很好的層次感
-          border: Border.all(color: mainColor.withOpacity(0.3), width: 1.5), // 更輕量柔和的邊框
-          borderRadius: BorderRadius.circular(16),
-          // 加上極為輕微的陰影，增加立體感但不會顯得花俏
+          color: Colors.white,
+          // 🌟 關鍵：移除 Icon 後，改用左側粗邊框作為視覺重心
+          border: Border(
+            left: BorderSide(color: mainColor, width: 6),
+            top: BorderSide(color: mainColor.withOpacity(0.1), width: 1),
+            right: BorderSide(color: mainColor.withOpacity(0.1), width: 1),
+            bottom: BorderSide(color: mainColor.withOpacity(0.1), width: 1),
+          ),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              color: mainColor.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             )
-          ]
+          ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start, // 🌟 內容靠左排版
           children: [
-            // 乾淨俐落的純圖示
-            Icon(icon, size: 56, color: mainColor),
-            const SizedBox(height: 16),
             Text(
               title,
               style: TextStyle(
                 fontSize: 22, 
-                fontWeight: FontWeight.bold, 
+                fontWeight: FontWeight.w900, 
                 color: mainColor,
+                letterSpacing: 0.5,
               ),
             ),
             const SizedBox(height: 12),
             Text(
               subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14, 
-                color: Colors.black54, // 使用統一的次要文字色
-                height: 1.5,
+              style: TextStyle(
+                fontSize: 15, 
+                color: Colors.black.withOpacity(0.6),
+                height: 1.6, // 增加行高讓文字更易讀
               ),
             ),
           ],

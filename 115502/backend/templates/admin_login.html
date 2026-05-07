@@ -58,17 +58,27 @@
     </div>
 
     <script>
-        document.getElementById('togglePassword').addEventListener('click', function () {
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('togglePassword');
             const passwordInput = document.getElementById('adminPassword');
             const eyeIcon = document.getElementById('eyeIcon');
-            
-            // 判斷目前的類型，如果是 password 就改成 text，反之亦然
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeIcon.textContent = '🙈'; // 變成閉眼
+
+            // 確保三個元素都有順利抓到才執行
+            if (toggleBtn && passwordInput && eyeIcon) {
+                toggleBtn.addEventListener('click', function () {
+                    // 取得目前的輸入框類型
+                    const currentType = passwordInput.getAttribute('type');
+                    
+                    if (currentType === 'password') {
+                        passwordInput.setAttribute('type', 'text');
+                        eyeIcon.textContent = '🙈'; // 切換成閉眼
+                    } else {
+                        passwordInput.setAttribute('type', 'password');
+                        eyeIcon.textContent = '👁️'; // 切換成睜眼
+                    }
+                });
             } else {
-                passwordInput.type = 'password';
-                eyeIcon.textContent = '👁️'; // 變成睜眼
+                console.error("⚠️ 找不到密碼欄位或按鈕，請檢查 HTML 標籤的 ID 設定。");
             }
         });
     </script>

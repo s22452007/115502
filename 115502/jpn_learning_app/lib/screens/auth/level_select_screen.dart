@@ -17,9 +17,9 @@ class LevelSelectScreen extends StatefulWidget {
 class _LevelSelectScreenState extends State<LevelSelectScreen> {
   int? _selectedIndex;
 
-  // 🌟 動態同步參數：讓顏色過渡維持優雅的慢速
-  static const _syncDuration = Duration(milliseconds: 700);
-  static const _syncCurve = Curves.fastOutSlowIn;
+  // 🌟 極致同步參數：大幅縮短時間，改用剛硬曲線以減少「波浪感」🌟
+  static const _syncDuration = Duration(milliseconds: 400); // 從 700ms 降至 400ms
+  static const _syncCurve = Curves.easeOutQuad; // 🌟 採用更精確、減速更快的曲線
 
   Future<void> _handleNavigation() async {
     if (_selectedIndex == 0) {
@@ -48,6 +48,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
       fontWeight: FontWeight.w900, 
       color: Colors.black87,
       height: 1.2,
+      fontFamily: '微軟正黑體',
     );
 
     return Scaffold(
@@ -82,7 +83,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 48),
 
-              _buildRefinedCard(
+              // 🌟 呼叫極簡對齊版本的卡片
+              _buildMinimalCard(
                 index: 0,
                 title: '我是日文新手',
                 subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
@@ -90,7 +92,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               
               const SizedBox(height: 24),
 
-              _buildRefinedCard(
+              _buildMinimalCard(
                 index: 1,
                 title: '我已經有基礎了',
                 subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
@@ -112,7 +114,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     elevation: _selectedIndex != null ? 4 : 0,
                   ),
-                  child: const Text('開始體驗', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    _selectedIndex == null ? '請選擇一個起點' : '開始體驗', 
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體')
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -123,19 +128,19 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     );
   }
 
-  // 🌟 核心：移除強烈跳動，改為細膩回饋
-  Widget _buildRefinedCard({required int index, required String title, required String subtitle}) {
+  // 🌟 核心：消除「波浪感」的極簡回饋卡片
+  Widget _buildMinimalCard({required int index, required String title, required String subtitle}) {
     bool isSelected = _selectedIndex == index;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 400), // 🌟 縮短時間，更 snappy
-        scale: isSelected ? 1.01 : 1.0, // 🌟 降低縮放比例，從 1.02 降至 1.01
-        curve: Curves.easeOutCubic, // 🌟 移除彈跳，改用平滑曲線
+        duration: const Duration(milliseconds: 250), // 🌟 縮短時間，大幅減少波浪感
+        scale: isSelected ? 1.01 : 1.0, 
+        curve: _syncCurve, // 🌟 使用與顏色統一的精確曲線，移除彈性
         child: AnimatedContainer(
-          duration: _syncDuration,
-          curve: _syncCurve,
+          duration: _syncDuration, // 大幅縮短
+          curve: _syncCurve, // 大幅減少波浪感
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -160,21 +165,23 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AnimatedDefaultTextStyle(
-                      duration: _syncDuration,
-                      curve: _syncCurve,
+                      duration: _syncDuration, // 同步大幅縮短
+                      curve: _syncCurve, // 同步剛硬曲線
                       style: TextStyle(
                         fontSize: 20, 
                         fontWeight: FontWeight.bold, 
+                        fontFamily: '微軟正黑體',
                         color: isSelected ? AppColors.primary : Colors.black87,
                       ),
                       child: Text(title),
                     ),
                     const SizedBox(height: 10),
                     AnimatedDefaultTextStyle(
-                      duration: _syncDuration,
-                      curve: _syncCurve,
+                      duration: _syncDuration, // 同步大幅縮短
+                      curve: _syncCurve, // 同步剛硬曲線
                       style: TextStyle(
                         fontSize: 14, 
+                        fontFamily: '微軟正黑體',
                         color: isSelected ? AppColors.primary.withOpacity(0.8) : Colors.black54, 
                         height: 1.5
                       ),
@@ -183,9 +190,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   ],
                 ),
               ),
-              // 勾選圓圈使用 Fade 效果代替跳出，視覺更穩
+              // Fade 效果也同步變快，消除飄浮感
               AnimatedOpacity(
-                duration: const Duration(milliseconds: 400),
+                duration: _syncDuration, 
+                curve: _syncCurve, 
                 opacity: isSelected ? 1.0 : 0.0,
                 child: Icon(Icons.check_circle, color: AppColors.primary, size: 30),
               ),

@@ -22,6 +22,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
+  // 🌟 黃金比例動畫參數
   static const _syncDuration = Duration(milliseconds: 280);
   static const _syncCurve = Curves.easeOutCubic;
 
@@ -76,18 +77,8 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
     if (_isLoading || _isSubmitting || _questions.isEmpty) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: AppColors.primary),
-              const SizedBox(height: 24),
-              Text(
-                _isSubmitting ? 'AI 正在為您判定程度...' : '正在抽取專屬題庫...',
-                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
@@ -102,14 +93,17 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const BackButton(color: Colors.black87),
+        title: const Text('程度測驗', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. 進度條
+              const SizedBox(height: 16),
+              // 1. 進度條 (使用 const 修飾非動畫部分提升效能)
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
@@ -123,12 +117,13 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
               // 2. 題目區
               Expanded(
-                child: SingleChildScrollView(
+                child: ListView(
                   physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
+                  children: [
+                    // 階段標籤
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
@@ -139,21 +134,23 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                           style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      Text(
-                        '第 ${_currentIndex + 1} 題',
-                        style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        currentQ['question'],
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black87, height: 1.4),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // 3. 選項列表
-                      ...List.generate(displayOptions.length, (index) {
-                        return Padding(
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '第 ${_currentIndex + 1} 題',
+                      style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      currentQ['question'],
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black87, height: 1.4),
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // 🌟 選項列表：使用 RepaintBoundary 包裹以消除卡頓
+                    ...List.generate(displayOptions.length, (index) {
+                      return RepaintBoundary( // 🌟 隔離繪製圖層，提升效能
+                        child: Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _buildSyncedOptionCard(
                             text: displayOptions[index],
@@ -161,33 +158,34 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                             isOptionE: (index == 4),
                             onTap: () => setState(() => _selectedAnswerIndex = index),
                           ),
-                        );
-                      }),
-                    ],
-                  ),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 20),
-
-              // 🌟 Commit 4 核心：統一規格之底部行動按鈕
-              AnimatedContainer(
-                duration: _syncDuration,
-                curve: _syncCurve,
-                width: double.infinity,
-                height: 62,
-                child: ElevatedButton(
-                  onPressed: _selectedAnswerIndex != null ? _nextQuestion : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    elevation: _selectedAnswerIndex != null ? 4 : 0,
-                  ),
-                  child: Text(
-                    _currentIndex == _questions.length - 1 ? '完成測驗' : '下一題',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體'),
+              // 3. 底部行動按鈕
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: AnimatedContainer(
+                  duration: _syncDuration,
+                  curve: _syncCurve,
+                  width: double.infinity,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: _selectedAnswerIndex != null ? _nextQuestion : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      elevation: _selectedAnswerIndex != null ? 4 : 0,
+                    ),
+                    child: Text(
+                      _currentIndex == _questions.length - 1 ? '完成測驗' : '下一題',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
@@ -198,6 +196,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
     );
   }
 
+  // 🌟 已優化效能的選項卡片
   Widget _buildSyncedOptionCard({
     required String text,
     required bool isSelected,
@@ -215,8 +214,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
         child: AnimatedContainer(
           duration: _syncDuration,
           curve: _syncCurve,
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
           decoration: BoxDecoration(
             color: isSelected ? activeColor.withOpacity(0.08) : Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -224,13 +222,14 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
               color: isSelected ? activeColor : Colors.black.withOpacity(0.05),
               width: isSelected ? 2.0 : 1.0,
             ),
-            boxShadow: [
+            // 🌟 簡化陰影計算，減少 GPU 負擔
+            boxShadow: isSelected ? [
               BoxShadow(
-                color: isSelected ? activeColor.withOpacity(0.1) : Colors.black.withOpacity(0.02),
+                color: activeColor.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               )
-            ],
+            ] : [],
           ),
           child: Row(
             children: [
@@ -247,6 +246,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                   child: Text(text),
                 ),
               ),
+              // 使用 Opacity 穩定佈局
               AnimatedOpacity(
                 duration: _syncDuration,
                 curve: _syncCurve,

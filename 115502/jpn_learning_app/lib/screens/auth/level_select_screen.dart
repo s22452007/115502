@@ -45,7 +45,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
           child: Column(
-            // 🌟 核心：確保所有子元件在 Column 中絕對靠左
             crossAxisAlignment: CrossAxisAlignment.start, 
             children: [
               const SizedBox(height: 20),
@@ -58,20 +57,38 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   letterSpacing: 2.0
                 ),
               ),
-              const SizedBox(height: 16),
-              // 🌟 完美對齊的兩行標題
-              const Text(
-                '請選擇你的\n日文學習起點',
-                textAlign: TextAlign.left, // 🌟 強制文字塊內部左對齊
-                style: TextStyle(
-                  fontSize: 32, 
-                  fontWeight: FontWeight.w900, 
-                  color: Colors.black87, 
-                  height: 1.3, // 稍微增加行高，讓兩行字更有設計感
-                ),
-              ),
               const SizedBox(height: 20),
-              // 裝飾用小綠條：寬度起點現在會與標題的第一個字完美重合
+
+              // 🌟 重新建構的標題區塊 🌟
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 第一行：請選擇你的 (往右移一點)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8.0), // 👈 調整這個數值來控制右移程度
+                    child: Text(
+                      '請選擇你的',
+                      style: TextStyle(
+                        fontSize: 28, 
+                        fontWeight: FontWeight.w700, 
+                        color: Colors.black54, // 稍微變淡一點增加層次感
+                      ),
+                    ),
+                  ),
+                  // 第二行：日文學習起點 (貼齊左側)
+                  const Text(
+                    '日文學習起點',
+                    style: TextStyle(
+                      fontSize: 34, 
+                      fontWeight: FontWeight.w900, 
+                      color: Colors.black87,
+                      height: 1.1,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
               Container(
                 width: 45,
                 height: 5,
@@ -82,7 +99,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 48),
 
-              // 卡片部分
+              // 卡片組件
               _buildFluidCard(
                 index: 0,
                 title: '我是日文新手',

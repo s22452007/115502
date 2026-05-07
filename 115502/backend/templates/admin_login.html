@@ -11,16 +11,13 @@
         .btn-snap { background-color: #5c8364; color: white; border: none; }
         .btn-snap:hover { background-color: #4a6b51; color: white; }
         
-        /* 讓下拉選單與輸入框點擊時，外框發出 JLens 專屬綠色光暈 */
         .form-select:focus, .form-control:focus {
             border-color: #5c8364;
             box-shadow: 0 0 0 0.25rem rgba(92, 131, 100, 0.25);
         }
 
-        /* 眼睛按鈕的滑鼠懸停效果 */
         #togglePassword:hover {
             background-color: #f8f9fa;
-            border-color: #5c8364;
         }
     </style>
 </head>
@@ -50,8 +47,8 @@
                 <label class="form-label text-muted fw-bold">密碼</label>
                 <div class="input-group">
                     <input type="password" name="password" id="adminPassword" class="form-control" placeholder="預設密碼同帳號" required>
-                    <button class="btn btn-outline-secondary" type="button" id="togglePassword" style="border-color: #dce7de; color: #5c8364;">
-                        <i id="eyeIcon" class="bi bi-eye-slash"></i>
+                    <button class="btn btn-outline-dark" type="button" id="togglePassword" style="border-color: #dee2e6; color: #000000;">
+                        <i id="eyeIcon" class="bi bi-eye-slash-fill"></i>
                     </button>
                 </div>
             </div>
@@ -71,17 +68,13 @@
                     const currentType = passwordInput.getAttribute('type');
                     
                     if (currentType === 'password') {
-                        // 切換為顯示密碼
                         passwordInput.setAttribute('type', 'text');
-                        // 🌟 切換成「睜眼」圖示
-                        eyeIcon.classList.remove('bi-eye-slash');
-                        eyeIcon.classList.add('bi-eye');
+                        eyeIcon.classList.remove('bi-eye-slash-fill');
+                        eyeIcon.classList.add('bi-eye-fill');
                     } else {
-                        // 切換為隱藏密碼
                         passwordInput.setAttribute('type', 'password');
-                        // 🌟 切換成「閉眼斜線」圖示
-                        eyeIcon.classList.remove('bi-eye');
-                        eyeIcon.classList.add('bi-eye-slash');
+                        eyeIcon.classList.remove('bi-eye-fill');
+                        eyeIcon.classList.add('bi-eye-slash-fill');
                     }
                 });
             }

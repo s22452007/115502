@@ -17,9 +17,9 @@ class LevelSelectScreen extends StatefulWidget {
 class _LevelSelectScreenState extends State<LevelSelectScreen> {
   int? _selectedIndex;
 
-  // 🌟 極致同步參數：大幅縮短時間，改用剛硬曲線以減少「波浪感」🌟
-  static const _syncDuration = Duration(milliseconds: 400); // 從 700ms 降至 400ms
-  static const _syncCurve = Curves.easeOutQuad; // 🌟 採用更精確、減速更快的曲線
+  // 🌟 動畫參數：調至極簡且穩定 🌟
+  static const _syncDuration = Duration(milliseconds: 350); 
+  static const _syncCurve = Curves.easeInOut; // 使用最穩定的對稱曲線
 
   Future<void> _handleNavigation() async {
     if (_selectedIndex == 0) {
@@ -83,8 +83,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 48),
 
-              // 🌟 呼叫極簡對齊版本的卡片
-              _buildMinimalCard(
+              // --- 卡片選單 ---
+              _buildAntiFlashCard(
                 index: 0,
                 title: '我是日文新手',
                 subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
@@ -92,7 +92,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               
               const SizedBox(height: 24),
 
-              _buildMinimalCard(
+              _buildAntiFlashCard(
                 index: 1,
                 title: '我已經有基礎了',
                 subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
@@ -100,9 +100,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
+              // 底部按鈕：穩定性處理
               AnimatedContainer(
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeInOutQuart,
+                duration: _syncDuration,
+                curve: _syncCurve,
                 width: double.infinity,
                 height: 62,
                 child: ElevatedButton(
@@ -114,10 +115,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     elevation: _selectedIndex != null ? 4 : 0,
                   ),
-                  child: Text(
-                    _selectedIndex == null ? '請選擇一個起點' : '開始體驗', 
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體')
-                  ),
+                  child: const Text('開始體驗', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體')),
                 ),
               ),
               const SizedBox(height: 10),
@@ -128,33 +126,35 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     );
   }
 
-  // 🌟 核心：消除「波浪感」的極簡回饋卡片
-  Widget _buildMinimalCard({required int index, required String title, required String subtitle}) {
+  // 🌟 核心：防閃爍穩定型卡片組件
+  Widget _buildAntiFlashCard({required int index, required String title, required String subtitle}) {
     bool isSelected = _selectedIndex == index;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 250), // 🌟 縮短時間，大幅減少波浪感
-        scale: isSelected ? 1.01 : 1.0, 
-        curve: _syncCurve, // 🌟 使用與顏色統一的精確曲線，移除彈性
+        duration: const Duration(milliseconds: 200),
+        scale: isSelected ? 1.01 : 1.0,
+        curve: _syncCurve,
         child: AnimatedContainer(
-          duration: _syncDuration, // 大幅縮短
-          curve: _syncCurve, // 大幅減少波浪感
+          duration: _syncDuration,
+          curve: _syncCurve,
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.05),
-              width: isSelected ? 2.5 : 1.0,
+              // 🌟 穩定邊框：顏色平滑過渡，寬度變化縮小
+              color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.08),
+              width: isSelected ? 2.0 : 1.0, 
             ),
             boxShadow: [
               BoxShadow(
+                // 🌟 穩定陰影：顏色從透明到淺綠，避免陣列變動導致閃爍
                 color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.black.withOpacity(0.02),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               )
             ],
           ),
@@ -165,8 +165,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AnimatedDefaultTextStyle(
-                      duration: _syncDuration, // 同步大幅縮短
-                      curve: _syncCurve, // 同步剛硬曲線
+                      duration: _syncDuration,
+                      curve: _syncCurve,
                       style: TextStyle(
                         fontSize: 20, 
                         fontWeight: FontWeight.bold, 
@@ -177,8 +177,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     ),
                     const SizedBox(height: 10),
                     AnimatedDefaultTextStyle(
-                      duration: _syncDuration, // 同步大幅縮短
-                      curve: _syncCurve, // 同步剛硬曲線
+                      duration: _syncDuration,
+                      curve: _syncCurve,
                       style: TextStyle(
                         fontSize: 14, 
                         fontFamily: '微軟正黑體',
@@ -190,12 +190,12 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   ],
                 ),
               ),
-              // Fade 效果也同步變快，消除飄浮感
+              // 🌟 佈局穩定化：不使用 if 條件，改用 Opacity 避免圖示出現時擠壓文字
               AnimatedOpacity(
-                duration: _syncDuration, 
-                curve: _syncCurve, 
+                duration: _syncDuration,
+                curve: _syncCurve,
                 opacity: isSelected ? 1.0 : 0.0,
-                child: Icon(Icons.check_circle, color: AppColors.primary, size: 30),
+                child: Icon(Icons.check_circle, color: AppColors.primary, size: 28),
               ),
             ],
           ),

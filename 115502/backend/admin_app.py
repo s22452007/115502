@@ -283,8 +283,9 @@ def purchase_list():
 @admin_login_required
 def photo_list():
     conn = get_db_connection()
+    # 🌟 修正點：將 p.filename 改為 p.image_path
     query = '''
-        SELECT p.id, u.username, s.name as scene_name, p.custom_title, p.created_at 
+        SELECT p.id, p.image_path, u.username, s.name as scene_name, p.custom_title, p.created_at 
         FROM user_photo p
         LEFT JOIN user u ON p.user_id = u.id
         LEFT JOIN scene s ON p.scene_id = s.id

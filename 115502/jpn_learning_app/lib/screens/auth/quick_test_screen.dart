@@ -22,6 +22,10 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
+  // 🌟 統一動畫參數：與程度選擇頁面保持一致
+  static const _syncDuration = Duration(milliseconds: 280);
+  static const _syncCurve = Curves.easeOutCubic;
+
   @override
   void initState() {
     super.initState();
@@ -116,7 +120,6 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
             children: [
               const SizedBox(height: 8),
               
-              // 進度條 (Commit 1 已完成)
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
@@ -129,13 +132,11 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
               
               const SizedBox(height: 32),
 
-              // 🌟 Commit 2 亮點：優化的問題區域
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- 階段標籤 (Tag) ---
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
@@ -144,27 +145,17 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                         ),
                         child: Text(
                           currentQ['context'] ?? '',
-                          style: const TextStyle(
-                            color: AppColors.primary, 
-                            fontSize: 12, 
-                            fontWeight: FontWeight.bold
-                          ),
+                          style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(height: 20),
 
-                      // --- 題號 ---
                       Text(
                         '第 ${_currentIndex + 1} 題',
-                        style: const TextStyle(
-                          fontSize: 16, 
-                          color: Colors.grey, 
-                          fontWeight: FontWeight.bold
-                        ),
+                        style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
 
-                      // --- 問題本文 ---
                       Text(
                         currentQ['question'],
                         style: const TextStyle(
@@ -172,20 +163,22 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                           fontWeight: FontWeight.w900, 
                           color: Colors.black87,
                           height: 1.4,
-                          fontFamily: '微軟正黑體'
                         ),
                       ),
                       const SizedBox(height: 32),
                       
-                      // 原始選項 (下個 Commit 將重構)
+                      // 🌟 Commit 3 核心：帶有動畫的選項卡片
                       ...List.generate(displayOptions.length, (index) {
-                        return ListTile(
-                          title: Text(displayOptions[index]),
-                          onTap: () => setState(() => _selectedAnswerIndex = index),
-                          leading: Radio<int>(
-                            value: index,
-                            groupValue: _selectedAnswerIndex,
-                            onChanged: (val) => setState(() => _selectedAnswerIndex = val),
+                        final isSelected = _selectedAnswerIndex == index;
+                        final isOptionE = (index == 4);
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _buildSyncedOptionCard(
+                            text: displayOptions[index],
+                            isSelected: isSelected,
+                            isOptionE: isOptionE,
+                            onTap: () => setState(() => _selectedAnswerIndex = index),
                           ),
                         );
                       }),
@@ -194,7 +187,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                 ),
               ),
 
-              // 底部按鈕
+              // 底部按鈕 (下個 Commit 將重構)
               ElevatedButton(
                 onPressed: _nextQuestion,
                 style: ElevatedButton.styleFrom(
@@ -204,6 +197,70 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                 child: Text(_currentIndex == _questions.length - 1 ? '完成測驗' : '下一題'),
               ),
               const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🌟 核心組件：與程度選擇頁面完全同步的選項卡片
+  Widget _buildSyncedOptionCard({
+    required String text,
+    required bool isSelected,
+    required bool isOptionE,
+    required VoidCallback onTap,
+  }) {
+    // 針對「防猜選項 E」使用灰色調，其餘使用品牌綠
+    final activeColor = isOptionE ? Colors.grey.shade600 : AppColors.primary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedScale(
+        duration: _syncDuration,
+        scale: isSelected ? 1.015 : 1.0,
+        curve: _syncCurve,
+        child: AnimatedContainer(
+          duration: _syncDuration,
+          curve: _syncCurve,
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor.withOpacity(0.08) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? activeColor : Colors.black.withOpacity(0.05),
+              width: isSelected ? 2.0 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected ? activeColor.withOpacity(0.1) : Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: AnimatedDefaultTextStyle(
+                  duration: _syncDuration,
+                  curve: _syncCurve,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? activeColor : Colors.black87,
+                    fontFamily: '微軟正黑體',
+                  ),
+                  child: Text(text),
+                ),
+              ),
+              AnimatedOpacity(
+                duration: _syncDuration,
+                curve: _syncCurve,
+                opacity: isSelected ? 1.0 : 0.0,
+                child: Icon(Icons.check_circle, color: activeColor, size: 24),
+              ),
             ],
           ),
         ),

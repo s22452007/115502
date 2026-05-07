@@ -39,7 +39,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 定義統一的標題樣式，確保兩行完全一樣
+    // 🌟 統一樣式：確保兩行字完全重合
     const TextStyle titleStyle = TextStyle(
       fontSize: 32, 
       fontWeight: FontWeight.w900, 
@@ -53,7 +53,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, 
+            crossAxisAlignment: CrossAxisAlignment.start, // 🌟 核心：全部靠左
             children: [
               const SizedBox(height: 20),
               const Text(
@@ -67,21 +67,17 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 🌟 修正後的統一標題區塊 🌟
-              Column(
+              // 🌟 恢復完美的左對齊標題區塊 🌟
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 第一行：請選擇你的 (往右移 12 像素)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 12.0), 
-                    child: Text('請選擇你的', style: titleStyle),
-                  ),
-                  // 第二行：日文學習起點 (靠左對齊)
-                  const Text('日文學習起點', style: titleStyle),
+                  Text('請選擇你的', style: titleStyle),
+                  Text('日文學習起點', style: titleStyle),
                 ],
               ),
 
               const SizedBox(height: 20),
+              // 裝飾綠條
               Container(
                 width: 45,
                 height: 5,

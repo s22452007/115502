@@ -26,8 +26,17 @@ import 'package:jpn_learning_app/screens/home/home_screen.dart';
 // ==========================================
 import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 
-class LevelSelectScreen extends StatelessWidget {
+// 🌟 Commit 2 改動：將 StatelessWidget 改為 StatefulWidget 以管理選取狀態
+class LevelSelectScreen extends StatefulWidget {
   const LevelSelectScreen({Key? key}) : super(key: key);
+
+  @override
+  State<LevelSelectScreen> createState() => _LevelSelectScreenState();
+}
+
+class _LevelSelectScreenState extends State<LevelSelectScreen> {
+  // 🌟 追蹤目前選中的索引 (0: 新手, 1: 基礎)
+  int? _selectedIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +47,7 @@ class LevelSelectScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, // 🌟 統一改為左對齊，更有專業感
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
                 const Text(
@@ -61,7 +70,6 @@ class LevelSelectScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 裝飾用小綠條
                 Container(
                   width: 40,
                   height: 4,
@@ -74,49 +82,38 @@ class LevelSelectScreen extends StatelessWidget {
 
                 // --- 卡片 1：我是新手 ---
                 _buildModernCard(
-                  context: context,
+                  index: 0,
                   title: '我是日文新手',
                   subtitle: '從五十音開始打穩基礎，\n適合完全沒學過日文的您。',
-                  mainColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onTap: () async {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('正在為您設定新手模式...'),
-                        backgroundColor: AppColors.primary,
-                      ),
-                    );
-
+                    setState(() => _selectedIndex = 0); // 🌟 更新狀態
+                    
+                    // 執行原本的邏輯
                     final currentUserId = context.read<UserProvider>().userId;
                     if (currentUserId != null) {
                       await ApiClient.updateLevel(currentUserId, 'N5');
                     }
-
                     if (!context.mounted) return;
                     context.read<UserProvider>().setJapaneseLevel('N5');
                     await LevelUpDialog.show(context, badgeId: 'level_01', level: 1);
-
                     if (context.mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HomeScreen()),
-                      );
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
                     }
                   },
                 ),
                 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // --- 卡片 2：我已經有基礎了 ---
                 _buildModernCard(
-                  context: context,
+                  index: 1,
                   title: '我已經有基礎了',
                   subtitle: '進行 10 題快速測驗，\nAI 將為您量身打造專屬起點。',
-                  mainColor: const Color(0xFF444444), // 使用深灰色區隔選項
+                  activeColor: const Color(0xFF444444),
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const QuickTestScreen()),
-                    );
+                    setState(() => _selectedIndex = 1); // 🌟 更新狀態
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const QuickTestScreen()));
                   },
                 ),
                 const SizedBox(height: 40),
@@ -129,61 +126,69 @@ class LevelSelectScreen extends StatelessWidget {
   }
 
   // ==========================================
-  // 🎨 Commit 1 重頭戲：無圖示極簡卡片元件
+  // 🎨 Commit 2 重頭戲：支援動態選取狀態的卡片
   // ==========================================
   Widget _buildModernCard({
-    required BuildContext context,
+    required int index,
     required String title,
     required String subtitle,
-    required Color mainColor,
+    required Color activeColor,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    // 🌟 判斷目前是否被選中
+    bool isSelected = _selectedIndex == index;
+
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          // 🌟 關鍵：移除 Icon 後，改用左側粗邊框作為視覺重心
-          border: Border(
-            left: BorderSide(color: mainColor, width: 6),
-            top: BorderSide(color: mainColor.withOpacity(0.1), width: 1),
-            right: BorderSide(color: mainColor.withOpacity(0.1), width: 1),
-            bottom: BorderSide(color: mainColor.withOpacity(0.1), width: 1),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+        // 🌟 未選中且已有其他卡片被選中時，變淡
+        opacity: (_selectedIndex != null && !isSelected) ? 0.5 : 1.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              // 🌟 選中時邊框變粗
+              left: BorderSide(color: isSelected ? activeColor : Colors.grey.shade300, width: isSelected ? 8 : 4),
+              top: BorderSide(color: isSelected ? activeColor.withOpacity(0.1) : Colors.grey.shade200, width: 1),
+              right: BorderSide(color: isSelected ? activeColor.withOpacity(0.1) : Colors.grey.shade200, width: 1),
+              bottom: BorderSide(color: isSelected ? activeColor.withOpacity(0.1) : Colors.grey.shade200, width: 1),
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected ? activeColor.withOpacity(0.1) : Colors.black.withOpacity(0.02),
+                blurRadius: isSelected ? 20 : 10,
+                offset: const Offset(0, 8),
+              )
+            ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: mainColor.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            )
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // 🌟 內容靠左排版
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 22, 
-                fontWeight: FontWeight.w900, 
-                color: mainColor,
-                letterSpacing: 0.5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 22, 
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold, 
+                  color: isSelected ? activeColor : Colors.black87,
+                  letterSpacing: 0.5,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 15, 
-                color: Colors.black.withOpacity(0.6),
-                height: 1.6, // 增加行高讓文字更易讀
+              const SizedBox(height: 12),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 15, 
+                  color: isSelected ? activeColor.withOpacity(0.7) : Colors.black.withOpacity(0.6),
+                  height: 1.6,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

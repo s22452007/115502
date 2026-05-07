@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
-import 'package:jpn_learning_app/utils/constants.dart'; // 🌟 引入 AppColors
+import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/auth/test_result_screen.dart';
 
@@ -78,10 +78,9 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // --- 載入與結算畫面優化 ---
     if (_isLoading || _isSubmitting || _questions.isEmpty) {
       return Scaffold(
-        backgroundColor: AppColors.background, // 🌟 統一背景色
+        backgroundColor: AppColors.background,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -90,11 +89,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
               const SizedBox(height: 24),
               Text(
                 _isSubmitting ? 'AI 正在為您判定程度...' : '正在抽取專屬題庫...',
-                style: const TextStyle(
-                  color: AppColors.primary, 
-                  fontWeight: FontWeight.bold,
-                  fontFamily: '微軟正黑體'
-                ),
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -107,7 +102,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
     displayOptions.add('E. 我還沒學過這個');
 
     return Scaffold(
-      backgroundColor: AppColors.background, // 🌟 統一背景色
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -115,13 +110,13 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32), // 🌟 統一 32 邊距
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, // 🌟 改為左對齊
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
               
-              // 🌟 自定義線條進度條
+              // 進度條 (Commit 1 已完成)
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
@@ -134,27 +129,59 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
               
               const SizedBox(height: 32),
 
-              // 🌟 這裡暫時保留舊有的 UI 結構，下個 Commit 會處理問題與選項的樣式
+              // 🌟 Commit 2 亮點：優化的問題區域
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '第 ${_currentIndex + 1} 題 / 共 ${_questions.length} 題',
-                        style: const TextStyle(fontSize: 16, color: AppColors.primary, fontWeight: FontWeight.bold),
+                      // --- 階段標籤 (Tag) ---
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          currentQ['context'] ?? '',
+                          style: const TextStyle(
+                            color: AppColors.primary, 
+                            fontSize: 12, 
+                            fontWeight: FontWeight.bold
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
+
+                      // --- 題號 ---
+                      Text(
+                        '第 ${_currentIndex + 1} 題',
+                        style: const TextStyle(
+                          fontSize: 16, 
+                          color: Colors.grey, 
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // --- 問題本文 ---
                       Text(
                         currentQ['question'],
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                        style: const TextStyle(
+                          fontSize: 24, 
+                          fontWeight: FontWeight.w900, 
+                          color: Colors.black87,
+                          height: 1.4,
+                          fontFamily: '微軟正黑體'
+                        ),
                       ),
                       const SizedBox(height: 32),
                       
-                      // 原始選項按鈕 (Commit 3 會重構)
+                      // 原始選項 (下個 Commit 將重構)
                       ...List.generate(displayOptions.length, (index) {
                         return ListTile(
                           title: Text(displayOptions[index]),
+                          onTap: () => setState(() => _selectedAnswerIndex = index),
                           leading: Radio<int>(
                             value: index,
                             groupValue: _selectedAnswerIndex,
@@ -167,7 +194,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                 ),
               ),
 
-              // 原始按鈕 (Commit 4 會重構)
+              // 底部按鈕
               ElevatedButton(
                 onPressed: _nextQuestion,
                 style: ElevatedButton.styleFrom(

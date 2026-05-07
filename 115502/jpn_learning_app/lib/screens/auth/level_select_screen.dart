@@ -39,6 +39,14 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 定義統一的標題樣式，確保兩行完全一樣
+    const TextStyle titleStyle = TextStyle(
+      fontSize: 32, 
+      fontWeight: FontWeight.w900, 
+      color: Colors.black87,
+      height: 1.2,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -59,36 +67,21 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 🌟 重新建構的標題區塊 🌟
+              // 🌟 修正後的統一標題區塊 🌟
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 第一行：請選擇你的 (往右移一點)
+                  // 第一行：請選擇你的 (往右移 12 像素)
                   const Padding(
-                    padding: EdgeInsets.only(left: 8.0), // 👈 調整這個數值來控制右移程度
-                    child: Text(
-                      '請選擇你的',
-                      style: TextStyle(
-                        fontSize: 28, 
-                        fontWeight: FontWeight.w700, 
-                        color: Colors.black54, // 稍微變淡一點增加層次感
-                      ),
-                    ),
+                    padding: EdgeInsets.only(left: 12.0), 
+                    child: Text('請選擇你的', style: titleStyle),
                   ),
-                  // 第二行：日文學習起點 (貼齊左側)
-                  const Text(
-                    '日文學習起點',
-                    style: TextStyle(
-                      fontSize: 34, 
-                      fontWeight: FontWeight.w900, 
-                      color: Colors.black87,
-                      height: 1.1,
-                    ),
-                  ),
+                  // 第二行：日文學習起點 (靠左對齊)
+                  const Text('日文學習起點', style: titleStyle),
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Container(
                 width: 45,
                 height: 5,
@@ -99,7 +92,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 48),
 
-              // 卡片組件
               _buildFluidCard(
                 index: 0,
                 title: '我是日文新手',
@@ -116,7 +108,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
-              // 底部按鈕
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOutCubic,
@@ -147,7 +138,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
   Widget _buildFluidCard({required int index, required String title, required String subtitle}) {
     bool isSelected = _selectedIndex == index;
-
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: AnimatedScale(

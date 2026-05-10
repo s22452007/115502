@@ -227,25 +227,25 @@ def get_profile_data(user_id):
     if not user:
         return jsonify({"error": "找不到使用者"}), 404
 
-    # 動態計算能力值
-    vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
-    scene_count = db.session.query(func.count(func.distinct(Vocab.scene_id))).select_from(UserVocab).join(Vocab, UserVocab.vocab_id == Vocab.id).filter(UserVocab.user_id == user_id).scalar()
-    folder_count = UserFolder.query.filter_by(user_id=user_id).count()
-    streak = user.streak_days if user else 0
-    pts = user.j_pts if user else 0
+    # # 動態計算能力值
+    # vocab_count = UserVocab.query.filter_by(user_id=user_id).count()
+    # scene_count = db.session.query(func.count(func.distinct(Vocab.scene_id))).select_from(UserVocab).join(Vocab, UserVocab.vocab_id == Vocab.id).filter(UserVocab.user_id == user_id).scalar()
+    # folder_count = UserFolder.query.filter_by(user_id=user_id).count()
+    # streak = user.streak_days if user else 0
+    # pts = user.j_pts if user else 0
 
-    ability_data = {
-        "reading": min(vocab_count / 50, 1.0),
-        "culture": min(scene_count / 5, 1.0),
-        "speaking": min(streak / 30, 1.0),
-        "listening": min(pts / 500, 1.0),
-        "writing": min(folder_count / 10, 1.0),
-    }
+    # ability_data = {
+    #     "reading": min(vocab_count / 50, 1.0),
+    #     "culture": min(scene_count / 5, 1.0),
+    #     "speaking": min(streak / 30, 1.0),
+    #     "listening": min(pts / 500, 1.0),
+    #     "writing": min(folder_count / 10, 1.0),
+    # }
 
-    # 確保最低值為 0.05（讓雷達圖不會完全空白）
-    for key in ability_data:
-        if ability_data[key] < 0.05:
-            ability_data[key] = 0.05
+    # # 確保最低值為 0.05（讓雷達圖不會完全空白）
+    # for key in ability_data:
+    #     if ability_data[key] < 0.05:
+    #         ability_data[key] = 0.05
 
     # 2. 算 5 大核心徽章的進度數字
     # 日語檢定轉換為 1~5 的數字

@@ -56,7 +56,7 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if not user:
-        return jsonify({"error": "not_registered"}), 401
+        return jsonify({"error": "尚未註冊過"}), 401
 
     # 如果帳號密碼正確
     if check_password_hash(user.password_hash, password):

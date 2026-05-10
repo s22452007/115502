@@ -418,7 +418,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                         controller: _controller,
                         onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
-                          hintText: '輸入日文...',
+                          hintText: '輸入日文訊息...',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),

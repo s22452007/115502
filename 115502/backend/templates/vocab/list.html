@@ -76,20 +76,6 @@
     </aside>
 
     <main class="main-content">
-        <div class="topbar">
-            <div class="dropdown">
-                <button class="admin-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="admin-avatar">{{ session['admin_user'][0]|upper }}</span>
-                    {{ session['admin_user'] }}
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="/admin/change_password">🔑 修改密碼</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="{{ url_for('admin_logout') }}">🚪 登出</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="content-area">
         <div class="body-area">
 
             <div class="page-title-box d-flex justify-content-between align-items-end">
@@ -168,7 +154,6 @@
 
             <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
         </div>
-        </div><!-- end content-area -->
     </main>
 
     <div class="modal fade" id="addModal" tabindex="-1">

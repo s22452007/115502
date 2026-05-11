@@ -151,6 +151,13 @@
                 <div class="icon-box">JL</div>
                 <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
             </div>
+            <div class="sidebar-admin">
+                <div class="sidebar-admin-avatar">{{ session['admin_user'][0]|upper }}</div>
+                <div class="sidebar-admin-info">
+                    <div class="name">{{ session['admin_user'] }}</div>
+                    <div class="role">管理者</div>
+                </div>
+            </div>
             <ul class="sidebar-menu">
                 <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
                 <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>

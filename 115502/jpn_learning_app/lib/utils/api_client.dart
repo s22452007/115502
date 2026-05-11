@@ -957,12 +957,16 @@ class ApiClient {
   // 上傳場景照片給 AI 分析 API
   static Future<Map<String, dynamic>> analyzeImage(
     String imagePath,
-    int userId,
-  ) async {
+    int userId, {
+    String? customTitle,
+  }) async {
     final url = Uri.parse('$baseUrl/scenario/analyze');
     try {
       var request = http.MultipartRequest('POST', url);
       request.fields['user_id'] = userId.toString();
+      if (customTitle != null && customTitle.isNotEmpty) {
+        request.fields['custom_title'] = customTitle;
+      }
 
       if (kIsWeb) {
         final imageResponse = await http.get(Uri.parse(imagePath));

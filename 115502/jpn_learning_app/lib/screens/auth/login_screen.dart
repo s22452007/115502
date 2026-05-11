@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const LevelSelectScreen()), // 👈 原本這裡寫成 HomeScreen，幫你改對了！
+            MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
           );
         }
       } else {
@@ -167,8 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ).showSnackBar(const SnackBar(content: Text('Google 登入中...')));
 
       // 1. 先做 Firebase Google 登入
-      final UserCredential? userCredential = await AuthService()
-          .signInWithGoogle();
+      final UserCredential? userCredential = await AuthService().signInWithGoogle();
 
       if (!context.mounted) return;
 
@@ -268,7 +267,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!context.mounted) return;
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Google 登入失敗：$e')));
@@ -415,7 +413,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: const Text(
-                              '忘記密碼？',
+                               '忘記密碼？',
                               style: TextStyle(color: AppColors.textGrey),
                             ),
                           ),
@@ -476,7 +474,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // 第三方登入按鈕區域
+                      // 第三方登入按鈕區域 (已移除 Apple)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -484,16 +482,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             icon: Icons.g_mobiledata,
                             iconSize: 36,
                             onTap: _handleGoogleLogin,
-                          ),
-                          const SizedBox(width: 24),
-                          _buildSocialButton(
-                            icon: Icons.apple,
-                            iconSize: 28,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Apple 登入功能開發中')),
-                              );
-                            },
                           ),
                         ],
                       ),
@@ -510,7 +498,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                         child: const Text(
-                          '以訪客身分繼續',
+                           '以訪客身分繼續',
                           style: TextStyle(
                             color: AppColors.textGrey,
                             fontSize: 14,

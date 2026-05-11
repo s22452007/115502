@@ -227,14 +227,8 @@ class _CameraScreenState extends State<CameraScreen>
                       if (pickedFile != null) {
                         if (!context.mounted) return;
 
-                        // 3. 帶著照片跳轉到辨識頁 (走原本的流程)
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                AnalyzingScreen(imagePath: pickedFile.path),
-                          ),
-                        );
+                        // 3. 跳出命名框，然後跳轉
+                        await _showNamingDialogAndProceed(pickedFile.path);
                       }
                     },
                   ),

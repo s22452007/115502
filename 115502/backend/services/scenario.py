@@ -20,6 +20,8 @@ def analyze_scene():
 
     # 確保有傳 user_id (相機辨識綁定使用者)
     user_id = request.form.get('user_id')
+    custom_title_input = request.form.get('custom_title')
+    
     if not user_id:
         return jsonify({'error': '缺少 user_id'}), 400
 
@@ -56,11 +58,13 @@ def analyze_scene():
             
             # 3. 建立相簿主檔 (UserPhoto)
             photo_title = main_label.split(" (")[0][:20] # 取簡單英文名稱或日文為主
+            final_title = custom_title_input if custom_title_input else f"AI辨識: {photo_title}"
+            
             new_photo = UserPhoto(
                 user_id=user_id,
                 scene_id=None, # 若沒有特定場景就留空
                 image_path=relative_image_path,
-                custom_title=f"AI辨識: {photo_title}", # 預設照片名稱
+                custom_title=final_title,
                 created_at=datetime.utcnow()
             )
             db.session.add(new_photo)

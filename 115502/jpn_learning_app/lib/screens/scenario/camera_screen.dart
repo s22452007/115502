@@ -77,15 +77,56 @@ class _CameraScreenState extends State<CameraScreen>
       final XFile photo = await _controller!.takePicture();
       if (!mounted) return;
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AnalyzingScreen(imagePath: photo.path),
-        ),
-      );
+      await _showNamingDialogAndProceed(photo.path);
     } on CameraException catch (e) {
       debugPrint('Error occured while taking picture: $e');
     }
+  }
+
+  Future<void> _showNamingDialogAndProceed(String imagePath) async {
+    final TextEditingController nameController = TextEditingController();
+    final String? customName = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('為這張照片命名（選填）'),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              hintText: '例如：我的書桌',
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, null);
+              },
+              child: const Text('跳過', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, nameController.text.trim());
+              },
+              child: const Text('確定', style: TextStyle(color: AppColors.primary)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AnalyzingScreen(
+          imagePath: imagePath,
+          customTitle: customName != null && customName.isNotEmpty ? customName : null,
+        ),
+      ),
+    );
   }
 
   @override
@@ -186,14 +227,8 @@ class _CameraScreenState extends State<CameraScreen>
                       if (pickedFile != null) {
                         if (!context.mounted) return;
 
-                        // 3. 帶著照片跳轉到辨識頁 (走原本的流程)
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                AnalyzingScreen(imagePath: pickedFile.path),
-                          ),
-                        );
+                        // 3. 跳出命名框，然後跳轉
+                        await _showNamingDialogAndProceed(pickedFile.path);
                       }
                     },
                   ),

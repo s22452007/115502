@@ -10,8 +10,9 @@ import 'package:jpn_learning_app/services/notification_service.dart';
 // 2-2-2 AI 分析中
 class AnalyzingScreen extends StatefulWidget {
   final String imagePath; // 接收圖片路徑
+  final String? customTitle; // 新增自訂標題
 
-  const AnalyzingScreen({Key? key, required this.imagePath}) : super(key: key);
+  const AnalyzingScreen({Key? key, required this.imagePath, this.customTitle}) : super(key: key);
   @override
   State<AnalyzingScreen> createState() => _AnalyzingScreenState();
 }
@@ -34,7 +35,11 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
       if (userId == null) {
         throw Exception('User ID is null');
       }
-      final result = await ApiClient.analyzeImage(widget.imagePath, userId);
+      final result = await ApiClient.analyzeImage(
+        widget.imagePath, 
+        userId,
+        customTitle: widget.customTitle,
+      );
 
       if (mounted && result.containsKey('result') && result['result'] != null) {
         // 分析成功，把今日進度 +1

@@ -25,7 +25,7 @@
         /* 統一設定側邊欄 icon 的顏色為墨綠色，並固定寬度以確保文字對齊 */
         .sidebar-menu a i { color: var(--snap-green-dark); font-size: 1.1rem; width: 20px; text-align: center; }
         .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
-        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--snap-green-light, #dce7de); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; color: var(--snap-green-dark, #5c8364); flex-shrink: 0; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--snap-green-light, #dce7de); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; color: var(--snap-green-dark, #5c8364); flex-shrink: 0; }
         .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
         .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
 
@@ -133,7 +133,7 @@
     <div class="layout">
         <aside class="sidebar">
             <div class="sidebar-admin">
-                <div class="sidebar-admin-avatar">{{ session['admin_user'][0]|upper }}</div>
+                <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
                 <div class="sidebar-admin-info">
                     <div class="name">{{ session['admin_user'] }}</div>
                     <div class="role">管理者</div>

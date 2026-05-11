@@ -58,6 +58,8 @@ def analyze_scene():
             
             # 3. 建立相簿主檔 (UserPhoto)
             photo_title = main_label.split(" (")[0][:20] # 取簡單英文名稱或日文為主
+            final_title = custom_title_input if custom_title_input else f"AI辨識: {photo_title}"
+            
             new_photo = UserPhoto(
                 user_id=user_id,
                 scene_id=None, # 若沒有特定場景就留空

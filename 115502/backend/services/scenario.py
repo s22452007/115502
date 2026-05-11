@@ -64,7 +64,7 @@ def analyze_scene():
                 user_id=user_id,
                 scene_id=None, # 若沒有特定場景就留空
                 image_path=relative_image_path,
-                custom_title=f"AI辨識: {photo_title}", # 預設照片名稱
+                custom_title=final_title,
                 created_at=datetime.utcnow()
             )
             db.session.add(new_photo)

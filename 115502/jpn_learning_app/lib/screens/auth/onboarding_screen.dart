@@ -21,6 +21,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         backgroundColor: AppColors.white,
         elevation: 0,
         actions: [
+          // 右上角 Skip 鍵
           TextButton(
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -44,7 +45,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 核心結構：PageView (支援左右滑動)
+            // 核心結構：PageView (圖片與文字會跟著這層一起絲滑連動) [cite: 7, 8, 9]
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -64,14 +65,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // 底部狀態點點 (Indicators)
+            // 🌟 升級點 1：會像水滴般平滑變形的狀態點點 (AnimatedContainer) [cite: 11, 12, 13]
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 3,
-                (index) => Container(
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300), // 點點變形的動畫時間
+                  curve: Curves.easeOutCubic, // 點點變形的曲線
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                  width: _currentPage == index ? 20.0 : 8.0,
+                  width: _currentPage == index ? 24.0 : 8.0, // 當前頁面的點會拉長
                   height: 8.0,
                   decoration: BoxDecoration(
                     color: _currentPage == index
@@ -103,10 +106,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < 2) {
-                      // 🚀 修改點：改用 600ms 與 fastOutSlowIn (先快速啟動，然後極度滑順地減速停下，零彈跳)
+                      // 🌟 升級點 2：使用 easeInOutCubic，營造電影級的柔和起步與緩停 [cite: 17, 18]
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.fastOutSlowIn,
+                        duration: const Duration(milliseconds: 500), 
+                        curve: Curves.easeInOutCubic, 
                       );
                     } else {
                       Navigator.pushReplacement(
@@ -129,7 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // 建立每一頁內容的小工具
+  // 建立每一頁圖片與內容的小工具 (完全保留您的原始排版) [cite: 23, 24, 25]
   Widget _buildPageContent({required IconData icon, required String title}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,

@@ -21,9 +21,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         backgroundColor: AppColors.white,
         elevation: 0,
         actions: [
-          // 右上角 Skip 鍵：按下直接跳到登入頁
           TextButton(
-            // 稍微縮減 TextButton 預設自帶的內邊距，並將觸控範圍縮到最小
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               minimumSize: Size.zero,
@@ -35,13 +33,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
-            // 這裡直接放 Text 即可，不要包 Padding
             child: const Text(
               'Skip',
               style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ),
-          // 在按鈕後面加上 SizedBox 來推開與右邊界的距離
           const SizedBox(width: 16.0),
         ],
       ),
@@ -107,13 +103,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < 2) {
-                      // 🚀 修改點：縮短時間並改用起步較快的動畫曲線
+                      // 🚀 修改點：改用 600ms 與 fastOutSlowIn (先快速啟動，然後極度滑順地減速停下，零彈跳)
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeOutCubic,
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.fastOutSlowIn,
                       );
                     } else {
-                      // 如果是最後一頁，跳轉到登入頁
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -151,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 24),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w500,
             color: AppColors.textGrey,

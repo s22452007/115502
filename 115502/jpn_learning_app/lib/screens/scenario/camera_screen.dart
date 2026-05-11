@@ -77,12 +77,7 @@ class _CameraScreenState extends State<CameraScreen>
       final XFile photo = await _controller!.takePicture();
       if (!mounted) return;
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AnalyzingScreen(imagePath: photo.path),
-        ),
-      );
+      await _showNamingDialogAndProceed(photo.path);
     } on CameraException catch (e) {
       debugPrint('Error occured while taking picture: $e');
     }

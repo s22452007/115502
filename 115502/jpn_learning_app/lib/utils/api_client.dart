@@ -964,6 +964,9 @@ class ApiClient {
     try {
       var request = http.MultipartRequest('POST', url);
       request.fields['user_id'] = userId.toString();
+      if (customTitle != null && customTitle.isNotEmpty) {
+        request.fields['custom_title'] = customTitle;
+      }
 
       if (kIsWeb) {
         final imageResponse = await http.get(Uri.parse(imagePath));

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>意見回饋管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         :root {
@@ -22,7 +23,7 @@
             margin: 0;
         }
 
-        /* ===== 佈局與選單 (保留並優化) ===== */
+        /* ===== 佈局與選單 ===== */
         .layout { display: flex; min-height: 100vh; }
         .sidebar {
             width: 220px;
@@ -65,13 +66,15 @@
             font-weight: bold;
             border-right: 4px solid var(--snap-green-dark);
         }
+        
+        .sidebar-menu a i { color: var(--snap-green-dark); font-size: 1.1rem; width: 20px; text-align: center; }
 
         /* ===== 主內容區 ===== */
         .main-content { flex: 1; padding: 40px 48px; overflow-x: hidden; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
         .page-title { color: var(--snap-green-dark); font-weight: bold; margin: 0; }
 
-        /* ===== 狀態篩選按鈕 (新增) ===== */
+        /* ===== 狀態篩選按鈕 ===== */
         .filter-group { display: flex; gap: 6px; }
         .btn-filter {
             padding: 6px 16px;
@@ -86,20 +89,31 @@
         }
         .btn-filter:hover { border-color: #bbb; color: #555; }
         
-        /* 選中狀態：綠色 (全部、已回覆) */
         .btn-filter.active-success {
             background: var(--snap-green-dark);
             color: white;
             border-color: var(--snap-green-dark);
         }
-        /* 選中狀態：紅色 (待回覆) */
         .btn-filter.active-danger {
             background: var(--snap-danger);
             color: white;
             border-color: var(--snap-danger);
         }
 
-        /* ===== 回饋卡片與其餘樣式 (保留) ===== */
+        /* 🌟 待回覆數字 Badge 的獨立樣式，消滅紅線！ */
+        .badge-count {
+            color: white;
+            border-radius: 50px;
+            padding: 1px 7px;
+            font-size: 0.75rem;
+            margin-left: 4px;
+        }
+        /* 當按鈕未選中時，Badge 為紅色 */
+        .btn-filter:not(.active-danger) .badge-count { background-color: var(--snap-danger); }
+        /* 當按鈕選中時，Badge 變為半透明白色 */
+        .btn-filter.active-danger .badge-count { background-color: rgba(255, 255, 255, 0.3); }
+
+        /* ===== 回饋卡片 ===== */
         .feedback-card {
             background: white; border-radius: 16px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
@@ -134,32 +148,37 @@
                 <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="/dashboard">🏠 首頁</a></li>
-                <li><a href="/user/list">👤 使用者資料</a></li>
-                <li><a href="/customer/list">💰 點數管理</a></li>
-                <li><a href="/purchase/list">🛒 購買紀錄</a></li>
-                <li><a href="/photo/list">🖼️ 照片管控</a></li>
-                <li><a href="/vocab/list">📖 教材單字管理</a></li>
-                <li><a href="/quiz/list">📝 測驗題目管理</a></li>
-                <li><a href="/feedback/list" class="active">💬 意見回饋</a></li>
+                <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+                <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+                <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+                <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+                <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+                <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+                <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+                <li><a href="/feedback/list" class="active"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
                 <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
-                <li><a href="/admin/change_password">🔑 修改密碼</a></li>
-                <li><a href="{{ url_for('admin_logout') }}" style="color:var(--snap-danger);">🚪 登出系統</a></li>
+                <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+                <li><a href="{{ url_for('admin_logout') }}" style="color:var(--snap-danger);"><i class="bi bi-box-arrow-right"></i> 登出系統</a></li>
             </ul>
         </aside>
 
         <main class="main-content">
             <div class="page-header">
-                <h3 class="page-title">💬 意見回饋管理</h3>
+                <h3 class="page-title"><i class="bi bi-chat-dots-fill me-2"></i>意見回饋管理</h3>
                 <div class="filter-group">
                     <a href="/feedback/list?status=all"
                        class="btn-filter {% if status == 'all' %}active-success{% endif %}">
                         全部
                     </a>
+                    
                     <a href="/feedback/list?status=pending"
                        class="btn-filter {% if status == 'pending' %}active-danger{% endif %}">
-                        待回覆{% if pending_count > 0 %} <span style="background:{% if status == 'pending' %}rgba(255,255,255,0.3){% else %}#d9534f{% endif %};color:white;border-radius:50px;padding:1px 7px;font-size:0.75rem;margin-left:2px;">{{ pending_count }}</span>{% endif %}
+                        待回覆
+                        {% if pending_count > 0 %} 
+                            <span class="badge-count">{{ pending_count }}</span>
+                        {% endif %}
                     </a>
+
                     <a href="/feedback/list?status=replied"
                        class="btn-filter {% if status == 'replied' %}active-success{% endif %}">
                         已回覆
@@ -177,9 +196,9 @@
                     <div class="d-flex gap-2">
                         <span class="type-tag">{{ f.feedback_type }}</span>
                         {% if f.reply %}
-                            <span class="status-badge status-replied">✓ 已回覆</span>
+                            <span class="status-badge status-replied"><i class="bi bi-check-circle-fill me-1"></i>已回覆</span>
                         {% else %}
-                            <span class="status-badge status-unreplied">● 待回覆</span>
+                            <span class="status-badge status-unreplied"><i class="bi bi-clock-fill me-1"></i>待回覆</span>
                         {% endif %}
                     </div>
                 </div>
@@ -193,7 +212,7 @@
 
                 {% if f.reply %}
                 <div class="mt-3">
-                    <div class="reply-label">🎧 官方回覆</div>
+                    <div class="reply-label"><i class="bi bi-headset me-1"></i>官方回覆</div>
                     <div class="reply-box">{{ f.reply }}</div>
                     <div class="meta-row">
                         <span>回覆時間</span>

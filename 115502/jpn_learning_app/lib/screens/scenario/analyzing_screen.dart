@@ -35,7 +35,11 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
       if (userId == null) {
         throw Exception('User ID is null');
       }
-      final result = await ApiClient.analyzeImage(widget.imagePath, userId);
+      final result = await ApiClient.analyzeImage(
+        widget.imagePath, 
+        userId,
+        customTitle: widget.customTitle,
+      );
 
       if (mounted && result.containsKey('result') && result['result'] != null) {
         // 分析成功，把今日進度 +1

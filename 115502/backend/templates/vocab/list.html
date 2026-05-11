@@ -27,6 +27,9 @@
         .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
         .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
         .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        
+        /* 統一設定側邊欄 icon 的顏色為墨綠色，並固定寬度以確保文字對齊 */
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
 
         /* 主內容區樣式 */
         .main-content { flex: 1; overflow-x: hidden; }
@@ -58,17 +61,17 @@
             <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="/dashboard">🏠 首頁</a></li>
-            <li><a href="/user/list">👤 使用者資料</a></li>
-            <li><a href="/customer/list">💰 點數管理</a></li>
-            <li><a href="/purchase/list">🛒 購買紀錄</a></li>
-            <li><a href="/photo/list">🖼️ 照片管控</a></li>
-            <li><a href="/vocab/list" class="active">📖 教材單字管理</a></li>
-            <li><a href="/quiz/list">📝 測驗題目管理</a></li>
-            <li><a href="/feedback/list">💬 意見回饋</a></li>
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list" class="active"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
             <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
-            <li><a href="/admin/change_password">🔑 修改密碼</a></li>
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;">🚪 登出系統</a></li>
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right"></i> 登出系統</a></li>
         </ul>
     </aside>
 
@@ -77,11 +80,11 @@
             
             <div class="page-title-box d-flex justify-content-between align-items-end">
                 <div>
-                    <h3 class="page-title">📖 教材單字庫管理</h3>
+                    <h3 class="page-title"><i class="bi bi-book-half me-2"></i>教材單字庫管理</h3>
                     <div class="text-muted small mt-1">維護系統單字庫，包含日文單字、假名讀音與中文釋義</div>
                 </div>
                 <div class="d-flex gap-2">
-                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋單字、假名或意思...">
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜尋單字、假名或意思...">
                     <button class="btn btn-snap px-3" data-bs-toggle="modal" data-bs-target="#addModal">
                         <i class="bi bi-plus-lg me-1"></i> 新增單字
                     </button>
@@ -89,7 +92,7 @@
             </div>
 
             <div class="panel">
-                <div class="panel-header">📚 單字資料清單</div>
+                <div class="panel-header"><i class="bi bi-journal-text me-1"></i> 單字資料清單</div>
                 <div class="p-0">
                     <table class="table table-hover mb-0 align-middle">
                         <thead>
@@ -126,7 +129,7 @@
                                     <div class="modal-content" style="border-radius: 16px;">
                                         <form action="{{ url_for('vocab_edit', id=v.id) }}" method="POST">
                                             <div class="modal-header">
-                                                <h5 class="modal-title fw-bold" style="color: var(--green-accent);">編輯單字</h5>
+                                                <h5 class="modal-title fw-bold" style="color: var(--green-accent);"><i class="bi bi-pencil-fill me-2"></i>編輯單字</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <div class="modal-body p-4">
@@ -158,7 +161,7 @@
             <div class="modal-content" style="border-radius: 16px;">
                 <form action="{{ url_for('vocab_add') }}" method="POST">
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold" style="color: var(--green-accent);">新增教材單字</h5>
+                        <h5 class="modal-title fw-bold" style="color: var(--green-accent);"><i class="bi bi-plus-circle-fill me-2"></i>新增教材單字</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">

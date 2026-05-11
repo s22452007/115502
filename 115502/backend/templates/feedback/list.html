@@ -36,23 +36,6 @@
             height: 100vh;
             overflow-y: auto;
         }
-        .sidebar-logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0 20px 20px;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 12px;
-        }
-        .sidebar-logo .icon-box {
-            width: 36px; height: 36px;
-            background-color: var(--snap-green-light);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--snap-green-dark); font-weight: bold;
-        }
-        .sidebar-logo .title { color: var(--snap-green-dark); font-weight: bold; font-size: 1rem; line-height: 1.2; }
-        .sidebar-logo .subtitle { color: #aaa; font-size: 0.7rem; margin-top: 2px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
         .sidebar-menu a {
             display: flex; align-items: center; gap: 10px;
@@ -147,10 +130,6 @@
 <body>
     <div class="layout">
         <aside class="sidebar">
-            <div class="sidebar-logo">
-                <div class="icon-box">JL</div>
-                <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
-            </div>
             <div class="sidebar-admin">
                 <div class="sidebar-admin-avatar">{{ session['admin_user'][0]|upper }}</div>
                 <div class="sidebar-admin-info">

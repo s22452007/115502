@@ -11,7 +11,7 @@ import 'group_config_screen.dart';
 
 import 'package:jpn_learning_app/widgets/study_group/empty_group_banner.dart';
 import 'package:jpn_learning_app/widgets/study_group/invites_status_card.dart';
-import 'package:jpn_learning_app/widgets/study_group/rules_card.dart'; 
+import 'package:jpn_learning_app/widgets/study_group/rules_card.dart';
 
 class StudyGroupScreen extends StatefulWidget {
   final bool showAppBar;
@@ -62,7 +62,7 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   title: const Text(
-                    '📜 上週結算通知',
+                    '上週結算通知',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   content: Text(

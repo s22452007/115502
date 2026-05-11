@@ -142,8 +142,8 @@ def seed_data():
         db.session.add(vip_user)
         db.session.commit()
 
-        # 能力值
-        db.session.add(UserAbility(user_id=vip_user.id, listening=0.8, speaking=0.6, reading=0.9, writing=0.5, culture=0.7))
+        # # 能力值
+        # db.session.add(UserAbility(user_id=vip_user.id, listening=0.8, speaking=0.6, reading=0.9, writing=0.5, culture=0.7))
 
         # ==========================================
         # 🌟 新架構假資料：模擬拍照與收藏

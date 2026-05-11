@@ -83,6 +83,52 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  Future<void> _showNamingDialogAndProceed(String imagePath) async {
+    final TextEditingController nameController = TextEditingController();
+    final String? customName = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('為這張照片命名（選填）'),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              hintText: '例如：我的書桌',
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, null);
+              },
+              child: const Text('跳過', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, nameController.text.trim());
+              },
+              child: const Text('確定', style: TextStyle(color: AppColors.primary)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AnalyzingScreen(
+          imagePath: imagePath,
+          customTitle: customName != null && customName.isNotEmpty ? customName : null,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);

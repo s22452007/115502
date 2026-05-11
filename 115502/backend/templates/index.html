@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>JLens Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         :root {
@@ -27,6 +28,9 @@
         .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
         .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
         .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+
+        /* 統一設定側邊欄 icon 的顏色為墨綠色，並固定寬度以確保文字對齊 */
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
 
         /* ===== Main ===== */
         .main-content { flex: 1; overflow-x: hidden; }
@@ -110,7 +114,8 @@
             position: relative;
         }
         .tl-dot {
-            width: 36px; height: 36px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             font-size: 1rem;
@@ -146,17 +151,17 @@
             <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="/dashboard" class="active">🏠 首頁</a></li>
-            <li><a href="/user/list">👤 使用者資料</a></li>
-            <li><a href="/customer/list">💰 點數管理</a></li>
-            <li><a href="/purchase/list">🛒 購買紀錄</a></li>
-            <li><a href="/photo/list">🖼️ 照片管控</a></li>
-            <li><a href="/vocab/list">📖 教材單字管理</a></li>
-            <li><a href="/quiz/list">📝 測驗題目管理</a></li>
-            <li><a href="/feedback/list">💬 意見回饋</a></li>
+            <li><a href="/dashboard" class="active"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
             <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
-            <li><a href="/admin/change_password">🔑 修改密碼</a></li>
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;">🚪 登出系統</a></li>
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
         </ul>
     </aside>
 
@@ -197,7 +202,7 @@
             <div class="row g-4">
                 <div class="col-md-7">
                     <div class="panel">
-                        <div class="panel-header">🕐 最近動態</div>
+                        <div class="panel-header"><i class="bi bi-clock-history me-1"></i> 最近動態</div>
                         <div class="panel-body">
                             {% if recent_users %}
                             <div class="timeline">
@@ -225,7 +230,7 @@
                 <div class="col-md-5">
                     <div class="panel">
                         <div class="panel-header">
-                            💬 待回覆回饋
+                            <i class="bi bi-chat-dots-fill me-1"></i> 待回覆回饋
                             {% if feedback_pending > 0 %}
                             <span style="margin-left:8px;background:rgba(255,255,255,0.2);font-size:0.75rem;padding:2px 8px;border-radius:50px;">{{ feedback_pending }} 筆</span>
                             {% endif %}
@@ -243,7 +248,7 @@
                                 </div>
                                 {% endfor %}
                             {% else %}
-                                <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">沒有待回覆的回饋 🎉</div>
+                                <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">沒有待回覆的回饋 <i class="bi bi-emoji-smile ms-1"></i></div>
                             {% endif %}
                         </div>
                         {% if feedback_pending > 0 %}

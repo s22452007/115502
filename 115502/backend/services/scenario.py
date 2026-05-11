@@ -20,6 +20,8 @@ def analyze_scene():
 
     # 確保有傳 user_id (相機辨識綁定使用者)
     user_id = request.form.get('user_id')
+    custom_title_input = request.form.get('custom_title')
+    
     if not user_id:
         return jsonify({'error': '缺少 user_id'}), 400
 

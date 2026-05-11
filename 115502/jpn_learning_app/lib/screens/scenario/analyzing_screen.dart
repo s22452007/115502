@@ -10,8 +10,9 @@ import 'package:jpn_learning_app/services/notification_service.dart';
 // 2-2-2 AI 分析中
 class AnalyzingScreen extends StatefulWidget {
   final String imagePath; // 接收圖片路徑
+  final String? customTitle; // 新增自訂標題
 
-  const AnalyzingScreen({Key? key, required this.imagePath}) : super(key: key);
+  const AnalyzingScreen({Key? key, required this.imagePath, this.customTitle}) : super(key: key);
   @override
   State<AnalyzingScreen> createState() => _AnalyzingScreenState();
 }

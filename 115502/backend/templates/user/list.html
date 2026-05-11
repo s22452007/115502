@@ -30,12 +30,7 @@
         .sidebar-menu a i { color: var(--green); font-size: 1.1rem; width: 20px; text-align: center; }
 
         /* ===== Main ===== */
-        .main-content { flex: 1; padding: 0; overflow-x: hidden; }
-        .topbar { display: flex; justify-content: flex-end; align-items: center; padding: 10px 48px; background: white; border-bottom: 1px solid #eee; }
-        .admin-btn { display: flex; align-items: center; gap: 8px; background: none; border: 1px solid #ddd; border-radius: 50px; padding: 6px 14px 6px 8px; cursor: pointer; font-size: 0.88rem; color: #444; transition: 0.2s; }
-        .admin-btn:hover { background: var(--bg); }
-        .admin-avatar { width: 28px; height: 28px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; color: var(--green); }
-        .content-area { padding: 40px 48px; }
+        .main-content { flex: 1; padding: 40px 48px; overflow-x: hidden; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .page-title { color: var(--green); font-weight: bold; margin: 0; }
 
@@ -147,20 +142,6 @@
     </aside>
 
     <main class="main-content">
-        <div class="topbar">
-            <div class="dropdown">
-                <button class="admin-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="admin-avatar">{{ session['admin_user'][0]|upper }}</span>
-                    {{ session['admin_user'] }}
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="/admin/change_password">🔑 修改密碼</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="{{ url_for('admin_logout') }}">🚪 登出</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="content-area">
         <div class="page-header">
             <h3 class="page-title"><i class="bi bi-person-fill me-2"></i>使用者資料管理</h3>
             <span class="text-muted">共 {{ users|length }} 位使用者</span>
@@ -244,7 +225,6 @@
         {% else %}
         <div class="empty-state">目前沒有任何使用者</div>
         {% endfor %}
-        </div><!-- end content-area -->
     </main>
 </div>
 <script>

@@ -13,6 +13,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  // 整理頁面資料，方便等等做動畫迴圈
+  final List<Map<String, dynamic>> _pagesData = [
+    {'icon': Icons.camera_alt, 'title': 'snap to learn'},
+    {'icon': Icons.menu_book, 'title': '輕鬆學習日文'},
+    {'icon': Icons.translate, 'title': '馬上開始你的旅程'},
+  ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,36 +58,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 核心結構：PageView (圖片與文字會跟著這層一起絲滑連動) [cite: 7, 8, 9]
+            // 🌟 核心升級：加入縮放與漸隱特效的 PageView
             Expanded(
-              child: PageView(
+              child: PageView.builder(
                 controller: _pageController,
+                itemCount: _pagesData.length,
                 onPageChanged: (index) {
                   setState(() {
                     _currentPage = index;
                   });
                 },
-                children: [
-                  _buildPageContent(
-                    icon: Icons.camera_alt,
-                    title: 'snap to learn',
-                  ),
-                  _buildPageContent(icon: Icons.menu_book, title: '輕鬆學習日文'),
-                  _buildPageContent(icon: Icons.translate, title: '馬上開始你的旅程'),
-                ],
+                itemBuilder: (context, index) {
+                  return AnimatedBuilder(
+                    animation: _pageController,
+                    builder: (context, child) {
+                      // 取得當前滑動的進度 (保護機制：避免第一幀尚未渲染時報錯)
+                      double page = _currentPage.toDouble();
+                      if (_pageController.position.haveDimensions) {
+                        page = _pageController.page ?? _currentPage.toDouble();
+                      }
+
+                      // 計算該頁面距離畫面中心的差距
+                      double diff = (page - index).abs();
+
+                      // 根據距離計算縮放比例 (越遠越小) 與透明度 (越遠越淡)
+                      double scale = (1 - (diff * 0.2)).clamp(0.0, 1.0);
+                      double opacity = (1 - (diff * 0.5)).clamp(0.0, 1.0);
+
+                      return Opacity(
+                        opacity: opacity,
+                        child: Transform.scale(
+                          scale: scale,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _buildPageContent(
+                      icon: _pagesData[index]['icon'] as IconData,
+                      title: _pagesData[index]['title'] as String,
+                    ),
+                  );
+                },
               ),
             ),
 
-            // 🌟 升級點 1：會像水滴般平滑變形的狀態點點 (AnimatedContainer) [cite: 11, 12, 13]
+            // 底部狀態點點 (滑順水滴變形特效)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                3,
+                _pagesData.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300), // 點點變形的動畫時間
-                  curve: Curves.easeOutCubic, // 點點變形的曲線
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                  width: _currentPage == index ? 24.0 : 8.0, // 當前頁面的點會拉長
+                  width: _currentPage == index ? 24.0 : 8.0,
                   height: 8.0,
                   decoration: BoxDecoration(
                     color: _currentPage == index
@@ -105,11 +142,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   onPressed: () {
-                    if (_currentPage < 2) {
-                      // 🌟 升級點 2：使用 easeInOutCubic，營造電影級的柔和起步與緩停 [cite: 17, 18]
+                    if (_currentPage < _pagesData.length - 1) {
+                      // 🌟 配合圖片縮放特效，採用起步快速但緩停的 easeOutQuart 曲線
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 500), 
-                        curve: Curves.easeInOutCubic, 
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOutQuart,
                       );
                     } else {
                       Navigator.pushReplacement(
@@ -119,7 +156,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     }
                   },
                   child: Text(
-                    _currentPage == 2 ? '開始使用' : '下一頁',
+                    _currentPage == _pagesData.length - 1 ? '開始使用' : '下一頁',
                     style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
@@ -132,7 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // 建立每一頁圖片與內容的小工具 (完全保留您的原始排版) [cite: 23, 24, 25]
+  // 建立每一頁內容的小工具
   Widget _buildPageContent({required IconData icon, required String title}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,

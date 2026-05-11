@@ -29,7 +29,12 @@
         /* 統一設定側邊欄 icon 的顏色為墨綠色，並固定寬度以確保文字對齊 */
         .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
 
-        .main-content { flex: 1; overflow-x: hidden; }
+        .main-content { flex: 1; padding: 0; overflow-x: hidden; }
+        .topbar { display: flex; justify-content: flex-end; align-items: center; padding: 10px 48px; background: white; border-bottom: 1px solid #eee; }
+        .admin-btn { display: flex; align-items: center; gap: 8px; background: none; border: 1px solid #ddd; border-radius: 50px; padding: 6px 14px 6px 8px; cursor: pointer; font-size: 0.88rem; color: #444; transition: 0.2s; }
+        .admin-btn:hover { background: #f4f7f5; }
+        .admin-avatar { width: 28px; height: 28px; background: #dce7de; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; color: #5c8364; }
+        .content-area { padding: 40px 48px; }
         .body-area { padding: 32px 48px; }
         .page-title-box { margin-bottom: 24px; }
         .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
@@ -65,8 +70,22 @@
     </aside>
 
     <main class="main-content">
+        <div class="topbar">
+            <div class="dropdown">
+                <button class="admin-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="admin-avatar">{{ session['admin_user'][0]|upper }}</span>
+                    {{ session['admin_user'] }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/admin/change_password">🔑 修改密碼</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="{{ url_for('admin_logout') }}">🚪 登出</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="content-area">
         <div class="body-area">
-            
+
             <div class="page-title-box d-flex justify-content-between align-items-end">
                 <div>
                     <h3 class="page-title"><i class="bi bi-cart-fill me-2"></i>購買紀錄管理</h3>
@@ -113,6 +132,7 @@
 
             <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
         </div>
+        </div><!-- end content-area -->
     </main>
 
 </div>

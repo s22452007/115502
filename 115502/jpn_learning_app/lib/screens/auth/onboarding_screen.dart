@@ -72,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   return AnimatedBuilder(
                     animation: _pageController,
                     builder: (context, child) {
-                      // 取得當前滑動的進度 (保護機制：避免第一幀尚未渲染時報錯)
+                      // 取得當前滑動的進度
                       double page = _currentPage.toDouble();
                       if (_pageController.position.haveDimensions) {
                         page = _pageController.page ?? _currentPage.toDouble();
@@ -102,13 +102,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // 底部狀態點點 (滑順水滴變形特效)
+            // 底部狀態點點 (滑順水滴變形特效，調慢以搭配主動畫)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 450), // 延長點點的變形時間
                   curve: Curves.easeOutCubic,
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   width: _currentPage == index ? 24.0 : 8.0,
@@ -143,10 +143,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < _pagesData.length - 1) {
-                      // 🌟 配合圖片縮放特效，採用起步快速但緩停的 easeOutQuart 曲線
+                      // 🌟 放慢動畫：時間調至 750ms，採用極致平滑的 easeInOutCubic 曲線
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOutQuart,
+                        duration: const Duration(milliseconds: 750),
+                        curve: Curves.easeInOutCubic,
                       );
                     } else {
                       Navigator.pushReplacement(

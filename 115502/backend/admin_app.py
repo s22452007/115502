@@ -252,7 +252,7 @@ def delete_user(user_id):
 
 
 @app.route('/purchase/list')
-# 如果您有登入驗證，請記得加上您的裝飾器，例如 @admin_login_required
+@admin_login_required
 def purchase_list():
     conn = get_db_connection()
     

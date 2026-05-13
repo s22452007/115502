@@ -34,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   List<dynamic> _recentScenes = [];
   bool _isLoadingScenes = true;
 
-  // 🌟 扁平風設計的核心配色系統
   final Color _textColor = const Color(0xFF2C3E50); 
   final Color _subTextColor = const Color(0xFF8E9AAB);
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
@@ -159,22 +158,18 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final userEmail = userProvider.email ?? '';
     final userName = isGuest ? '訪客' : ((userProvider.username?.trim().isNotEmpty ?? false) ? userProvider.username!.trim() : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
     final jPts = userProvider.jPts;
+    final streakDays = userProvider.streakDays; // 🌟 獲取連續登入天數
     final avatarUrl = userProvider.avatar;
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
-      // 🌟 沉浸式透明頂欄
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: _textColor),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, size: 26),
-            color: _textColor,
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.notifications_outlined, size: 26), color: _textColor, onPressed: () {}),
           const SizedBox(width: 12),
         ],
       ),
@@ -182,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. 頁首個人資料區 (圖二對應)
+            // 1. 頁首個人資料區
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 115, 24, 15),
@@ -202,6 +197,29 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         Text(_getGreeting(), style: TextStyle(fontSize: 14, color: _subTextColor, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
                         Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, height: 1.2, letterSpacing: 0.5)),
+                        
+                        // 🌟 Commit 1: 重新加回連續登入天數標籤
+                        if (!isGuest) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '已連續登入 $streakDays 天',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -209,10 +227,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ),
 
-            // 2. 本週打卡日曆 (圖一對應)
             _buildCheckInCalendarCard(),
 
-            // 3. J-Pts 狀態標籤 (扁平化按鈕風格)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
               child: Align(
@@ -223,29 +239,22 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     icon: Icons.monetization_on_outlined, 
                     iconColor: AppColors.primary, 
                     text: isGuest ? '登入購買 J-Pts' : '$jPts J-Pts',
-                    borderColor: Colors.transparent, // 徹底扁平化
+                    borderColor: Colors.transparent, 
                   ),
                 ),
               ),
             ),
 
             const SizedBox(height: 15),
-
-            // 4. 今日學習目標區塊
             _buildSectionHeader('今日學習目標'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: isGuest
-                  ? PremiumLockedOverlay(
-                      message: '登入啟用今日目標', 
-                      child: DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress)
-                    )
+                  ? PremiumLockedOverlay(message: '登入啟用今日目標', child: DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress))
                   : DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
             ),
 
             const SizedBox(height: 35),
-
-            // 5. 最近解鎖場景區塊
             _buildSectionHeader('最近解鎖場景', hasGalleryLink: true),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -255,8 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, context.read<UserProvider>().userId?.toString()),
               ),
             ),
-            
-            const SizedBox(height: 40), // 底部留白
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -273,16 +281,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  // 🌟 打卡日曆漂浮卡片
   Widget _buildCheckInCalendarCard() {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
       padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30), // 極致大圓角
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -305,7 +309,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  // 🌟 日曆日期節點
   Widget _buildCalendarDayNode(String dayName, String dateNum, {bool isToday = false, bool isCompleted = false}) {
     Color nodeColor = Colors.grey.withOpacity(0.08);
     Color dateTextColor = _textColor;
@@ -315,24 +318,19 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     } else if (isCompleted) {
       nodeColor = AppColors.primaryLighter.withOpacity(0.5);
     }
-
     return Column(
       children: [
         Text(dayName, style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
         const SizedBox(height: 10),
         Container(
-          width: 38,
-          height: 38,
+          width: 38, height: 38,
           decoration: BoxDecoration(color: nodeColor, shape: BoxShape.circle),
-          child: Center(
-            child: Text(dateNum, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: dateTextColor)),
-          ),
+          child: Center(child: Text(dateNum, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: dateTextColor))),
         ),
       ],
     );
   }
 
-  // 🌟 通用區塊標題
   Widget _buildSectionHeader(String title, {bool hasGalleryLink = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 15),
@@ -343,10 +341,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           if (hasGalleryLink)
             GestureDetector(
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
-              child: Text(
-                '我的單字探險 >', 
-                style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800),
-              ),
+              child: Text('我的單字探險 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
             ),
         ],
       ),

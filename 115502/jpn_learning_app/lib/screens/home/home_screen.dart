@@ -162,13 +162,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = context.watch<UserProvider>();
-    final isGuest = userProvider.userId == null;
-    final userEmail = userProvider.email ?? '';
-    final userName = isGuest ? '訪客' : ((userProvider.username?.trim().isNotEmpty ?? false) ? userProvider.username!.trim() : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
-    final streakDays = userProvider.streakDays;
-    final jPts = userProvider.jPts;
-
     return Scaffold(
       backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
@@ -176,86 +169,21 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: _textColor),
-        title: Icon(Icons.camera_alt_rounded, color: _textColor, size: 28),
-        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            color: _textColor,
+            onPressed: () {},
+          ),
+          const SizedBox(width: 12),
+        ],
       ),
+      extendBodyBehindAppBar: true,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${_getGreeting()}，\n$userName!', 
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: _textColor, height: 1.2),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '今天也是學習日語的好日子',
-              style: TextStyle(fontSize: 15, color: _subTextColor, fontWeight: FontWeight.w600, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                StatusChip(
-                  icon: Icons.local_fire_department,
-                  iconColor: Colors.deepOrange,
-                  text: isGuest ? '登入挑戰' : '連續$streakDays天',
-                  borderColor: Colors.transparent, 
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => isGuest ? const LoginScreen() : const BuyPointsScreen())),
-                  child: StatusChip(
-                    icon: Icons.monetization_on,
-                    iconColor: Colors.blue,
-                    text: isGuest ? '0 J-Pts' : '$jPts J-Pts',
-                    borderColor: Colors.transparent,
-                  ),
-                ),
-              ],
-            ),
-            
-            // 🌟 Commit 3: 標題風格升級
-            const SizedBox(height: 40),
-            Text(
-              '今日學習目標',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor),
-            ),
-            const SizedBox(height: 16),
-            isGuest
-                ? PremiumLockedOverlay(
-                    message: '登入啟用今日目標',
-                    child: DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
-                  )
-                : DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
-            
-            const SizedBox(height: 40),
-            
-            // 🌟 Commit 3: 連結樣式優化
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '最近解鎖場景', 
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor)
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
-                  child: const Text(
-                    '我的單字探險 >', 
-                    style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800, letterSpacing: 0.5)
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            RecentScenesList(
-              recentScenes: _recentScenes,
-              isLoadingScenes: _isLoadingScenes,
-              onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, context.read<UserProvider>().userId?.toString()),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 120),
+            // (後續內容待 Commit 處理)
           ],
         ),
       ),

@@ -1,13 +1,19 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
+
 import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
+import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
 
-  // 🌟 扁平風設計的核心配色
+  // 🌟 扁平風核心顏色
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
   final Color _textColor = const Color(0xFF2C3E50);
   final Color _subTextColor = const Color(0xFF8E9AAB);
@@ -15,9 +21,18 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final userName = userProvider.username ?? '使用者';
-    final userEmail = userProvider.email ?? '';
-    final avatarUrl = userProvider.avatar;
+    final userAvatar = userProvider.avatar;
+    final userEmail = userProvider.email ?? 'guest@example.com';
+    final userName = userProvider.username ?? userEmail.split('@')[0];
+    final friendId = userProvider.friendId;
+    final bool isGuest = userProvider.userId == null;
+
+    // 🌟 計算預設頭貼顏色與連結
+    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
+    final String hashString = friendId?.toString() ?? userName;
+    int hash = 0;
+    for (int i = 0; i < hashString.length; i++) hash = (hash * 31 + hashString.codeUnitAt(i)) & 0x7FFFFFFF;
+    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userName)}&background=${colors[hash % colors.length]}&color=fff';
 
     return Drawer(
       backgroundColor: _flatCanvasColor,
@@ -25,44 +40,26 @@ class AppDrawer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. 頁首個人資料區
+          // 1. 頁首區：沉浸式個人資訊
           Container(
             padding: const EdgeInsets.fromLTRB(24, 80, 24, 30),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 30,
+                  radius: 32,
                   backgroundColor: AppColors.primaryLighter,
-                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) 
-                      ? NetworkImage(avatarUrl) 
-                      : null,
-                  child: (avatarUrl == null || avatarUrl.isEmpty) 
-                      ? const Icon(Icons.person, size: 30, color: AppColors.primary) 
-                      : null,
+                  backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
+                      ? (userAvatar.startsWith('http') ? NetworkImage(userAvatar) : MemoryImage(base64Decode(userAvatar.split(",").last)) as ImageProvider)
+                      : NetworkImage(defaultAvatarUrl) as ImageProvider,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        userName,
-                        style: TextStyle(
-                          fontSize: 18, 
-                          fontWeight: FontWeight.w900, 
-                          color: _textColor
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        userEmail,
-                        style: TextStyle(
-                          fontSize: 12, 
-                          color: _subTextColor, 
-                          fontWeight: FontWeight.w500
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(isGuest ? '訪客' : userName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
+                      const SizedBox(height: 4),
+                      Text(isGuest ? '登入解鎖更多功能！' : 'ID：${friendId ?? '—'}', style: TextStyle(fontSize: 13, color: _subTextColor, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
@@ -72,104 +69,54 @@ class AppDrawer extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // 2. 選單列表區
+          // 2. 🌟 Commit 3：扁平化藥丸功能列表
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                _buildMenuItem(
-                  context,
-                  icon: Icons.home_rounded, 
-                  title: '主頁首頁', 
-                  isSelected: true,
-                ),
-                _buildMenuItem(
-                  context,
-                  icon: Icons.workspace_premium_rounded, 
-                  title: '升級至 Pro',
-                ),
-                _buildMenuItem(
-                  context,
-                  icon: Icons.settings_rounded, 
-                  title: '設定中心',
-                ),
-                _buildMenuItem(
-                  context,
-                  icon: Icons.help_outline_rounded, 
-                  title: '幫助與回饋',
-                ),
+                _buildMenuItem(context, Icons.home_outlined, '回首頁', onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+                }),
+                _buildMenuItem(context, Icons.person_outline, '個人檔案', onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                }),
+                _buildMenuItem(context, Icons.bookmark_border, '我的單字探險', onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()));
+                }),
+                _buildMenuItem(context, Icons.people_outline, '好友', onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()));
+                }),
+                _buildMenuItem(context, Icons.groups_outlined, '我的學習小組', onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()));
+                }),
               ],
             ),
           ),
-
-          // 🌟 核心：使用 Spacer 將登出按鈕推至底部
           const Spacer(),
-
-          // 3. 🌟 Commit 4: 底部登出按鈕
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
-            child: _buildMenuItem(
-              context,
-              icon: Icons.logout_rounded, 
-              title: '登出帳號',
-              isLogout: true,
-              onTap: () {
-                // 這裡執行登出邏輯並跳轉回登入畫面
-                Navigator.pushReplacement(
-                  context, 
-                  MaterialPageRoute(builder: (_) => const LoginScreen())
-                );
-              },
-            ),
-          ),
         ],
       ),
     );
   }
 
-  // 🌟 更新後的選單項目元件：支援登出樣式與點擊回呼
-  Widget _buildMenuItem(
-    BuildContext context, {
-    required IconData icon, 
-    required String title, 
-    bool isSelected = false,
-    bool isLogout = false,
-    VoidCallback? onTap,
-  }) {
-    // 根據是否為登出按鈕來決定顏色：登出為紅色，選中為原色，其餘為深灰
-    Color itemColor = isLogout 
-        ? Colors.redAccent 
-        : (isSelected ? AppColors.primary : _textColor);
-
+  // 🌟 Commit 3：自定義藥丸選單元件
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title, {required VoidCallback onTap, Color? color}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected 
-            ? AppColors.primary.withOpacity(0.1) 
-            : (isLogout ? Colors.redAccent.withOpacity(0.05) : Colors.transparent),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.transparent, 
+        borderRadius: BorderRadius.circular(18),
       ),
       child: ListTile(
-        leading: Icon(
-          icon, 
-          color: itemColor, 
-          size: 24
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: itemColor,
-            fontWeight: isSelected || isLogout ? FontWeight.w800 : FontWeight.w600,
-            fontSize: 15,
-          ),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16)
-        ),
-        onTap: onTap ?? () {
-          // 預設為收起選單
-          Navigator.pop(context);
-        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        leading: Icon(icon, color: color ?? _textColor, size: 24),
+        title: Text(title, style: TextStyle(color: color ?? _textColor, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        onTap: onTap,
       ),
     );
   }

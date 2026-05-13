@@ -13,12 +13,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // 整理頁面資料
   final List<Map<String, dynamic>> _pagesData = [
     {'icon': Icons.camera_alt, 'title': 'snap to learn'},
     {'icon': Icons.menu_book, 'title': '輕鬆學習日文'},
     {'icon': Icons.translate, 'title': '馬上開始你的旅程'},
   ];
+
+  // 🌟 Commit 1 核心：定義並套用淺色畫布背景
+  final Color _flatCanvasColor = const Color(0xFFF4F7F5);
 
   @override
   void dispose() {
@@ -29,12 +31,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: _flatCanvasColor, // 套用新背景
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: _flatCanvasColor, // 套用新背景
         elevation: 0,
         actions: [
-          // 右上角 Skip 鍵
           TextButton(
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -58,7 +59,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 純粹的滑動 PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -76,15 +76,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-
-            // 底部狀態點點 (配合更慢的滑動，點點變形時間拉長至 500ms)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 500), // 💧 配合拉長的時間
-                  curve: Curves.easeOutQuart, 
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutQuart,
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   width: _currentPage == index ? 24.0 : 8.0,
                   height: 8.0,
@@ -97,10 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 32),
-
-            // 底部主按鈕
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 32.0,
@@ -118,7 +113,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < _pagesData.length - 1) {
-                      // 🌟 終極從容手感：拉長到 800ms，保留 easeOutQuart 確保起步不卡頓 [cite: 17, 18]
                       _pageController.nextPage(
                         duration: const Duration(milliseconds: 800),
                         curve: Curves.easeOutQuart,
@@ -144,7 +138,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // 建立每一頁內容的小工具
   Widget _buildPageContent({required IconData icon, required String title}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,

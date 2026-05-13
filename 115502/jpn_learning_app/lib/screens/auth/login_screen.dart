@@ -285,36 +285,27 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // 淺灰藍色背景
+      // 🌟 Commit 1: 統一背景色為極淺扁平畫布色
+      backgroundColor: const Color(0xFFF4F7F5),
       body: SafeArea(
         child: Container(
           margin: const EdgeInsets.all(20.0), // 卡片與螢幕邊緣的距離
           decoration: BoxDecoration(
             color: AppColors.white, // 卡片本身的白色
             borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            // 🌟 Commit 1: 拔除大卡片的 BoxShadow 陰影，讓畫面徹底扁平貼合
           ),
           clipBehavior: Clip.antiAlias,
-          // 這裡使用 Column 包裹 Expanded，確保內容過長時可以滑動，不會再出現黃黑條紋！
           child: Column(
             children: [
-              // 上半部：插圖與表單區塊 (會自動填滿剩餘空間並可滑動)
               Expanded(
                 child: SingleChildScrollView(
-                  // 加大內邊距，讓最上方的書本圖示不會貼在圓角邊緣
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24.0,
                     vertical: 32.0,
                   ),
                   child: Column(
                     children: [
-                      // 1. 頂部插圖
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -339,7 +330,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 40),
 
-                      // 2. 表單區域
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -366,7 +356,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // 輸入框 Email
                       _buildInputField(
                         controller: _emailController,
                         hintText: '電子郵件',
@@ -375,7 +364,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // 輸入框 Password
                       _buildInputField(
                         controller: _passwordController,
                         hintText: '密碼',
@@ -383,7 +371,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscureText: true,
                       ),
 
-                      // 註冊時的確認密碼
                       if (!_isLogin) ...[
                         const SizedBox(height: 20),
                         _buildInputField(
@@ -394,7 +381,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
 
-                      // 忘記密碼 (只有登入時顯示)
                       if (_isLogin)
                         Align(
                           alignment: Alignment.centerRight,
@@ -423,7 +409,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 24),
 
-                      // 登入/註冊主按鈕
                       GestureDetector(
                         onTap: _submit,
                         child: Container(
@@ -455,7 +440,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // OR 分隔線
                       Row(
                         children: [
                           Expanded(child: Divider(color: Colors.grey.shade300)),
@@ -474,7 +458,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // 第三方登入按鈕區域 (已移除 Apple)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -487,7 +470,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // 訪客登入
                       TextButton(
                         onPressed: () {
                           Navigator.pushReplacement(
@@ -511,7 +493,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              // 下半部：固定的切換註冊/登入區塊 (固定在底部不會被滑動吃掉)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 20.0),
@@ -562,7 +543,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // ============== 輔助 UI 元件 ==============
 
-  // 1. 現代化圓角輸入框 (不顯示上方 label，只顯示內部 hint 與 icon)
   Widget _buildInputField({
     required TextEditingController controller,
     required String hintText,
@@ -589,7 +569,7 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-          prefixIcon: Icon(icon, color: AppColors.primary), // 前方的綠色圖示
+          prefixIcon: Icon(icon, color: AppColors.primary),
           filled: true,
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(
@@ -609,7 +589,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 2. 第三方登入圓形按鈕
   Widget _buildSocialButton({
     required IconData icon,
     required double iconSize,
@@ -628,7 +607,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Icon(
           icon,
           size: iconSize,
-          color: AppColors.textDark, // 圖示用深灰色，質感更好
+          color: AppColors.textDark,
         ),
       ),
     );

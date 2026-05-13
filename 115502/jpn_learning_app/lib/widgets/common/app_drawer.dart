@@ -7,10 +7,11 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
-import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
+import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -40,7 +41,7 @@ class AppDrawer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. 頁首區
+          // 1. 頁首區：與主頁高度一致
           Container(
             padding: const EdgeInsets.fromLTRB(24, 80, 24, 30),
             child: Row(
@@ -69,7 +70,7 @@ class AppDrawer extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // 2. 🌟 Commit 4：加入強調項目與分隔線
+          // 2. 功能清單列表
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -94,25 +95,18 @@ class AppDrawer extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()));
                 }),
-                
-                // 🌟 Commit 4：訂閱特別樣式
                 _buildMenuItem(
                   context, 
                   Icons.stars, 
                   '訂閱與點數', 
                   color: Colors.orange, 
-                  bgColor: Colors.orange.withOpacity(0.08), 
+                  bgColor: Colors.orange.withOpacity(0.08),
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
                   }
                 ),
-
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Divider(color: Colors.black12, thickness: 0.5), // 🌟 Commit 4：輕盈分隔線
-                ),
-
+                const Padding(padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16), child: Divider(color: Colors.black12, thickness: 0.5)),
                 _buildMenuItem(context, Icons.settings_outlined, '系統設定', onTap: () {
                   Navigator.pop(context);
                   Future.delayed(Duration.zero, () {
@@ -122,20 +116,34 @@ class AppDrawer extends StatelessWidget {
               ],
             ),
           ),
+
           const Spacer(),
+
+          // 3. 底部區域：登入與登出 (藥丸按鈕樣式)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+            child: _buildMenuItem(
+              context, 
+              isGuest ? Icons.login : Icons.logout, 
+              isGuest ? '註冊 / 登入' : '登出帳號',
+              color: isGuest ? Colors.blue : Colors.redAccent,
+              bgColor: isGuest ? Colors.blue.withOpacity(0.08) : Colors.redAccent.withOpacity(0.08),
+              onTap: () {
+                Navigator.pop(context); 
+                if (!isGuest) context.read<UserProvider>().logout();
+                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+              }
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // 🌟 Commit 4：支援背景色切換的選單元件
   Widget _buildMenuItem(BuildContext context, IconData icon, String title, {required VoidCallback onTap, Color? color, Color? bgColor}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        color: bgColor ?? Colors.transparent, 
-        borderRadius: BorderRadius.circular(18),
-      ),
+      decoration: BoxDecoration(color: bgColor ?? Colors.transparent, borderRadius: BorderRadius.circular(18)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         leading: Icon(icon, color: color ?? _textColor, size: 24),

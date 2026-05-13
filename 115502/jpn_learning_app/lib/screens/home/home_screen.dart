@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ),
 
-            // 🌟 Commit 3: 加入打卡日曆卡片殼子
+            // 打卡日曆卡片
             _buildCheckInCalendarCard(),
 
             const SizedBox(height: 20),
@@ -222,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  // 🌟 Commit 3: 打卡日曆元件 (外殼)
+  // 打卡日曆元件
   Widget _buildCheckInCalendarCard() {
     return Container(
       width: double.infinity,
@@ -241,10 +241,57 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor),
             ),
           ),
-          // 內部點點留待 Commit 4
-          const SizedBox(height: 20),
+          // 🌟 Commit 4: 填充日期節點
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildCalendarDayNode('一', '15', isCompleted: true),
+                _buildCalendarDayNode('二', '16', isCompleted: true),
+                _buildCalendarDayNode('三', '17', isCompleted: true),
+                _buildCalendarDayNode('四', '18', isToday: true), 
+                _buildCalendarDayNode('五', '19'),
+                _buildCalendarDayNode('六', '20'),
+                _buildCalendarDayNode('日', '21'),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  // 🌟 Commit 4: 單個日期節點
+  Widget _buildCalendarDayNode(String dayName, String dateNum, {bool isToday = false, bool isCompleted = false}) {
+    Color nodeColor = Colors.grey.withOpacity(0.1);
+    Color dateTextColor = _textColor;
+    if (isToday) {
+      nodeColor = AppColors.primary;
+      dateTextColor = Colors.white;
+    } else if (isCompleted) {
+      nodeColor = AppColors.primaryLighter;
+    }
+
+    return Column(
+      children: [
+        Text(dayName, style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: nodeColor,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              dateNum, 
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: dateTextColor),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -17,9 +17,11 @@ class LevelSelectScreen extends StatefulWidget {
 class _LevelSelectScreenState extends State<LevelSelectScreen> {
   int? _selectedIndex;
 
-  // 🌟 黃金比例參數：280ms 是兼顧流暢與速度的最優解 🌟
   static const _goldenDuration = Duration(milliseconds: 280); 
-  static const _smoothCurve = Curves.easeOutCubic; // 🌟 快速開始但優雅結束
+  static const _smoothCurve = Curves.easeOutCubic;
+
+  // 🌟 Commit 1: 定義統一背景色
+  final Color _flatCanvasColor = const Color(0xFFF4F7F5);
 
   Future<void> _handleNavigation() async {
     if (_selectedIndex == 0) {
@@ -43,16 +45,18 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 Commit 1: 更新標題樣式，使用更現代的深色調
     const TextStyle titleStyle = TextStyle(
       fontSize: 32, 
       fontWeight: FontWeight.w900, 
-      color: Colors.black87,
+      color: Color(0xFF2C3E50), 
       height: 1.2,
       fontFamily: '微軟正黑體',
     );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      // 🌟 Commit 1: 同步背景色
+      backgroundColor: _flatCanvasColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
@@ -131,7 +135,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
       onTap: () => setState(() => _selectedIndex = index),
       child: AnimatedScale(
         duration: _goldenDuration,
-        scale: isSelected ? 1.015 : 1.0, // 🌟 稍微調整為 1.5% 的縮放，回饋感更適中
+        scale: isSelected ? 1.015 : 1.0, 
         curve: _smoothCurve,
         child: AnimatedContainer(
           duration: _goldenDuration,
@@ -145,6 +149,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.08),
               width: isSelected ? 2.0 : 1.0,
             ),
+            // 🌟 陰影暫留，下一個 Commit 處理
             boxShadow: [
               BoxShadow(
                 color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.black.withOpacity(0.02),

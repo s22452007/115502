@@ -19,7 +19,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {'icon': Icons.translate, 'title': '馬上開始你的旅程'},
   ];
 
-  // 🌟 Commit 1 核心：定義並套用淺色畫布背景
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
 
   @override
@@ -31,9 +30,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _flatCanvasColor, // 套用新背景
+      backgroundColor: _flatCanvasColor,
       appBar: AppBar(
-        backgroundColor: _flatCanvasColor, // 套用新背景
+        backgroundColor: _flatCanvasColor,
         elevation: 0,
         actions: [
           TextButton(
@@ -50,10 +49,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             },
             child: const Text(
               'Skip',
-              style: TextStyle(color: Colors.grey, fontSize: 16),
+              // 🌟 Commit 2：淡化右上角字體，不搶戲
+              style: TextStyle(
+                color: Colors.black38, 
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          const SizedBox(width: 16.0),
+          const SizedBox(width: 20.0),
         ],
       ),
       body: SafeArea(
@@ -142,23 +146,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // 🌟 Commit 2 核心：改為純白、無陰影大圓角卡片
         Container(
-          width: 180,
-          height: 180,
+          width: 200, 
+          height: 200,
           decoration: BoxDecoration(
-            color: AppColors.primaryLighter,
-            borderRadius: BorderRadius.circular(32),
+            color: Colors.white, 
+            borderRadius: BorderRadius.circular(40), 
           ),
-          child: Icon(icon, size: 80, color: AppColors.primary),
+          child: Icon(icon, size: 90, color: AppColors.primary),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 40),
+        // 🌟 Commit 2 核心：加粗標題並使用深色系
         Text(
           title,
           style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textGrey,
-            letterSpacing: 2,
+            fontSize: 24, 
+            fontWeight: FontWeight.w900, 
+            color: Color(0xFF2C3E50), 
+            letterSpacing: 1.5,
           ),
         ),
       ],

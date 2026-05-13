@@ -102,13 +102,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // 底部狀態點點 (滑順水滴變形特效，調慢以搭配主動畫)
+            // 底部狀態點點 (滑順水滴變形特效，調至 350ms)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 450), // 延長點點的變形時間
+                  duration: const Duration(milliseconds: 350), // ⚡ 稍微加快點點變形時間
                   curve: Curves.easeOutCubic,
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   width: _currentPage == index ? 24.0 : 8.0,
@@ -143,9 +143,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < _pagesData.length - 1) {
-                      // 🌟 放慢動畫：時間調至 750ms，採用極致平滑的 easeInOutCubic 曲線
+                      // ⚡ 完美比例：時間調至 600ms，保持平滑流暢但反應更快
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 750),
+                        duration: const Duration(milliseconds: 600),
                         curve: Curves.easeInOutCubic,
                       );
                     } else {

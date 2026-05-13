@@ -100,19 +100,20 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
+              // 🌟 Commit 3: 底部按鈕完全扁平化，增加大圓角
               AnimatedContainer(
                 duration: _goldenDuration,
                 curve: _smoothCurve,
                 width: double.infinity,
-                height: 62,
+                height: 60,
                 child: ElevatedButton(
                   onPressed: _selectedIndex != null ? _handleNavigation : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor: Colors.grey.shade300,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    elevation: _selectedIndex != null ? 4 : 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    elevation: 0, // 徹底扁平化
                   ),
                   child: const Text('開始體驗', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: '微軟正黑體')),
                 ),
@@ -138,11 +139,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
           duration: _goldenDuration,
           curve: _smoothCurve,
           width: double.infinity,
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(26), // 稍微加大內邊距，看起來更大氣
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            // 🌟 Commit 2: 拔除陰影，改靠邊框與底色區分
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
               color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.1),
               width: isSelected ? 2.5 : 1.0,
@@ -165,7 +165,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                       ),
                       child: Text(title),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     AnimatedDefaultTextStyle(
                       duration: _goldenDuration,
                       curve: _smoothCurve,
@@ -173,7 +173,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                         fontSize: 14, 
                         fontFamily: '微軟正黑體',
                         color: isSelected ? AppColors.primary.withOpacity(0.8) : Colors.black54, 
-                        height: 1.5
+                        height: 1.6
                       ),
                       child: Text(subtitle),
                     ),

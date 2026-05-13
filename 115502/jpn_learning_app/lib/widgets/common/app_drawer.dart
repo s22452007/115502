@@ -9,11 +9,12 @@ import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
+import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
 
-  // 🌟 扁平風核心顏色
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
   final Color _textColor = const Color(0xFF2C3E50);
   final Color _subTextColor = const Color(0xFF8E9AAB);
@@ -27,7 +28,6 @@ class AppDrawer extends StatelessWidget {
     final friendId = userProvider.friendId;
     final bool isGuest = userProvider.userId == null;
 
-    // 🌟 計算預設頭貼顏色與連結
     final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
     final String hashString = friendId?.toString() ?? userName;
     int hash = 0;
@@ -40,7 +40,7 @@ class AppDrawer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. 頁首區：沉浸式個人資訊
+          // 1. 頁首區
           Container(
             padding: const EdgeInsets.fromLTRB(24, 80, 24, 30),
             child: Row(
@@ -69,7 +69,7 @@ class AppDrawer extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // 2. 🌟 Commit 3：扁平化藥丸功能列表
+          // 2. 🌟 Commit 4：加入強調項目與分隔線
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -94,6 +94,31 @@ class AppDrawer extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()));
                 }),
+                
+                // 🌟 Commit 4：訂閱特別樣式
+                _buildMenuItem(
+                  context, 
+                  Icons.stars, 
+                  '訂閱與點數', 
+                  color: Colors.orange, 
+                  bgColor: Colors.orange.withOpacity(0.08), 
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+                  }
+                ),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Divider(color: Colors.black12, thickness: 0.5), // 🌟 Commit 4：輕盈分隔線
+                ),
+
+                _buildMenuItem(context, Icons.settings_outlined, '系統設定', onTap: () {
+                  Navigator.pop(context);
+                  Future.delayed(Duration.zero, () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SystemSettingsScreen()));
+                  });
+                }),
               ],
             ),
           ),
@@ -103,12 +128,12 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // 🌟 Commit 3：自定義藥丸選單元件
-  Widget _buildMenuItem(BuildContext context, IconData icon, String title, {required VoidCallback onTap, Color? color}) {
+  // 🌟 Commit 4：支援背景色切換的選單元件
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title, {required VoidCallback onTap, Color? color, Color? bgColor}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: Colors.transparent, 
+        color: bgColor ?? Colors.transparent, 
         borderRadius: BorderRadius.circular(18),
       ),
       child: ListTile(

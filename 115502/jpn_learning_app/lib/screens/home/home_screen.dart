@@ -175,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 🌟 Commit 2: 頁首個人資料區 (頭像 + 姓名)
+            // 頁首個人資料區
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 110, 24, 20),
@@ -201,6 +201,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ],
               ),
             ),
+
+            // 🌟 Commit 3: 加入打卡日曆卡片殼子
+            _buildCheckInCalendarCard(),
+
             const SizedBox(height: 20),
           ],
         ),
@@ -214,6 +218,32 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           if (i == 3) Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData());
           if (i == 4) Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _syncHomeData());
         },
+      ),
+    );
+  }
+
+  // 🌟 Commit 3: 打卡日曆元件 (外殼)
+  Widget _buildCheckInCalendarCard() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 15),
+            child: Text(
+              '本週打卡', 
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor),
+            ),
+          ),
+          // 內部點點留待 Commit 4
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }

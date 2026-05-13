@@ -77,14 +77,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // 底部狀態點點 (滑順水滴變形特效)
+            // 底部狀態點點 (配合更慢的滑動，點點變形時間拉長至 500ms)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutQuart, // 點點也跟隨立刻反應的曲線
+                  duration: const Duration(milliseconds: 500), // 💧 配合拉長的時間
+                  curve: Curves.easeOutQuart, 
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   width: _currentPage == index ? 24.0 : 8.0,
                   height: 8.0,
@@ -118,9 +118,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < _pagesData.length - 1) {
-                      // ⚡ 終極手感解法：起步立刻彈出零遲疑，結尾像絲綢般滑行
+                      // 🌟 終極從容手感：拉長到 800ms，保留 easeOutQuart 確保起步不卡頓 [cite: 17, 18]
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 500),
+                        duration: const Duration(milliseconds: 800),
                         curve: Curves.easeOutQuart,
                       );
                     } else {

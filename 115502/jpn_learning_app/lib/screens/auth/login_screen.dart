@@ -32,8 +32,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _confirmPasswordController = TextEditingController();
 
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
-  // 🌟 Commit 2 核心變數
   final Color _textDark = const Color(0xFF2C3E50);
+  // 🌟 Commit 3 核心變數
+  final Color _inputFillColor = const Color(0xFFF4F7F5);
 
   int _toInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
@@ -161,7 +162,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 Commit 2: 獲取使用者名稱
     final userProvider = context.watch<UserProvider>();
     final userName = (userProvider.username?.isNotEmpty ?? false) ? userProvider.username : '使用者';
 
@@ -180,7 +180,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
                     child: Column(
                       children: [
-                        // 🌟 Commit 2: 頂部圖示與標題優化
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
@@ -193,7 +192,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 48),
 
-                        // 🌟 Commit 2: 問候區動態文字與字體優化
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
@@ -211,13 +209,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
 
+                        // 🌟 Commit 3: 扁平化輸入框，調整間距
                         _buildInputField(
                           controller: _emailController,
                           hintText: '電子郵件',
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
                         _buildInputField(
                           controller: _passwordController,
                           hintText: '密碼',
@@ -225,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: true,
                         ),
                         if (!_isLogin) ...[
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           _buildInputField(
                             controller: _confirmPasswordController,
                             hintText: '確認密碼',
@@ -240,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: TextButton(
                               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
                               style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                              child: const Text('忘記密碼？', style: TextStyle(color: AppColors.textGrey)),
+                              child: const Text('忘記密碼？', style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w700)),
                             ),
                           )
                         else
@@ -321,6 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // 🌟 Commit 3: 拔除陰影，改用扁平色塊與圓角 20
   Widget _buildInputField({
     required TextEditingController controller,
     required String hintText,
@@ -328,25 +328,22 @@ class _LoginScreenState extends State<LoginScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: obscureText,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-          prefixIcon: Icon(icon, color: AppColors.primary),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      style: TextStyle(color: _textDark, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.black26, fontWeight: FontWeight.w600),
+        prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
+        filled: true,
+        fillColor: _inputFillColor,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
       ),
     );

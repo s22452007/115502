@@ -58,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 🌟 核心升級：加入縮放與漸隱特效的 PageView
+            // 核心升級：縮放與漸隱特效的 PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -81,7 +81,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       // 計算該頁面距離畫面中心的差距
                       double diff = (page - index).abs();
 
-                      // 根據距離計算縮放比例 (越遠越小) 與透明度 (越遠越淡)
+                      // 根據距離計算縮放比例與透明度
                       double scale = (1 - (diff * 0.2)).clamp(0.0, 1.0);
                       double opacity = (1 - (diff * 0.5)).clamp(0.0, 1.0);
 
@@ -102,14 +102,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // 底部狀態點點 (滑順水滴變形特效，調至 350ms)
+            // 底部狀態點點 (配合主動畫，改為 300ms 快速變形)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 350), // ⚡ 稍微加快點點變形時間
-                  curve: Curves.easeOutCubic,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutQuint, // 點點變形也用相同的極速起步曲線
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   width: _currentPage == index ? 24.0 : 8.0,
                   height: 8.0,
@@ -143,10 +143,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < _pagesData.length - 1) {
-                      // ⚡ 完美比例：時間調至 600ms，保持平滑流暢但反應更快
+                      // ⚡ 終極防卡頓版：時間 400ms，搭配 easeOutQuint (起步極快，結尾滑順)
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeInOutCubic,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutQuint,
                       );
                     } else {
                       Navigator.pushReplacement(

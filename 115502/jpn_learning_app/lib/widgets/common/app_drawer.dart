@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -24,7 +25,7 @@ class AppDrawer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. 頁首個人資料區 (延續 Commit 2)
+          // 1. 頁首個人資料區
           Container(
             padding: const EdgeInsets.fromLTRB(24, 80, 24, 30),
             child: Row(
@@ -71,73 +72,103 @@ class AppDrawer extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // 2. 🌟 Commit 3: 扁平化藥丸選單列表
+          // 2. 選單列表區
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
                 _buildMenuItem(
+                  context,
                   icon: Icons.home_rounded, 
                   title: '主頁首頁', 
-                  isSelected: true
+                  isSelected: true,
                 ),
                 _buildMenuItem(
+                  context,
                   icon: Icons.workspace_premium_rounded, 
-                  title: '升級至 Pro'
+                  title: '升級至 Pro',
                 ),
                 _buildMenuItem(
+                  context,
                   icon: Icons.settings_rounded, 
-                  title: '設定中心'
+                  title: '設定中心',
                 ),
                 _buildMenuItem(
+                  context,
                   icon: Icons.help_outline_rounded, 
-                  title: '幫助與回饋'
+                  title: '幫助與回饋',
                 ),
               ],
             ),
           ),
 
+          // 🌟 核心：使用 Spacer 將登出按鈕推至底部
           const Spacer(),
+
+          // 3. 🌟 Commit 4: 底部登出按鈕
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
+            child: _buildMenuItem(
+              context,
+              icon: Icons.logout_rounded, 
+              title: '登出帳號',
+              isLogout: true,
+              onTap: () {
+                // 這裡執行登出邏輯並跳轉回登入畫面
+                Navigator.pushReplacement(
+                  context, 
+                  MaterialPageRoute(builder: (_) => const LoginScreen())
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // 🌟 Commit 3: 選單項目元件定義
-  Widget _buildMenuItem({
+  // 🌟 更新後的選單項目元件：支援登出樣式與點擊回呼
+  Widget _buildMenuItem(
+    BuildContext context, {
     required IconData icon, 
     required String title, 
-    bool isSelected = false
+    bool isSelected = false,
+    bool isLogout = false,
+    VoidCallback? onTap,
   }) {
+    // 根據是否為登出按鈕來決定顏色：登出為紅色，選中為原色，其餘為深灰
+    Color itemColor = isLogout 
+        ? Colors.redAccent 
+        : (isSelected ? AppColors.primary : _textColor);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        // 如果被選中，背景顯示淡綠色
         color: isSelected 
             ? AppColors.primary.withOpacity(0.1) 
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(16), // 🌟 大圓角藥丸感
+            : (isLogout ? Colors.redAccent.withOpacity(0.05) : Colors.transparent),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
         leading: Icon(
           icon, 
-          color: isSelected ? AppColors.primary : _textColor, 
+          color: itemColor, 
           size: 24
         ),
         title: Text(
           title,
           style: TextStyle(
-            color: isSelected ? AppColors.primary : _textColor,
-            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+            color: itemColor,
+            fontWeight: isSelected || isLogout ? FontWeight.w800 : FontWeight.w600,
             fontSize: 15,
           ),
         ),
-        // 設定點擊區域的圓角，讓水波紋效果也符合藥丸形狀
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16)
         ),
-        onTap: () {
-          // 選單點擊邏輯
+        onTap: onTap ?? () {
+          // 預設為收起選單
+          Navigator.pop(context);
         },
       ),
     );

@@ -20,7 +20,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
   static const _goldenDuration = Duration(milliseconds: 280); 
   static const _smoothCurve = Curves.easeOutCubic;
 
-  // 🌟 Commit 1: 定義統一背景色
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
 
   Future<void> _handleNavigation() async {
@@ -45,7 +44,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 Commit 1: 更新標題樣式，使用更現代的深色調
     const TextStyle titleStyle = TextStyle(
       fontSize: 32, 
       fontWeight: FontWeight.w900, 
@@ -55,7 +53,6 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     );
 
     return Scaffold(
-      // 🌟 Commit 1: 同步背景色
       backgroundColor: _flatCanvasColor,
       body: SafeArea(
         child: Padding(
@@ -145,18 +142,11 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
             borderRadius: BorderRadius.circular(24),
+            // 🌟 Commit 2: 拔除陰影，改靠邊框與底色區分
             border: Border.all(
-              color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.08),
-              width: isSelected ? 2.0 : 1.0,
+              color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.1),
+              width: isSelected ? 2.5 : 1.0,
             ),
-            // 🌟 陰影暫留，下一個 Commit 處理
-            boxShadow: [
-              BoxShadow(
-                color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.black.withOpacity(0.02),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              )
-            ],
           ),
           child: Row(
             children: [
@@ -171,7 +161,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                         fontSize: 20, 
                         fontWeight: FontWeight.bold, 
                         fontFamily: '微軟正黑體',
-                        color: isSelected ? AppColors.primary : Colors.black87,
+                        color: isSelected ? AppColors.primary : Color(0xFF2C3E50),
                       ),
                       child: Text(title),
                     ),

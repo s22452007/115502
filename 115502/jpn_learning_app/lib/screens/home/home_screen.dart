@@ -41,9 +41,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _syncHomeData();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) { _syncHomeData(); });
   }
 
   @override
@@ -53,22 +51,15 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final currentUserId = Provider.of<UserProvider>(context).userId;
     if (_lastUserId != currentUserId) {
       _lastUserId = currentUserId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _syncHomeData();
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) { _syncHomeData(); });
     }
   }
 
   @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
+  void dispose() { routeObserver.unsubscribe(this); super.dispose(); }
 
   @override
-  void didPopNext() {
-    _syncHomeData();
-  }
+  void didPopNext() { _syncHomeData(); }
 
   Future<void> _syncHomeData() async {
     final userProvider = context.read<UserProvider>();
@@ -162,6 +153,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+    final isGuest = userProvider.userId == null;
+    final userEmail = userProvider.email ?? '';
+    final userName = isGuest ? '訪客' : ((userProvider.username?.trim().isNotEmpty ?? false) ? userProvider.username!.trim() : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
+    final avatarUrl = userProvider.avatar;
+
     return Scaffold(
       backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
@@ -170,11 +167,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         elevation: 0,
         iconTheme: IconThemeData(color: _textColor),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            color: _textColor,
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.notifications_outlined), color: _textColor, onPressed: () {}),
           const SizedBox(width: 12),
         ],
       ),
@@ -182,15 +175,39 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 120),
-            // (後續內容待 Commit 處理)
+            // 🌟 Commit 2: 頁首個人資料區 (頭像 + 姓名)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 110, 24, 20),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 35,
+                    backgroundColor: AppColors.primaryLighter,
+                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+                    child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 40, color: AppColors.primary) : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_getGreeting(), style: TextStyle(fontSize: 14, color: _subTextColor, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 4),
+                        Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, height: 1.2)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _currentIndex,
+        currentIndex: 2,
         onTap: (i) {
-          setState(() => _currentIndex = i);
           if (i == 0) Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
           if (i == 1) Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())).then((_) => _syncHomeData());
           if (i == 2) Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen())).then((_) => _syncHomeData());

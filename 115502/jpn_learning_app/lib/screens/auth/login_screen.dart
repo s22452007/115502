@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return int.tryParse(value.toString()) ?? defaultValue;
   }
 
-  // ============== 原始邏輯保留 ==============
+  // ============== 您的原始邏輯完全保留 ==============
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -57,33 +57,45 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (_isLogin) {
       final result = await ApiClient.login(email, password);
+
       if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
-        final userProvider = context.read<UserProvider>();
-        userProvider.setUserId(_toInt(result['user_id']));
-        userProvider.setEmail(email);
+        context.read<UserProvider>().setUserId(_toInt(result['user_id']));
+        context.read<UserProvider>().setEmail(email);
 
         if (result.containsKey('avatar') && result['avatar'] != null && result['avatar'].toString().isNotEmpty) {
-          userProvider.setAvatar(result['avatar']);
+          context.read<UserProvider>().setAvatar(result['avatar']);
         }
 
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
 
-        if (result.containsKey('streak_days')) userProvider.setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
-        if (result.containsKey('j_pts')) userProvider.setJPts(_toInt(result['j_pts']));
-        if (result.containsKey('daily_scans')) userProvider.setDailyScans(_toInt(result['daily_scans']));
-        if (result.containsKey('friend_id') && result['friend_id'] != null) userProvider.setFriendId(result['friend_id']);
-        if (result.containsKey('username') && result['username'] != null) userProvider.setUsername(result['username']);
+        if (result.containsKey('streak_days')) {
+          context.read<UserProvider>().setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
+        }
+        if (result.containsKey('j_pts')) {
+          context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
+        }
+        if (result.containsKey('daily_scans')) {
+          context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
+        }
+        if (result.containsKey('friend_id') && result['friend_id'] != null) {
+          context.read<UserProvider>().setFriendId(result['friend_id']);
+        }
+        if (result.containsKey('username') && result['username'] != null) {
+          context.read<UserProvider>().setUsername(result['username']);
+        }
 
         try {
           await NotificationService.setLoginStatus(true);
         } catch (e) {
-          debugPrint('推播狀態設定失敗: $e');
+          debugPrint('推播狀態設定失敗 (網頁版正常現象): $e');
         }
 
+        if (!mounted) return;
+
         if (result['japanese_level'] != null) {
-          userProvider.setJapaneseLevel(result['japanese_level']);
+          context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
         } else {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
@@ -93,14 +105,19 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       final result = await ApiClient.register(email, password);
+
       if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
-        final userProvider = context.read<UserProvider>();
-        userProvider.setUserId(_toInt(result['user_id']));
-        userProvider.setEmail(email);
-        if (result.containsKey('friend_id') && result['friend_id'] != null) userProvider.setFriendId(result['friend_id']);
-        if (result.containsKey('username') && result['username'] != null) userProvider.setUsername(result['username']);
+        context.read<UserProvider>().setUserId(_toInt(result['user_id']));
+        context.read<UserProvider>().setEmail(email);
+
+        if (result.containsKey('friend_id') && result['friend_id'] != null) {
+          context.read<UserProvider>().setFriendId(result['friend_id']);
+        }
+        if (result.containsKey('username') && result['username'] != null) {
+          context.read<UserProvider>().setUsername(result['username']);
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('註冊成功！請選擇您的日語程度')));
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
@@ -114,23 +131,19 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 登入中...')));
 
-      final dynamic authResult = await AuthService().signInWithGoogle();
+      final UserCredential? userCredential = await AuthService().signInWithGoogle();
+
       if (!context.mounted) return;
 
-      if (authResult == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 登入失敗')));
-        return;
-      }
-
-      final dynamic user = (authResult is UserCredential) ? authResult.user : authResult;
+      final user = userCredential?.user;
 
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 登入失敗，未取得使用者資料')));
         return;
       }
 
-      final String? email = user.email;
-      final String? avatar = user.photoURL;
+      final email = user.email;
+      final avatar = user.photoURL;
 
       if (email == null || email.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 帳號未提供 Email')));
@@ -138,31 +151,56 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final result = await ApiClient.googleLogin(email, avatar: avatar);
+
       if (!context.mounted) return;
 
       if (!result.containsKey('user_id')) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')),);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')));
         return;
       }
 
-      final userProvider = context.read<UserProvider>();
-      userProvider.setUserId(_toInt(result['user_id']));
-      userProvider.setEmail(email);
+      context.read<UserProvider>().setUserId(_toInt(result['user_id']));
+      context.read<UserProvider>().setEmail(email);
 
-      if (result.containsKey('friend_id') && result['friend_id'] != null) userProvider.setFriendId(result['friend_id']);
-      if (result.containsKey('avatar') && result['avatar'] != null && result['avatar'].toString().isNotEmpty) {
-        userProvider.setAvatar(result['avatar']);
-      } else if (avatar != null && avatar.isNotEmpty) {
-        userProvider.setAvatar(avatar);
+      if (result.containsKey('friend_id') && result['friend_id'] != null) {
+        context.read<UserProvider>().setFriendId(result['friend_id']);
       }
 
-      userProvider.setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
-      userProvider.setJPts(_toInt(result['j_pts']));
-      userProvider.setDailyScans(_toInt(result['daily_scans']));
-      if (result['japanese_level'] != null) userProvider.setJapaneseLevel(result['japanese_level']);
-      if (result['username'] != null) userProvider.setUsername(result['username']);
+      if (result.containsKey('avatar') && result['avatar'] != null && result['avatar'].toString().isNotEmpty) {
+        context.read<UserProvider>().setAvatar(result['avatar']);
+      } else if (avatar != null && avatar.isNotEmpty) {
+        context.read<UserProvider>().setAvatar(avatar);
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
+      if (result.containsKey('streak_days')) {
+        context.read<UserProvider>().setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
+      } else {
+        context.read<UserProvider>().setStreakDays(1);
+      }
+
+      if (result.containsKey('j_pts')) {
+        context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
+      } else {
+        context.read<UserProvider>().setJPts(0);
+      }
+
+      if (result.containsKey('daily_scans')) {
+        context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
+      } else {
+        context.read<UserProvider>().setDailyScans(0);
+      }
+
+      if (result.containsKey('japanese_level') && result['japanese_level'] != null) {
+        context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
+      }
+
+      if (result.containsKey('username') && result['username'] != null) {
+        context.read<UserProvider>().setUsername(result['username']);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')),
+      );
 
       if (result['japanese_level'] != null) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
@@ -281,7 +319,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             borderRadius: BorderRadius.circular(30),
-                            // 🌟 Commit 3 核心：拔除登入按鈕陰影
                           ),
                           child: Center(
                             child: Text(
@@ -357,7 +394,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7F5), 
+        color: const Color(0xFFF4F7F5),
         borderRadius: BorderRadius.circular(30),
       ),
       child: TextField(
@@ -369,7 +406,7 @@ class _LoginScreenState extends State<LoginScreen> {
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
           prefixIcon: Icon(icon, color: AppColors.primary),
           filled: true,
-          fillColor: const Color(0xFFF4F7F5), 
+          fillColor: const Color(0xFFF4F7F5),
           contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
@@ -389,16 +426,16 @@ class _LoginScreenState extends State<LoginScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(color: Colors.grey.shade300, width: 1),
-          // 🌟 Commit 3 核心：拔除 Google 按鈕陰影
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Transform.translate(
-              offset: const Offset(-2, 1),
-              child: const Icon(Icons.g_mobiledata, size: 38, color: Color(0xFF4285F4)),
+            Image.network(
+              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
+              width: 22,
+              height: 22,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 12),
             const Text(
               "使用 Google 帳號繼續",
               style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.2),

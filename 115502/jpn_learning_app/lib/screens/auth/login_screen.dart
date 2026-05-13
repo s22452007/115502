@@ -33,7 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
   final Color _textDark = const Color(0xFF2C3E50);
-  // 🌟 Commit 3 核心變數
   final Color _inputFillColor = const Color(0xFFF4F7F5);
 
   int _toInt(dynamic value, {int defaultValue = 0}) {
@@ -209,7 +208,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
 
-                        // 🌟 Commit 3: 扁平化輸入框，調整間距
                         _buildInputField(
                           controller: _emailController,
                           hintText: '電子郵件',
@@ -246,21 +244,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 20),
                         const SizedBox(height: 24),
 
-                        GestureDetector(
-                          onTap: _submit,
-                          child: Container(
-                            width: double.infinity,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                        // 🌟 Commit 4: 將主按鈕扁平化
+                        SizedBox(
+                          width: double.infinity,
+                          height: 58,
+                          child: ElevatedButton(
+                            onPressed: _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                             ),
-                            child: Center(
-                              child: Text(
-                                _isLogin ? '登入' : '註冊',
-                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                              ),
+                            child: Text(
+                              _isLogin ? '登入' : '註冊',
+                              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 2),
                             ),
                           ),
                         ),
@@ -281,11 +278,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         _buildLongGoogleButton(onTap: _handleGoogleLogin),
                         const SizedBox(height: 24),
 
-                        TextButton(
-                          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
+                        // 🌟 Commit 4: 訪客登入連結優化
+                        GestureDetector(
+                          onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
                           child: const Text(
                             '以訪客身分繼續',
-                            style: TextStyle(color: AppColors.textGrey, fontSize: 14, decoration: TextDecoration.underline),
+                            style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
                           ),
                         ),
                       ],
@@ -320,7 +318,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 🌟 Commit 3: 拔除陰影，改用扁平色塊與圓角 20
   Widget _buildInputField({
     required TextEditingController controller,
     required String hintText,

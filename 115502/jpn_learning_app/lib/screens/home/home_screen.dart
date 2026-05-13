@@ -153,6 +153,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 Commit 3: 動態計算本週日期 (週一為起點)
+    final now = DateTime.now();
+    final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
+    List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
+
     final userProvider = context.watch<UserProvider>();
     final isGuest = userProvider.userId == null;
     final userEmail = userProvider.email ?? '';
@@ -177,7 +183,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. 頁首個人資料區
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 115, 24, 15),
@@ -226,10 +231,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ),
 
-            // 2. 打卡日曆 (目前樣式支援打勾)
-            _buildCheckInCalendarCard(),
+            // 🌟 Commit 3: 傳入動態日期
+            _buildCheckInCalendarCard(weekDates, weekDayNames),
 
-            // 3. J-Pts
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
               child: Align(
@@ -282,7 +286,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  Widget _buildCheckInCalendarCard() {
+  // 🌟 Commit 3: 接收動態日期參數
+  Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames) {
+    final now = DateTime.now();
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -295,15 +302,17 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildCalendarDayNode('一', '15', isCompleted: true), // 🌟 測試打勾
-              _buildCalendarDayNode('二', '16', isCompleted: true), // 🌟 測試打勾
-              _buildCalendarDayNode('三', '17'),
-              _buildCalendarDayNode('四', '18', isToday: true), 
-              _buildCalendarDayNode('五', '19'),
-              _buildCalendarDayNode('六', '20'),
-              _buildCalendarDayNode('日', '21'),
-            ],
+            children: List.generate(7, (index) {
+              final date = weekDates[index];
+              final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
+              
+              return _buildCalendarDayNode(
+                weekDayNames[index],
+                date.day.toString(),
+                isToday: isToday,
+                isCompleted: false, // 完成邏輯留待 Commit 4
+              );
+            }),
           ),
         ],
       ),
@@ -318,7 +327,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       nodeColor = AppColors.primary;
       dateTextColor = Colors.white;
     } else if (isCompleted) {
-      // 🌟 Commit 2: 已完成使用主色，展現勾勾
       nodeColor = AppColors.primary.withOpacity(0.7);
     }
 
@@ -330,7 +338,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           width: 38, height: 38,
           decoration: BoxDecoration(color: nodeColor, shape: BoxShape.circle),
           child: Center(
-            // 🌟 Commit 2: 打勾圖示邏輯
             child: isCompleted
                 ? const Icon(Icons.check, color: Colors.white, size: 20)
                 : Text(dateNum, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: dateTextColor)),

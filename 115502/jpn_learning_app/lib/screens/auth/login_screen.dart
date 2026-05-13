@@ -31,8 +31,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  // 🌟 Commit 1 核心變數
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
+  // 🌟 Commit 2 核心變數
+  final Color _textDark = const Color(0xFF2C3E50);
 
   int _toInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
@@ -160,55 +161,52 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 Commit 2: 獲取使用者名稱
+    final userProvider = context.watch<UserProvider>();
+    final userName = (userProvider.username?.isNotEmpty ?? false) ? userProvider.username : '使用者';
+
     return Scaffold(
-      backgroundColor: _flatCanvasColor, // 🌟 Commit 1: 更新背景色
+      backgroundColor: _flatCanvasColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             child: Container(
-              // 🌟 Commit 1: 卡片外距與拔除陰影
               margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-              ),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  // 🌟 Commit 1: 為內部區塊加入統一的大 Padding
                   Padding(
                     padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
                     child: Column(
                       children: [
-                        // (內部元件暫時保留原樣，待後續 Commit 處理)
+                        // 🌟 Commit 2: 頂部圖示與標題優化
                         Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.menu_book_rounded, size: 80, color: AppColors.primary),
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
+                          child: const Icon(Icons.menu_book_rounded, size: 70, color: AppColors.primary),
                         ),
                         const SizedBox(height: 16),
                         const Text(
                           "JPN Learning ID",
-                          style: TextStyle(fontSize: 20, color: AppColors.primary, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                          style: TextStyle(fontSize: 20, color: AppColors.primary, fontWeight: FontWeight.w900, letterSpacing: 1.2),
                         ),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 48),
 
+                        // 🌟 Commit 2: 問候區動態文字與字體優化
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            _isLogin ? '歡迎回來' : '建立新帳號',
-                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppColors.textDark),
+                            _isLogin ? '早安，$userName!' : '建立新帳號',
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _textDark),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            _isLogin ? '登入您的帳號' : '註冊以開始學習',
-                            style: const TextStyle(fontSize: 16, color: AppColors.textGrey),
+                            _isLogin ? '請登入您的帳號' : '註冊以開始學習之旅',
+                            style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w600),
                           ),
                         ),
                         const SizedBox(height: 32),

@@ -58,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 🌟 拔除花俏特效，回歸最純粹、最順暢的原生滑動
+            // 純粹的滑動 PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -77,14 +77,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // 底部狀態點點 (保留水滴滑順變形特效)
+            // 底部狀態點點 (滑順水滴變形特效)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutCubic,
+                  curve: Curves.easeOutQuart, // 點點也跟隨立刻反應的曲線
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   width: _currentPage == index ? 24.0 : 8.0,
                   height: 8.0,
@@ -118,10 +118,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < _pagesData.length - 1) {
-                      // ⚡ 完美滑動：500ms 搭配 easeInOutCubic (起步與結尾都極度柔和)
+                      // ⚡ 終極手感解法：起步立刻彈出零遲疑，結尾像絲綢般滑行
                       _pageController.nextPage(
                         duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeInOutCubic,
+                        curve: Curves.easeOutQuart,
                       );
                     } else {
                       Navigator.pushReplacement(

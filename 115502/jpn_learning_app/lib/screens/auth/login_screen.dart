@@ -244,7 +244,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 20),
                         const SizedBox(height: 24),
 
-                        // 🌟 Commit 4: 將主按鈕扁平化
                         SizedBox(
                           width: double.infinity,
                           height: 58,
@@ -263,22 +262,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
 
+                        // 🌟 Commit 5: 簡化分隔線
                         Row(
                           children: [
-                            Expanded(child: Divider(color: Colors.grey.shade300)),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text('或使用以下方式登入', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                            Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1.5)),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('OR', style: TextStyle(color: Colors.black26, fontWeight: FontWeight.w900, fontSize: 12)),
                             ),
-                            Expanded(child: Divider(color: Colors.grey.shade300)),
+                            Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1.5)),
                           ],
                         ),
                         const SizedBox(height: 24),
 
-                        _buildLongGoogleButton(onTap: _handleGoogleLogin),
+                        // 🌟 Commit 5: 官方 Google 按鈕
+                        _buildGoogleButton(onTap: _handleGoogleLogin),
                         const SizedBox(height: 24),
 
-                        // 🌟 Commit 4: 訪客登入連結優化
                         GestureDetector(
                           onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
                           child: const Text(
@@ -290,21 +290,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
+                  // 🌟 Commit 5: 頁尾優化
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 20.0),
-                    decoration: BoxDecoration(color: AppColors.white, border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1)))),
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAFAFA),
+                      border: Border(top: BorderSide(color: Colors.grey.shade100)),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(_isLogin ? '還沒有帳號嗎？ ' : '已經有帳號了嗎？ ', style: const TextStyle(color: AppColors.textGrey, fontSize: 16)),
+                        Text(_isLogin ? '還沒有帳號嗎？ ' : '已經有帳號了嗎？ ', style: const TextStyle(color: Colors.black45, fontWeight: FontWeight.w600)),
                         GestureDetector(
-                          onTap: () => setState(() {
-                            _isLogin = !_isLogin;
-                            _passwordController.clear();
-                            _confirmPasswordController.clear();
-                          }),
-                          child: Text(_isLogin ? '註冊' : '登入', style: const TextStyle(color: AppColors.primary, fontSize: 16, fontWeight: FontWeight.bold)),
+                          onTap: () => setState(() => _isLogin = !_isLogin),
+                          child: Text(
+                            _isLogin ? '立即註冊' : '登入帳號',
+                            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16),
+                          ),
                         ),
                       ],
                     ),
@@ -346,26 +349,33 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLongGoogleButton({required VoidCallback onTap}) {
+  // 🌟 Commit 5: 官方 Google 按鈕實作
+  Widget _buildGoogleButton({required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(30),
       child: Container(
         width: double.infinity,
-        height: 50,
+        height: 56,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.grey.shade300, width: 1),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))],
+          border: Border.all(color: Colors.grey.shade200, width: 1.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Transform.translate(offset: const Offset(-2, 1), child: const Icon(Icons.g_mobiledata, size: 38, color: Color(0xFF4285F4))),
-            const SizedBox(width: 4),
-            const Text("使用 Google 帳號繼續", style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
-            const SizedBox(width: 34),
+            Image.network(
+              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              "使用 Google 帳號登入",
+              style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+            ),
+            const SizedBox(width: 36), // 補償 Logo 寬度
           ],
         ),
       ),

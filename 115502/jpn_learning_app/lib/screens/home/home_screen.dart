@@ -158,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final userEmail = userProvider.email ?? '';
     final userName = isGuest ? '訪客' : ((userProvider.username?.trim().isNotEmpty ?? false) ? userProvider.username!.trim() : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
     final jPts = userProvider.jPts;
-    final streakDays = userProvider.streakDays; // 🌟 獲取連續登入天數
+    final streakDays = userProvider.streakDays;
     final avatarUrl = userProvider.avatar;
 
     return Scaffold(
@@ -198,7 +198,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         const SizedBox(height: 4),
                         Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, height: 1.2, letterSpacing: 0.5)),
                         
-                        // 🌟 Commit 1: 重新加回連續登入天數標籤
                         if (!isGuest) ...[
                           const SizedBox(height: 8),
                           Container(
@@ -227,8 +226,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ),
 
+            // 2. 打卡日曆 (目前樣式支援打勾)
             _buildCheckInCalendarCard(),
 
+            // 3. J-Pts
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
               child: Align(
@@ -295,9 +296,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildCalendarDayNode('一', '15', isCompleted: true),
-              _buildCalendarDayNode('二', '16', isCompleted: true),
-              _buildCalendarDayNode('三', '17', isCompleted: true),
+              _buildCalendarDayNode('一', '15', isCompleted: true), // 🌟 測試打勾
+              _buildCalendarDayNode('二', '16', isCompleted: true), // 🌟 測試打勾
+              _buildCalendarDayNode('三', '17'),
               _buildCalendarDayNode('四', '18', isToday: true), 
               _buildCalendarDayNode('五', '19'),
               _buildCalendarDayNode('六', '20'),
@@ -312,12 +313,15 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   Widget _buildCalendarDayNode(String dayName, String dateNum, {bool isToday = false, bool isCompleted = false}) {
     Color nodeColor = Colors.grey.withOpacity(0.08);
     Color dateTextColor = _textColor;
+
     if (isToday) {
       nodeColor = AppColors.primary;
       dateTextColor = Colors.white;
     } else if (isCompleted) {
-      nodeColor = AppColors.primaryLighter.withOpacity(0.5);
+      // 🌟 Commit 2: 已完成使用主色，展現勾勾
+      nodeColor = AppColors.primary.withOpacity(0.7);
     }
+
     return Column(
       children: [
         Text(dayName, style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
@@ -325,7 +329,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         Container(
           width: 38, height: 38,
           decoration: BoxDecoration(color: nodeColor, shape: BoxShape.circle),
-          child: Center(child: Text(dateNum, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: dateTextColor))),
+          child: Center(
+            // 🌟 Commit 2: 打勾圖示邏輯
+            child: isCompleted
+                ? const Icon(Icons.check, color: Colors.white, size: 20)
+                : Text(dateNum, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: dateTextColor)),
+          ),
         ),
       ],
     );

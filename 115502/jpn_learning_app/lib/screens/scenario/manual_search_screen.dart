@@ -87,7 +87,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                '輸入您想模擬的情境或主題，AI 將為您量身打造專屬的日語家教課程！',
+                '輸入您想模擬的情境或主題，AI 將為您量身打造專屬的日語課程！',
                 style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
               ),
               const SizedBox(height: 24),

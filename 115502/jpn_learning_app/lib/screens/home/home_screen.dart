@@ -153,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    // 動態計算本週日期
+    // 🌟 計算本週日期
     final now = DateTime.now();
     final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
     List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
@@ -183,6 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // 1. 頁首個人資料區
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 115, 24, 15),
@@ -231,9 +232,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ),
 
-            // 🌟 Commit 4: 傳入 streakDays 進行判定
+            // 2. 打卡日曆
             _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
 
+            // 3. J-Pts
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
               child: Align(
@@ -286,7 +288,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  // 🌟 Commit 4: 真正的打勾判定邏輯
   Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
     final now = DateTime.now();
 
@@ -306,9 +307,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               final date = weekDates[index];
               final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
               
-              // 🌟 Commit 4: 計算是否該打勾
+              // 打卡判定邏輯
               bool isCompleted = false;
-              // 計算該日期與今天的相差天數
+              // 計算該日期與今天的差距
               int daysDifference = now.difference(DateTime(date.year, date.month, date.day)).inDays;
               if (daysDifference >= 0 && streakDays > daysDifference) {
                 isCompleted = true;

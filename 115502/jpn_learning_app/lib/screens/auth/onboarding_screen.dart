@@ -13,7 +13,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // 整理頁面資料，方便等等做動畫迴圈
+  // 整理頁面資料
   final List<Map<String, dynamic>> _pagesData = [
     {'icon': Icons.camera_alt, 'title': 'snap to learn'},
     {'icon': Icons.menu_book, 'title': '輕鬆學習日文'},
@@ -58,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 核心升級：縮放與漸隱特效的 PageView
+            // 🌟 拔除花俏特效，回歸最純粹、最順暢的原生滑動
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -69,47 +69,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   });
                 },
                 itemBuilder: (context, index) {
-                  return AnimatedBuilder(
-                    animation: _pageController,
-                    builder: (context, child) {
-                      // 取得當前滑動的進度
-                      double page = _currentPage.toDouble();
-                      if (_pageController.position.haveDimensions) {
-                        page = _pageController.page ?? _currentPage.toDouble();
-                      }
-
-                      // 計算該頁面距離畫面中心的差距
-                      double diff = (page - index).abs();
-
-                      // 根據距離計算縮放比例與透明度
-                      double scale = (1 - (diff * 0.2)).clamp(0.0, 1.0);
-                      double opacity = (1 - (diff * 0.5)).clamp(0.0, 1.0);
-
-                      return Opacity(
-                        opacity: opacity,
-                        child: Transform.scale(
-                          scale: scale,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _buildPageContent(
-                      icon: _pagesData[index]['icon'] as IconData,
-                      title: _pagesData[index]['title'] as String,
-                    ),
+                  return _buildPageContent(
+                    icon: _pagesData[index]['icon'] as IconData,
+                    title: _pagesData[index]['title'] as String,
                   );
                 },
               ),
             ),
 
-            // 底部狀態點點 (配合主動畫，改為 300ms 快速變形)
+            // 底部狀態點點 (保留水滴滑順變形特效)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutQuint, // 點點變形也用相同的極速起步曲線
+                  curve: Curves.easeOutCubic,
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   width: _currentPage == index ? 24.0 : 8.0,
                   height: 8.0,
@@ -143,10 +118,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   onPressed: () {
                     if (_currentPage < _pagesData.length - 1) {
-                      // ⚡ 終極防卡頓版：時間 400ms，搭配 easeOutQuint (起步極快，結尾滑順)
+                      // ⚡ 完美滑動：500ms 搭配 easeInOutCubic (起步與結尾都極度柔和)
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOutQuint,
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeInOutCubic,
                       );
                     } else {
                       Navigator.pushReplacement(

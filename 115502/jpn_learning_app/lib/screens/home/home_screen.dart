@@ -184,7 +184,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🌟 Commit 2: 更新問候語字體
             Text(
               '${_getGreeting()}，\n$userName!', 
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: _textColor, height: 1.2),
@@ -195,7 +194,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               style: TextStyle(fontSize: 15, color: _subTextColor, fontWeight: FontWeight.w600, letterSpacing: 0.5),
             ),
             const SizedBox(height: 24),
-            // 🌟 Commit 2: 標籤更簡約扁平
             Row(
               children: [
                 StatusChip(
@@ -216,30 +214,42 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ),
               ],
             ),
-            const SizedBox(height: 32),
-            const Text(
+            
+            // 🌟 Commit 3: 標題風格升級
+            const SizedBox(height: 40),
+            Text(
               '今日學習目標',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             isGuest
                 ? PremiumLockedOverlay(
                     message: '登入啟用今日目標',
                     child: DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
                   )
                 : DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
-            const SizedBox(height: 32),
+            
+            const SizedBox(height: 40),
+            
+            // 🌟 Commit 3: 連結樣式優化
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('最近解鎖場景', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  '最近解鎖場景', 
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor)
+                ),
                 GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
-                  child: const Text('我的單字探險 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    '我的單字探險 >', 
+                    style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800, letterSpacing: 0.5)
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            
+            const SizedBox(height: 16),
             RecentScenesList(
               recentScenes: _recentScenes,
               isLoadingScenes: _isLoadingScenes,

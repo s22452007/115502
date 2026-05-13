@@ -34,9 +34,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   List<dynamic> _recentScenes = [];
   bool _isLoadingScenes = true;
 
-  final Color _textColor = const Color(0xFF2C3E50); // 🌟 Commit 1: 換成更高級的深藍灰
-  final Color _subTextColor = const Color(0xFF8E9AAB); // 🌟 Commit 1: 淺色輔助字
-  final Color _flatCanvasColor = const Color(0xFFF4F7F5); // 🌟 Commit 1: 統一背景色
+  final Color _textColor = const Color(0xFF2C3E50);
+  final Color _subTextColor = const Color(0xFF8E9AAB);
+  final Color _flatCanvasColor = const Color(0xFFF4F7F5);
 
   @override
   void initState() {
@@ -75,10 +75,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final userId = userProvider.userId;
     if (userId == null) {
       if (!mounted) return;
-      setState(() {
-        _recentScenes = [];
-        _isLoadingScenes = false;
-      });
+      setState(() { _recentScenes = []; _isLoadingScenes = false; });
       return;
     }
     if (!mounted) return;
@@ -105,8 +102,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           try { notifiedLevels = json.decode(rawNotified); } catch (e) {}
         }
         for (String id in BadgeUtils.milestones.keys) {
-          int currentVal = 0;
-          int currentLvl = 0;
+          int currentVal = 0, currentLvl = 0;
           if (id == 'level_01') {
             final String? levelStr = result['japanese_level'];
             currentLvl = BadgeUtils.japaneseLevelToNumber(levelStr);
@@ -174,13 +170,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final jPts = userProvider.jPts;
 
     return Scaffold(
-      backgroundColor: _flatCanvasColor, // 🌟 Commit 1
+      backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // 🌟 Commit 1: 透明頂欄
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: _textColor), // 🌟 Commit 1: 按鈕改深色
-        title: Icon(Icons.camera_alt_rounded, color: _textColor, size: 28), // 🌟 Commit 1: 插圖改深色
+        iconTheme: IconThemeData(color: _textColor),
+        title: Icon(Icons.camera_alt_rounded, color: _textColor, size: 28),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -188,34 +184,34 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 🌟 Commit 2: 更新問候語字體
             Text(
-              '${_getGreeting()}，$userName!',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _textColor),
+              '${_getGreeting()}，\n$userName!', 
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: _textColor, height: 1.2),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
               '今天也是學習日語的好日子',
-              style: TextStyle(fontSize: 14, color: _subTextColor, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 15, color: _subTextColor, fontWeight: FontWeight.w600, letterSpacing: 0.5),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            // 🌟 Commit 2: 標籤更簡約扁平
             Row(
               children: [
                 StatusChip(
                   icon: Icons.local_fire_department,
                   iconColor: Colors.deepOrange,
                   text: isGuest ? '登入挑戰' : '連續$streakDays天',
-                  borderColor: Colors.orange.shade200,
+                  borderColor: Colors.transparent, 
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => isGuest ? const LoginScreen() : const BuyPointsScreen()));
-                  },
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => isGuest ? const LoginScreen() : const BuyPointsScreen())),
                   child: StatusChip(
                     icon: Icons.monetization_on,
                     iconColor: Colors.blue,
                     text: isGuest ? '0 J-Pts' : '$jPts J-Pts',
-                    borderColor: Colors.blue.shade200,
+                    borderColor: Colors.transparent,
                   ),
                 ),
               ],

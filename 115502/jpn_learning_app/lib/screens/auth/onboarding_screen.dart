@@ -49,9 +49,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             },
             child: const Text(
               'Skip',
-              // 🌟 Commit 2：淡化右上角字體，不搶戲
               style: TextStyle(
-                color: Colors.black38, 
+                color: Colors.black38,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -80,26 +79,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
+            
+            // 🌟 Commit 3：調整點點樣式
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _pagesData.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 500),
                   curve: Curves.easeOutQuart,
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                  width: _currentPage == index ? 24.0 : 8.0,
+                  width: _currentPage == index ? 28.0 : 8.0, 
                   height: 8.0,
                   decoration: BoxDecoration(
                     color: _currentPage == index
                         ? AppColors.primary
-                        : AppColors.primaryLighter,
+                        : Colors.black12, // 未選中改為質感淡灰色
                     borderRadius: BorderRadius.circular(4.0),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
+
+            // 🌟 Commit 3 核心：按鈕無陰影化
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 32.0,
@@ -107,10 +110,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               child: SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 56, // 加高按鈕
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    elevation: 0, // 徹底拔除陰影
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -130,7 +134,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                   child: Text(
                     _currentPage == _pagesData.length - 1 ? '開始使用' : '下一頁',
-                    style: const TextStyle(fontSize: 16, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -146,24 +155,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // 🌟 Commit 2 核心：改為純白、無陰影大圓角卡片
         Container(
-          width: 200, 
+          width: 200,
           height: 200,
           decoration: BoxDecoration(
-            color: Colors.white, 
-            borderRadius: BorderRadius.circular(40), 
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(40),
           ),
           child: Icon(icon, size: 90, color: AppColors.primary),
         ),
         const SizedBox(height: 40),
-        // 🌟 Commit 2 核心：加粗標題並使用深色系
         Text(
           title,
           style: const TextStyle(
-            fontSize: 24, 
-            fontWeight: FontWeight.w900, 
-            color: Color(0xFF2C3E50), 
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2C3E50),
             letterSpacing: 1.5,
           ),
         ),

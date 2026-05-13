@@ -34,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   List<dynamic> _recentScenes = [];
   bool _isLoadingScenes = true;
 
-  // 🌟 扁平風核心配色
   final Color _textColor = const Color(0xFF2C3E50); 
   final Color _subTextColor = const Color(0xFF8E9AAB);
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
@@ -62,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   void didPopNext() { _syncHomeData(); }
 
-  // 數據同步邏輯
   Future<void> _syncHomeData() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
@@ -155,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 動態計算本週日期
+    // 動態計算本週日期
     final now = DateTime.now();
     final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
     List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
@@ -171,24 +169,28 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
-      // 🌟 確保側邊欄元件存在
       drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // 🌟 修復關鍵：手動指定 leading 元件並使用 Builder 取得正確的 Context 打開側邊欄
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded, size: 30), // 漢堡選單圖示
-            color: _textColor, // 確保顏色是顯眼的墨藍灰
+            icon: const Icon(Icons.menu_rounded, size: 30),
+            color: _textColor,
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
+        // 🌟 修正點：將鈴鐺換回個人資料 ICON 並加上跳轉邏輯
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined, size: 26), 
+            icon: const Icon(Icons.person_outline_rounded, size: 30), 
             color: _textColor, 
-            onPressed: () {}
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
           ),
           const SizedBox(width: 12),
         ],
@@ -302,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  // 🌟 打卡日曆元件
+  // 打卡日曆元件
   Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
     final now = DateTime.now();
 

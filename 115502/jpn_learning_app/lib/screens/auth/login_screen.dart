@@ -141,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return;
 
       if (!result.containsKey('user_id')) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')),);
         return;
       }
 
@@ -234,7 +234,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // 🌟 Commit 2 核心：呼叫已扁平化的輸入框
                       _buildInputField(
                         controller: _emailController,
                         hintText: '電子郵件',
@@ -282,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             borderRadius: BorderRadius.circular(30),
-                            boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                            // 🌟 Commit 3 核心：拔除登入按鈕陰影
                           ),
                           child: Center(
                             child: Text(
@@ -356,7 +355,6 @@ class _LoginScreenState extends State<LoginScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
   }) {
-    // 🌟 Commit 2 核心：輸入框不靠陰影，改靠「極淺灰綠底色」產生內凹對比
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF4F7F5), 
@@ -371,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
           prefixIcon: Icon(icon, color: AppColors.primary),
           filled: true,
-          fillColor: const Color(0xFFF4F7F5), // 填滿這個底色
+          fillColor: const Color(0xFFF4F7F5), 
           contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
@@ -391,7 +389,7 @@ class _LoginScreenState extends State<LoginScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(color: Colors.grey.shade300, width: 1),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))],
+          // 🌟 Commit 3 核心：拔除 Google 按鈕陰影
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

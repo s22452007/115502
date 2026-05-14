@@ -63,7 +63,7 @@ def chat():
     topic = request.form.get('topic', '日常對話') 
     user_level = request.form.get('level', 'N5') # 🌟 接收等級！如果 App 沒傳，預設當作 N5
 
-    print(f"📦 收到包裹 -> 主題：{topic} | 等級：{user_level} | 訊息：{user_message}")
+    print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 訊息：{user_message}")
 
     # 2. 把食材交給內場廚師 (呼叫 tutor.py 的函數，記得把 user_level 也傳進去)
     ai_response_text = get_ai_reply(topic, user_message, chat_history, user_level)

@@ -19,10 +19,6 @@
 
         /* 側邊欄樣式 - 與購買紀錄完全統一 */
         .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-        .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; border-bottom: 1px solid #eee; margin-bottom: 12px; }
-        .sidebar-logo .icon-box { width: 36px; height: 36px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--green-accent); font-weight: bold; }
-        .sidebar-logo .title { color: var(--green-accent); font-weight: bold; font-size: 1rem; line-height: 1.2; }
-        .sidebar-logo .subtitle { color: #aaa; font-size: 0.7rem; margin-top: 2px; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
         .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
         .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
@@ -30,6 +26,10 @@
 
         /* 統一設定側邊欄 icon 的顏色為墨綠色，並固定寬度以確保文字對齊 */
         .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light, #dce7de); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; color: var(--green-accent, #5c8364); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
 
         /* 主內容區樣式 */
         .main-content { flex: 1; padding: 0; overflow-x: hidden; }
@@ -57,9 +57,12 @@
 <div class="layout">
 
     <aside class="sidebar">
-        <div class="sidebar-logo">
-            <div class="icon-box">JL</div>
-            <div><div class="title">JLens</div><div class="subtitle">snap to manage</div></div>
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">管理者</div>
+            </div>
         </div>
         <ul class="sidebar-menu">
             <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
@@ -72,7 +75,7 @@
             <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
             <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
             <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right"></i> 登出系統</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
         </ul>
     </aside>
 

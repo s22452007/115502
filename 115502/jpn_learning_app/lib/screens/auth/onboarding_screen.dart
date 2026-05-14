@@ -13,6 +13,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  // 整理頁面資料，方便等等做動畫迴圈
+  final List<Map<String, dynamic>> _pagesData = [
+    {'icon': Icons.camera_alt, 'title': 'snap to learn'},
+    {'icon': Icons.menu_book, 'title': '輕鬆學習日文'},
+    {'icon': Icons.translate, 'title': '馬上開始你的旅程'},
+  ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -21,9 +34,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         backgroundColor: AppColors.white,
         elevation: 0,
         actions: [
-          // 右上角 Skip 鍵：按下直接跳到登入頁
+          // 右上角 Skip 鍵
           TextButton(
-            // 加入這段 style：稍微縮減 TextButton 預設自帶的內邊距，並將觸控範圍縮到最小
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               minimumSize: Size.zero,
@@ -35,50 +47,73 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
-            // 這裡直接放 Text 即可，不要包 Padding
             child: const Text(
               'Skip',
               style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ),
-          // 重點在這裡：在按鈕後面加上 SizedBox 來推開與右邊界的距離 (這塊空間不會有觸控效果)
           const SizedBox(width: 16.0),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // 核心結構：PageView (支援左右滑動)
+            // 🌟 核心升級：加入縮放與漸隱特效的 PageView
             Expanded(
-              child: PageView(
+              child: PageView.builder(
                 controller: _pageController,
+                itemCount: _pagesData.length,
                 onPageChanged: (index) {
                   setState(() {
                     _currentPage = index;
                   });
                 },
-                children: [
-                  _buildPageContent(
-                    icon: Icons.camera_alt,
-                    title: 'snap to learn',
-                  ),
-                  _buildPageContent(icon: Icons.menu_book, title: '輕鬆學習日文'),
-                  _buildPageContent(icon: Icons.translate, title: '馬上開始你的旅程'),
-                ],
+                itemBuilder: (context, index) {
+                  return AnimatedBuilder(
+                    animation: _pageController,
+                    builder: (context, child) {
+                      // 取得當前滑動的進度
+                      double page = _currentPage.toDouble();
+                      if (_pageController.position.haveDimensions) {
+                        page = _pageController.page ?? _currentPage.toDouble();
+                      }
+
+                      // 計算該頁面距離畫面中心的差距
+                      double diff = (page - index).abs();
+
+                      // 根據距離計算縮放比例 (越遠越小) 與透明度 (越遠越淡)
+                      double scale = (1 - (diff * 0.2)).clamp(0.0, 1.0);
+                      double opacity = (1 - (diff * 0.5)).clamp(0.0, 1.0);
+
+                      return Opacity(
+                        opacity: opacity,
+                        child: Transform.scale(
+                          scale: scale,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _buildPageContent(
+                      icon: _pagesData[index]['icon'] as IconData,
+                      title: _pagesData[index]['title'] as String,
+                    ),
+                  );
+                },
               ),
             ),
 
-            // 底部狀態點點 (Indicators)
+            // 底部狀態點點 (滑順水滴變形特效，調慢以搭配主動畫)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                3,
-                (index) => Container(
+                _pagesData.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 450), // 延長點點的變形時間
+                  curve: Curves.easeOutCubic,
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                  width: _currentPage == index ? 20.0 : 8.0,
+                  width: _currentPage == index ? 24.0 : 8.0,
                   height: 8.0,
                   decoration: BoxDecoration(
-                    // 使用你原本設定的 AppColors
                     color: _currentPage == index
                         ? AppColors.primary
                         : AppColors.primaryLighter,
@@ -107,14 +142,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   onPressed: () {
-                    if (_currentPage < 2) {
-                      // 如果是第 1 頁或第 2 頁，滑動到下一頁
+                    if (_currentPage < _pagesData.length - 1) {
+                      // 🌟 放慢動畫：時間調至 750ms，採用極致平滑的 easeInOutCubic 曲線
                       _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeIn,
+                        duration: const Duration(milliseconds: 750),
+                        curve: Curves.easeInOutCubic,
                       );
                     } else {
-                      // 如果是最後一頁，跳轉到登入頁
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -122,7 +156,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     }
                   },
                   child: Text(
-                    _currentPage == 2 ? '開始使用' : '下一頁',
+                    _currentPage == _pagesData.length - 1 ? '開始使用' : '下一頁',
                     style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
@@ -135,7 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // 建立每一頁內容的小工具 (保留你原本的尺寸和設計)
+  // 建立每一頁內容的小工具
   Widget _buildPageContent({required IconData icon, required String title}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -152,7 +186,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 24),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w500,
             color: AppColors.textGrey,

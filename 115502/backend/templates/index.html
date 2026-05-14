@@ -12,10 +12,10 @@
             --green-mid: #6a9e72;
             --green-light: #dce7de;
             --green-accent: #5c8364;
-            --bg: #f4f7f5;
+            --bg: #f2f4f3;
         }
         * { box-sizing: border-box; }
-        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
 
         /* ===== Sidebar ===== */
         .layout { display: flex; min-height: 100vh; }
@@ -24,69 +24,103 @@
         .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
         .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
         .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
-
-        /* 統一設定側邊欄 icon 的顏色為墨綠色，並固定寬度以確保文字對齊 */
         .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
         .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
-        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light, #dce7de); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; color: var(--green-accent, #5c8364); flex-shrink: 0; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
         .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
         .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
 
         /* ===== Main ===== */
         .main-content { flex: 1; overflow-x: hidden; }
 
-        /* ===== Stats Banner ===== */
-        .stats-banner {
-            background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
-            padding: 28px 48px;
+        /* ===== Page Header ===== */
+        .page-header {
+            padding: 32px 48px 0;
             display: flex;
-            gap: 0;
+            align-items: flex-end;
+            justify-content: space-between;
         }
-        .stat-item {
-            flex: 1;
-            text-align: center;
-            padding: 0 16px;
-            border-right: 1px solid rgba(255,255,255,0.15);
+        .page-header h1 {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #222;
+            margin: 0;
+            letter-spacing: -0.5px;
         }
-        .stat-item:last-child { border-right: none; }
-        .stat-item .num {
+        .page-header .sub {
+            font-size: 0.82rem;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        /* ===== Stat Cards ===== */
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 24px 48px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+        .stat-card .icon-wrap {
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.35rem;
+        }
+        .stat-card .num {
             font-size: 2.4rem;
-            font-weight: 800;
-            color: white;
+            font-weight: 900;
+            color: #1a1a1a;
             line-height: 1;
         }
-        .stat-item .lbl {
+        .stat-card .lbl {
             font-size: 0.8rem;
-            color: rgba(255,255,255,0.65);
-            margin-top: 6px;
-            letter-spacing: 0.5px;
+            color: #999;
+            font-weight: 500;
+            margin-top: -8px;
         }
-        .stat-item .dot {
-            display: inline-block;
-            width: 7px; height: 7px;
-            background: #6ee07a;
-            border-radius: 50%;
-            margin-right: 5px;
-            vertical-align: middle;
-        }
+        .ic-green  { background: #e8f5e9; color: #388e3c; }
+        .ic-blue   { background: #e3f2fd; color: #1976d2; }
+        .ic-amber  { background: #fff8e1; color: #f57c00; }
+        .ic-pink   { background: #fce4ec; color: #c2185b; }
 
         /* ===== Body area ===== */
-        .body-area { padding: 32px 48px; }
+        .body-area { padding: 0 48px 32px; }
 
-        /* ===== Cards ===== */
+        /* ===== Panels ===== */
         .panel {
             background: white;
-            border-radius: 16px;
+            border-radius: 20px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.05);
             overflow: hidden;
         }
         .panel-header {
-            padding: 14px 20px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            color: white;
-            background: var(--green-dark);
-            letter-spacing: 0.5px;
+            padding: 18px 20px 14px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: #222;
+            border-bottom: 1px solid #f2f2f2;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-header i { color: var(--green-accent); font-size: 1rem; }
+        .panel-header .badge-count {
+            margin-left: auto;
+            background: #fce4ec;
+            color: #c2185b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 50px;
         }
         .panel-body { padding: 16px 20px; }
 
@@ -98,43 +132,43 @@
             left: 17px;
             top: 0; bottom: 0;
             width: 2px;
-            background: #eee;
+            background: #f0f0f0;
         }
-        .tl-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            padding: 10px 0;
-            position: relative;
-        }
+        .tl-item { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; position: relative; }
         .tl-dot {
-            width: 36px;
-            height: 36px;
+            width: 36px; height: 36px;
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1rem;
-            flex-shrink: 0;
-            position: relative;
-            z-index: 1;
+            font-size: 1rem; flex-shrink: 0;
+            position: relative; z-index: 1;
         }
-        .tl-dot.login  { background: #d4edda; }
-        .tl-info { flex: 1; min-width: 0; padding-top: 2px; }
-        .tl-name { font-weight: 600; font-size: 0.9rem; color: #333; }
-        .tl-desc { font-size: 0.78rem; color: #aaa; margin-top: 2px; }
+        .tl-dot.login { background: #e8f5e9; color: #388e3c; font-size: 0.85rem; font-weight: 800; }
+        .tl-info { flex: 1; min-width: 0; padding-top: 4px; }
+        .tl-name { font-weight: 700; font-size: 0.88rem; color: #222; }
+        .tl-desc { font-size: 0.76rem; color: #bbb; margin-top: 2px; }
 
-        /* ===== Activity list (feedback panel) ===== */
+        /* ===== Feedback list ===== */
         .activity-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 0;
-            border-bottom: 1px solid #f2f2f2;
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f5f5;
         }
         .activity-item:last-child { border-bottom: none; }
         .activity-info { flex: 1; min-width: 0; }
-        .activity-name { font-weight: 600; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .activity-time { font-size: 0.75rem; color: #aaa; margin-top: 1px; }
-
+        .activity-name { font-weight: 700; font-size: 0.88rem; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .activity-excerpt { font-size: 0.76rem; color: #bbb; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .activity-time { font-size: 0.72rem; color: #ccc; margin-top: 2px; }
+        .reply-btn {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: var(--green-accent);
+            text-decoration: none;
+            font-weight: 700;
+            background: var(--green-light);
+            padding: 4px 10px;
+            border-radius: 50px;
+        }
+        .reply-btn:hover { background: var(--green-accent); color: white; }
     </style>
 </head>
 <body>
@@ -163,20 +197,32 @@
     </aside>
 
     <main class="main-content">
-        <div class="stats-banner">
-            <div class="stat-item">
+        <div class="page-header">
+            <div>
+                <h1>Dashboard</h1>
+                <div class="sub">JLens 管理後台總覽</div>
+            </div>
+        </div>
+
+        <!-- 四個統計卡片 -->
+        <div class="stat-cards">
+            <div class="stat-card">
+                <div class="icon-wrap ic-green"><i class="bi bi-people-fill"></i></div>
                 <div class="num">{{ user_count }}</div>
                 <div class="lbl">總使用者</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
+                <div class="icon-wrap ic-blue"><i class="bi bi-activity"></i></div>
                 <div class="num">{{ today_active }}</div>
-                <div class="lbl"><span class="dot"></span>今日活躍</div>
+                <div class="lbl">今日活躍</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
+                <div class="icon-wrap ic-amber"><i class="bi bi-book-fill"></i></div>
                 <div class="num">{{ vocab_count }}</div>
                 <div class="lbl">教材單字</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
+                <div class="icon-wrap ic-pink"><i class="bi bi-person-plus-fill"></i></div>
                 <div class="num">{{ new_users_today }}</div>
                 <div class="lbl">今日新使用者</div>
             </div>
@@ -186,7 +232,9 @@
             <div class="row g-4">
                 <div class="col-md-7">
                     <div class="panel">
-                        <div class="panel-header"><i class="bi bi-clock-history me-1"></i> 最近動態</div>
+                        <div class="panel-header">
+                            <i class="bi bi-clock-history"></i> 最近動態
+                        </div>
                         <div class="panel-body">
                             {% if recent_users %}
                             <div class="timeline">
@@ -195,7 +243,7 @@
                                     {% if u.avatar %}
                                     <img src="{{ u.avatar }}" class="tl-dot" style="object-fit:cover;">
                                     {% else %}
-                                    <div class="tl-dot login" style="font-size:0.9rem;font-weight:bold;color:#4a7a54;">{{ (u.username or u.email)[0]|upper }}</div>
+                                    <div class="tl-dot login">{{ (u.username or u.email)[0]|upper }}</div>
                                     {% endif %}
                                     <div class="tl-info">
                                         <div class="tl-name">{{ u.username or '未設定暱稱' }} 登入</div>
@@ -205,7 +253,7 @@
                                 {% endfor %}
                             </div>
                             {% else %}
-                                <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">尚無登入紀錄</div>
+                                <div style="text-align:center;color:#ccc;padding:24px 0;font-size:0.9rem;">尚無登入紀錄</div>
                             {% endif %}
                         </div>
                     </div>
@@ -214,9 +262,9 @@
                 <div class="col-md-5">
                     <div class="panel">
                         <div class="panel-header">
-                            <i class="bi bi-chat-dots-fill me-1"></i> 待回覆回饋
+                            <i class="bi bi-chat-dots-fill"></i> 待回覆回饋
                             {% if feedback_pending > 0 %}
-                            <span style="margin-left:8px;background:rgba(255,255,255,0.2);font-size:0.75rem;padding:2px 8px;border-radius:50px;">{{ feedback_pending }} 筆</span>
+                            <span class="badge-count">{{ feedback_pending }} 筆</span>
                             {% endif %}
                         </div>
                         <div class="panel-body">
@@ -225,26 +273,26 @@
                                 <div class="activity-item">
                                     <div class="activity-info">
                                         <div class="activity-name">{{ f.username or f.email or '匿名' }}</div>
-                                        <div class="activity-time" style="color:#888;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ f.content }}</div>
+                                        <div class="activity-excerpt">{{ f.content }}</div>
                                         <div class="activity-time">{{ f.created_at }}</div>
                                     </div>
-                                    <a href="/feedback/list" style="flex-shrink:0;font-size:0.75rem;color:var(--green-accent);text-decoration:none;font-weight:600;">回覆 →</a>
+                                    <a href="/feedback/list" class="reply-btn">回覆 →</a>
                                 </div>
                                 {% endfor %}
                             {% else %}
-                                <div style="text-align:center;color:#bbb;padding:20px 0;font-size:0.9rem;">沒有待回覆的回饋 <i class="bi bi-emoji-smile ms-1"></i></div>
+                                <div style="text-align:center;color:#ccc;padding:24px 0;font-size:0.9rem;">沒有待回覆的回饋 🎉</div>
                             {% endif %}
                         </div>
                         {% if feedback_pending > 0 %}
-                        <div style="border-top:1px solid #f2f2f2;padding:10px 20px;text-align:center;">
-                            <a href="/feedback/list" style="font-size:0.82rem;color:var(--green-accent);text-decoration:none;font-weight:600;">查看全部 →</a>
+                        <div style="border-top:1px solid #f5f5f5;padding:12px 20px;text-align:center;">
+                            <a href="/feedback/list" style="font-size:0.82rem;color:var(--green-accent);text-decoration:none;font-weight:700;">查看全部 →</a>
                         </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+            <p class="mt-4" style="font-size:0.75rem;color:#ccc;">© 2026 JLens Project Team. All rights reserved.</p>
         </div>
     </main>
 </div>

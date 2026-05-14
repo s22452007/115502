@@ -31,248 +31,125 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  final Color _flatCanvasColor = const Color(0xFFF4F7F5);
+  final Color _textDark = const Color(0xFF2C3E50);
+  final Color _inputFillColor = const Color(0xFFF4F7F5);
+
   int _toInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
     if (value is int) return value;
     return int.tryParse(value.toString()) ?? defaultValue;
   }
 
-  // ============== 您的原始邏輯完全保留 開始 ==============
+  // ============== 邏輯部分 (完全保留) ==============
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('請輸入 Email 與密碼喔！')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請輸入 Email 與密碼喔！')));
       return;
     }
 
     if (!_isLogin && password != confirmPassword) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('兩次輸入的密碼不相同喔！')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('兩次輸入的密碼不相同喔！')));
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(_isLogin ? '登入中...' : '註冊中...')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isLogin ? '登入中...' : '註冊中...')));
 
     if (_isLogin) {
       final result = await ApiClient.login(email, password);
-
       if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
         context.read<UserProvider>().setUserId(_toInt(result['user_id']));
         context.read<UserProvider>().setEmail(email);
-
-        if (result.containsKey('avatar') &&
-            result['avatar'] != null &&
-            result['avatar'].toString().isNotEmpty) {
+        if (result.containsKey('avatar') && result['avatar'] != null && result['avatar'].toString().isNotEmpty) {
           context.read<UserProvider>().setAvatar(result['avatar']);
         }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
+        if (result.containsKey('streak_days')) context.read<UserProvider>().setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
+        if (result.containsKey('j_pts')) context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
+        if (result.containsKey('daily_scans')) context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
+        if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
+        if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
+        try { await NotificationService.setLoginStatus(true); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
 
-        if (result.containsKey('streak_days')) {
-          context.read<UserProvider>().setStreakDays(
-            _toInt(result['streak_days'], defaultValue: 1),
-          );
-        }
-        if (result.containsKey('j_pts')) {
-          context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
-        }
-        if (result.containsKey('daily_scans')) {
-          context.read<UserProvider>().setDailyScans(
-            _toInt(result['daily_scans']),
-          );
-        }
-        if (result.containsKey('friend_id') && result['friend_id'] != null) {
-          context.read<UserProvider>().setFriendId(result['friend_id']);
-        }
-        if (result.containsKey('username') && result['username'] != null) {
-          context.read<UserProvider>().setUsername(result['username']);
-        }
-
-        try {
-          await NotificationService.setLoginStatus(true);
-        } catch (e) {
-          debugPrint('推播狀態設定失敗 (網頁版正常現象): $e');
-        }
-
-        if (!mounted) return;
-
-        // 有程度進首頁，沒程度去選程度
         if (result['japanese_level'] != null) {
-          context.read<UserProvider>().setJapaneseLevel(
-            result['japanese_level'],
-          );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
+          context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
-          );
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
         }
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(result['error'] ?? '登入失敗')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '登入失敗')));
       }
     } else {
       final result = await ApiClient.register(email, password);
-
       if (!context.mounted) return;
-
       if (result.containsKey('user_id')) {
         context.read<UserProvider>().setUserId(_toInt(result['user_id']));
         context.read<UserProvider>().setEmail(email);
-
-        if (result.containsKey('friend_id') && result['friend_id'] != null) {
-          context.read<UserProvider>().setFriendId(result['friend_id']);
-        }
-        if (result.containsKey('username') && result['username'] != null) {
-          context.read<UserProvider>().setUsername(result['username']);
-        }
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('註冊成功！請選擇您的日語程度')));
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
-        );
+        if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
+        if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('註冊成功！請選擇您的日語程度')));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(result['error'] ?? '註冊失敗')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '註冊失敗')));
       }
     }
   }
 
   Future<void> _handleGoogleLogin() async {
     try {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Google 登入中...')));
-
-      // 1. 先做 Firebase Google 登入
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 登入中...')));
       final UserCredential? userCredential = await AuthService().signInWithGoogle();
-
       if (!context.mounted) return;
-
       final user = userCredential?.user;
-
       if (user == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Google 登入失敗，未取得使用者資料')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 登入失敗，未取得使用者資料')));
         return;
       }
-
       final email = user.email;
       final avatar = user.photoURL;
-
       if (email == null || email.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Google 帳號未提供 Email')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 帳號未提供 Email')));
         return;
       }
-
-      // 2. Firebase 登入成功後，打你同學的 Flask API
       final result = await ApiClient.googleLogin(email, avatar: avatar);
-
       if (!context.mounted) return;
-
       if (!result.containsKey('user_id')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')));
         return;
       }
-
-      // 3. 存進 UserProvider（使用你們自己後端的會員資料）
       context.read<UserProvider>().setUserId(_toInt(result['user_id']));
       context.read<UserProvider>().setEmail(email);
-
-      if (result.containsKey('friend_id') && result['friend_id'] != null) {
-        context.read<UserProvider>().setFriendId(result['friend_id']);
-      }
-
-      if (result.containsKey('avatar') &&
-          result['avatar'] != null &&
-          result['avatar'].toString().isNotEmpty) {
+      if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
+      if (result.containsKey('avatar') && result['avatar'] != null && result['avatar'].toString().isNotEmpty) {
         context.read<UserProvider>().setAvatar(result['avatar']);
       } else if (avatar != null && avatar.isNotEmpty) {
         context.read<UserProvider>().setAvatar(avatar);
       }
+      context.read<UserProvider>().setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
+      context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
+      context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
+      if (result.containsKey('japanese_level') && result['japanese_level'] != null) context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
+      if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
 
-      if (result.containsKey('streak_days')) {
-        context.read<UserProvider>().setStreakDays(
-          _toInt(result['streak_days'], defaultValue: 1),
-        );
-      } else {
-        context.read<UserProvider>().setStreakDays(1);
-      }
-
-      if (result.containsKey('j_pts')) {
-        context.read<UserProvider>().setJPts(_toInt(result['j_pts']));
-      } else {
-        context.read<UserProvider>().setJPts(0);
-      }
-
-      if (result.containsKey('daily_scans')) {
-        context.read<UserProvider>().setDailyScans(
-          _toInt(result['daily_scans']),
-        );
-      } else {
-        context.read<UserProvider>().setDailyScans(0);
-      }
-
-      if (result.containsKey('japanese_level') &&
-          result['japanese_level'] != null) {
-        context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
-      }
-
-      if (result.containsKey('username') && result['username'] != null) {
-        context.read<UserProvider>().setUsername(result['username']);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')),
-      );
-
-      // 4. 導頁：有程度就進首頁，沒有就去選程度
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
       if (result['japanese_level'] != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
       } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Google 登入失敗：$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Google 登入失敗：$e')));
     }
   }
-  // ============== 您的原始邏輯完全保留 結束 ==============
 
   @override
   void dispose() {
@@ -284,285 +161,166 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+    final userName = (userProvider.username?.isNotEmpty ?? false) ? userProvider.username : '使用者';
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // 淺灰藍色背景
+      backgroundColor: _flatCanvasColor,
       body: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(20.0), // 卡片與螢幕邊緣的距離
-          decoration: BoxDecoration(
-            color: AppColors.white, // 卡片本身的白色
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          // 這裡使用 Column 包裹 Expanded，確保內容過長時可以滑動，不會再出現黃黑條紋！
-          child: Column(
-            children: [
-              // 上半部：插圖與表單區塊 (會自動填滿剩餘空間並可滑動)
-              Expanded(
-                child: SingleChildScrollView(
-                  // 加大內邊距，讓最上方的書本圖示不會貼在圓角邊緣
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 32.0,
-                  ),
-                  child: Column(
-                    children: [
-                      // 1. 頂部插圖
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          shape: BoxShape.circle,
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
+                          child: const Icon(Icons.menu_book_rounded, size: 70, color: AppColors.primary),
                         ),
-                        child: const Icon(
-                          Icons.menu_book_rounded,
-                          size: 80,
-                          color: AppColors.primary,
+                        const SizedBox(height: 16),
+                        const Text(
+                          "JPN Learning ID",
+                          style: TextStyle(fontSize: 20, color: AppColors.primary, fontWeight: FontWeight.w900, letterSpacing: 1.2),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "JPN Learning ID",
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 40),
+                        const SizedBox(height: 48),
 
-                      // 2. 表單區域
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _isLogin ? '歡迎回來' : '建立新帳號',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textDark,
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _isLogin ? '早安，$userName!' : '建立新帳號',
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _textDark),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _isLogin
-                              ? '登入您的帳號'
-                              : '註冊以開始學習',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: AppColors.textGrey,
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _isLogin ? '請登入您的帳號' : '註冊以開始學習之旅',
+                            style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w600),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // 輸入框 Email
-                      _buildInputField(
-                        controller: _emailController,
-                        hintText: '電子郵件',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // 輸入框 Password
-                      _buildInputField(
-                        controller: _passwordController,
-                        hintText: '密碼',
-                        icon: Icons.lock_outline_rounded,
-                        obscureText: true,
-                      ),
-
-                      // 註冊時的確認密碼
-                      if (!_isLogin) ...[
-                        const SizedBox(height: 20),
                         _buildInputField(
-                          controller: _confirmPasswordController,
-                          hintText: '確認密碼',
-                          icon: Icons.lock_reset_rounded,
+                          controller: _emailController,
+                          hintText: '電子郵件',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 18),
+                        _buildInputField(
+                          controller: _passwordController,
+                          hintText: '密碼',
+                          icon: Icons.lock_outline_rounded,
                           obscureText: true,
                         ),
-                      ],
-
-                      // 忘記密碼 (只有登入時顯示)
-                      if (_isLogin)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const ForgotPasswordScreen(),
-                                ),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.only(top: 8, bottom: 8),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                               '忘記密碼？',
-                              style: TextStyle(color: AppColors.textGrey),
-                            ),
+                        if (!_isLogin) ...[
+                          const SizedBox(height: 18),
+                          _buildInputField(
+                            controller: _confirmPasswordController,
+                            hintText: '確認密碼',
+                            icon: Icons.lock_reset_rounded,
+                            obscureText: true,
                           ),
-                        )
-                      else
-                        const SizedBox(height: 20),
+                        ],
 
-                      const SizedBox(height: 24),
+                        if (_isLogin)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+                              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                              child: const Text('忘記密碼？', style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w700)),
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 20),
+                        const SizedBox(height: 24),
 
-                      // 登入/註冊主按鈕
-                      GestureDetector(
-                        onTap: _submit,
-                        child: Container(
+                        SizedBox(
                           width: double.infinity,
-                          height: 55,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Center(
+                          height: 58,
+                          child: ElevatedButton(
+                            onPressed: _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            ),
                             child: Text(
                               _isLogin ? '登入' : '註冊',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                              ),
+                              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 2),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // OR 分隔線
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              '或使用以下方式登入',
-                              style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontSize: 12,
-                              ),
+                        // 🌟 Commit 5: 簡化分隔線
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1.5)),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('OR', style: TextStyle(color: Colors.black26, fontWeight: FontWeight.w900, fontSize: 12)),
                             ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+                            Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1.5)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
 
-                      // 第三方登入按鈕區域 (已移除 Apple)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildSocialButton(
-                            icon: Icons.g_mobiledata,
-                            iconSize: 36,
-                            onTap: _handleGoogleLogin,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+                        // 🌟 Commit 5: 官方 Google 按鈕
+                        _buildGoogleButton(onTap: _handleGoogleLogin),
+                        const SizedBox(height: 24),
 
-                      // 訪客登入
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const HomeScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                           '以訪客身分繼續',
-                          style: TextStyle(
-                            color: AppColors.textGrey,
-                            fontSize: 14,
-                            decoration: TextDecoration.underline,
+                        GestureDetector(
+                          onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
+                          child: const Text(
+                            '以訪客身分繼續',
+                            style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 下半部：固定的切換註冊/登入區塊 (固定在底部不會被滑動吃掉)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 20.0),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  border: Border(
-                    top: BorderSide(color: Colors.grey.withOpacity(0.1)),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _isLogin
-                          ? '還沒有帳號嗎？ '
-                          : '已經有帳號了嗎？ ',
-                      style: const TextStyle(
-                        color: AppColors.textGrey,
-                        fontSize: 16,
-                      ),
+                      ],
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _isLogin = !_isLogin;
-                          _passwordController.clear();
-                          _confirmPasswordController.clear();
-                        });
-                      },
-                      child: Text(
-                        _isLogin ? '註冊' : '登入',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  ),
+
+                  // 🌟 Commit 5: 頁尾優化
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAFAFA),
+                      border: Border(top: BorderSide(color: Colors.grey.shade100)),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_isLogin ? '還沒有帳號嗎？ ' : '已經有帳號了嗎？ ', style: const TextStyle(color: Colors.black45, fontWeight: FontWeight.w600)),
+                        GestureDetector(
+                          onTap: () => setState(() => _isLogin = !_isLogin),
+                          child: Text(
+                            _isLogin ? '立即註冊' : '登入帳號',
+                            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ============== 輔助 UI 元件 ==============
-
-  // 1. 現代化圓角輸入框 (不顯示上方 label，只顯示內部 hint 與 icon)
   Widget _buildInputField({
     required TextEditingController controller,
     required String hintText,
@@ -570,65 +328,55 @@ class _LoginScreenState extends State<LoginScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04), // 超淡的陰影
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: obscureText,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-          prefixIcon: Icon(icon, color: AppColors.primary), // 前方的綠色圖示
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 16,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-          ),
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      style: TextStyle(color: _textDark, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.black26, fontWeight: FontWeight.w600),
+        prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
+        filled: true,
+        fillColor: _inputFillColor,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
       ),
     );
   }
 
-  // 2. 第三方登入圓形按鈕
-  Widget _buildSocialButton({
-    required IconData icon,
-    required double iconSize,
-    required VoidCallback onTap,
-  }) {
+  // 🌟 Commit 5: 官方 Google 按鈕實作
+  Widget _buildGoogleButton({required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(50),
+      borderRadius: BorderRadius.circular(30),
       child: Container(
-        width: 60,
-        height: 60,
+        width: double.infinity,
+        height: 56,
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.shade300, width: 1),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.grey.shade200, width: 1.5),
         ),
-        child: Icon(
-          icon,
-          size: iconSize,
-          color: AppColors.textDark, // 圖示用深灰色，質感更好
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.network(
+              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              "使用 Google 帳號登入",
+              style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+            ),
+            const SizedBox(width: 36), // 補償 Logo 寬度
+          ],
         ),
       ),
     );

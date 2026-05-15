@@ -13,37 +13,20 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: onTap,
-        backgroundColor: AppColors.primary,
-        selectedItemColor: AppColors.white,
-        unselectedItemColor: AppColors.primaryLighter,
-        type: BottomNavigationBarType.fixed,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt_outlined),
-            label: '相機',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: '搜尋'),
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '首頁'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark_border),
-            label: '我的收藏夾',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: '個人檔案',
-          ),
-        ],
-      ),
+    return BottomNavigationBar(
+      currentIndex: currentIndex,
+      onTap: onTap,
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: AppColors.primary,
+      unselectedItemColor: Colors.grey,
+      // 🌟 調整順序：主頁移到最左邊 (Index 0)
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: '主頁'),
+        BottomNavigationBarItem(icon: Icon(Icons.camera_alt_rounded), label: '相機'),
+        BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: '搜尋'),
+        BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: '紀錄'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: '個人'),
+      ],
     );
   }
 }

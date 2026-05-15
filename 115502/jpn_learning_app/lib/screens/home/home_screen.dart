@@ -144,10 +144,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        // 🌟 1. 改成實體背景色
         backgroundColor: _flatCanvasColor,
         elevation: 0,
-        // 確保向上捲動時不會有陰影線條
         scrolledUnderElevation: 0, 
         leading: Builder(
           builder: (context) => IconButton(
@@ -171,15 +169,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           const SizedBox(width: 12),
         ],
       ),
-      // 🌟 2. 移除 extendBodyBehindAppBar (預設為 false)
-      
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. 頁首歡迎區 + 連續登入天數
+            // 1. 頁首歡迎區
             Container(
               width: double.infinity,
-              // 🌟 3. 調整頂部 Padding (原本是 115，縮小成 20)
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 15),
               child: Row(
                 children: [
@@ -198,22 +193,44 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         const SizedBox(height: 4),
                         Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
                         
-                        // 連續登入天數 Chip
-                        if (!isGuest) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
-                                const SizedBox(width: 4),
-                                Text('已連續登入 $streakDays 天', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
-                              ],
-                            ),
+                        const SizedBox(height: 10),
+                        // 🌟 Jpoint 與 連續登入並排
+                        if (!isGuest) 
+                          Wrap(
+                            spacing: 8, // 水平間距
+                            runSpacing: 6, // 垂直間距 (換行時用)
+                            children: [
+                              // 連續登入 Chip
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text('$streakDays 天', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                                  ],
+                                ),
+                              ),
+                              // J-Pts Chip
+                              GestureDetector(
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen())),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.monetization_on_outlined, color: Colors.blue, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text('$jPts Pts', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.blue)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
                       ],
                     ),
                   ),
@@ -224,21 +241,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             // 2. 本週打卡日曆卡片
             _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
 
-            // 3. J-Pts 狀態
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: StatusChip(
-                  icon: Icons.monetization_on_outlined, 
-                  iconColor: AppColors.primary, 
-                  text: isGuest ? '登入購買 J-Pts' : '$jPts J-Pts',
-                  borderColor: Colors.transparent,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 15),
+            // 🌟 3. 原本單獨一列的 J-Pts 已經移到頁首，這裡改為增加一點間距
+            const SizedBox(height: 10),
             
             // 4. 今日學習目標
             _buildSectionHeader('今日學習目標'),

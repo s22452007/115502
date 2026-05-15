@@ -194,13 +194,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
                         
                         const SizedBox(height: 10),
-                        // 🌟 Jpoint 與 連續登入並排
+                        // Jpoint 與 連續登入並排
                         if (!isGuest) 
                           Wrap(
-                            spacing: 8, // 水平間距
-                            runSpacing: 6, // 垂直間距 (換行時用)
+                            spacing: 8, 
+                            runSpacing: 6, 
                             children: [
-                              // 連續登入 Chip
+                              // 🌟 已還原「已連續登入」字樣的 Chip
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
@@ -209,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                   children: [
                                     const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
                                     const SizedBox(width: 4),
-                                    Text('$streakDays 天', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                                    Text('已連續登入 $streakDays 天', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
                                   ],
                                 ),
                               ),
@@ -241,7 +241,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             // 2. 本週打卡日曆卡片
             _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
 
-            // 🌟 3. 原本單獨一列的 J-Pts 已經移到頁首，這裡改為增加一點間距
             const SizedBox(height: 10),
             
             // 4. 今日學習目標

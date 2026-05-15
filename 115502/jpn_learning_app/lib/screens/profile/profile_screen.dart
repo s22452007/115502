@@ -1,193 +1,352 @@
+import 'dart:convert';
+// Flutter 內建與第三方套件
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:jpn_learning_app/providers/user_provider.dart';
+
+// 專案內的設定與 Provider
 import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/helpers.dart'; 
+
+// UI 元件與其他畫面
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
+import 'package:jpn_learning_app/widgets/profile/profile_header.dart';
+import 'package:jpn_learning_app/widgets/profile/profile_radar_section.dart';
+import 'package:jpn_learning_app/widgets/profile/profile_achievements_section.dart';
+
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
+import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
-import 'package:jpn_learning_app/screens/profile/edit_profile_screen.dart';
-import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
-import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final userProvider = context.watch<UserProvider>();
-    final isGuest = !userProvider.isLoggedIn;
-    final userName = isGuest ? '訪客' : (userProvider.username ?? '使用者');
-    final email = isGuest ? '登入後同步資料' : (userProvider.email ?? '尚未設定 Email');
-    final jPts = userProvider.jPts;
-    final avatarUrl = userProvider.avatar;
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F5),
-      extendBody: true, // 🌟 配合懸浮導航欄
-      appBar: AppBar(
-        title: const Text('個人檔案', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 120), // 避免被懸浮導航欄遮擋
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            // 1. 使用者資訊區
-            Center(
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 55,
-                        backgroundColor: AppColors.primaryLighter,
-                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) 
-                            ? NetworkImage(avatarUrl) : null,
-                        child: (avatarUrl == null || avatarUrl.isEmpty) 
-                            ? const Icon(Icons.person, size: 60, color: AppColors.primary) : null,
-                      ),
-                      if (!isGuest)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                              child: const Icon(Icons.edit, color: Colors.white, size: 18),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(userName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 4),
-                  Text(email, style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
-                ],
-              ),
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoading = true;
+  List<double> _radarValues = [0.2, 0.2, 0.2, 0.2, 0.2];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  // ==========================================
+  // 邏輯函式區塊
+  // ==========================================
+
+  Future<void> _fetchData() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final result = await ApiClient.fetchProfileData(userId);
+    if (!mounted) return;
+
+    if (result.containsKey('ability')) {
+      setState(() {
+        _radarValues = [
+          result['ability']['listening'].toDouble(),
+          result['ability']['speaking'].toDouble(),
+          result['ability']['reading'].toDouble(),
+          result['ability']['writing'].toDouble(),
+          result['ability']['culture'].toDouble(),
+        ];
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('抓取資料失敗')));
+    }
+
+    if (result.containsKey('badge_progress')) {
+      context.read<UserProvider>().setBadgeProgress(result['badge_progress']);
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) {
+      _handleGuestClick('修改大頭貼');
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 300,
+      maxHeight: 300,
+      imageQuality: 50,
+    );
+
+    if (pickedFile != null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
+
+      final bytes = await pickedFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      final result = await ApiClient.uploadAvatar(userId, base64String);
+
+      if (!context.mounted) return;
+      if (result.containsKey('avatar')) {
+        context.read<UserProvider>().setAvatar(result['avatar']);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
+      }
+    }
+  }
+
+  Future<void> _editNickname() async {
+    final userId = context.read<UserProvider>().userId;
+    final controller = TextEditingController(
+      text: context.read<UserProvider>().username ?? '',
+    );
+    String? errorText;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('修改暱稱'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: '中文或英文，2～20 字',
+              border: const OutlineInputBorder(),
+              errorText: errorText,
             ),
-
-            const SizedBox(height: 30),
-            // 2. 數據卡片 (J-Pts)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
-                      child: const Icon(Icons.monetization_on_outlined, color: Colors.blue),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('剩餘 J-Pts', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w700)),
-                          Text('$jPts Pts', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen())),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      ),
-                      child: const Text('儲值', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                    ),
-                  ],
-                ),
-              ),
+            onChanged: (_) {
+              if (errorText != null) setDialogState(() => errorText = null);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
             ),
-
-            const SizedBox(height: 30),
-            // 3. 功能選單
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  _buildMenuTile(Icons.settings_outlined, '系統設定', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SystemSettingsScreen()));
-                  }),
-                  _buildMenuTile(Icons.help_outline_rounded, '幫助與回饋', () {}),
-                  _buildMenuTile(Icons.info_outline_rounded, '關於我們', () {}),
-                  const SizedBox(height: 20),
-                  _buildMenuTile(
-                    isGuest ? Icons.login_rounded : Icons.logout_rounded, 
-                    isGuest ? '登入帳號' : '登出帳號', 
-                    () {
-                      if (!isGuest) userProvider.logout();
-                      Navigator.pushAndRemoveUntil(
-                        context, 
-                        MaterialPageRoute(builder: (_) => const LoginScreen()), 
-                        (route) => false
-                      );
-                    },
-                    isDestructive: !isGuest,
-                  ),
-                ],
+            TextButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) {
+                  setDialogState(() => errorText = '請輸入暱稱');
+                  return;
+                }
+                final check = await ApiClient.checkUsername(
+                  name,
+                  userId: userId,
+                );
+                if (check['error'] != null) {
+                  setDialogState(() => errorText = check['error']);
+                  return;
+                }
+                if (check['available'] == false) {
+                  setDialogState(() => errorText = '此暱稱已被使用');
+                  return;
+                }
+                if (ctx.mounted) Navigator.pop(ctx, name);
+              },
+              child: const Text(
+                '確認',
+                style: TextStyle(color: Color.fromARGB(255, 74, 124, 89)),
               ),
             ),
           ],
         ),
       ),
-      // 🌟 修正後的導航列邏輯
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 4, // 個人檔案在最右邊
-        onTap: (i) {
-          if (i == 0) {
-            // 點擊最左邊：回到主頁 (Index 0)
-            Navigator.pushAndRemoveUntil(
-              context, 
-              MaterialPageRoute(builder: (_) => const HomeScreen()), 
-              (route) => false
-            );
-          } else if (i == 1) {
-            // 點擊相機 (Index 1)
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
-          } else if (i == 2) {
-            // 點擊搜尋 (Index 2)
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
-          } else if (i == 3) {
-            // 點擊紀錄 (Index 3)
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()));
-          } else if (i == 4) {
-            // 已經在個人檔案頁面，不需跳轉
-          }
-        },
-      ),
     );
+
+    if (result == null || result.isEmpty || userId == null) return;
+    final res = await ApiClient.updateUsername(userId, result);
+    if (!mounted) return;
+    if (res['error'] != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(res['error'])));
+      return;
+    }
+    context.read<UserProvider>().setUsername(result);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('暱稱已更新')));
   }
 
-  Widget _buildMenuTile(IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: isDestructive ? Colors.redAccent : const Color(0xFF2C3E50)),
-        title: Text(title, style: TextStyle(
-          color: isDestructive ? Colors.redAccent : const Color(0xFF2C3E50),
-          fontWeight: FontWeight.w800,
-        )),
-        trailing: const Icon(Icons.chevron_right_rounded),
+  void _handleGuestClick(String featureName) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+    final isGuest = userProvider.userId == null;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      drawer: const AppDrawer(),
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        title: IconButton(
+          icon: const Icon(Icons.camera_alt, color: Colors.white, size: 28),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color.fromARGB(255, 74, 124, 89),
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ProfileHeader(
+                    isGuest: isGuest,
+                    userName:
+                        userProvider.username ??
+                        userProvider.email?.split('@')[0] ??
+                        'Guest',
+                    friendId: userProvider.friendId,
+                    userAvatar: userProvider.avatar,
+                    
+                    rawLevel: userProvider.japaneseLevel, 
+                    
+                    onAvatarTap: _pickAndUploadImage,
+                    onNameTap: _editNickname,
+                    ),
+                  const SizedBox(height: 32),
+                  ProfileRadarSection(
+                    isGuest: isGuest,
+                    radarValues: _radarValues,
+                  ),
+                  const SizedBox(height: 24),
+                  ProfileAchievementsSection(
+                    isGuest: isGuest,
+                    onGuestClick: _handleGuestClick,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 收藏夾區塊
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F8E9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '收藏夾',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => isGuest
+                              ? _handleGuestClick('收藏夾')
+                              : Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PhotoFolderV2Screen(),
+                                  ),
+                                ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '查看全部',
+                                style: TextStyle(
+                                  color: Color.fromARGB(255, 74, 124, 89),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                color: Color.fromARGB(255, 74, 124, 89),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+      // 🌟 已經對應最新順序修正的導航欄
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 4,
+        onTap: (i) {
+          if (i == 0) {
+            // Index 0: 回到主頁 (並清空其他堆疊)
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          } else if (i == 1) {
+            // Index 1: 前往相機
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          } else if (i == 2) {
+            // Index 2: 前往搜尋
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            );
+          } else if (i == 3) {
+            // Index 3: 前往紀錄
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
+            );
+          } else if (i == 4) {
+            // Index 4: 個人檔案 (已在當前頁面，不做任何事)
+          }
+        },
       ),
     );
   }

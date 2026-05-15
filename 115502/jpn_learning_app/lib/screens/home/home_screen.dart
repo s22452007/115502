@@ -31,7 +31,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with RouteAware {
-  // 🌟 核心修正：主頁現在是 Index 0
   int _currentIndex = 0; 
   int? _lastUserId; 
   List<dynamic> _recentScenes = [];
@@ -159,12 +158,24 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline_rounded, size: 30), 
-            color: _textColor, 
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+          // 🌟 右上角頭像：點擊進入個人檔案
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              alignment: Alignment.center,
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primaryLighter,
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) 
+                    ? NetworkImage(avatarUrl) 
+                    : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty) 
+                    ? Icon(Icons.person, size: 20, color: AppColors.primary) 
+                    : null,
+              ),
+            ),
           ),
-          const SizedBox(width: 12),
         ],
       ),
       body: SingleChildScrollView(
@@ -259,12 +270,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           ],
         ),
       ),
-      // 🌟 調整後的 BottomNavBar 點擊邏輯
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (i) {
           if (i == 0) {
-             // 已經在主頁，不動作或執行重新整理
+             // 已經在主頁
           } else if (i == 1) {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
           } else if (i == 2) {

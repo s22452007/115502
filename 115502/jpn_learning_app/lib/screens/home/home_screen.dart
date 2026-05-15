@@ -59,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   void dispose() { routeObserver.unsubscribe(this); super.dispose(); }
+
   @override
   void didPopNext() { _syncHomeData(); }
 
@@ -88,10 +89,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       if (result.containsKey('badge_progress')) {
         userProvider.setBadgeProgress(result['badge_progress'] as Map<String, dynamic>);
       }
-      if (result.containsKey('jPts')) {
-        userProvider.setJPts((result['jPts'] as num).toInt());
+      if (result.containsKey('j_pts')) {
+        userProvider.setJPts((result['j_pts'] as num).toInt());
       }
-    } catch (e) { debugPrint('Badge 錯誤: $e'); }
+      if (result.containsKey('streak_days')) {
+        userProvider.setStreakDays((result['streak_days'] as num).toInt());
+      }
+    } catch (e) { debugPrint('資料同步錯誤: $e'); }
   }
 
   Future<void> _fetchRecentScenes(int userId) async {
@@ -115,8 +119,20 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     } catch (e) {}
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) return '早安';
+    if (hour >= 12 && hour < 18) return '午安';
+    return '晚安';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
+    List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
+
     final userProvider = context.watch<UserProvider>();
     final isGuest = !userProvider.isLoggedIn;
     final userName = isGuest ? '訪客' : (userProvider.username ?? '使用者');
@@ -128,8 +144,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        // 🌟 1. 改成實體背景色
+        backgroundColor: _flatCanvasColor,
         elevation: 0,
+        // 確保向上捲動時不會有陰影線條
+        scrolledUnderElevation: 0, 
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu_rounded, size: 30),
@@ -152,13 +171,16 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           const SizedBox(width: 12),
         ],
       ),
-      extendBodyBehindAppBar: true,
+      // 🌟 2. 移除 extendBodyBehindAppBar (預設為 false)
+      
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // 1. 頁首歡迎區 + 連續登入天數
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 115, 24, 15),
+              // 🌟 3. 調整頂部 Padding (原本是 115，縮小成 20)
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 15),
               child: Row(
                 children: [
                   CircleAvatar(
@@ -172,16 +194,37 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("你好,", style: TextStyle(fontSize: 14, color: _subTextColor, fontWeight: FontWeight.w600)),
+                        Text(_getGreeting(), style: TextStyle(fontSize: 14, color: _subTextColor, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
                         Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
+                        
+                        // 連續登入天數 Chip
+                        if (!isGuest) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                                const SizedBox(width: 4),
+                                Text('已連續登入 $streakDays 天', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            
+
+            // 2. 本週打卡日曆卡片
+            _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
+
+            // 3. J-Pts 狀態
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
               child: Align(
@@ -196,6 +239,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             ),
 
             const SizedBox(height: 15),
+            
+            // 4. 今日學習目標
+            _buildSectionHeader('今日學習目標'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: isGuest
@@ -204,6 +250,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             ),
 
             const SizedBox(height: 35),
+
+            // 5. 最近解鎖場景
+            _buildSectionHeader('最近解鎖場景', hasGalleryLink: true),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: RecentScenesList(
@@ -219,8 +268,65 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 2,
         onTap: (i) {
+          if (i == 0) Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
+          if (i == 3) Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData());
           if (i == 4) Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
         },
+      ),
+    );
+  }
+
+  // --- UI 組件方法 ---
+
+  Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
+    final now = DateTime.now();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('本週打卡', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor)),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (index) {
+              final date = weekDates[index];
+              final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
+              bool isCompleted = (now.difference(date).inDays >= 0 && streakDays > now.difference(date).inDays);
+              return Column(
+                children: [
+                  Text(weekDayNames[index], style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(color: isToday ? AppColors.primary : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), shape: BoxShape.circle),
+                    child: Center(child: isCompleted ? const Icon(Icons.check, color: Colors.white, size: 20) : Text(date.day.toString(), style: TextStyle(color: isToday ? Colors.white : _textColor, fontWeight: FontWeight.w900))),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {bool hasGalleryLink = false}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 15),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
+          if (hasGalleryLink)
+            GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
+              child: Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
+            ),
+        ],
       ),
     );
   }

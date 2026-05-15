@@ -31,6 +31,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with RouteAware {
+  // 🌟 核心修正：主頁現在是 Index 0
+  int _currentIndex = 0; 
   int? _lastUserId; 
   List<dynamic> _recentScenes = [];
   bool _isLoadingScenes = true;
@@ -59,23 +61,19 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   void dispose() { routeObserver.unsubscribe(this); super.dispose(); }
-
   @override
   void didPopNext() { _syncHomeData(); }
 
   Future<void> _syncHomeData() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
-
     if (userId == null) {
       if (!mounted) return;
       setState(() { _recentScenes = []; _isLoadingScenes = false; });
       return;
     }
-    
     if (!mounted) return;
     setState(() { _isLoadingScenes = true; });
-
     await _checkPendingFriendRequests(userId);
     await _fetchRecentScenes(userId);
     await _fetchAndCheckBadgeProgress(userId);
@@ -172,7 +170,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. 頁首歡迎區
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 15),
@@ -194,13 +191,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
                         
                         const SizedBox(height: 10),
-                        // Jpoint 與 連續登入並排
                         if (!isGuest) 
                           Wrap(
                             spacing: 8, 
                             runSpacing: 6, 
                             children: [
-                              // 🌟 已還原「已連續登入」字樣的 Chip
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
@@ -213,7 +208,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                   ],
                                 ),
                               ),
-                              // J-Pts Chip
                               GestureDetector(
                                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen())),
                                 child: Container(
@@ -238,12 +232,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ),
 
-            // 2. 本週打卡日曆卡片
             _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
 
             const SizedBox(height: 10),
             
-            // 4. 今日學習目標
             _buildSectionHeader('今日學習目標'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -254,7 +246,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
             const SizedBox(height: 35),
 
-            // 5. 最近解鎖場景
             _buildSectionHeader('最近解鎖場景', hasGalleryLink: true),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -268,18 +259,25 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           ],
         ),
       ),
+      // 🌟 調整後的 BottomNavBar 點擊邏輯
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 2,
+        currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 0) Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
-          if (i == 3) Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData());
-          if (i == 4) Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+          if (i == 0) {
+             // 已經在主頁，不動作或執行重新整理
+          } else if (i == 1) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
+          } else if (i == 2) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())).then((_) => _syncHomeData());
+          } else if (i == 3) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData());
+          } else if (i == 4) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _syncHomeData());
+          }
         },
       ),
     );
   }
-
-  // --- UI 組件方法 ---
 
   Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
     final now = DateTime.now();

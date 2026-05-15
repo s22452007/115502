@@ -7,27 +7,18 @@ class UserProvider extends ChangeNotifier {
   String? _username;
   String? _avatar;
 
-  // 連續天數與點數
   int _streakDays = 0;
   int _jPts = 0;
   String? _friendId;
 
-  // 存放今日進度
   int _dailyScans = 0;
   int get dailyScans => _dailyScans;
 
-  // 存放待確認的好友邀請數量
   int _pendingFriendRequests = 0;
   int get pendingFriendRequests => _pendingFriendRequests;
 
-  // ==========================================
-  // --- ✅ 登入狀態 ---
-  // ==========================================
   bool get isLoggedIn => _userId != null;
 
-  // ==========================================
-  // --- 🏆 徽章系統狀態 ---
-  // ==========================================
   Map<String, int> _badgeProgress = {};
   Map<String, int> get badgeProgress => _badgeProgress;
 
@@ -38,9 +29,6 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ==========================================
-  // --- 基本資料 getter ---
-  // ==========================================
   int? get userId => _userId;
   String get japaneseLevel => _japaneseLevel;
   String? get email => _email;
@@ -50,62 +38,22 @@ class UserProvider extends ChangeNotifier {
   int get streakDays => _streakDays;
   int get jPts => _jPts;
 
-  // ==========================================
-  // --- 基本資料 setter ---
-  // ==========================================
-  void setPendingFriendRequests(int count) {
-    _pendingFriendRequests = count;
-    notifyListeners();
-  }
+  void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
+  void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
+  void setUserId(int? id) { _userId = id; notifyListeners(); }
+  void setJapaneseLevel(String level) { _japaneseLevel = level; notifyListeners(); }
+  void setEmail(String? email) { _email = email; notifyListeners(); }
+  void setUsername(String? username) { _username = username; notifyListeners(); }
+  void setAvatar(String? avatar) { _avatar = avatar; notifyListeners(); }
+  void setStreakDays(int days) { _streakDays = days; notifyListeners(); }
+  void setFriendId(String? id) { _friendId = id; notifyListeners(); }
 
-  void setDailyScans(int scans) {
-    _dailyScans = scans;
-    notifyListeners();
-  }
-
-  void setUserId(int? id) {
-    _userId = id;
-    notifyListeners();
-  }
-
-  void setJapaneseLevel(String level) {
-    _japaneseLevel = level;
-    notifyListeners();
-  }
-
-  void setEmail(String? email) {
-    _email = email;
-    notifyListeners();
-  }
-
-  void setUsername(String? username) {
-    _username = username;
-    notifyListeners();
-  }
-
-  void setAvatar(String? avatar) {
-    _avatar = avatar;
-    notifyListeners();
-  }
-
-  void setStreakDays(int days) {
-    _streakDays = days;
-    notifyListeners();
-  }
-
+  // 🌟 確保點數更新方法名稱一致
   void setJPts(int pts) {
     _jPts = pts;
     notifyListeners();
   }
 
-  void setFriendId(String? id) {
-    _friendId = id;
-    notifyListeners();
-  }
-
-  // ==========================================
-  // --- ✅ 一次設定登入者資料（推薦）---
-  // ==========================================
   void setLoginUser({
     required int userId,
     String? email,
@@ -133,9 +81,6 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ==========================================
-  // --- 登出 ---
-  // ==========================================
   void logout() {
     _userId = null;
     _email = null;

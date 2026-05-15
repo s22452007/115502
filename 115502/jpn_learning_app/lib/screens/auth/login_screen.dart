@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 // 2. 第三方套件
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 🌟 新增：用於判斷新手引導
 
 // 3. 我們自己寫的工具與狀態管理
 import 'package:jpn_learning_app/utils/constants.dart';
@@ -16,6 +17,7 @@ import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
+import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart'; // 🌟 新增：新手引導頁面
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,6 +36,29 @@ class _LoginScreenState extends State<LoginScreen> {
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
   final Color _textDark = const Color(0xFF2C3E50);
   final Color _inputFillColor = const Color(0xFFF4F7F5);
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus(); // 🌟 畫面初始化時檢查是否需要顯示新手引導
+  }
+
+  // 🌟 新增：新手引導判斷邏輯
+  Future<void> _checkOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isFirstTime = prefs.getBool('isFirstTime') ?? true;
+
+    if (isFirstTime) {
+      await prefs.setBool('isFirstTime', false); // 標記為已看過
+      if (!mounted) return;
+      
+      // 自動跳轉到新手引導頁面
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      );
+    }
+  }
 
   int _toInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
@@ -179,10 +204,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
                     child: Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
-                          child: const Icon(Icons.menu_book_rounded, size: 70, color: AppColors.primary),
+                        // 🌟 替換點：將 LOGO 放進來，並保留你原本的 Icon 樣式作為防呆
+                        Image.asset(
+                          'assets/images/logo.png',
+                          width: 120, // 調整到適合的大小
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
+                            child: const Icon(Icons.menu_book_rounded, size: 70, color: AppColors.primary),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         const Text(
@@ -262,7 +292,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
 
-                        // 🌟 Commit 5: 簡化分隔線
                         Row(
                           children: [
                             Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1.5)),
@@ -275,7 +304,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // 🌟 Commit 5: 官方 Google 按鈕
                         _buildGoogleButton(onTap: _handleGoogleLogin),
                         const SizedBox(height: 24),
 
@@ -290,7 +318,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  // 🌟 Commit 5: 頁尾優化
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 24),
@@ -349,7 +376,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 🌟 Commit 5: 官方 Google 按鈕實作
   Widget _buildGoogleButton({required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
@@ -375,7 +401,7 @@ class _LoginScreenState extends State<LoginScreen> {
               "使用 Google 帳號登入",
               style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
             ),
-            const SizedBox(width: 36), // 補償 Logo 寬度
+            const SizedBox(width: 36), 
           ],
         ),
       ),

@@ -1,21 +1,23 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/route_observer.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart';
-import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
 import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
@@ -29,14 +31,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with RouteAware {
-  int _currentIndex = 2; 
-  int? _lastUserId;
+  int _currentIndex = 0; 
+  int? _lastUserId; 
   List<dynamic> _recentScenes = [];
   bool _isLoadingScenes = true;
 
   final Color _textColor = const Color(0xFF2C3E50); 
   final Color _subTextColor = const Color(0xFF8E9AAB);
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
+  final Color _brandColor = const Color(0xFF006D3E);
 
   @override
   void initState() {
@@ -57,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   void dispose() { routeObserver.unsubscribe(this); super.dispose(); }
-
   @override
   void didPopNext() { _syncHomeData(); }
 
@@ -71,56 +73,29 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     }
     if (!mounted) return;
     setState(() { _isLoadingScenes = true; });
-    await _checkPendingFriendRequests();
-    await _fetchRecentScenes();
-    await _fetchAndCheckBadgeProgress();
+    await _checkPendingFriendRequests(userId);
+    await _fetchRecentScenes(userId);
+    await _fetchAndCheckBadgeProgress(userId);
   }
 
-  Future<void> _fetchAndCheckBadgeProgress() async {
+  Future<void> _fetchAndCheckBadgeProgress(int userId) async {
     final userProvider = context.read<UserProvider>();
-    final userId = userProvider.userId;
-    if (userId == null) return;
     try {
       final result = await ApiClient.fetchProfileData(userId);
       if (!mounted) return;
       if (result.containsKey('badge_progress')) {
-        final newProgress = result['badge_progress'] as Map<String, dynamic>;
-        Map<String, dynamic> notifiedLevels = {};
-        final rawNotified = result['notified_levels'];
-        if (rawNotified is Map) {
-          notifiedLevels = Map<String, dynamic>.from(rawNotified);
-        } else if (rawNotified is String && rawNotified.isNotEmpty) {
-          try { notifiedLevels = json.decode(rawNotified); } catch (e) {}
-        }
-        for (String id in BadgeUtils.milestones.keys) {
-          int currentVal = 0, currentLvl = 0;
-          if (id == 'level_01') {
-            final String? levelStr = result['japanese_level'];
-            currentLvl = BadgeUtils.japaneseLevelToNumber(levelStr);
-            if (levelStr != null) userProvider.setJapaneseLevel(levelStr);
-          } else {
-            currentVal = (newProgress[id] is int) ? newProgress[id] : (newProgress[id] as num?)?.toInt() ?? 0;
-            currentLvl = BadgeUtils.calculateLevel(currentVal, id);
-          }
-          int notifiedLvl = (notifiedLevels[id] as num?)?.toInt() ?? 0;
-          if (currentLvl > notifiedLvl) {
-            await LevelUpDialog.show(context, badgeId: id, level: currentLvl);
-            await ApiClient.markBadgeSeen(userId, id, currentLvl);
-          }
-        }
-        userProvider.setBadgeProgress(newProgress);
+        userProvider.setBadgeProgress(result['badge_progress'] as Map<String, dynamic>);
       }
-    } catch (e) { debugPrint('❌ [BadgeCheck] 發生錯誤: $e'); }
+      if (result.containsKey('j_pts')) {
+        userProvider.setJPts((result['j_pts'] as num).toInt());
+      }
+      if (result.containsKey('streak_days')) {
+        userProvider.setStreakDays((result['streak_days'] as num).toInt());
+      }
+    } catch (e) { debugPrint('資料同步錯誤: $e'); }
   }
 
-  Future<void> _fetchRecentScenes() async {
-    final userProvider = context.read<UserProvider>();
-    final userId = userProvider.userId;
-    if (userId == null) {
-      if (!mounted) return;
-      setState(() { _recentScenes = []; _isLoadingScenes = false; });
-      return;
-    }
+  Future<void> _fetchRecentScenes(int userId) async {
     try {
       final scenes = await ApiClient.getUnlockedScenes(userId, limit: 3);
       if (!mounted) return;
@@ -131,15 +106,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     }
   }
 
-  Future<void> _checkPendingFriendRequests() async {
+  Future<void> _checkPendingFriendRequests(int userId) async {
     final userProvider = context.read<UserProvider>();
-    final userId = userProvider.userId;
-    if (userId == null) return;
     try {
       final result = await ApiClient.getPendingRequests(userId);
-      if (result.containsKey('pending_requests') && result['pending_requests'] is List) {
-        final List requests = result['pending_requests'];
-        userProvider.setPendingFriendRequests(requests.length);
+      if (result.containsKey('pending_requests')) {
+        userProvider.setPendingFriendRequests((result['pending_requests'] as List).length);
       }
     } catch (e) {}
   }
@@ -153,16 +125,14 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    // 動態計算本週日期
     final now = DateTime.now();
     final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
     List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
     List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
 
     final userProvider = context.watch<UserProvider>();
-    final isGuest = userProvider.userId == null;
-    final userEmail = userProvider.email ?? '';
-    final userName = isGuest ? '訪客' : ((userProvider.username?.trim().isNotEmpty ?? false) ? userProvider.username!.trim() : (userEmail.isNotEmpty ? userEmail.split('@')[0] : '使用者'));
+    final isGuest = !userProvider.isLoggedIn;
+    final userName = isGuest ? '訪客' : (userProvider.username ?? '使用者');
     final jPts = userProvider.jPts;
     final streakDays = userProvider.streakDays;
     final avatarUrl = userProvider.avatar;
@@ -171,8 +141,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: _flatCanvasColor,
         elevation: 0,
+        scrolledUnderElevation: 0, 
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu_rounded, size: 30),
@@ -180,29 +151,39 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        // 🌟 修正點：將鈴鐺換回個人資料 ICON 並加上跳轉邏輯
+        title: Image.asset(
+          'assets/images/logo.png', 
+          height: 35, 
+          errorBuilder: (c,e,s) => Text("J-LENS", style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900))
+        ),
+        centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline_rounded, size: 30), 
-            color: _textColor, 
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
+          // 🌟 右上角頭像：點擊進入個人檔案
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              alignment: Alignment.center,
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primaryLighter,
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) 
+                    ? NetworkImage(avatarUrl) 
+                    : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty) 
+                    ? Icon(Icons.person, size: 20, color: AppColors.primary) 
+                    : null,
+              ),
+            ),
           ),
-          const SizedBox(width: 12),
         ],
       ),
-      extendBodyBehindAppBar: true,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. 頁首個人資料區
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 115, 24, 15),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 15),
               child: Row(
                 children: [
                   CircleAvatar(
@@ -218,29 +199,43 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       children: [
                         Text(_getGreeting(), style: TextStyle(fontSize: 14, color: _subTextColor, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
-                        Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, height: 1.2, letterSpacing: 0.5)),
+                        Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
                         
-                        if (!isGuest) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '已連續登入 $streakDays 天',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary),
+                        const SizedBox(height: 10),
+                        if (!isGuest) 
+                          Wrap(
+                            spacing: 8, 
+                            runSpacing: 6, 
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text('已連續登入 $streakDays 天', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              GestureDetector(
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen())),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.monetization_on_outlined, color: Colors.blue, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text('$jPts Pts', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.blue)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
                       ],
                     ),
                   ),
@@ -248,43 +243,27 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ),
 
-            // 2. 打卡日曆
             _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
 
-            // 3. J-Pts
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: () { Navigator.push(context, MaterialPageRoute(builder: (_) => isGuest ? const LoginScreen() : const BuyPointsScreen())); },
-                  child: StatusChip(
-                    icon: Icons.monetization_on_outlined, 
-                    iconColor: AppColors.primary, 
-                    text: isGuest ? '登入購買 J-Pts' : '$jPts J-Pts',
-                    borderColor: Colors.transparent, 
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 15),
+            const SizedBox(height: 10),
+            
             _buildSectionHeader('今日學習目標'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: isGuest
-                  ? PremiumLockedOverlay(message: '登入啟用今日目標', child: DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress))
-                  : DailyGoalCard(onReturnFromCamera: _fetchAndCheckBadgeProgress),
+                  ? PremiumLockedOverlay(message: '登入啟用今日目標', child: DailyGoalCard(onReturnFromCamera: () => _syncHomeData()))
+                  : DailyGoalCard(onReturnFromCamera: () => _syncHomeData()),
             ),
 
             const SizedBox(height: 35),
+
             _buildSectionHeader('最近解鎖場景', hasGalleryLink: true),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: RecentScenesList(
                 recentScenes: _recentScenes,
                 isLoadingScenes: _isLoadingScenes,
-                onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, context.read<UserProvider>().userId?.toString()),
+                onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, userProvider.userId?.toString()),
               ),
             ),
             const SizedBox(height: 40),
@@ -292,22 +271,26 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         ),
       ),
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 2,
+        currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 0) Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
-          if (i == 1) Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())).then((_) => _syncHomeData());
-          if (i == 2) Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen())).then((_) => _syncHomeData());
-          if (i == 3) Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData());
-          if (i == 4) Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _syncHomeData());
+          if (i == 0) {
+             // 已經在主頁
+          } else if (i == 1) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
+          } else if (i == 2) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())).then((_) => _syncHomeData());
+          } else if (i == 3) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData());
+          } else if (i == 4) {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _syncHomeData());
+          }
         },
       ),
     );
   }
 
-  // 打卡日曆元件
   Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
     final now = DateTime.now();
-
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -323,51 +306,22 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             children: List.generate(7, (index) {
               final date = weekDates[index];
               final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
-              
-              bool isCompleted = false;
-              int daysDifference = now.difference(DateTime(date.year, date.month, date.day)).inDays;
-              if (daysDifference >= 0 && streakDays > daysDifference) {
-                isCompleted = true;
-              }
-
-              return _buildCalendarDayNode(
-                weekDayNames[index],
-                date.day.toString(),
-                isToday: isToday,
-                isCompleted: isCompleted,
+              bool isCompleted = (now.difference(date).inDays >= 0 && streakDays > now.difference(date).inDays);
+              return Column(
+                children: [
+                  Text(weekDayNames[index], style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(color: isToday ? AppColors.primary : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), shape: BoxShape.circle),
+                    child: Center(child: isCompleted ? const Icon(Icons.check, color: Colors.white, size: 20) : Text(date.day.toString(), style: TextStyle(color: isToday ? Colors.white : _textColor, fontWeight: FontWeight.w900))),
+                  ),
+                ],
               );
             }),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCalendarDayNode(String dayName, String dateNum, {bool isToday = false, bool isCompleted = false}) {
-    Color nodeColor = Colors.grey.withOpacity(0.08);
-    Color dateTextColor = _textColor;
-
-    if (isToday) {
-      nodeColor = AppColors.primary;
-      dateTextColor = Colors.white;
-    } else if (isCompleted) {
-      nodeColor = AppColors.primary.withOpacity(0.7);
-    }
-
-    return Column(
-      children: [
-        Text(dayName, style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 10),
-        Container(
-          width: 38, height: 38,
-          decoration: BoxDecoration(color: nodeColor, shape: BoxShape.circle),
-          child: Center(
-            child: isCompleted
-                ? const Icon(Icons.check, color: Colors.white, size: 20)
-                : Text(dateNum, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: dateTextColor)),
-          ),
-        ),
-      ],
     );
   }
 
@@ -381,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           if (hasGalleryLink)
             GestureDetector(
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
-              child: Text('我的單字探險 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
+              child: Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
             ),
         ],
       ),

@@ -261,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 收藏夾區塊因為很單純，可以直接寫在這裡，或是你之後也可以把它拆出去
+                  // 收藏夾區塊
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -314,31 +314,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+      // 🌟 已經對應最新順序修正的導航欄
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 4,
         onTap: (i) {
           if (i == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const CameraScreen()),
-            );
-          } else if (i == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
-            );
-          } else if (i == 2) {
-            // 首頁用這個清空所有堆疊是正確的！
+            // Index 0: 回到主頁 (並清空其他堆疊)
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => const HomeScreen()),
               (route) => false,
             );
+          } else if (i == 1) {
+            // Index 1: 前往相機
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          } else if (i == 2) {
+            // Index 2: 前往搜尋
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            );
           } else if (i == 3) {
+            // Index 3: 前往紀錄
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
             );
+          } else if (i == 4) {
+            // Index 4: 個人檔案 (已在當前頁面，不做任何事)
           }
         },
       ),

@@ -305,13 +305,22 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               style: TextStyle(fontSize: 14, color: Colors.black54),
             ),
             const SizedBox(height: 12),
-            Text(
-              vocab['ex_jp']!,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  vocab['ex_jp']!,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.volume_up, color: _darkGreen, size: 20),
+                  onPressed: () => _speak(vocab['ex_jp']!),
+                ),
+              ],
             ),
             Text(
               vocab['ex_en']!,

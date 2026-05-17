@@ -27,6 +27,12 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
   // 🌟 魔法變數：控制綠色捲簾的當前高度 (一開始預設 550)
   double _curtainHeight = 550.0;
   final Set<int> _collectedIds = {};
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
   @override
   Widget build(BuildContext context) {

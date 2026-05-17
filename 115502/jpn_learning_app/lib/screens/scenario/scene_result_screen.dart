@@ -364,10 +364,11 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.volume_up,
-                        color: Colors.blueGrey,
-                        size: 20,
+                      IconButton(
+                        icon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                        onPressed: () => _speak(sentence!['japanese'] ?? ''),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                       const SizedBox(width: 10),
                       Expanded(

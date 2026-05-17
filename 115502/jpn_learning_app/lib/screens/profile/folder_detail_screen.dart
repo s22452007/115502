@@ -221,7 +221,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.volume_up, size: 20, color: primaryGreen),
-                      onPressed: () => _speak(vocab['word'] ?? ''),
+                      onPressed: () => _speak(vocab['kana'] ?? ''),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),

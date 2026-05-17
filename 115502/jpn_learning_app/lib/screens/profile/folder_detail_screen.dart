@@ -211,10 +211,21 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(
-                child: Text(
-                  vocab['word'] ?? '',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryGreen),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      vocab['word'] ?? '',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryGreen),
+                      textAlign: TextAlign.center,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.volume_up, size: 20, color: primaryGreen),
+                      onPressed: () => _speak(vocab['word'] ?? ''),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
             ),

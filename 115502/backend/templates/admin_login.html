@@ -12,7 +12,7 @@
         /* ===== 左側品牌區 ===== */
         .brand-side {
             width: 45%;
-            background: #4a7a54;
+            background: linear-gradient(150deg, #3a6644 0%, #4a7a54 60%, #3f7049 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -25,63 +25,98 @@
         .brand-side::before {
             content: '';
             position: absolute;
-            width: 320px; height: 320px;
+            width: 420px; height: 420px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.06);
-            top: -80px; right: -80px;
+            background: rgba(255,255,255,0.05);
+            top: -120px; right: -120px;
         }
         .brand-side::after {
             content: '';
             position: absolute;
-            width: 200px; height: 200px;
+            width: 280px; height: 280px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.05);
-            bottom: -40px; left: -40px;
+            background: rgba(255,255,255,0.04);
+            bottom: -80px; left: -80px;
+        }
+        .brand-deco-dot {
+            position: absolute;
+            width: 160px; height: 160px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.07);
+            bottom: 120px; right: -60px;
+        }
+        .brand-deco-dot2 {
+            position: absolute;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+            top: 200px; right: 40px;
         }
 
+        .brand-logo {
+            width: 68px; height: 68px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            margin-bottom: 36px;
+            position: relative; z-index: 1;
+        }
         .brand-tag {
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            letter-spacing: 3px;
-            color: rgba(255,255,255,0.5);
+            letter-spacing: 4px;
+            color: rgba(255,255,255,0.45);
             text-transform: uppercase;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
+            position: relative; z-index: 1;
         }
         .brand-title {
-            font-size: 3.2rem;
+            font-size: 3.4rem;
             font-weight: 900;
             color: white;
-            line-height: 1.1;
-            letter-spacing: -1px;
-            margin-bottom: 16px;
+            line-height: 1.05;
+            letter-spacing: -1.5px;
+            margin-bottom: 14px;
+            position: relative; z-index: 1;
         }
         .brand-subtitle {
-            font-size: 1rem;
-            color: rgba(255,255,255,0.6);
-            line-height: 1.6;
-            margin-bottom: 48px;
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.7;
+            margin-bottom: 40px;
+            position: relative; z-index: 1;
         }
         .brand-divider {
-            width: 48px;
-            height: 4px;
-            background: rgba(255,255,255,0.3);
+            width: 40px;
+            height: 3px;
+            background: rgba(255,255,255,0.25);
             border-radius: 2px;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
+            position: relative; z-index: 1;
         }
-        .brand-stats {
+        .brand-features {
             display: flex;
-            gap: 32px;
+            flex-direction: column;
+            gap: 14px;
+            position: relative; z-index: 1;
         }
-        .brand-stat .num {
-            font-size: 1.6rem;
-            font-weight: 900;
+        .brand-feature {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            color: rgba(255,255,255,0.75);
+            font-size: 0.88rem;
+        }
+        .brand-feature-icon {
+            width: 34px; height: 34px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem;
             color: white;
-            line-height: 1;
-        }
-        .brand-stat .lbl {
-            font-size: 0.72rem;
-            color: rgba(255,255,255,0.5);
-            margin-top: 4px;
+            flex-shrink: 0;
         }
 
         /* ===== 右側表單區 ===== */
@@ -173,18 +208,30 @@
 
     <!-- 左側品牌區 -->
     <div class="brand-side">
+        <div class="brand-deco-dot"></div>
+        <div class="brand-deco-dot2"></div>
+
+        <div class="brand-logo"><i class="bi bi-camera-fill"></i></div>
         <div class="brand-tag">Admin Panel</div>
         <div class="brand-title">JLens<br>後台系統</div>
+        <div class="brand-subtitle">日語學習平台管理中心<br>全面掌握使用者與學習資料</div>
         <div class="brand-divider"></div>
-        <div class="brand-subtitle">管理使用者、教材與意見回饋<br>讓學習體驗持續優化</div>
-        <div class="brand-stats">
-            <div class="brand-stat">
-                <div class="num">8</div>
-                <div class="lbl">管理功能</div>
+        <div class="brand-features">
+            <div class="brand-feature">
+                <div class="brand-feature-icon"><i class="bi bi-people-fill"></i></div>
+                <span>使用者資料與點數管理</span>
             </div>
-            <div class="brand-stat">
-                <div class="num">5</div>
-                <div class="lbl">管理者帳號</div>
+            <div class="brand-feature">
+                <div class="brand-feature-icon"><i class="bi bi-book-fill"></i></div>
+                <span>教材單字與測驗題目</span>
+            </div>
+            <div class="brand-feature">
+                <div class="brand-feature-icon"><i class="bi bi-chat-dots-fill"></i></div>
+                <span>意見回饋即時回覆</span>
+            </div>
+            <div class="brand-feature">
+                <div class="brand-feature-icon"><i class="bi bi-image-fill"></i></div>
+                <span>照片審核與內容管控</span>
             </div>
         </div>
     </div>

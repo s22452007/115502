@@ -412,13 +412,21 @@ class _VocabCardState extends State<VocabCard> {
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      widget.vocab['word'],
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF333333),
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          widget.vocab['word'],
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.volume_up, color: Colors.blueGrey),
+                          onPressed: () => _speak(widget.vocab['word']),
+                        ),
+                      ],
                     ),
                   ],
                 ),

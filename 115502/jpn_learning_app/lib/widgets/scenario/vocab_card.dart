@@ -18,6 +18,12 @@ class _VocabCardState extends State<VocabCard> {
   bool _isLoading = true;
   bool _isStarred = false;
   List<dynamic> _sentences = []; 
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
   @override
   void initState() {

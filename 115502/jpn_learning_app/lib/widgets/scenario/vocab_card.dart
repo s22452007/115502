@@ -425,7 +425,7 @@ class _VocabCardState extends State<VocabCard> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.volume_up, color: Colors.blueGrey),
-                          onPressed: () => _speak(widget.vocab['word']),
+                          onPressed: () => _speak(widget.vocab['kana']),
                         ),
                       ],
                     ),

@@ -29,6 +29,12 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
   static const Color starColor = Color(0xFFFFC107);
 
   bool _isStarred = true; 
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speakWord(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
 Future<void> _toggleStar() async {
     final userId = context.read<UserProvider>().userId;

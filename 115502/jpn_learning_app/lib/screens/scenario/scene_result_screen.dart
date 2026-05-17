@@ -269,7 +269,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.volume_up, color: Colors.blueGrey),
-                              onPressed: () => _speak(vocab['word'] ?? ''),
+                              onPressed: () => _speak(vocab['kana'] ?? ''),
                             ),
                           ],
                         ),

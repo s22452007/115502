@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 /// 單字底部表單類別
 /// 提供靜態方法來顯示場景單字的解鎖進度

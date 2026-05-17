@@ -157,7 +157,7 @@ Future<void> _toggleStar() async {
                         ),
                         IconButton(
                           icon: const Icon(Icons.volume_up, color: primaryGreen, size: 32),
-                          onPressed: () => _speakWord(widget.word),
+                          onPressed: () => _speakWord(widget.kana),
                         ),
                       ],
                     ),

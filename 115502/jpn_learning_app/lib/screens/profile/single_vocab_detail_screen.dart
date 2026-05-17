@@ -76,12 +76,6 @@ Future<void> _toggleStar() async {
     }
   }
 
-  void _playSound(String text) {
-    // 播放發音
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('正在播放發音：$text')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

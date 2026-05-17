@@ -129,6 +129,11 @@ class VocabBottomSheet {
                                         ),
                                       ),
                                     ),
+                                    if (isUnlocked)
+                                      IconButton(
+                                        icon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                                        onPressed: () => speak(vocab['word']),
+                                      ),
                                   ],
                                 ),
                               );

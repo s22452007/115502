@@ -257,13 +257,21 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          vocab['word'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF333333),
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              vocab['word'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.volume_up, color: Colors.blueGrey),
+                              onPressed: () => _speak(vocab['word'] ?? ''),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 // import 'package:jpn_learning_app/utils/constants.dart'; // 如果沒用到可以先註解掉
+import 'package:flutter_tts/flutter_tts.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
   final String topicTitle; // 🌟 用來接收上一頁傳來的主題

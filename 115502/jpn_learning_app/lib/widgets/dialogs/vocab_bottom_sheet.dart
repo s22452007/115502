@@ -22,6 +22,12 @@ class VocabBottomSheet {
     }
 
     final textColor = const Color(0xFF333333);
+    final flutterTts = FlutterTts();
+    
+    Future<void> speak(String text) async {
+      await flutterTts.setLanguage("ja-JP");
+      await flutterTts.speak(text);
+    }
 
     showModalBottomSheet(
       context: context,

@@ -276,7 +276,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                 ),
                 IconButton(
                   icon: Icon(Icons.volume_up, color: _darkGreen),
-                  onPressed: () => _speak(vocab['word']!),
+                  onPressed: () => _speak(vocab['kana']!),
                 ),
               ],
             ),

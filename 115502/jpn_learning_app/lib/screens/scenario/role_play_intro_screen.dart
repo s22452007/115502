@@ -17,6 +17,12 @@ class RolePlayIntroScreen extends StatefulWidget {
 class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
   final PageController _pageController = PageController(viewportFraction: 0.78);
   final Color _darkGreen = const Color(0xFF4A7A4D);
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
   // 🌟 新增的「情境小資料庫」(模擬未來 AI)
   Map<String, dynamic> _getTopicData() {

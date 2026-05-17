@@ -6,6 +6,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class SceneResultScreen extends StatefulWidget {
   final String imagePath;

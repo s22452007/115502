@@ -277,7 +277,7 @@ Future<void> _toggleStar() async {
           const SizedBox(width: 8),
           // 右側：實體播放按鈕
           GestureDetector(
-            onTap: () => _playSound(sentence),
+            onTap: () => _speakWord(sentence),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

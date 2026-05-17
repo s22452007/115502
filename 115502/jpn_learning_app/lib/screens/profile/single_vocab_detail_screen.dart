@@ -149,16 +149,23 @@ Future<void> _toggleStar() async {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // 主單字置中放大
-                    Center(
-                      child: Text(
-                        widget.word,
-                        style: const TextStyle(
-                          fontSize: 44,
-                          fontWeight: FontWeight.w900,
-                          color: textColor,
+                    // 主單字置中放大與發音按鈕
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.word,
+                          style: const TextStyle(
+                            fontSize: 44,
+                            fontWeight: FontWeight.w900,
+                            color: textColor,
+                          ),
                         ),
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.volume_up, color: primaryGreen, size: 32),
+                          onPressed: () => _speakWord(widget.word),
+                        ),
+                      ],
                     ),
                   ],
                 ),

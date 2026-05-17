@@ -30,6 +30,12 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _vocabs = [];
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
   @override
   void initState() {

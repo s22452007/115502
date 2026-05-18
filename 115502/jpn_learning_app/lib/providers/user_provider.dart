@@ -66,6 +66,18 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updatePhotoUsage({int? countToday, int? extraCount}) {
+    if (countToday != null) _photoCountToday = countToday;
+    if (extraCount != null) _photoExtraCount = extraCount;
+    notifyListeners();
+  }
+
+  void updateAIUsage({int? countToday, int? extraCount}) {
+    if (countToday != null) _aiCountToday = countToday;
+    if (extraCount != null) _aiExtraCount = extraCount;
+    notifyListeners();
+  }
+
   bool get hasActiveSubscription {
     if (!_isPremium) return false;
     if (_subscriptionEndDate == null) return false;

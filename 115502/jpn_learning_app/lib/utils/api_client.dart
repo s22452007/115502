@@ -313,9 +313,26 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
       );
-      return jsonDecode(response.body);
+      
+      final data = jsonDecode(response.body);
+      data['statusCode'] = response.statusCode; 
+      return data;
     } catch (e) {
-      print('更新進度連線失敗: $e');
+      return {'error': '網路連線失敗', 'statusCode': 500};
+    }
+  }
+
+  // 取得使用狀態 (X / 3次 等數據)
+  static Future<Map<String, dynamic>> getUsageStatus(int userId) async {
+    final url = Uri.parse('$baseUrl/user/usage_status/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        // 加上 "as Map<String, dynamic>" 明確告訴編譯器它的型別
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return {'error': '無法取得使用量'};
+    } catch (e) {
       return {'error': '網路連線失敗'};
     }
   }
@@ -1156,9 +1173,25 @@ class ApiClient {
           'feature': feature,
         }),
       );
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
     } catch (e) {
-      return {'error': '網路連線失敗'};
+      return {'error': '網路連線失敗', '_status': 0};
+    }
+  }
+
+  static Future<Map<String, dynamic>> incrementScan(int userId) async {
+    final url = Uri.parse('$baseUrl/user/increment_scan');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
+    } catch (e) {
+      return {'error': '網路連線失敗', '_status': 0};
     }
   }
 
@@ -1196,20 +1229,10 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
       );
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
     } catch (e) {
-      return {'error': '網路連線失敗'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> getUsageStatus(int userId) async {
-    final url = Uri.parse('$baseUrl/user/usage_status/$userId');
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) return jsonDecode(response.body);
-      return {'error': '無法取得使用量'};
-    } catch (e) {
-      return {'error': '網路連線失敗'};
+      return {'error': '網路連線失敗', '_status': 0};
     }
   }
 }

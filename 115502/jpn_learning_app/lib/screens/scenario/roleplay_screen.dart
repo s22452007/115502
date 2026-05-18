@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert'; // 新增：用來解析未來後端回傳的 JSON
+import 'dart:convert';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 class RoleplayScreen extends StatefulWidget {
   final String topicTitle;
@@ -24,9 +26,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   // 功能 4：快捷回覆籌碼資料
   List<String> _quickReplies = [];
 
+  // 使用量顯示狀態
+  int _aiUsed = 0;
+  int _aiMax = 5;
+  int _aiExtra = 0;
+
   @override
   void initState() {
     super.initState();
+    _fetchUsageData(); // 初始化時抓取使用量
+
     _messages.add({
       'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
       'isUserMessage': false,
@@ -37,7 +46,119 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
   }
 
+  // 抓取最新使用量
+  Future<void> _fetchUsageData() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    final res = await ApiClient.getUsageStatus(userId);
+    if (mounted && !res.containsKey('error')) {
+      setState(() {
+        _aiUsed = (res['ai_count_today'] as num?)?.toInt() ?? 0;
+        _aiExtra = (res['ai_extra_count'] as num?)?.toInt() ?? 0;
+        _aiMax = res['subscription_status'] == 'active' ? 30 : 5;
+      });
+    }
+  }
+
+  // 核心：每次傳訊息前先檢查額度
+  Future<bool> _checkAILimit() async {
+    final provider = context.read<UserProvider>();
+    final userId = provider.userId;
+    if (userId == null) return false;
+
+    final res = await ApiClient.useAI(userId);
+    if (!mounted) return false;
+
+    final status = (res['_status'] as num?)?.toInt() ?? 200;
+    
+    // 遇到 403，跳出加購彈窗
+    if (status == 403) {
+      final used = (res['daily_ai'] as num?)?.toInt() ?? _aiUsed;
+      final limit = (res['daily_limit'] as num?)?.toInt() ?? _aiMax;
+      _showQuotaExceededDialog(used, limit);
+      return false;
+    } else {
+      // 成功扣除次數 (200)，更新畫面
+      setState(() {
+        _aiUsed = (res['daily_ai'] as num?)?.toInt() ?? _aiUsed + 1;
+        _aiExtra = (res['extra_count'] as num?)?.toInt() ?? _aiExtra;
+      });
+      // provider.updateAIUsage(countToday: _aiUsed, extraCount: _aiExtra);
+      return true;
+    }
+  }
+
+  // 次數用盡的加購彈窗
+  void _showQuotaExceededDialog(int used, int limit) {
+    final jPts = context.read<UserProvider>().jPts;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('今日對話次數已用完', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('已使用 $used / $limit 次', style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 12),
+            const Text('花 30 點加購 +5 次（永久有效）', style: TextStyle(fontSize: 15)),
+            const SizedBox(height: 4),
+            Text('目前點數：$jPts J-Pts',
+                style: TextStyle(fontSize: 13, color: jPts >= 30 ? Colors.grey : Colors.red)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6AA86B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: jPts < 30
+                ? null
+                : () async {
+                    Navigator.pop(ctx);
+                    await _buyExtraAndProceed();
+                  },
+            child: const Text('加購次數', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 花費點數購買次數的邏輯
+  Future<void> _buyExtraAndProceed() async {
+    final provider = context.read<UserProvider>();
+    final userId = provider.userId;
+    if (userId == null) return;
+
+    final buyRes = await ApiClient.spendPoints(userId: userId, points: 30, feature: 'ai_extra');
+    if (!mounted) return;
+
+    if ((buyRes['_status'] as num?)?.toInt() != 200) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(buyRes['error'] ?? '購買失敗')));
+      return;
+    }
+
+    if (buyRes['total_points'] != null) {
+      provider.setJPts((buyRes['total_points'] as num).toInt());
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('加購成功！請再次點擊發送。')));
+    _fetchUsageData(); // 更新最新次數
+  }
+
   Future<void> _triggerAIOpening() async {
+    // 發送前檢查次數
+    final canProceed = await _checkAILimit();
+    if (!canProceed) return;
+
     setState(() {
       _isTyping = true;
     });
@@ -71,6 +192,10 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+
+    // 發送前檢查次數
+    final canProceed = await _checkAILimit();
+    if (!canProceed) return;
 
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
@@ -219,6 +344,18 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       ),
       body: Column(
         children: [
+          // 頂部：次數顯示條
+          Container(
+            width: double.infinity,
+            color: AppColors.primaryLighter.withOpacity(0.2),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: Text(
+              '今日對話：$_aiUsed / $_aiMax次' + (_aiExtra > 0 ? ' (+$_aiExtra次備用)' : ''),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.bold),
+            ),
+          ),
+
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -290,7 +427,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                   ],
                                 ),
                               ),
-
                             // 功能 1：加上 GestureDetector 實現點擊選單
                             GestureDetector(
                               onTap: () {
@@ -360,7 +496,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 ],
               ),
             ),
-
           // 底部區域包裝在一起
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -374,30 +509,27 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                     vertical: 4,
                   ),
                   child: Row(
-                    children: _quickReplies
-                        .map(
-                          (reply) => Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: ActionChip(
-                              backgroundColor: Colors.white,
-                              side: const BorderSide(color: AppColors.primary),
-                              label: Text(
-                                reply,
-                                style: const TextStyle(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              onPressed: () {
-                                _controller.text = reply;
+                    children: _quickReplies.map((reply) => Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ActionChip(
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(color: AppColors.primary),
+                            label: Text(reply, style: const TextStyle(color: AppColors.primary)),
+                            onPressed: () {
+                              _controller.text = reply;
+                              //如果是 "幫我開場" 呼叫 trigger
+                              if (reply == '幫我開場') {
+                                _triggerAIOpening();
+                                _quickReplies.clear();
+                                _controller.clear();
+                              } else {
                                 _sendMessage();
-                              },
-                            ),
+                              }
+                            },
                           ),
-                        )
-                        .toList(),
+                        )).toList(),
                   ),
                 ),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,

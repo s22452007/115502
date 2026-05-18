@@ -20,7 +20,7 @@ import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
-import 'badge_library_screen.dart'; // 🌟 已補上徽章頁面檔案路徑引入
+import 'badge_library_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -32,11 +32,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
 
-  // 統一全域現代扁平化配色
-  final Color _flatCanvasColor = const Color(0xFFE8F3EB); 
-  final Color _textColor = const Color(0xFF4A4A4A);
-  final Color _subTextColor = const Color(0xFF9B9B9B);
-  final Color _btnGreenColor = const Color(0xFF75D19A); 
+  // 🌟 統一全域現代扁平化配色 (與主頁完全一致)
+  final Color _flatCanvasColor = const Color(0xFFF4F7F5); 
+  final Color _textColor = const Color(0xFF2C3E50);
+  final Color _subTextColor = const Color(0xFF8E9AAB);
 
   @override
   void initState() {
@@ -152,13 +151,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('修改暱稱', style: TextStyle(fontWeight: FontWeight.w900)),
+          title: Text('修改暱稱', style: TextStyle(color: _textColor, fontWeight: FontWeight.w900)),
           content: TextField(
             controller: controller,
             autofocus: true,
+            style: TextStyle(color: _textColor, fontWeight: FontWeight.w700),
             decoration: InputDecoration(
               hintText: '中文或英文，2～20 字',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
+              filled: true,
+              fillColor: _flatCanvasColor,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              ),
               errorText: errorText,
             ),
             onChanged: (_) {
@@ -166,7 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消', style: TextStyle(color: Colors.grey))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w700))),
             ElevatedButton(
               onPressed: () async {
                 final name = controller.text.trim();
@@ -185,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
                 if (ctx.mounted) Navigator.pop(ctx, name);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               child: const Text('確認', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
             ),
           ],
@@ -268,23 +275,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             
                             const SizedBox(height: 14),
                             
-                            // 綠色稱號徽章
+                            // 主色調稱號徽章
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _btnGreenColor.withOpacity(0.12), 
-                                border: Border.all(color: _btnGreenColor, width: 1.5), 
+                                color: AppColors.primary.withOpacity(0.12), 
+                                border: Border.all(color: AppColors.primary, width: 1.5), 
                                 borderRadius: BorderRadius.circular(20), 
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.stars_rounded, color: _btnGreenColor, size: 18), 
+                                  const Icon(Icons.stars_rounded, color: AppColors.primary, size: 18), 
                                   const SizedBox(width: 6),
                                   Text(
                                     levelTitle, 
-                                    style: TextStyle(
-                                      color: _btnGreenColor, 
+                                    style: const TextStyle(
+                                      color: AppColors.primary, 
                                       fontWeight: FontWeight.w900, 
                                       fontSize: 14, 
                                       letterSpacing: 1.0
@@ -305,13 +312,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     child: LinearProgressIndicator(
                                       value: progressValue,
                                       backgroundColor: const Color(0xFFEBEBEB),
-                                      valueColor: AlwaysStoppedAnimation<Color>(_btnGreenColor),
+                                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                                       minHeight: 8,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Text('${(progressValue * 100).toInt()}%', style: TextStyle(color: _btnGreenColor, fontWeight: FontWeight.w900, fontSize: 15)),
+                                Text('${(progressValue * 100).toInt()}%', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 15)),
                               ],
                             ),
                             
@@ -324,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: ElevatedButton(
                                 onPressed: _editNickname,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _btnGreenColor,
+                                  backgroundColor: AppColors.primary,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                 ),
@@ -347,7 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               radius: 50,
                               backgroundColor: AppColors.primaryLighter,
                               backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                              child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 50, color: AppColors.primary) : null,
+                              child: (avatarUrl == null || avatarUrl.isEmpty) ? const Icon(Icons.person, size: 50, color: AppColors.primary) : null,
                             ),
                           ),
                         ),
@@ -366,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.monetization_on_rounded, 
                           title: 'J-Points', 
                           trailingText: '$jPts',
-                          iconColor: _btnGreenColor,
+                          iconColor: AppColors.primary,
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen()))
                         ),
                         _buildListItem(
@@ -381,11 +388,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onTap: () {} 
                         ),
                         
-                        // 🌟 「成就徽章」跳轉至實體畫面
                         _buildListItem(
                           icon: Icons.military_tech_rounded, 
                           title: '成就徽章', 
-                          iconColor: _btnGreenColor,
+                          iconColor: AppColors.primary,
                           onTap: () {
                             if (isGuest) {
                               _handleGuestClick('成就徽章');
@@ -405,7 +411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _buildListItem(
                           icon: isGuest ? Icons.login_rounded : Icons.logout_rounded, 
                           title: isGuest ? '登入帳號' : '登出帳號', 
-                          iconColor: isGuest ? _btnGreenColor : Colors.redAccent,
+                          iconColor: isGuest ? AppColors.primary : Colors.redAccent,
                           textColor: isGuest ? _textColor : Colors.redAccent,
                           onTap: () {
                             if (!isGuest) context.read<UserProvider>().logout();
@@ -454,7 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (trailingText != null) 
-              Text(trailingText, style: TextStyle(color: _btnGreenColor, fontWeight: FontWeight.w900, fontSize: 16)),
+              Text(trailingText, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
             const SizedBox(width: 8),
             Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ],

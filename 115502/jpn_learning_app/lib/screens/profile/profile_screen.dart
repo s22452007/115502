@@ -41,40 +41,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ==========================================
-  // 邏輯函式區塊
+  // 邏輯函式區塊 (已補上高容錯同步機制)
   // ==========================================
 
   Future<void> _fetchData() async {
-    final userId = context.read<UserProvider>().userId;
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId;
     if (userId == null) {
       setState(() => _isLoading = false);
       return;
     }
 
-    final result = await ApiClient.fetchProfileData(userId);
-    if (!mounted) return;
+    try {
+      final result = await ApiClient.fetchProfileData(userId);
+      if (!mounted) return;
 
-    if (result.containsKey('ability')) {
-      setState(() {
-        _radarValues = [
-          result['ability']['listening'].toDouble(),
-          result['ability']['speaking'].toDouble(),
-          result['ability']['reading'].toDouble(),
-          result['ability']['writing'].toDouble(),
-          result['ability']['culture'].toDouble(),
-        ];
-        _isLoading = false;
-      });
-    } else {
+      // 🌟 核心防呆：不論 ability 是否存在，第一時間一定要把大頭貼、名稱、徽章同步進來
+      if (result.containsKey('avatar') && result['avatar'] != null) {
+        userProvider.setAvatar(result['avatar'].toString());
+      }
+      if (result.containsKey('username') && result['username'] != null) {
+        userProvider.setUsername(result['username'].toString());
+      }
+      if (result.containsKey('badge_progress') && result['badge_progress'] != null) {
+        userProvider.setBadgeProgress(result['badge_progress']);
+      }
+
+      // 檢查五向雷達圖能力值
+      if (result.containsKey('ability') && result['ability'] != null) {
+        setState(() {
+          _radarValues = [
+            (result['ability']['listening'] ?? 0.2).toDouble(),
+            (result['ability']['speaking'] ?? 0.2).toDouble(),
+            (result['ability']['reading'] ?? 0.2).toDouble(),
+            (result['ability']['writing'] ?? 0.2).toDouble(),
+            (result['ability']['culture'] ?? 0.2).toDouble(),
+          ];
+          _isLoading = false;
+        });
+      } else {
+        // 🌟 防呆：若無能力值資料則給予基礎 0.2 預設值，不彈出失敗錯誤，讓使用者能正常看見大頭貼與其他選單
+        setState(() {
+          _radarValues = [0.2, 0.2, 0.2, 0.2, 0.2];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('個人檔案抓取發生未知異常: $e');
       setState(() => _isLoading = false);
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('抓取資料失敗')));
-    }
-
-    if (result.containsKey('badge_progress')) {
-      context.read<UserProvider>().setBadgeProgress(result['badge_progress']);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('同步資料時發生錯誤: $e')),
+        );
+      }
     }
   }
 
@@ -261,7 +280,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 收藏夾區塊
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -314,37 +332,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-      // 🌟 已經對應最新順序修正的導航欄
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 4,
         onTap: (i) {
           if (i == 0) {
-            // Index 0: 回到主頁 (並清空其他堆疊)
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => const HomeScreen()),
               (route) => false,
             );
           } else if (i == 1) {
-            // Index 1: 前往相機
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const CameraScreen()),
             );
           } else if (i == 2) {
-            // Index 2: 前往搜尋
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
             );
           } else if (i == 3) {
-            // Index 3: 前往紀錄
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()),
             );
           } else if (i == 4) {
-            // Index 4: 個人檔案 (已在當前頁面，不做任何事)
+            // 已在個人頁
           }
         },
       ),

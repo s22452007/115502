@@ -126,8 +126,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
+    
+    // 🌟 修正點 1：將時間全部歸零到午夜 00:00:00，確保天數計算 100% 精準
+    final today = DateTime(now.year, now.month, now.day);
+    final firstDayOfWeek = today.subtract(Duration(days: today.weekday - 1));
+    
+    // 使用 DateTime 建構子來加天數，避免跨越日光節約時間時被吃掉一小時導致算錯天數
+    List<DateTime> weekDates = List.generate(7, (i) => DateTime(firstDayOfWeek.year, firstDayOfWeek.month, firstDayOfWeek.day + i));
     List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
 
     final userProvider = context.watch<UserProvider>();
@@ -158,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         ),
         centerTitle: true,
         actions: [
-          // 🌟 右上角頭像：點擊進入個人檔案
           GestureDetector(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
             child: Container(
@@ -167,12 +171,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.primaryLighter,
-                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) 
-                    ? NetworkImage(avatarUrl) 
-                    : null,
-                child: (avatarUrl == null || avatarUrl.isEmpty) 
-                    ? Icon(Icons.person, size: 20, color: AppColors.primary) 
-                    : null,
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 20, color: AppColors.primary) : null,
               ),
             ),
           ),
@@ -274,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         currentIndex: _currentIndex,
         onTap: (i) {
           if (i == 0) {
-             // 已經在主頁
+             // 主頁不動
           } else if (i == 1) {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
           } else if (i == 2) {
@@ -290,7 +290,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
+    // 再次取得準確的午夜時間，作為基準點
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -305,16 +308,33 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final date = weekDates[index];
-              final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
-              bool isCompleted = (now.difference(date).inDays >= 0 && streakDays > now.difference(date).inDays);
+              
+              // 🌟 修正點 2：使用精準天數差，取代 .inDays 截斷漏洞
+              // 如果 diffDays = 0 代表是今天，1 代表昨天，-1 代表明天
+              final int diffDays = today.difference(date).inDays;
+              final bool isToday = diffDays == 0;
+              
+              // 條件判斷：日期必須是「今天或過去」且「差值必須小於連續天數」
+              bool isCompleted = false;
+              if (diffDays >= 0 && diffDays < streakDays) {
+                isCompleted = true;
+              }
+
               return Column(
                 children: [
                   Text(weekDayNames[index], style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 10),
                   Container(
                     width: 38, height: 38,
-                    decoration: BoxDecoration(color: isToday ? AppColors.primary : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), shape: BoxShape.circle),
-                    child: Center(child: isCompleted ? const Icon(Icons.check, color: Colors.white, size: 20) : Text(date.day.toString(), style: TextStyle(color: isToday ? Colors.white : _textColor, fontWeight: FontWeight.w900))),
+                    decoration: BoxDecoration(
+                      color: isToday ? AppColors.primary : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), 
+                      shape: BoxShape.circle
+                    ),
+                    child: Center(
+                      child: isCompleted 
+                        ? const Icon(Icons.check, color: Colors.white, size: 20) 
+                        : Text(date.day.toString(), style: TextStyle(color: isToday ? Colors.white : _textColor, fontWeight: FontWeight.w900))
+                    ),
                   ),
                 ],
               );

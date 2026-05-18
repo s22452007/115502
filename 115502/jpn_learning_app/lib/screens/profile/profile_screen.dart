@@ -8,12 +8,10 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/utils/helpers.dart'; 
 
 // UI 元件與其他畫面
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
-import 'package:jpn_learning_app/widgets/profile/profile_radar_section.dart';
 import 'package:jpn_learning_app/widgets/profile/profile_achievements_section.dart';
 
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
@@ -21,6 +19,8 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -31,12 +31,12 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
-  List<double> _radarValues = [0.2, 0.2, 0.2, 0.2, 0.2];
 
   // 統一全域現代扁平化配色
-  final Color _flatCanvasColor = const Color(0xFFF4F7F5);
-  final Color _textColor = const Color(0xFF2C3E50);
-  final Color _subTextColor = const Color(0xFF8E9AAB);
+  final Color _flatCanvasColor = const Color(0xFFE8F3EB); // 參考圖的極淡綠背景
+  final Color _textColor = const Color(0xFF4A4A4A);
+  final Color _subTextColor = const Color(0xFF9B9B9B);
+  final Color _btnGreenColor = const Color(0xFF75D19A); // 參考圖的按鈕淺綠
 
   @override
   void initState() {
@@ -45,7 +45,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ==========================================
-  // 邏輯函式區塊 (100% 保留原生功能與高容錯)
+  // UI 轉換邏輯：等級對應稱號與進度
+  // ==========================================
+  
+  String _getLevelTitle(String level) {
+    switch (level.toUpperCase().trim()) {
+      case 'N5': return '新手上路';
+      case 'N4': return '生活達人';
+      case 'N3': return '交流無礙';
+      case 'N2': return '商務菁英';
+      case 'N1': return '日語大師';
+      default: return '尚未認證';
+    }
+  }
+
+  double _getProgressValue(String level) {
+    switch (level.toUpperCase().trim()) {
+      case 'N5': return 0.20;
+      case 'N4': return 0.40;
+      case 'N3': return 0.60;
+      case 'N2': return 0.80;
+      case 'N1': return 1.00;
+      default: return 0.0;
+    }
+  }
+
+  // ==========================================
+  // 核心邏輯函式區塊
   // ==========================================
 
   Future<void> _fetchData() async {
@@ -60,7 +86,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final result = await ApiClient.fetchProfileData(userId);
       if (!mounted) return;
 
-      // 同步大頭貼、名稱、徽章
       if (result.containsKey('avatar') && result['avatar'] != null) {
         userProvider.setAvatar(result['avatar'].toString());
       }
@@ -71,24 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         userProvider.setBadgeProgress(result['badge_progress']);
       }
 
-      // 檢查五向雷達圖能力值
-      if (result.containsKey('ability') && result['ability'] != null) {
-        setState(() {
-          _radarValues = [
-            (result['ability']['listening'] ?? 0.2).toDouble(),
-            (result['ability']['speaking'] ?? 0.2).toDouble(),
-            (result['ability']['reading'] ?? 0.2).toDouble(),
-            (result['ability']['writing'] ?? 0.2).toDouble(),
-            (result['ability']['culture'] ?? 0.2).toDouble(),
-          ];
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _radarValues = [0.2, 0.2, 0.2, 0.2, 0.2];
-          _isLoading = false;
-        });
-      }
+      setState(() => _isLoading = false);
     } catch (e) {
       debugPrint('個人檔案抓取發生未知異常: $e');
       setState(() => _isLoading = false);
@@ -130,9 +138,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _editNickname() async {
     final userId = context.read<UserProvider>().userId;
-    final controller = TextEditingController(
-      text: context.read<UserProvider>().username ?? '',
-    );
+    if (userId == null) {
+      _handleGuestClick('管理個人檔案');
+      return;
+    }
+    
+    final controller = TextEditingController(text: context.read<UserProvider>().username ?? '');
     String? errorText;
 
     final result = await showDialog<String>(
@@ -147,7 +158,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             autofocus: true,
             decoration: InputDecoration(
               hintText: '中文或英文，2～20 字',
-              border: const OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               errorText: errorText,
             ),
             onChanged: (_) {
@@ -155,8 +166,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-            TextButton(
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消', style: TextStyle(color: Colors.grey))),
+            ElevatedButton(
               onPressed: () async {
                 final name = controller.text.trim();
                 if (name.isEmpty) {
@@ -174,14 +185,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
                 if (ctx.mounted) Navigator.pop(ctx, name);
               },
-              child: const Text('確認', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800)),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: const Text('確認', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
       ),
     );
 
-    if (result == null || result.isEmpty || userId == null) return;
+    if (result == null || result.isEmpty) return;
     final res = await ApiClient.updateUsername(userId, result);
     if (!mounted) return;
     if (res['error'] != null) {
@@ -203,146 +215,160 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final email = isGuest ? '登入後同步資料' : (userProvider.email ?? '—');
     final userName = isGuest ? 'Guest' : (userProvider.username ?? email.split('@')[0]);
-    final japaneseLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
+    final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
+    final levelTitle = _getLevelTitle(rawLevel);
+    final progressValue = _getProgressValue(rawLevel);
+    
+    final jPts = userProvider.jPts;
     final friendId = userProvider.friendId ?? '—';
     final avatarUrl = userProvider.avatar;
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
-      extendBody: true, // 🌟 配合懸浮導航欄
+      extendBody: true,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: _flatCanvasColor,
+        backgroundColor: Colors.transparent, // 讓背景顏色延伸
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded, color: AppColors.primary, size: 28),
+            icon: const Icon(Icons.menu_rounded, color: AppColors.primary, size: 30),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: Text('個人檔案', style: TextStyle(color: _textColor, fontWeight: FontWeight.w900, fontSize: 20)),
-        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 120), // 底部留白避免被懸浮欄遮擋
+              padding: const EdgeInsets.only(bottom: 120),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  
-                  // 🌟 1. 大頭照置中區塊
-                  Center(
-                    child: Stack(
-                      children: [
-                        GestureDetector(
-                          onTap: _pickAndUploadImage,
-                          child: CircleAvatar(
-                            radius: 55,
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                            child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 60, color: AppColors.primary) : null,
-                          ),
+                  // 🌟 核心：全新大頭照與進度條卡片
+                  Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
+                    children: [
+                      // 白底資料卡片
+                      Container(
+                        margin: const EdgeInsets.only(top: 55, left: 24, right: 24),
+                        padding: const EdgeInsets.fromLTRB(24, 65, 24, 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))
+                          ],
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: _pickAndUploadImage,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                        child: Column(
+                          children: [
+                            Text(userName, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor)),
+                            const SizedBox(height: 6),
+                            Text(email, style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
+                            const SizedBox(height: 4),
+                            Text('$rawLevel · $levelTitle', style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // 進度條區塊
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: LinearProgressIndicator(
+                                      value: progressValue,
+                                      backgroundColor: const Color(0xFFEBEBEB),
+                                      valueColor: AlwaysStoppedAnimation<Color>(_btnGreenColor),
+                                      minHeight: 8,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text('${(progressValue * 100).toInt()}%', style: TextStyle(color: _btnGreenColor, fontWeight: FontWeight.w900, fontSize: 15)),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // 管理按鈕
+                            SizedBox(
+                              width: 180,
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: _editNickname,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _btnGreenColor,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: const Text('管理個人檔案', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                      
+                      // 懸浮大頭照
+                      Positioned(
+                        top: 0,
+                        child: GestureDetector(
+                          onTap: _pickAndUploadImage,
+                          child: Container(
+                            padding: const EdgeInsets.all(4), // 製造白色邊框效果
+                            decoration: const BoxDecoration(color: Color(0xFFE8F3EB), shape: BoxShape.circle),
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundColor: AppColors.primaryLighter,
+                              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+                              child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 50, color: AppColors.primary) : null,
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 20),
 
-                  // 🌟 2. 大頭照正下方的日檢等級進度條
-                  Center(
-                    child: Container(
-                      width: 200,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade200, width: 1),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(japaneseLevel, style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 13)),
-                              Text('學習進度', style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w700, fontSize: 11)),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: const LinearProgressIndicator(
-                              value: 0.65, // 這裡可以放入目前的關卡進度比例，先以好看的 0.65 預設
-                              backgroundColor: Color(0xFFEBEBEB),
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                              minHeight: 6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 35),
-
-                  // 🌟 3. 基本資訊區塊 (扁平大圓角卡片)
-                  Text('基本資料', style: TextStyle(color: _subTextColor, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-                  const SizedBox(height: 12),
-                  _buildFlatInfoTile(label: '暱稱', value: userName, isEditable: true, onTap: _editNickname),
-                  _buildFlatInfoTile(label: 'Email', value: email),
-                  _buildFlatInfoTile(label: '日文等級', value: japaneseLevel),
-                  _buildFlatInfoTile(label: '好友 ID', value: friendId),
-                  
-                  const SizedBox(height: 25),
-
-                  // 🌟 4. 能力分析雷達圖區塊
-                  Text('能力分析', style: TextStyle(color: _subTextColor, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-                  const SizedBox(height: 12),
-                  ProfileRadarSection(isGuest: isGuest, radarValues: _radarValues),
-                  
-                  const SizedBox(height: 25),
-
-                  // 🌟 5. 成就徽章區塊
-                  ProfileAchievementsSection(isGuest: isGuest, onGuestClick: _handleGuestClick),
-                  const SizedBox(height: 25),
-
-                  // 🌟 6. 收藏夾區塊
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.grey.shade200, width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // 🌟 下方選單列表 (仿照圖片無邊框清單設計)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
                       children: [
-                        Text('收藏夾', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor)),
-                        TextButton(
-                          onPressed: () => isGuest
-                              ? _handleGuestClick('收藏夾')
-                              : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen())),
-                          style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('查看全部', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 14)),
-                              const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 20),
-                            ],
-                          ),
+                        _buildListItem(
+                          icon: Icons.monetization_on_rounded, 
+                          title: 'J-Points', 
+                          trailingText: '$jPts',
+                          iconColor: _btnGreenColor,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen()))
+                        ),
+                        _buildListItem(
+                          icon: Icons.folder_special_rounded, 
+                          title: '我的收藏', 
+                          onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))
+                        ),
+                        _buildListItem(
+                          icon: Icons.people_alt_rounded, 
+                          title: '好友綁定', 
+                          trailingText: friendId,
+                          onTap: () {} // 預留好友功能
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // 🌟 成就徽章區塊 (原生功能保留)
+                        ProfileAchievementsSection(isGuest: isGuest, onGuestClick: _handleGuestClick),
+                        
+                        const SizedBox(height: 16),
+                        _buildListItem(
+                          icon: isGuest ? Icons.login_rounded : Icons.logout_rounded, 
+                          title: isGuest ? '登入帳號' : '登出帳號', 
+                          iconColor: isGuest ? _btnGreenColor : Colors.redAccent,
+                          textColor: isGuest ? _textColor : Colors.redAccent,
+                          onTap: () {
+                            if (!isGuest) context.read<UserProvider>().logout();
+                            Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+                          }
                         ),
                       ],
                     ),
@@ -350,67 +376,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-      // 底部懸浮橢圓導航欄
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 4,
         onTap: (i) {
-          if (i == 0) {
-            Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
-          } else if (i == 1) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
-          } else if (i == 2) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
-          } else if (i == 3) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()));
-          } else if (i == 4) {
-            // 已在個人頁
-          }
+          if (i == 0) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+          else if (i == 1) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
+          else if (i == 2) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
+          else if (i == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()));
         },
       ),
     );
   }
 
-  // 扁平化極簡資料卡片組件
-  Widget _buildFlatInfoTile({required String label, required String value, bool isEditable = false, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: isEditable ? onTap : null,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.shade200, width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  // 仿照參考圖片的乾淨選單樣式
+  Widget _buildListItem({
+    required IconData icon, 
+    required String title, 
+    String? trailingText, 
+    Color? iconColor, 
+    Color? textColor,
+    required VoidCallback onTap
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+        leading: Icon(icon, color: iconColor ?? _subTextColor, size: 26),
+        title: Text(title, style: TextStyle(color: textColor ?? _textColor, fontWeight: FontWeight.w800, fontSize: 16)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label, style: TextStyle(color: _subTextColor, fontSize: 14, fontWeight: FontWeight.w700)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Flexible(
-                    child: Text(
-                      value,
-                      textAlign: TextAlign.end,
-                      style: TextStyle(color: _textColor, fontSize: 15, fontWeight: FontWeight.w900),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (isEditable) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                      child: const Icon(Icons.edit_rounded, size: 14, color: AppColors.primary),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            if (trailingText != null) 
+              Text(trailingText, style: TextStyle(color: _btnGreenColor, fontWeight: FontWeight.w900, fontSize: 16)),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ],
         ),
       ),

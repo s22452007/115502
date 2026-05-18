@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 
 import 'single_vocab_detail_screen.dart';
@@ -29,6 +30,12 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _vocabs = [];
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
   @override
   void initState() {
@@ -204,10 +211,21 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(
-                child: Text(
-                  vocab['word'] ?? '',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryGreen),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      vocab['word'] ?? '',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryGreen),
+                      textAlign: TextAlign.center,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.volume_up, size: 20, color: primaryGreen),
+                      onPressed: () => _speak(vocab['kana'] ?? ''),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
             ),

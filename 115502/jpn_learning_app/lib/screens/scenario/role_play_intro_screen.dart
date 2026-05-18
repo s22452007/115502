@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 // import 'package:jpn_learning_app/utils/constants.dart'; // 如果沒用到可以先註解掉
+import 'package:flutter_tts/flutter_tts.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
   final String topicTitle; // 🌟 用來接收上一頁傳來的主題
@@ -17,6 +18,12 @@ class RolePlayIntroScreen extends StatefulWidget {
 class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
   final PageController _pageController = PageController(viewportFraction: 0.78);
   final Color _darkGreen = const Color(0xFF4A7A4D);
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
   // 🌟 新增的「情境小資料庫」(模擬未來 AI)
   Map<String, dynamic> _getTopicData() {
@@ -256,13 +263,22 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              vocab['word']!,
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: _darkGreen,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  vocab['word']!,
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: _darkGreen,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.volume_up, color: _darkGreen),
+                  onPressed: () => _speak(vocab['kana']!),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -289,13 +305,22 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               style: TextStyle(fontSize: 14, color: Colors.black54),
             ),
             const SizedBox(height: 12),
-            Text(
-              vocab['ex_jp']!,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  vocab['ex_jp']!,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.volume_up, color: _darkGreen, size: 20),
+                  onPressed: () => _speak(vocab['ex_jp']!),
+                ),
+              ],
             ),
             Text(
               vocab['ex_en']!,

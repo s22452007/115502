@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 /// 單字底部表單類別
 /// 提供靜態方法來顯示場景單字的解鎖進度
@@ -21,6 +22,12 @@ class VocabBottomSheet {
     }
 
     final textColor = const Color(0xFF333333);
+    final flutterTts = FlutterTts();
+    
+    Future<void> speak(String text) async {
+      await flutterTts.setLanguage("ja-JP");
+      await flutterTts.speak(text);
+    }
 
     showModalBottomSheet(
       context: context,
@@ -122,6 +129,11 @@ class VocabBottomSheet {
                                         ),
                                       ),
                                     ),
+                                    if (isUnlocked)
+                                      IconButton(
+                                        icon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                                        onPressed: () => speak(vocab['kana']),
+                                      ),
                                   ],
                                 ),
                               );

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class VocabCard extends StatefulWidget {
   final dynamic vocab;
@@ -18,6 +19,12 @@ class _VocabCardState extends State<VocabCard> {
   bool _isLoading = true;
   bool _isStarred = false;
   List<dynamic> _sentences = []; 
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
   @override
   void initState() {
@@ -406,13 +413,21 @@ class _VocabCardState extends State<VocabCard> {
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      widget.vocab['word'],
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF333333),
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          widget.vocab['word'],
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.volume_up, color: Colors.blueGrey),
+                          onPressed: () => _speak(widget.vocab['kana']),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -472,7 +487,12 @@ class _VocabCardState extends State<VocabCard> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                          IconButton(
+                            icon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                            onPressed: () => _speak(s['text'] ?? ''),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(

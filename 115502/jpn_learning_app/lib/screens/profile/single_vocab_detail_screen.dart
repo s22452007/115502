@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class SingleVocabDetailScreen extends StatefulWidget {
   final int vocabId;
@@ -29,6 +30,12 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
   static const Color starColor = Color(0xFFFFC107);
 
   bool _isStarred = true; 
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> _speakWord(String text) async {
+    await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.speak(text);
+  }
 
 Future<void> _toggleStar() async {
     final userId = context.read<UserProvider>().userId;
@@ -69,12 +76,6 @@ Future<void> _toggleStar() async {
     }
   }
 
-  void _playSound(String text) {
-    // 播放發音
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('正在播放發音：$text')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,16 +143,23 @@ Future<void> _toggleStar() async {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // 主單字置中放大
-                    Center(
-                      child: Text(
-                        widget.word,
-                        style: const TextStyle(
-                          fontSize: 44,
-                          fontWeight: FontWeight.w900,
-                          color: textColor,
+                    // 主單字置中放大與發音按鈕
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.word,
+                          style: const TextStyle(
+                            fontSize: 44,
+                            fontWeight: FontWeight.w900,
+                            color: textColor,
+                          ),
                         ),
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.volume_up, color: primaryGreen, size: 32),
+                          onPressed: () => _speakWord(widget.kana),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -269,7 +277,7 @@ Future<void> _toggleStar() async {
           const SizedBox(width: 8),
           // 右側：實體播放按鈕
           GestureDetector(
-            onTap: () => _playSound(sentence),
+            onTap: () => _speakWord(sentence),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

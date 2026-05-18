@@ -20,6 +20,7 @@ import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
+import 'badge_library_screen.dart'; // 🌟 已補上徽章頁面檔案路徑引入
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -380,12 +381,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onTap: () {} 
                         ),
                         
-                        // 🌟 修正點：將原先複雜的徽章區塊移除，改成與其他欄位統一的清單格式
+                        // 🌟 「成就徽章」跳轉至實體畫面
                         _buildListItem(
                           icon: Icons.military_tech_rounded, 
                           title: '成就徽章', 
                           iconColor: _btnGreenColor,
-                          onTap: () => isGuest ? _handleGuestClick('成就徽章') : () {} // 可在此預留點擊跳轉事件
+                          onTap: () {
+                            if (isGuest) {
+                              _handleGuestClick('成就徽章');
+                            } else {
+                              Navigator.push(
+                                context, 
+                                MaterialPageRoute(builder: (_) => const BadgeLibraryScreen())
+                              );
+                            }
+                          }
                         ),
                         
                         const SizedBox(height: 8),

@@ -1,18 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_trial_screen.dart';
 import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
+import 'package:jpn_learning_app/screens/premium/subscription_management_screen.dart';
+import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 
-class PremiumScreen extends StatelessWidget {
+class PremiumScreen extends StatefulWidget {
   const PremiumScreen({Key? key}) : super(key: key);
 
+  @override
+  State<PremiumScreen> createState() => _PremiumScreenState();
+}
+
+class _PremiumScreenState extends State<PremiumScreen> {
   static const Color _green = Color(0xFF4E8B4C);
   static const Color _lightGreen = Color(0xFF95BE94);
-  static const Color _premiumGold = Color(0xFFC6B13B);
   static const Color _textDark = Color(0xFF333333);
+
+  Map<String, dynamic>? _plan;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlans();
+  }
+
+  Future<void> _loadPlans() async {
+    final res = await ApiClient.getSubscriptionPlans();
+    if (!mounted) return;
+    final plans = res['plans'] as List?;
+    if (plans != null && plans.isNotEmpty) {
+      setState(() => _plan = plans.first as Map<String, dynamic>);
+    }
+  }
+
+  void _goToCheckout(BuildContext context) {
+    if (_plan == null) {
+      // 方案尚未載入，fallback 試用畫面
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const PremiumTrialScreen()));
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubscriptionCheckoutScreen(
+          planId: _plan!['id'] as int,
+          planName: _plan!['name'] as String,
+          priceMonthly: _plan!['price_monthly'] as int,
+          priceYearly: _plan!['price_yearly'] as int,
+          features: List<String>.from(_plan!['features'] ?? []),
+          pointsGrant: _plan!['points_grant'] as int? ?? 0,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isPremium = context.watch<UserProvider>().isPremium;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -39,6 +89,18 @@ class PremiumScreen extends StatelessWidget {
               ),
               const SizedBox(height: 18),
 
+              // 已訂閱：顯示管理入口 banner
+              if (isPremium) ...[
+                _ManageSubscriptionBanner(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SubscriptionManagementScreen()),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               _PlanCard(
                 title: 'Free',
                 titleColor: _green,
@@ -54,9 +116,7 @@ class PremiumScreen extends StatelessWidget {
                 onActionTap: () {
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const HomeScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
                     (route) => false,
                   );
                 },
@@ -67,23 +127,31 @@ class PremiumScreen extends StatelessWidget {
               _PlanCard(
                 title: 'Premium Pro',
                 titleColor: _green,
-                actionText: '免費試用',
-                priceText: '\$ 490/月  \$ 1280/年',
-                features: const [
-                  '無限使用，免廣告',
-                  '無限次 AI 對話、場景照片上傳',
-                  '詳細學習分析報告',
-                  '每月贈送 1000 Points',
-                ],
+                actionText: isPremium ? '管理訂閱' : '免費試用',
+                priceText: _plan != null
+                    ? '\$ ${_plan!['price_monthly']}/月  \$ ${_plan!['price_yearly']}/年'
+                    : '\$ 490/月  \$ 1280/年',
+                features: _plan != null
+                    ? List<String>.from(_plan!['features'] ?? [])
+                    : const [
+                        '無限使用，免廣告',
+                        '無限次 AI 對話、場景照片上傳',
+                        '詳細學習分析報告',
+                        '每月贈送 1000 Points',
+                      ],
                 actionColor: _lightGreen,
                 showCrown: true,
                 onActionTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PremiumTrialScreen(),
-                    ),
-                  );
+                  if (isPremium) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const SubscriptionManagementScreen()),
+                    );
+                  } else {
+                    _goToCheckout(context);
+                  }
                 },
               ),
 
@@ -94,46 +162,88 @@ class PremiumScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const BuyPointsScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const BuyPointsScreen()),
                   );
                 },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFE0C85C)),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const Icon(Icons.monetization_on_outlined, color: Color(0xFFC6A700), size: 28),
-                      const SizedBox(width: 12),
-                      const Expanded(
+                      Icon(Icons.monetization_on_outlined,
+                          color: Color(0xFFC6A700), size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               '購買 J-Pts 點數',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _textDark),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF333333)),
                             ),
                             SizedBox(height: 2),
                             Text(
                               '用點數解鎖更多學習功能',
-                              style: TextStyle(fontSize: 13, color: Color(0xFF7A7A7A)),
+                              style: TextStyle(
+                                  fontSize: 13, color: Color(0xFF7A7A7A)),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: Color(0xFFC6A700)),
+                      Icon(Icons.chevron_right, color: Color(0xFFC6A700)),
                     ],
                   ),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManageSubscriptionBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ManageSubscriptionBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF4EA),
+          borderRadius: BorderRadius.circular(14),
+          border:
+              Border.all(color: const Color(0xFF4E8B4C), width: 1.5),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.verified, color: Color(0xFF4E8B4C), size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Premium 已啟用 — 點此管理訂閱',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4E8B4C)),
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Color(0xFF4E8B4C)),
+          ],
         ),
       ),
     );
@@ -168,7 +278,7 @@ class _PlanCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: PremiumScreen._green, width: 1.6),
+        border: Border.all(color: const Color(0xFF4E8B4C), width: 1.6),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -180,7 +290,7 @@ class _PlanCard extends StatelessWidget {
                 const Icon(
                   Icons.workspace_premium,
                   size: 20,
-                  color: PremiumScreen._premiumGold,
+                  color: Color(0xFFC6B13B),
                 ),
                 const SizedBox(width: 4),
               ],
@@ -198,9 +308,7 @@ class _PlanCard extends StatelessWidget {
                 onTap: onActionTap,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 7,
-                  ),
+                      horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: actionColor,
                     borderRadius: BorderRadius.circular(10),
@@ -223,7 +331,7 @@ class _PlanCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: PremiumScreen._textDark,
+              color: Color(0xFF333333),
             ),
           ),
           const SizedBox(height: 14),
@@ -251,7 +359,7 @@ class _PlanCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         height: 1.35,
-                        color: PremiumScreen._textDark,
+                        color: Color(0xFF333333),
                       ),
                     ),
                   ),

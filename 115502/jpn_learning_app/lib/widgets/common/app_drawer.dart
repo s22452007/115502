@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'package:jpn_learning_app/screens/premium/subscription_management_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
@@ -68,7 +69,14 @@ class AppDrawer extends StatelessWidget {
                   _buildPillItem(context, Icons.bookmark_border, '單字探險', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()))),
                   _buildPillItem(context, Icons.people_outline, '好友', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
                   _buildPillItem(context, Icons.groups_outlined, '學習小組', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()))),
-                  _buildPillItem(context, Icons.stars, '訂閱與點數', color: Colors.orange, bgColor: Colors.orange.withOpacity(0.1), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()))),
+                  _buildPillItem(context, Icons.stars, '訂閱與點數', color: Colors.orange, bgColor: Colors.orange.withValues(alpha: 0.1), onTap: () {
+                    final isPremium = context.read<UserProvider>().isPremium;
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => isPremium
+                          ? const SubscriptionManagementScreen()
+                          : const PremiumScreen(),
+                    ));
+                  }),
                   const Divider(height: 30, thickness: 0.5),
                   _buildPillItem(context, Icons.settings_outlined, '系統設定', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SystemSettingsScreen()))),
                 ],

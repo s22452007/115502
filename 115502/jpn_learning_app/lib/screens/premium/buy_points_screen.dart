@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'package:jpn_learning_app/screens/premium/points_store_screen.dart';
 import 'point_checkout_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
@@ -23,11 +24,25 @@ class _BuyPointsScreenState extends State<BuyPointsScreen> {
 
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoadingTxn = true;
+  List<Map<String, dynamic>> _packages = [];
+  bool _isLoadingPkgs = true;
 
   @override
   void initState() {
     super.initState();
     _loadTransactions();
+    _loadPackages();
+  }
+
+  Future<void> _loadPackages() async {
+    final res = await ApiClient.getPointPackages();
+    if (!mounted) return;
+    setState(() {
+      _isLoadingPkgs = false;
+      if (res.containsKey('packages')) {
+        _packages = List<Map<String, dynamic>>.from(res['packages']);
+      }
+    });
   }
 
   Future<void> _loadTransactions() async {
@@ -48,26 +63,6 @@ class _BuyPointsScreenState extends State<BuyPointsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final packages = [
-      {
-        'points': '500 Points',
-        'price': '\$50',
-        'desc': '適合輕量使用',
-        'tag': '',
-      },
-      {
-        'points': '1200 Points',
-        'price': '\$100',
-        'desc': '最受歡迎的選擇',
-        'tag': '推薦',
-      },
-      {
-        'points': '3000 Points',
-        'price': '\$200',
-        'desc': '平均單價最低',
-        'tag': '最划算',
-      },
-    ];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -162,38 +157,37 @@ class _BuyPointsScreenState extends State<BuyPointsScreen> {
               const SizedBox(height: 22),
 
               /// 點數方案
-              ...packages.map(
-                (pkg) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _PointPackageCard(
-                    points: pkg['points']!,
-                    price: pkg['price']!,
-                    desc: pkg['desc']!,
-                    tag: pkg['tag']!,
-                    onTap: () {
-                      final int pointValue =
-                          int.parse(pkg['points']!.split(' ').first);
-                      final int priceValue =
-                          int.parse(pkg['price']!.replaceAll('\$', ''));
-                      final String tagValue = pkg['tag']!;
-                      final String descValue = pkg['desc']!;
-
-                      Navigator.push(
+              if (_isLoadingPkgs)
+                const Center(child: CircularProgressIndicator())
+              else
+                ..._packages.map((pkg) {
+                  final int pts = (pkg['points'] as num).toInt();
+                  final int price = (pkg['price'] as num).toInt();
+                  final String tag = pkg['tag'] as String? ?? '';
+                  final String desc = pkg['description'] as String? ?? '';
+                  final String name = pkg['name'] as String? ?? '$pts Points';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _PointPackageCard(
+                      points: '$pts Points',
+                      price: 'NT\$$price',
+                      desc: desc,
+                      tag: tag,
+                      onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => PointCheckoutScreen(
-                            title: pkg['points']!,
-                            points: pointValue,
-                            price: priceValue,
-                            badge: tagValue.isEmpty ? null : tagValue,
-                            subtitle: descValue,
+                            title: name,
+                            points: pts,
+                            price: price,
+                            badge: tag.isEmpty ? null : tag,
+                            subtitle: desc,
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ),
+                      ),
+                    ),
+                  );
+                }),
 
               const SizedBox(height: 8),
 
@@ -260,6 +254,52 @@ class _BuyPointsScreenState extends State<BuyPointsScreen> {
                         size: 16,
                         color: darkGreen,
                       ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              /// J-Pts 商店入口
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PointsStoreScreen()),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F4FF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFB8C8F0)),
+                  ),
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 46,
+                        height: 46,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Color(0xFFDDE8FF),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.storefront_outlined, color: Color(0xFF3B69CC), size: 24),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('J-Pts 商店', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: textDark)),
+                            SizedBox(height: 4),
+                            Text('用點數換取加購次數或永久擴充', style: TextStyle(fontSize: 13, color: subText)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFF3B69CC)),
                     ],
                   ),
                 ),
@@ -351,64 +391,85 @@ class _BuyPointsScreenState extends State<BuyPointsScreen> {
                   ),
                 )
               else
-                ..._transactions.map((txn) => Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7FAF2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: borderGreen),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: lightGreen,
-                          borderRadius: BorderRadius.circular(12),
+                ..._transactions.map((txn) {
+                  final type = txn['transaction_type'] ?? 'purchase';
+                  final pts = txn['points'] as int? ?? 0;
+                  final isSpend = type == 'spend';
+                  final isGrant = type == 'subscription_grant' || type == 'reward';
+
+                  IconData icon;
+                  Color iconColor;
+                  if (isSpend) {
+                    icon = Icons.remove_circle_outline;
+                    iconColor = Colors.red;
+                  } else if (isGrant) {
+                    icon = Icons.card_membership;
+                    iconColor = const Color(0xFFC6A700);
+                  } else {
+                    icon = Icons.monetization_on_outlined;
+                    iconColor = darkGreen;
+                  }
+
+                  final ptsLabel = pts >= 0 ? '+$pts J-Pts' : '$pts J-Pts';
+                  final ptsColor = isSpend ? Colors.red : darkGreen;
+                  final feature = txn['related_feature'] as String?;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7FAF2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderGreen),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: lightGreen,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(icon, color: iconColor, size: 22),
                         ),
-                        child: const Icon(
-                          Icons.monetization_on_outlined,
-                          color: darkGreen,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '+${txn['points']} J-Pts',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: textDark,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ptsLabel,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ptsColor,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${txn['payment_method']} • ${txn['created_at']}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: subText,
+                              const SizedBox(height: 2),
+                              Text(
+                                feature != null
+                                    ? '$feature • ${txn['created_at']}'
+                                    : '${txn['payment_method']} • ${txn['created_at']}',
+                                style: const TextStyle(
+                                    fontSize: 12, color: subText),
                               ),
+                            ],
+                          ),
+                        ),
+                        if (!isSpend && !isGrant)
+                          Text(
+                            '\$${txn['price']}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textDark,
                             ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '\$${txn['price']}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: textDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
             ],
           ),
         ),

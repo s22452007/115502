@@ -22,6 +22,40 @@ class UserProvider extends ChangeNotifier {
   bool _isPremium = false;
   bool get isPremium => _isPremium;
 
+  // 訂閱詳細狀態
+  String? _subscriptionEndDate;
+  bool _autoRenew = false;
+  String? _subscriptionStatus;
+  String? _subscriptionPlanName;
+  String? _billingCycle;
+
+  String? get subscriptionEndDate => _subscriptionEndDate;
+  bool get autoRenew => _autoRenew;
+  String? get subscriptionStatus => _subscriptionStatus;
+  String? get subscriptionPlanName => _subscriptionPlanName;
+  String? get billingCycle => _billingCycle;
+
+  bool get hasActiveSubscription {
+    if (!_isPremium) return false;
+    if (_subscriptionEndDate == null) return false;
+    return DateTime.tryParse(_subscriptionEndDate!)?.isAfter(DateTime.now()) ?? false;
+  }
+
+  void setSubscriptionInfo({
+    String? endDate,
+    bool autoRenew = false,
+    String? status,
+    String? planName,
+    String? billingCycle,
+  }) {
+    _subscriptionEndDate = endDate;
+    _autoRenew = autoRenew;
+    _subscriptionStatus = status;
+    _subscriptionPlanName = planName;
+    _billingCycle = billingCycle;
+    notifyListeners();
+  }
+
   Map<String, int> _badgeProgress = {};
   Map<String, int> get badgeProgress => _badgeProgress;
 
@@ -100,6 +134,11 @@ class UserProvider extends ChangeNotifier {
     _pendingFriendRequests = 0;
     _badgeProgress = {};
     _isPremium = false;
+    _subscriptionEndDate = null;
+    _autoRenew = false;
+    _subscriptionStatus = null;
+    _subscriptionPlanName = null;
+    _billingCycle = null;
     notifyListeners();
   }
 }

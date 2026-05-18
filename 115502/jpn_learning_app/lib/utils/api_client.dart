@@ -1071,4 +1071,120 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 訂閱系統 API（DFD 5.7–5.11）
+  // ────────────────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getSubscriptionPlans() async {
+    final url = Uri.parse('$baseUrl/subscription/plans');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return {'error': '無法取得方案列表'};
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getSubscriptionStatus(int userId) async {
+    final url = Uri.parse('$baseUrl/subscription/status/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return {'error': '無法取得訂閱狀態'};
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> subscribeplan({
+    required int userId,
+    required int planId,
+    required String billingCycle,
+    required String paymentMethod,
+  }) async {
+    final url = Uri.parse('$baseUrl/subscription/subscribe');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'plan_id': planId,
+          'billing_cycle': billingCycle,
+          'payment_method': paymentMethod,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> cancelSubscription(int userId) async {
+    final url = Uri.parse('$baseUrl/subscription/cancel/$userId');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 點數消費 API（DFD 5.5）
+  // ────────────────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> spendPoints({
+    required int userId,
+    required int points,
+    required String feature,
+  }) async {
+    final url = Uri.parse('$baseUrl/user/spend_points');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'points': points,
+          'feature': feature,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 商店 API
+  // ────────────────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getPointPackages() async {
+    final url = Uri.parse('$baseUrl/store/packages');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return {'error': '無法取得購點方案'};
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getStoreItems() async {
+    final url = Uri.parse('$baseUrl/store/items');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return {'error': '無法取得商品列表'};
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

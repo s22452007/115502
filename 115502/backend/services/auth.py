@@ -113,7 +113,8 @@ def login():
             "j_pts": user.j_pts,             # 順便把點數也傳回去
             "daily_scans": user.daily_scans,
             "friend_id": user.friend_id,
-            "username": user.username
+            "username": user.username,
+            "is_premium": user.is_premium or False
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401

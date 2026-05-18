@@ -6,6 +6,7 @@ class UserAvatar extends StatelessWidget {
   final String? friendId;
   final String originalName;
   final double radius;
+  final bool isPremium;
 
   const UserAvatar({
     Key? key,
@@ -13,6 +14,7 @@ class UserAvatar extends StatelessWidget {
     required this.friendId,
     required this.originalName,
     this.radius = 26,
+    this.isPremium = false,
   }) : super(key: key);
 
   String _getFixedColor(String hashString) {
@@ -55,10 +57,37 @@ class UserAvatar extends StatelessWidget {
       imageProvider = NetworkImage(defaultAvatarUrl);
     }
 
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: radius,
       backgroundColor: Colors.grey.shade200,
       backgroundImage: imageProvider,
+    );
+
+    if (!isPremium) return avatar;
+
+    final badgeSize = (radius * 0.52).clamp(10.0, 20.0);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: Container(
+            width: badgeSize,
+            height: badgeSize,
+            decoration: const BoxDecoration(
+              color: Color(0xFFC6B13B),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.workspace_premium,
+              color: Colors.white,
+              size: badgeSize * 0.65,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

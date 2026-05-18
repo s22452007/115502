@@ -5,9 +5,10 @@ import 'package:jpn_learning_app/utils/helpers.dart';
 class ProfileHeader extends StatelessWidget {
   final bool isGuest;
   final String userName;
-  final String? friendId; // 這個參數：為了給 UserAvatar 算顏色
+  final String? friendId;
   final String? userAvatar;
   final String rawLevel;
+  final bool isPremium;
   final VoidCallback onAvatarTap;
   final VoidCallback onNameTap;
 
@@ -15,9 +16,10 @@ class ProfileHeader extends StatelessWidget {
     Key? key,
     required this.isGuest,
     required this.userName,
-    this.friendId, 
+    this.friendId,
     required this.userAvatar,
     required this.rawLevel,
+    this.isPremium = false,
     required this.onAvatarTap,
     required this.onNameTap,
   }) : super(key: key);
@@ -53,9 +55,10 @@ class ProfileHeader extends StatelessWidget {
                 // 呼叫我們寫好的共用積木！
                 child: UserAvatar(
                   avatarBase64: userAvatar,
-                  friendId: friendId,      // 傳入專屬 ID 確保顏色不變
-                  originalName: userName,  // 傳入名字當作預設文字
-                  radius: 40,              // 保持原本的 40 大小
+                  friendId: friendId,
+                  originalName: userName,
+                  radius: 40,
+                  isPremium: isPremium,
                 ),
               ),
               // 右下角的相機小圖示

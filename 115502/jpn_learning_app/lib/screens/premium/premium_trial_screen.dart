@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 class PremiumTrialScreen extends StatelessWidget {
@@ -276,8 +279,15 @@ class PremiumTrialScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
               ),
             ),
-            onPressed: () {
-              _showTrialSuccessDialog(context);
+            onPressed: () async {
+              final userId = context.read<UserProvider>().userId;
+              if (userId != null) {
+                await ApiClient.activatePremium(userId);
+                if (context.mounted) {
+                  context.read<UserProvider>().setIsPremium(true);
+                }
+              }
+              if (context.mounted) _showTrialSuccessDialog(context);
             },
             child: const Text(
               '開始 7 天免費試用',

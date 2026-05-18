@@ -98,7 +98,11 @@ def upload_avatar():
     if not user:
         return jsonify({"error": "找不到此使用者"}), 404
 
-    user.avatar = avatar_base64 # 更新大頭貼
+    # 去掉 data URI 前綴（如 data:image/png;base64,）
+    if ',' in avatar_base64:
+        avatar_base64 = avatar_base64.split(',', 1)[1]
+
+    user.avatar = avatar_base64
     db.session.commit()
 
     return jsonify({"message": "大頭貼更新成功！", "avatar": avatar_base64}), 200

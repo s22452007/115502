@@ -37,14 +37,28 @@ class UserAvatar extends StatelessWidget {
     final String defaultAvatarUrl =
         'https://ui-avatars.com/api/?name=${Uri.encodeComponent(originalName)}&background=$bgColor&color=fff';
 
+    ImageProvider imageProvider;
+    if (avatarBase64 != null && avatarBase64!.isNotEmpty) {
+      if (avatarBase64!.startsWith('http')) {
+        imageProvider = NetworkImage(avatarBase64!);
+      } else {
+        try {
+          final raw = avatarBase64!.contains(',')
+              ? avatarBase64!.substring(avatarBase64!.indexOf(',') + 1)
+              : avatarBase64!;
+          imageProvider = MemoryImage(base64Decode(raw));
+        } catch (_) {
+          imageProvider = NetworkImage(defaultAvatarUrl);
+        }
+      }
+    } else {
+      imageProvider = NetworkImage(defaultAvatarUrl);
+    }
+
     return CircleAvatar(
       radius: radius,
       backgroundColor: Colors.grey.shade200,
-      backgroundImage: (avatarBase64 != null && avatarBase64!.isNotEmpty)
-          ? (avatarBase64!.startsWith('http')
-              ? NetworkImage(avatarBase64!)
-              : MemoryImage(base64Decode(avatarBase64!)) as ImageProvider)
-          : NetworkImage(defaultAvatarUrl) as ImageProvider,
+      backgroundImage: imageProvider,
     );
   }
 }

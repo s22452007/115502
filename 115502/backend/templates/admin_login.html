@@ -7,200 +7,213 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { height: 100vh; display: flex; font-family: "微軟正黑體", sans-serif; }
+        body { height: 100vh; display: flex; font-family: "微軟正黑體", sans-serif; overflow: hidden; }
 
         /* ===== 左側品牌區 ===== */
         .brand-side {
-            width: 45%;
-            background: linear-gradient(150deg, #3a6644 0%, #4a7a54 60%, #3f7049 100%);
+            width: 46%;
+            background: linear-gradient(150deg, #3d7a52 0%, #1e4d30 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 60px 56px;
+            padding: 64px 56px;
             position: relative;
             overflow: hidden;
         }
 
-        /* 裝飾圓形 */
+        /* 背景大光暈 */
         .brand-side::before {
             content: '';
             position: absolute;
             width: 420px; height: 420px;
             border-radius: 50%;
             background: rgba(255,255,255,0.05);
-            top: -120px; right: -120px;
+            top: -140px; right: -140px;
         }
         .brand-side::after {
             content: '';
             position: absolute;
             width: 280px; height: 280px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.04);
+            background: rgba(0,0,0,0.12);
             bottom: -80px; left: -80px;
         }
-        .brand-deco-dot {
-            position: absolute;
-            width: 160px; height: 160px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.07);
-            bottom: 120px; right: -60px;
-        }
-        .brand-deco-dot2 {
-            position: absolute;
-            width: 80px; height: 80px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.06);
-            top: 200px; right: 40px;
+
+        /* 大 Icon */
+        .brand-icon-wrap {
+            width: 96px; height: 96px;
+            background: rgba(255,255,255,0.13);
+            border-radius: 26px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.6rem; color: white;
+            margin-bottom: 32px;
+            position: relative; z-index: 1;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
         }
 
-        .brand-logo {
-            width: 68px; height: 68px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 18px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.8rem;
-            color: white;
-            margin-bottom: 36px;
-            position: relative; z-index: 1;
-        }
-        .brand-tag {
-            font-size: 0.72rem;
+        .brand-app-name {
+            font-size: 0.75rem;
             font-weight: 700;
             letter-spacing: 4px;
-            color: rgba(255,255,255,0.45);
+            color: rgba(255,255,255,0.5);
             text-transform: uppercase;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             position: relative; z-index: 1;
         }
+
         .brand-title {
-            font-size: 3.4rem;
+            font-size: 2.6rem;
             font-weight: 900;
             color: white;
-            line-height: 1.05;
-            letter-spacing: -1.5px;
-            margin-bottom: 14px;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+            margin-bottom: 16px;
             position: relative; z-index: 1;
         }
+
         .brand-subtitle {
-            font-size: 0.95rem;
-            color: rgba(255,255,255,0.55);
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.48);
             line-height: 1.7;
-            margin-bottom: 40px;
             position: relative; z-index: 1;
+            margin-bottom: 48px;
         }
-        .brand-divider {
-            width: 40px;
-            height: 3px;
-            background: rgba(255,255,255,0.25);
-            border-radius: 2px;
-            margin-bottom: 28px;
-            position: relative; z-index: 1;
-        }
-        .brand-features {
+
+        /* 底部統計數字 */
+        .brand-stats {
             display: flex;
-            flex-direction: column;
-            gap: 14px;
+            gap: 36px;
+            padding-top: 32px;
+            border-top: 1px solid rgba(255,255,255,0.12);
             position: relative; z-index: 1;
         }
-        .brand-feature {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            color: rgba(255,255,255,0.75);
-            font-size: 0.88rem;
-        }
-        .brand-feature-icon {
-            width: 34px; height: 34px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.95rem;
+        .brand-stat-num {
+            font-size: 1.6rem;
+            font-weight: 900;
             color: white;
-            flex-shrink: 0;
+            line-height: 1;
+        }
+        .brand-stat-lbl {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.45);
+            margin-top: 4px;
+            letter-spacing: 0.5px;
         }
 
         /* ===== 右側表單區 ===== */
         .form-side {
             flex: 1;
-            background: #f2f4f3;
+            background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 60px 48px;
+            padding: 60px 56px;
         }
         .form-box {
             width: 100%;
-            max-width: 360px;
+            max-width: 340px;
         }
-        .form-heading {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: #1a1a1a;
-            margin-bottom: 6px;
-        }
-        .form-subheading {
-            font-size: 0.85rem;
-            color: #aaa;
-            margin-bottom: 36px;
-        }
-        .field-label {
+        .form-hello {
             font-size: 0.78rem;
             font-weight: 700;
-            color: #888;
-            letter-spacing: 0.5px;
+            letter-spacing: 2px;
+            color: #4a7a54;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .form-heading {
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: #111;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            line-height: 1.1;
+        }
+        .form-subheading {
+            font-size: 0.83rem;
+            color: #bbb;
+            margin-bottom: 40px;
+        }
+
+        .field-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #aaa;
+            letter-spacing: 1px;
             text-transform: uppercase;
             margin-bottom: 8px;
         }
         .form-control, .form-select {
-            background: white;
-            border: 1.5px solid #e8e8e8;
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.92rem;
-            color: #333;
-            transition: border-color 0.2s;
+            background: #f8f9f8;
+            border: 1.5px solid #eee;
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 0.9rem;
+            color: #222;
+            transition: border-color 0.2s, background 0.2s;
         }
         .form-control:focus, .form-select:focus {
+            background: white;
             border-color: #4a7a54;
-            box-shadow: 0 0 0 3px rgba(74,122,84,0.12);
+            box-shadow: 0 0 0 3px rgba(74,122,84,0.1);
+            outline: none;
         }
         .input-group .form-control {
-            border-radius: 12px 0 0 12px;
+            border-radius: 10px 0 0 10px;
             border-right: none;
         }
-        .input-group .btn {
-            border-radius: 0 12px 12px 0;
-            border: 1.5px solid #e8e8e8;
+        .input-group .btn-eye {
+            border-radius: 0 10px 10px 0;
+            border: 1.5px solid #eee;
             border-left: none;
-            background: white;
-            color: #999;
+            background: #f8f9f8;
+            color: #ccc;
+            padding: 0 14px;
+            transition: color 0.2s, background 0.2s;
         }
-        .input-group .form-control:focus ~ .btn {
+        .input-group .form-control:focus ~ .btn-eye {
             border-color: #4a7a54;
+            background: white;
         }
+        .btn-eye:hover { color: #888; }
+
         .btn-login {
             width: 100%;
-            padding: 14px;
-            background: #4a7a54;
+            padding: 13px;
+            background: #2d5a3d;
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 1rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
             font-weight: 800;
             letter-spacing: 0.5px;
             cursor: pointer;
             transition: background 0.2s;
-            margin-top: 8px;
+            margin-top: 6px;
         }
-        .btn-login:hover { background: #3d6645; }
+        .btn-login:hover { background: #244d33; }
+
         .error-box {
-            background: #fce4ec;
-            color: #c2185b;
-            border-radius: 10px;
-            padding: 10px 16px;
-            font-size: 0.85rem;
+            background: #fff5f5;
+            color: #e53e3e;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82rem;
             font-weight: 600;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-footer {
+            margin-top: 36px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.72rem;
+            color: #ddd;
+            text-align: center;
         }
     </style>
 </head>
@@ -208,49 +221,34 @@
 
     <!-- 左側品牌區 -->
     <div class="brand-side">
-        <div class="brand-deco-dot"></div>
-        <div class="brand-deco-dot2"></div>
-
-        <div class="brand-logo"><i class="bi bi-camera-fill"></i></div>
-        <div class="brand-tag">Admin Panel</div>
-        <div class="brand-title">JLens<br>後台系統</div>
-        <div class="brand-subtitle">日語學習平台管理中心<br>全面掌握使用者與學習資料</div>
-        <div class="brand-divider"></div>
-        <div class="brand-features">
-            <div class="brand-feature">
-                <div class="brand-feature-icon"><i class="bi bi-people-fill"></i></div>
-                <span>使用者資料與點數管理</span>
-            </div>
-            <div class="brand-feature">
-                <div class="brand-feature-icon"><i class="bi bi-book-fill"></i></div>
-                <span>教材單字與測驗題目</span>
-            </div>
-            <div class="brand-feature">
-                <div class="brand-feature-icon"><i class="bi bi-chat-dots-fill"></i></div>
-                <span>意見回饋即時回覆</span>
-            </div>
-            <div class="brand-feature">
-                <div class="brand-feature-icon"><i class="bi bi-image-fill"></i></div>
-                <span>照片審核與內容管控</span>
-            </div>
+        <div class="brand-icon-wrap">
+            <i class="bi bi-camera-fill"></i>
         </div>
+
+        <div class="brand-app-name">JLens Admin</div>
+        <div class="brand-title">後台<br>管理系統</div>
+        <div class="brand-subtitle">集中管理使用者、教材內容與學習數據，讓平台持續優化。</div>
+
     </div>
 
     <!-- 右側表單區 -->
     <div class="form-side">
         <div class="form-box">
-            <div class="form-heading">歡迎回來</div>
-            <div class="form-subheading">請選擇帳號並輸入密碼</div>
+            <div class="form-hello">Welcome back</div>
+            <div class="form-heading">管理者登入</div>
+            <div class="form-subheading">請選擇帳號並輸入密碼以繼續</div>
 
             {% if error %}
-            <div class="error-box"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+            <div class="error-box">
+                <i class="bi bi-exclamation-circle-fill"></i>{{ error }}
+            </div>
             {% endif %}
 
             <form action="{{ url_for('admin_login') }}" method="POST">
                 <div class="mb-4">
-                    <div class="field-label">管理者帳號</div>
+                    <div class="field-label">帳號</div>
                     <select name="username" class="form-select" required autofocus>
-                        <option value="" disabled selected>請選擇帳號...</option>
+                        <option value="" disabled selected>選擇管理者帳號...</option>
                         <option value="11156001">11156001</option>
                         <option value="11156006">11156006</option>
                         <option value="11156015">11156015</option>
@@ -264,7 +262,7 @@
                     <div class="input-group">
                         <input type="password" name="password" id="adminPassword"
                                class="form-control" placeholder="輸入密碼" required>
-                        <button class="btn" type="button" id="togglePassword">
+                        <button class="btn btn-eye" type="button" id="togglePassword">
                             <i id="eyeIcon" class="bi bi-eye-slash-fill"></i>
                         </button>
                     </div>
@@ -272,6 +270,8 @@
 
                 <button type="submit" class="btn-login">登入系統</button>
             </form>
+
+            <div class="form-footer">© 2026 JLens Project Team · 管理者專用</div>
         </div>
     </div>
 

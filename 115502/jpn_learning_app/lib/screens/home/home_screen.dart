@@ -22,6 +22,7 @@ import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
 import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -171,11 +172,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             child: Container(
               margin: const EdgeInsets.only(right: 16),
               alignment: Alignment.center,
-              child: CircleAvatar(
+              child: UserAvatar(
+                avatarBase64: avatarUrl,
+                friendId: userProvider.friendId,
+                originalName: userName,
                 radius: 18,
-                backgroundColor: AppColors.primaryLighter,
-                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 20, color: AppColors.primary) : null,
               ),
             ),
           ),
@@ -189,11 +190,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 15),
               child: Row(
                 children: [
-                  CircleAvatar(
+                  UserAvatar(
+                    avatarBase64: avatarUrl,
+                    friendId: userProvider.friendId,
+                    originalName: userName,
                     radius: 35,
-                    backgroundColor: AppColors.primaryLighter,
-                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                    child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 40, color: AppColors.primary) : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

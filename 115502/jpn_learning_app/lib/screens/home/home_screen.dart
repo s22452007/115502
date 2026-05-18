@@ -174,6 +174,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 friendId: userProvider.friendId,
                 originalName: userName,
                 radius: 18,
+                isPremium: userProvider.isPremium,
               ),
             ),
           ),
@@ -192,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     friendId: userProvider.friendId,
                     originalName: userName,
                     radius: 35,
+                    isPremium: userProvider.isPremium,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

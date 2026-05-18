@@ -243,12 +243,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'Guest',
                     friendId: userProvider.friendId,
                     userAvatar: userProvider.avatar,
-                    
-                    rawLevel: userProvider.japaneseLevel, 
-                    
+                    rawLevel: userProvider.japaneseLevel,
+                    isPremium: userProvider.isPremium,
                     onAvatarTap: _pickAndUploadImage,
                     onNameTap: _editNickname,
-                    ),
+                  ),
                   const SizedBox(height: 32),
                   ProfileRadarSection(
                     isGuest: isGuest,

@@ -84,6 +84,18 @@ def grant_initial_badges():
         "granted": granted_badge_names 
     }), 200
 
+# 啟用 Premium
+@user_bp.route('/activate_premium', methods=['POST'])
+def activate_premium():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+    user.is_premium = True
+    db.session.commit()
+    return jsonify({"message": "Premium 已啟用", "is_premium": True}), 200
+
 # 上傳大頭貼
 @user_bp.route('/upload_avatar', methods=['POST'])
 def upload_avatar():

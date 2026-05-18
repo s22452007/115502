@@ -49,8 +49,14 @@ app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
 
 # 啟動時自動建立資料表 (如果還沒有的話)
 with app.app_context():
-    #db.drop_all()  # <-- 🛑 絕對不能在 app.py 裡寫這行！
-    db.create_all()  # 只要保留這行就好，它會檢查「如果沒有表才建立」，不會蓋掉舊資料
+    db.create_all()
+    # 舊資料庫補欄位（新裝置自動跳過）
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(db.text("ALTER TABLE user ADD COLUMN is_premium BOOLEAN DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            pass
 
 # ==========================================
 # 🛎️ 專屬櫃檯：負責接收 Flutter 傳來的聊天包裹

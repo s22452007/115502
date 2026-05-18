@@ -41,6 +41,7 @@ class AppDrawer extends StatelessWidget {
                   friendId: friendId,
                   originalName: userName,
                   radius: 32,
+                  isPremium: userProvider.isPremium,
                 ),
                 const SizedBox(width: 16),
                 Expanded(

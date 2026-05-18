@@ -100,6 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('daily_scans')) context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
         if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
         if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
+        if (result.containsKey('is_premium')) context.read<UserProvider>().setIsPremium(result['is_premium'] == true);
 
         try { await NotificationService.setLoginStatus(true); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
 

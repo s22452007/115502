@@ -19,6 +19,9 @@ class UserProvider extends ChangeNotifier {
 
   bool get isLoggedIn => _userId != null;
 
+  bool _isPremium = false;
+  bool get isPremium => _isPremium;
+
   Map<String, int> _badgeProgress = {};
   Map<String, int> get badgeProgress => _badgeProgress;
 
@@ -38,6 +41,7 @@ class UserProvider extends ChangeNotifier {
   int get streakDays => _streakDays;
   int get jPts => _jPts;
 
+  void setIsPremium(bool value) { _isPremium = value; notifyListeners(); }
   void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
   void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
   void setUserId(int? id) { _userId = id; notifyListeners(); }
@@ -66,6 +70,7 @@ class UserProvider extends ChangeNotifier {
     int dailyScans = 0,
     int pendingFriendRequests = 0,
     Map<String, int>? badgeProgress,
+    bool isPremium = false,
   }) {
     _userId = userId;
     _email = email;
@@ -78,6 +83,7 @@ class UserProvider extends ChangeNotifier {
     _dailyScans = dailyScans;
     _pendingFriendRequests = pendingFriendRequests;
     _badgeProgress = badgeProgress ?? {};
+    _isPremium = isPremium;
     notifyListeners();
   }
 
@@ -93,6 +99,7 @@ class UserProvider extends ChangeNotifier {
     _dailyScans = 0;
     _pendingFriendRequests = 0;
     _badgeProgress = {};
+    _isPremium = false;
     notifyListeners();
   }
 }

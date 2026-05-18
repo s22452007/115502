@@ -34,7 +34,10 @@ class User(db.Model):
     total_scans = db.Column(db.Integer, default=0)       # 對應：快門獵人
     
     # 記錄他看過哪些徽章彈窗 (紀錄通知過，避免重複通知)
-    notified_levels = db.Column(db.JSON, default={}) 
+    notified_levels = db.Column(db.JSON, default={})
+
+    # 訂閱狀態
+    is_premium = db.Column(db.Boolean, default=False) 
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
 
     # 使用者單字紀錄（解鎖 / 收藏）

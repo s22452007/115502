@@ -33,10 +33,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
 
   // 統一全域現代扁平化配色
-  final Color _flatCanvasColor = const Color(0xFFE8F3EB); // 參考圖的極淡綠背景
+  final Color _flatCanvasColor = const Color(0xFFE8F3EB); 
   final Color _textColor = const Color(0xFF4A4A4A);
   final Color _subTextColor = const Color(0xFF9B9B9B);
-  final Color _btnGreenColor = const Color(0xFF75D19A); // 參考圖的按鈕淺綠
+  final Color _btnGreenColor = const Color(0xFF75D19A); 
 
   @override
   void initState() {
@@ -45,7 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ==========================================
-  // UI 轉換邏輯：等級對應稱號與進度
+  // UI 轉換邏輯：等級精準對應程度稱號與進度
   // ==========================================
   
   String _getLevelTitle(String level) {
@@ -216,6 +216,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final email = isGuest ? '登入後同步資料' : (userProvider.email ?? '—');
     final userName = isGuest ? 'Guest' : (userProvider.username ?? email.split('@')[0]);
     final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
+    
+    // 🌟 核心轉換：將 N 幾移除，只留下對應稱號
     final levelTitle = _getLevelTitle(rawLevel);
     final progressValue = _getProgressValue(rawLevel);
     
@@ -228,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       extendBody: true,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // 讓背景顏色延伸
+        backgroundColor: Colors.transparent, 
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: Builder(
@@ -244,12 +246,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.only(bottom: 120),
               child: Column(
                 children: [
-                  // 🌟 核心：全新大頭照與進度條卡片
+                  // 大頭照與進度條白底卡片
                   Stack(
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
-                      // 白底資料卡片
                       Container(
                         margin: const EdgeInsets.only(top: 55, left: 24, right: 24),
                         padding: const EdgeInsets.fromLTRB(24, 65, 24, 24),
@@ -265,8 +266,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text(userName, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor)),
                             const SizedBox(height: 6),
                             Text(email, style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
-                            const SizedBox(height: 4),
-                            Text('$rawLevel · $levelTitle', style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
+                            const SizedBox(height: 6),
+                            // 🌟 修正：此處已移除 $rawLevel，只單純顯示稱號
+                            Text(levelTitle, style: TextStyle(color: _btnGreenColor, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
                             
                             const SizedBox(height: 24),
                             
@@ -291,7 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             
                             const SizedBox(height: 24),
                             
-                            // 管理按鈕
+                            // 管理個人檔案按鈕
                             SizedBox(
                               width: 180,
                               height: 44,
@@ -309,14 +311,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       
-                      // 懸浮大頭照
+                      // 懸浮置中大頭照
                       Positioned(
                         top: 0,
                         child: GestureDetector(
                           onTap: _pickAndUploadImage,
                           child: Container(
-                            padding: const EdgeInsets.all(4), // 製造白色邊框效果
-                            decoration: const BoxDecoration(color: Color(0xFFE8F3EB), shape: BoxShape.circle),
+                            padding: const EdgeInsets.all(4), 
+                            decoration: BoxDecoration(color: _flatCanvasColor, shape: BoxShape.circle),
                             child: CircleAvatar(
                               radius: 50,
                               backgroundColor: AppColors.primaryLighter,
@@ -331,7 +333,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 20),
 
-                  // 🌟 下方選單列表 (仿照圖片無邊框清單設計)
+                  // 下方細項選單清單
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -352,11 +354,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.people_alt_rounded, 
                           title: '好友綁定', 
                           trailingText: friendId,
-                          onTap: () {} // 預留好友功能
+                          onTap: () {} 
                         ),
-                        const SizedBox(height: 16),
                         
-                        // 🌟 成就徽章區塊 (原生功能保留)
+                        const SizedBox(height: 12),
+                        // 🌟 修正：基本資料明細列表中的日文等級，也更換為純稱號 (levelTitle)
+                        _buildFlatInfoTile(label: '日文等級', value: levelTitle),
+                        const SizedBox(height: 12),
+
+                        // 成就徽章區塊
                         ProfileAchievementsSection(isGuest: isGuest, onGuestClick: _handleGuestClick),
                         
                         const SizedBox(height: 16),
@@ -417,6 +423,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ],
         ),
+      ),
+    );
+  }
+
+  // 扁平化極簡資料小卡片（唯讀顯示）
+  Widget _buildFlatInfoTile({required String label, required String value}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: _subTextColor, fontSize: 16, fontWeight: FontWeight.w800)),
+          Text(value, style: TextStyle(color: _textColor, fontSize: 16, fontWeight: FontWeight.w900)),
+        ],
       ),
     );
   }

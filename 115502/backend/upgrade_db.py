@@ -30,6 +30,8 @@ add_column("group_member", "group_logins INTEGER DEFAULT 0")
 # 各自領獎與押金機制欄位
 add_column("group_member", "has_claimed BOOLEAN DEFAULT 0")
 add_column("group_member", "paid_deposit BOOLEAN DEFAULT 0")
+# 小組押金紀錄
+add_column("group_member", "deposit_amount INTEGER DEFAULT 0")
 
 print("✅ group_member 欄位確認完畢")
 
@@ -37,22 +39,29 @@ print("✅ group_member 欄位確認完畢")
 # 2. 升級 user
 # ==========================================
 add_column("user", "username VARCHAR(30)")
-# 🌟 新增：押金對賭機制，紀錄上一次免費參加是哪一週
+# 押金對賭機制，紀錄上一次免費參加是哪一週
 add_column("user", "last_free_group_week VARCHAR(10)")
+
+# 訂閱與 AI 相關欄位
+add_column("user", "is_premium BOOLEAN DEFAULT 0")
+add_column("user", "subscription_end_date DATETIME")
+add_column("user", "auto_renew BOOLEAN DEFAULT 0")
+add_column("user", "group_completions INTEGER DEFAULT 0")
+add_column("user", "daily_ai INTEGER DEFAULT 0")
+add_column("user", "last_ai_date DATE")
 
 try:
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_username ON user(username);")
-    print("✅ user 及其索引、對賭額度欄位確認完畢")
+    print("✅ user 及其索引、訂閱、對賭額度欄位確認完畢")
 except sqlite3.OperationalError as e:
     print(f"⚠️ username 索引建立警告：{e}")
-
 # ==========================================
 # 3. 升級 study_group (學習小組獎勵機制與到期日)
 # ==========================================
 add_column("study_group", "current_progress INTEGER DEFAULT 0")
 add_column("study_group", "reward_points INTEGER DEFAULT 50")
 add_column("study_group", "is_reward_claimed BOOLEAN DEFAULT 0")
-# 🌟 新增：自動結算系統，紀錄小組到期時間
+# 新增：自動結算系統，紀錄小組到期時間
 add_column("study_group", "expire_at DATETIME")
 print("✅ study_group 獎勵機制與到期日欄位確認完畢")
 
@@ -213,6 +222,28 @@ try:
     print("✅ user_ability 資料表已成功移除！")
 except sqlite3.OperationalError as e:
     print(f"⚠️ user_ability 移除警告：{e}")
+
+# ==========================================
+# 12. 升級 point_transaction (從 app.py 搬過來的新增欄位)
+# ==========================================
+try:
+    # 確保表格存在 (因為有時候舊使用者連這個表都沒有)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS point_transaction (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        points INTEGER NOT NULL,
+        price INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id)
+    );
+    """)
+    # 補充欄位
+    add_column("point_transaction", "transaction_type VARCHAR(20) DEFAULT 'purchase'")
+    add_column("point_transaction", "related_feature VARCHAR(100)")
+    print("✅ point_transaction 交易紀錄表欄位確認完畢")
+except Exception as e:
+    print(f"⚠️ point_transaction 建立或升級警告：{e}")
 
 # 儲存並關閉 (這兩行原本就有，加在它們上面就好)
 conn.commit()

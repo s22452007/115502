@@ -19,6 +19,43 @@ class UserProvider extends ChangeNotifier {
 
   bool get isLoggedIn => _userId != null;
 
+  bool _isPremium = false;
+  bool get isPremium => _isPremium;
+
+  // 訂閱詳細狀態
+  String? _subscriptionEndDate;
+  bool _autoRenew = false;
+  String? _subscriptionStatus;
+  String? _subscriptionPlanName;
+  String? _billingCycle;
+
+  String? get subscriptionEndDate => _subscriptionEndDate;
+  bool get autoRenew => _autoRenew;
+  String? get subscriptionStatus => _subscriptionStatus;
+  String? get subscriptionPlanName => _subscriptionPlanName;
+  String? get billingCycle => _billingCycle;
+
+  bool get hasActiveSubscription {
+    if (!_isPremium) return false;
+    if (_subscriptionEndDate == null) return false;
+    return DateTime.tryParse(_subscriptionEndDate!)?.isAfter(DateTime.now()) ?? false;
+  }
+
+  void setSubscriptionInfo({
+    String? endDate,
+    bool autoRenew = false,
+    String? status,
+    String? planName,
+    String? billingCycle,
+  }) {
+    _subscriptionEndDate = endDate;
+    _autoRenew = autoRenew;
+    _subscriptionStatus = status;
+    _subscriptionPlanName = planName;
+    _billingCycle = billingCycle;
+    notifyListeners();
+  }
+
   Map<String, int> _badgeProgress = {};
   Map<String, int> get badgeProgress => _badgeProgress;
 
@@ -38,6 +75,7 @@ class UserProvider extends ChangeNotifier {
   int get streakDays => _streakDays;
   int get jPts => _jPts;
 
+  void setIsPremium(bool value) { _isPremium = value; notifyListeners(); }
   void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
   void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
   void setUserId(int? id) { _userId = id; notifyListeners(); }
@@ -48,7 +86,7 @@ class UserProvider extends ChangeNotifier {
   void setStreakDays(int days) { _streakDays = days; notifyListeners(); }
   void setFriendId(String? id) { _friendId = id; notifyListeners(); }
 
-  // 🌟 確保點數更新方法名稱一致
+  // 確保點數更新方法名稱一致
   void setJPts(int pts) {
     _jPts = pts;
     notifyListeners();
@@ -66,6 +104,7 @@ class UserProvider extends ChangeNotifier {
     int dailyScans = 0,
     int pendingFriendRequests = 0,
     Map<String, int>? badgeProgress,
+    bool isPremium = false,
   }) {
     _userId = userId;
     _email = email;
@@ -78,6 +117,7 @@ class UserProvider extends ChangeNotifier {
     _dailyScans = dailyScans;
     _pendingFriendRequests = pendingFriendRequests;
     _badgeProgress = badgeProgress ?? {};
+    _isPremium = isPremium;
     notifyListeners();
   }
 
@@ -93,6 +133,12 @@ class UserProvider extends ChangeNotifier {
     _dailyScans = 0;
     _pendingFriendRequests = 0;
     _badgeProgress = {};
+    _isPremium = false;
+    _subscriptionEndDate = null;
+    _autoRenew = false;
+    _subscriptionStatus = null;
+    _subscriptionPlanName = null;
+    _billingCycle = null;
     notifyListeners();
   }
 }

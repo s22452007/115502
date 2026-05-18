@@ -100,7 +100,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
               const Spacer(),
 
-              // 🌟 Commit 3: 底部按鈕完全扁平化，增加大圓角
+              // Commit 3: 底部按鈕完全扁平化，增加大圓角
               AnimatedContainer(
                 duration: _goldenDuration,
                 curve: _smoothCurve,

@@ -1,3 +1,5 @@
+
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,11 +8,11 @@ import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -41,6 +43,7 @@ class AppDrawer extends StatelessWidget {
                   friendId: friendId,
                   originalName: userName,
                   radius: 32,
+                  isPremium: userProvider.isPremium,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -67,7 +70,10 @@ class AppDrawer extends StatelessWidget {
                   _buildPillItem(context, Icons.bookmark_border, '單字探險', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()))),
                   _buildPillItem(context, Icons.people_outline, '好友', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
                   _buildPillItem(context, Icons.groups_outlined, '學習小組', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()))),
-                  _buildPillItem(context, Icons.stars, '訂閱與點數', color: Colors.orange, bgColor: Colors.orange.withOpacity(0.1), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()))),
+                  _buildPillItem(context, Icons.storefront, '商城與會員中心', color: Colors.orange, bgColor: Colors.orange.withOpacity(0.1), onTap: () {
+                    // initialIndex: 0 代表打開時預設顯示「👑 Premium」分頁
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 0)));
+                  }),
                   const Divider(height: 30, thickness: 0.5),
                   _buildPillItem(context, Icons.settings_outlined, '系統設定', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SystemSettingsScreen()))),
                 ],

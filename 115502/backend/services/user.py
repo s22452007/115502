@@ -12,7 +12,7 @@ from utils.group_helper import add_group_progress_and_check_reward
 from models import (
     User, UserAchievement, UserVocab, UserFolder, UserVocab,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
-    Feedback, PointTransaction, Vocab
+    Feedback, PointTransaction, Vocab, UserBoost,
 )
 
 user_bp = Blueprint('user', __name__)
@@ -292,7 +292,7 @@ def mark_badge_seen():
         # 3. 存回資料庫
         user.notified_levels = levels
         
-        # 🌟 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
+        # 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
         flag_modified(user, "notified_levels")
         
         db.session.commit()
@@ -342,7 +342,7 @@ def add_points():
     }), 200
 
 
-# 查詢交易紀錄
+# 查詢交易紀錄（DFD 5.6，含購買與消費）
 @user_bp.route('/transactions/<int:user_id>', methods=['GET'])
 def get_transactions(user_id):
     txns = PointTransaction.query.filter_by(user_id=user_id).order_by(PointTransaction.created_at.desc()).all()
@@ -352,9 +352,125 @@ def get_transactions(user_id):
             "points": t.points,
             "price": t.price,
             "payment_method": t.payment_method,
+            "transaction_type": getattr(t, 'transaction_type', 'purchase'),
+            "related_feature": getattr(t, 'related_feature', None),
             "created_at": t.created_at.strftime('%Y-%m-%d %H:%M'),
         })
     return jsonify({"transactions": result}), 200
+
+
+# 各 feature 的固定點數成本（server-side）
+_FEATURE_COST = {
+    'photo_extra':  30,
+    'ai_extra':     30,
+    'vocab_expand': 50,
+}
+
+# 消費點數解鎖功能（DFD 5.5）
+@user_bp.route('/spend_points', methods=['POST'])
+def spend_points():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    feature = data.get('feature', 'unknown')
+    # 已知 feature 用 server 定義的成本，否則接受前端傳入
+    points_to_spend = _FEATURE_COST.get(feature, data.get('points', 0))
+
+    if not user_id or points_to_spend <= 0:
+        return jsonify({"error": "缺少使用者 ID 或點數數量錯誤"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    if user.j_pts < points_to_spend:
+        return jsonify({"error": "點數不足", "current_points": user.j_pts}), 400
+
+    user.j_pts -= points_to_spend
+    db.session.add(PointTransaction(
+        user_id=user_id,
+        points=-points_to_spend,
+        price=0,
+        payment_method='points',
+        transaction_type='spend',
+        related_feature=feature,
+    ))
+
+    # 依 feature 給予對應道具效果
+    effect_desc = ''
+    now = datetime.utcnow()
+
+    if feature == 'photo_extra':
+        end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=0)
+        db.session.add(UserBoost(user_id=user_id, boost_type='photo_daily', extra_amount=10, expire_at=end_of_day))
+        effect_desc = '+10 次拍照（今日有效）'
+
+    elif feature == 'ai_extra':
+        end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=0)
+        db.session.add(UserBoost(user_id=user_id, boost_type='ai_daily', extra_amount=10, expire_at=end_of_day))
+        effect_desc = '+10 次 AI 對話（今日有效）'
+
+    elif feature == 'vocab_expand':
+        existing = db.session.query(
+            db.func.coalesce(db.func.sum(UserBoost.extra_amount), 0)
+        ).filter(
+            UserBoost.user_id == user_id,
+            UserBoost.boost_type == 'vocab_slots',
+        ).scalar() or 0
+        if int(existing) >= 500:
+            db.session.rollback()
+            return jsonify({"error": "單字收藏擴充已達上限（500個）"}), 400
+        add_amount = min(50, 500 - int(existing))
+        db.session.add(UserBoost(user_id=user_id, boost_type='vocab_slots', extra_amount=add_amount))
+        effect_desc = f'+{add_amount} 個收藏位'
+
+    db.session.commit()
+
+    return jsonify({
+        "message": f"成功使用 {points_to_spend} 點！{effect_desc}",
+        "total_points": user.j_pts,
+        "effect": effect_desc,
+    }), 200
+
+
+# 啟用試用 Premium（DFD 5.9 trial，7 天）
+@user_bp.route('/activate_premium', methods=['POST'])
+def activate_premium():
+    from models import UserSubscription, SubscriptionPlan
+    from datetime import timedelta
+
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+
+    plan = SubscriptionPlan.query.filter_by(is_active=True).first()
+    now = datetime.utcnow()
+    trial_end = now + timedelta(days=7)
+
+    user.is_premium = True
+    user.subscription_end_date = trial_end
+    user.auto_renew = False
+
+    if plan:
+        db.session.add(UserSubscription(
+            user_id=user_id,
+            plan_id=plan.id,
+            billing_cycle='monthly',
+            start_date=now,
+            end_date=trial_end,
+            auto_renew=False,
+            status='trial',
+            payment_method='trial',
+        ))
+
+    db.session.commit()
+    return jsonify({
+        "message": "試用已啟用（7 天）",
+        "end_date": trial_end.isoformat(),
+        "is_premium": True,
+    }), 200
 
 # 增加拍照次數
 @user_bp.route('/increment_scan', methods=['POST'])
@@ -367,15 +483,24 @@ def increment_scan():
         return jsonify({"error": "找不到此使用者"}), 404
 
     today = date.today()
-    # 防呆：如果是新的一天，先歸零
     if user.last_scan_date != today:
         user.daily_scans = 0
         user.last_scan_date = today
 
-    # 增加次數 (假設每日目標是 3 次)
-    if user.daily_scans < 3:
+    # 計算今日有效上限（Premium 無限；一般用戶基礎 3 次 + 有效加購）
+    daily_limit = None
+    if not user.is_premium:
+        now = datetime.utcnow()
+        active_boosts = UserBoost.query.filter(
+            UserBoost.user_id == user_id,
+            UserBoost.boost_type == 'photo_daily',
+            UserBoost.expire_at > now,
+        ).all()
+        daily_limit = 3 + sum(b.extra_amount for b in active_boosts)
+
+    if daily_limit is None or user.daily_scans < daily_limit:
         user.daily_scans += 1
-    
+
     # 增加小組的拍照貢獻
     member_record = GroupMember.query.filter_by(user_id=user_id).first()
     if member_record:
@@ -388,7 +513,8 @@ def increment_scan():
 
     return jsonify({
         "message": "進度更新成功！",
-        "daily_scans": user.daily_scans
+        "daily_scans": user.daily_scans,
+        "daily_limit": daily_limit,
     }), 200
 
 # ==========================================

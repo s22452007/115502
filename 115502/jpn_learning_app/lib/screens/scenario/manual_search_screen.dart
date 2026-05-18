@@ -35,10 +35,10 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   void _submitScenario() {
     if (_searchController.text.trim().isEmpty) return;
 
-    // 🌟 1. 抓取你輸入或點擊的文字 (例如：🎮 遊戲日常)
+    // 1. 抓取你輸入或點擊的文字 (例如：🎮 遊戲日常)
     String selectedTopic = _searchController.text.trim();
 
-    // 🌟 2. 帶著這個文字，直接跳轉到對話頁面 (RoleplayScreen)
+    // 2. 帶著這個文字，直接跳轉到對話頁面 (RoleplayScreen)
     Navigator.push(
       context,
       MaterialPageRoute(

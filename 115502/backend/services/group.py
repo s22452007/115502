@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from utils.db import db
-from models import User, StudyGroup, GroupMember, GroupInvite, Friendship
+from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction, UserBoost
 from datetime import datetime, timedelta, timezone
 
 group_bp = Blueprint('group', __name__)
@@ -23,20 +23,109 @@ def get_next_sunday_end():
     return next_sunday.replace(hour=23, minute=59, second=59, microsecond=0)
 
 def handle_deposit_and_free_quota(user):
-    """處理玩家的押金與免費額度"""
+    """處理玩家的押金與免費額度，回傳 (success, msg, deposit_amount)"""
     current_week = get_current_year_week()
     is_free = (user.last_free_group_week != current_week)
-    
+
     if not is_free:
-        # 第二團起，檢查餘額並扣除 20 點押金
-        if user.j_pts < 20:
-            return False, "點數不足 20 點，無法開啟額外小組對賭！", False
-        user.j_pts -= 20
-        return True, "OK", True  # 付了押金
+        # 第二團起：訂閱用戶押 10 點，一般用戶押 20 點
+        deposit = 10 if user.is_premium else 20
+        if user.j_pts < deposit:
+            return False, f"點數不足 {deposit} 點，無法開啟額外小組對賭！", 0
+        user.j_pts -= deposit
+        feature_key = 'group_deposit_premium' if user.is_premium else 'group_deposit_free'
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=-deposit,
+            price=0,
+            payment_method='points',
+            transaction_type='spend',
+            related_feature=feature_key,
+        ))
+        return True, "OK", deposit
     else:
-        # 免費團，更新他的免費額度使用紀錄
         user.last_free_group_week = current_week
-        return True, "OK", False # 使用免費額度
+        return True, "OK", 0  # 免費，無押金
+
+
+def _give_group_reward(user, member, group):
+    """按完成次數與訂閱狀態給予獎勵，回傳描述字串。"""
+    now = datetime.now(timezone.utc)
+
+    # 等級判斷
+    if group.goal_target <= 15:
+        tier = 0  # 輕鬆
+    elif group.goal_target <= 30:
+        tier = 1  # 標準
+    else:
+        tier = 2  # 爆肝
+
+    # 退還押金
+    deposit_refund = getattr(member, 'deposit_amount', 0) or (20 if member.paid_deposit else 0)
+    if deposit_refund > 0:
+        user.j_pts += deposit_refund
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=deposit_refund,
+            price=0,
+            payment_method='refund',
+            transaction_type='reward',
+            related_feature='group_deposit_refund',
+        ))
+
+    completions = getattr(user, 'group_completions', 0) or 0
+    msg_parts = []
+
+    if completions == 0:
+        # 第一次達成：給點數 10/20/40
+        pts = [10, 20, 40][tier]
+        user.j_pts += pts
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=pts,
+            price=0,
+            payment_method='reward',
+            transaction_type='reward',
+            related_feature='group_first_completion',
+        ))
+        msg_parts.append(f'獲得 {pts} 點')
+    elif user.is_premium:
+        # 訂閱用戶後續達成：給點數 5/10/20
+        pts = [5, 10, 20][tier]
+        user.j_pts += pts
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=pts,
+            price=0,
+            payment_method='reward',
+            transaction_type='reward',
+            related_feature='group_completion',
+        ))
+        msg_parts.append(f'獲得 {pts} 點')
+    else:
+        # 一般用戶後續達成：給限時道具
+        expire_days = [0, 3, 7][tier]
+        extra_scans = [5, 10, 20][tier]
+        if expire_days == 0:
+            expire_at = now.replace(hour=23, minute=59, second=59, microsecond=0, tzinfo=None)
+            expire_label = '今日'
+        else:
+            expire_at = (now + timedelta(days=expire_days)).replace(tzinfo=None)
+            expire_label = f'{expire_days} 天'
+        db.session.add(UserBoost(user_id=user.id, boost_type='photo_daily', extra_amount=extra_scans, expire_at=expire_at))
+        db.session.add(UserBoost(user_id=user.id, boost_type='ai_daily',   extra_amount=extra_scans, expire_at=expire_at))
+        msg_parts.append(f'拍照 +{extra_scans} 次、AI +{extra_scans} 次（限 {expire_label}）')
+        if tier == 2:
+            db.session.add(UserBoost(user_id=user.id, boost_type='vocab_unlimited', extra_amount=0, expire_at=expire_at))
+            msg_parts.append('收藏暫時無限')
+
+    if deposit_refund > 0:
+        msg_parts.append(f'退還押金 {deposit_refund} 點')
+
+    if hasattr(user, 'group_completions'):
+        user.group_completions = completions + 1
+
+    return '、'.join(msg_parts) if msg_parts else '達成獎勵已發放'
 
 
 # ==========================================
@@ -66,9 +155,8 @@ def get_my_group(user_id):
         for m in members:
             u = User.query.get(m.user_id)
             if u and is_success and not m.has_claimed:
-                # 達標發放獎勵！加回押金
-                total_reward = group.reward_points + (20 if m.paid_deposit else 0)
-                u.j_pts += total_reward 
+                _give_group_reward(u, m, group)
+                m.has_claimed = True
                 
         # 結算完畢後，抓取「當前打開畫面的這個人」的最新點數
         current_user = User.query.get(user_id)
@@ -158,31 +246,30 @@ def create_group():
         return jsonify({"error": "找不到用戶"}), 404
 
     # 檢查押金與額度
-    success, msg, paid_deposit = handle_deposit_and_free_quota(user)
+    success, msg, deposit_amount = handle_deposit_and_free_quota(user)
     if not success:
         return jsonify({"error": msg}), 400
+    paid_deposit = deposit_amount > 0
 
     try:
-        # 根據「目標類型」與「目標數值」，動態決定獎勵點數！
-        calculated_reward = 30 # 預設防呆值
-        
+        # 根據「目標類型」與「目標數值」，動態決定首次達成獎勵點數
+        calculated_reward = 10  # 預設防呆值
+
         if goal_type == 'scans':
-            # 📸 拍照任務 (輕鬆15次 / 標準30次 / 爆肝50次)
             if goal_target <= 15:
-                calculated_reward = 30
+                calculated_reward = 10
             elif goal_target <= 30:
-                calculated_reward = 50
+                calculated_reward = 20
             else:
-                calculated_reward = 100
-                
+                calculated_reward = 40
+
         elif goal_type == 'logins':
-            # 📅 登入任務 (輕鬆15天 / 標準25天 / 爆肝35天)
             if goal_target <= 15:
-                calculated_reward = 30
+                calculated_reward = 10
             elif goal_target <= 25:
-                calculated_reward = 50
+                calculated_reward = 20
             else:
-                calculated_reward = 100
+                calculated_reward = 40
 
         # 建立小組，並計算結算日
         new_group = StudyGroup(
@@ -198,10 +285,11 @@ def create_group():
         
         initial_logins = 1 if goal_type == 'logins' else 0
         host_member = GroupMember(
-            group_id=new_group.id, 
+            group_id=new_group.id,
             user_id=host_id,
             group_logins=initial_logins,
-            paid_deposit=paid_deposit # 紀錄是否付了押金！
+            paid_deposit=paid_deposit,
+            deposit_amount=deposit_amount,
         )
         db.session.add(host_member)
         new_group.current_progress += initial_logins
@@ -330,16 +418,18 @@ def respond_group_invite():
                 return jsonify({"error": "該小組已達成目標，目前鎖定加入喔！"}), 400
 
             # 加入也需要檢查押金與額度
-            success, msg, paid_deposit = handle_deposit_and_free_quota(user)
+            success, msg, deposit_amount = handle_deposit_and_free_quota(user)
             if not success:
                 return jsonify({"error": msg}), 400
+            paid_deposit = deposit_amount > 0
 
             initial_logins = 1 if group.goal_type == 'logins' else 0
             new_member = GroupMember(
-                group_id=invite.group_id, 
+                group_id=invite.group_id,
                 user_id=user_id,
                 group_logins=initial_logins,
-                paid_deposit=paid_deposit # 紀錄是否付了押金！
+                paid_deposit=paid_deposit,
+                deposit_amount=deposit_amount,
             )
             db.session.add(new_member)
             group.current_progress += initial_logins
@@ -479,30 +569,18 @@ def claim_reward():
         return jsonify({"error": "任務尚未達成，還不能領獎喔！"}), 400
 
     try:
-        # 計算總獎勵 = 預設獎勵 + (若有付押金則退還 20 點)
-        total_reward = group.reward_points + (20 if member.paid_deposit else 0)
-
         user = User.query.get(user_id)
-        user.j_pts += total_reward
+        reward_desc = _give_group_reward(user, member, group)
 
-        # 領完獎後，直接把這個人從小組刪除 (順利畢業)
-        # 注意：我們「絕對不」扣除 group.current_progress，讓留下來的隊友依然能領獎！
         db.session.delete(member)
         db.session.commit()
 
-        # 檢查是不是所有人都領完結業了？
-        # 如果小組空了，代表大家都領完了，這組才真正解散清除！
         remaining_members = GroupMember.query.filter_by(group_id=group_id).count()
         if remaining_members == 0:
-            db.session.delete(group) # 清除這個空蕩蕩的小組
+            db.session.delete(group)
             db.session.commit()
 
-        msg = f"太棒了！成功領取 {group.reward_points} 點"
-        if member.paid_deposit:
-            msg += " (含退還 20 點押金)"
-        msg += "！你已順利結業！"
-
-        return jsonify({"message": msg, "new_j_pts": user.j_pts}), 200
+        return jsonify({"message": f"太棒了！{reward_desc}！你已順利結業！", "new_j_pts": user.j_pts}), 200
 
     except Exception as e:
         db.session.rollback()

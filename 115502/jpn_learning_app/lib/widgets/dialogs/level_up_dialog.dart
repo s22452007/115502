@@ -38,7 +38,7 @@ class LevelUpDialog extends StatelessWidget {
     final String title = info['title'] as String;
 
     // ==========================================
-    // 🌟 智慧文案判斷邏輯：給予專屬的對話框文字
+    // 智慧文案判斷邏輯：給予專屬的對話框文字
     // ==========================================
     String topTitle = '🎉 恭喜升級 🎉';
     String descText = '你的努力有了回報！繼續保持下去！';

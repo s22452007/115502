@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 // 2. 第三方套件
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // 🌟 新增：用於判斷新手引導
+import 'package:shared_preferences/shared_preferences.dart'; // 新增：用於判斷新手引導
 
 // 3. 我們自己寫的工具與狀態管理
 import 'package:jpn_learning_app/utils/constants.dart';
@@ -17,7 +17,7 @@ import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
-import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart'; // 🌟 新增：新手引導頁面
+import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart'; // 新增：新手引導頁面
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,10 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _checkOnboardingStatus(); // 🌟 畫面初始化時檢查是否需要顯示新手引導
+    _checkOnboardingStatus(); // 畫面初始化時檢查是否需要顯示新手引導
   }
 
-  // 🌟 新增：新手引導判斷邏輯
+  // 新增：新手引導判斷邏輯
   Future<void> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final isFirstTime = prefs.getBool('isFirstTime') ?? true;
@@ -100,6 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('daily_scans')) context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
         if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
         if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
+        if (result.containsKey('is_premium')) context.read<UserProvider>().setIsPremium(result['is_premium'] == true);
 
         try { await NotificationService.setLoginStatus(true); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
 
@@ -204,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
                     child: Column(
                       children: [
-                        // 🌟 替換點：將 LOGO 放進來，並保留你原本的 Icon 樣式作為防呆
+                        // 替換點：將 LOGO 放進來，並保留你原本的 Icon 樣式作為防呆
                         Image.asset(
                           'assets/images/logo.png',
                           width: 120, // 調整到適合的大小

@@ -92,7 +92,7 @@ def admin_login():
             # 登入成功，將重要資訊寫入 Session
             session['admin_user'] = admin.username
             session['admin_id'] = admin.id
-            session['role'] = admin.role # 🌟 確保這行有加上，這樣才能分辨 super_admin
+            session['role'] = admin.role # 確保這行有加上，這樣才能分辨 super_admin
             session.permanent = True
             
             print(f"✅ 登入成功: {username} (權限: {admin.role})")
@@ -283,7 +283,7 @@ def purchase_list():
 @admin_login_required
 def photo_list():
     conn = get_db_connection()
-    # 🌟 修正點：將 p.filename 改為 p.image_path
+    # 修正點：將 p.filename 改為 p.image_path
     query = '''
         SELECT p.id, p.image_path, u.username, s.name as scene_name, p.custom_title, p.created_at 
         FROM user_photo p

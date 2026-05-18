@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert'; // 🌟 新增：用來解析未來後端回傳的 JSON
+import 'dart:convert'; // 新增：用來解析未來後端回傳的 JSON
 import 'package:jpn_learning_app/utils/api_client.dart';
 
 class RoleplayScreen extends StatefulWidget {
@@ -18,10 +18,10 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
   bool _isTyping = false;
 
-  // 🌟 功能 2：假名標音開關狀態
+  // 功能 2：假名標音開關狀態
   bool _showFurigana = false;
 
-  // 🌟 功能 4：快捷回覆籌碼資料
+  // 功能 4：快捷回覆籌碼資料
   List<String> _quickReplies = [];
 
   @override
@@ -75,7 +75,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
       _isTyping = true;
-      _quickReplies.clear(); // 🌟 發送訊息後清空快捷鍵
+      _quickReplies.clear(); // 發送訊息後清空快捷鍵
     });
 
     _controller.clear();
@@ -94,7 +94,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
       if (response.statusCode == 200 && mounted) {
         /* 
-          🌟 這裡未來需要配合後端改為解析 JSON 
+          這裡未來需要配合後端改為解析 JSON 
           目前先寫死模擬資料，讓你看 UI 效果
           Map<String, dynamic> data = json.decode(response.body);
         */
@@ -103,11 +103,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           _messages.add({
             'text': response.body, // 正常 API 回覆
             'isUserMessage': false,
-            // 🌟 模擬功能 3：語法糾正 (未來從 data['correction'] 取得)
+            // 模擬功能 3：語法糾正 (未來從 data['correction'] 取得)
             'correction': text.contains('錯') ? '剛剛的句子動詞變化有點小問題喔！建議改成...' : null,
           });
 
-          // 🌟 模擬功能 4：更新快捷選項 (未來從 data['quick_replies'] 取得)
+          // 模擬功能 4：更新快捷選項 (未來從 data['quick_replies'] 取得)
           _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
         });
       }
@@ -121,7 +121,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     }
   }
 
-  // 🌟 功能 1：顯示單句點擊操作的 Bottom Sheet
+  // 功能 1：顯示單句點擊操作的 Bottom Sheet
   void _showBottomSheetOptions(BuildContext context, String messageText) {
     showModalBottomSheet(
       context: context,
@@ -196,7 +196,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        // 🌟 功能 2：假名標音切換按鈕
+        // 功能 2：假名標音切換按鈕
         actions: [
           Row(
             children: [
@@ -227,7 +227,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 final msg = _messages[i];
                 bool isUserMessage = msg['isUserMessage'] ?? false;
                 String messageText = msg['text'] ?? '';
-                String? correction = msg['correction']; // 🌟 檢查是否有語法糾正
+                String? correction = msg['correction']; // 檢查是否有語法糾正
 
                 return Align(
                   alignment: isUserMessage
@@ -250,14 +250,14 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                         const SizedBox(width: 8),
                       ],
 
-                      // 🌟 外層包一個 Flexible 避免超出邊界
+                      // 外層包一個 Flexible 避免超出邊界
                       Flexible(
                         child: Column(
                           crossAxisAlignment: isUserMessage
                               ? CrossAxisAlignment.end
                               : CrossAxisAlignment.start,
                           children: [
-                            // 🌟 功能 3：如果有語法糾正，顯示提示卡片
+                            // 功能 3：如果有語法糾正，顯示提示卡片
                             if (correction != null && !isUserMessage)
                               Container(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -291,7 +291,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                 ),
                               ),
 
-                            // 🌟 功能 1：加上 GestureDetector 實現點擊選單
+                            // 功能 1：加上 GestureDetector 實現點擊選單
                             GestureDetector(
                               onTap: () {
                                 if (!isUserMessage) {
@@ -311,7 +311,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  // 🌟 配合功能 2：如果未來有 furiganaText 欄位且開關打開，就顯示標音版文字
+                                  // 配合功能 2：如果未來有 furiganaText 欄位且開關打開，就顯示標音版文字
                                   (_showFurigana &&
                                           msg.containsKey('furiganaText'))
                                       ? msg['furiganaText']
@@ -361,11 +361,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               ),
             ),
 
-          // 🌟 底部區域包裝在一起
+          // 底部區域包裝在一起
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 🌟 功能 4：快捷回覆籌碼
+              // 功能 4：快捷回覆籌碼
               if (_quickReplies.isNotEmpty)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,

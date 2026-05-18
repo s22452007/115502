@@ -15,14 +15,14 @@ def init_default_admins():
     cursor = conn.cursor()
     
     print("🛠️ 開始檢查並升級資料庫欄位...")
-    # 🌟 自動幫舊的 admin 資料表補上 role 欄位
+    # 自動幫舊的 admin 資料表補上 role 欄位
     try:
         cursor.execute("ALTER TABLE admin ADD COLUMN role VARCHAR(20) DEFAULT 'admin'")
         print("✅ 成功為 admin 資料表加入 'role' 權限欄位！")
     except sqlite3.OperationalError:
         print("⚡ 'role' 欄位已存在，無需新增。")
         
-    # 🌟 自動幫舊的 admin 資料表補上 created_at 欄位
+    # 自動幫舊的 admin 資料表補上 created_at 欄位
     try:
         cursor.execute("ALTER TABLE admin ADD COLUMN created_at DATETIME")
         print("✅ 成功為 admin 資料表加入 'created_at' 時間欄位！")

@@ -146,7 +146,7 @@ def seed_data():
         # db.session.add(UserAbility(user_id=vip_user.id, listening=0.8, speaking=0.6, reading=0.9, writing=0.5, culture=0.7))
 
         # ==========================================
-        # 🌟 新架構假資料：模擬拍照與收藏
+        # 新架構假資料：模擬拍照與收藏
         # ==========================================
         from datetime import timedelta
         current_time = datetime.utcnow()
@@ -191,7 +191,7 @@ def seed_data():
         uv3 = UserVocab(user_id=vip_user.id, vocab_id=vocabs[2].id, collected_at=None)
         db.session.add(uv3)
 
-        # --- 事件 3: 🌟 淺草吃拉麵 (重複出現的單字) ---
+        # --- 事件 3: 淺草吃拉麵 (重複出現的單字) ---
         photo3 = UserPhoto(
             user_id=vip_user.id,
             scene_id=scene1.id,

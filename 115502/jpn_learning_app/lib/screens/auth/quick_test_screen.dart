@@ -127,7 +127,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                   // --- 選項列表 (使用 Column 並壓縮間距) ---
                   ...List.generate(displayOptions.length, (index) {
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 10), // 🌟 縮減選項間距 (從 16 降至 10)
+                      padding: const EdgeInsets.only(bottom: 10), // 縮減選項間距 (從 16 降至 10)
                       child: _buildCompactCard(
                         index: index,
                         text: displayOptions[index],
@@ -151,7 +151,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
     );
   }
 
-  // --- 🌟 壓縮版卡片設計 (與程度選擇頁面視覺同步，但體積更小) ---
+  // --- 壓縮版卡片設計 (與程度選擇頁面視覺同步，但體積更小) ---
   Widget _buildCompactCard({required int index, required String text, required bool isSelected, required bool isOptionE}) {
     final activeColor = isOptionE ? Colors.grey.shade600 : AppColors.primary;
     return GestureDetector(
@@ -164,7 +164,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
           duration: _syncDuration,
           curve: _syncCurve,
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20), // 🌟 垂直內邊距從 22 降至 14
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20), // 垂直內邊距從 22 降至 14
           decoration: BoxDecoration(
             color: isSelected ? activeColor.withOpacity(0.08) : Colors.white,
             borderRadius: BorderRadius.circular(18), // 圓角稍微收緊一點點
@@ -180,7 +180,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                   duration: _syncDuration,
                   curve: _syncCurve,
                   style: TextStyle(
-                    fontSize: 16, // 🌟 從 17 降至 16，確保單行容納更多字
+                    fontSize: 16, // 從 17 降至 16，確保單行容納更多字
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, 
                     color: isSelected ? activeColor : Colors.black87, 
                     fontFamily: '微軟正黑體'

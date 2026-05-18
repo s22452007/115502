@@ -12,6 +12,8 @@ from services.user import user_bp
 from services.group import group_bp
 from services.vocabulary import vocab_bp
 from services.tutor import tutor_bp
+from services.subscription import subscription_bp
+from services.store import store_bp
 
 # 👨‍🍳 引入內場廚師 (AI 聊天函數)
 from services.tutor import get_ai_reply
@@ -40,17 +42,48 @@ db.init_app(app)
 
 # 註冊 API 路由 (綁定網址前綴)
 app.register_blueprint(quiz_bp, url_prefix='/api/quiz')
-app.register_blueprint(auth_bp, url_prefix='/api/auth')    
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(scenario_bp, url_prefix='/api/scenario')
-app.register_blueprint(user_bp, url_prefix='/api/user')    
-app.register_blueprint(group_bp, url_prefix='/api/group')  
-app.register_blueprint(vocab_bp, url_prefix='/api/vocab')  
-app.register_blueprint(tutor_bp, url_prefix='/api/tutor')  
+app.register_blueprint(user_bp, url_prefix='/api/user')
+app.register_blueprint(group_bp, url_prefix='/api/group')
+app.register_blueprint(vocab_bp, url_prefix='/api/vocab')
+app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
+app.register_blueprint(subscription_bp, url_prefix='/api/subscription')
+app.register_blueprint(store_bp, url_prefix='/api/store')
 
 # 啟動時自動建立資料表 (如果還沒有的話)
 with app.app_context():
-    #db.drop_all()  # <-- 🛑 絕對不能在 app.py 裡寫這行！
-    db.create_all()  # 只要保留這行就好，它會檢查「如果沒有表才建立」，不會蓋掉舊資料
+    # 1. 這裡只負責「建立全新的空表」(包含你的 subscription_plan 等)
+    db.create_all()  
+    
+    # 2. 種入預設訂閱方案（idempotent，有就不會重複加）
+    from models import SubscriptionPlan, PointPackage
+    from utils.db import db as _db
+    if not SubscriptionPlan.query.first():
+        _db.session.add(SubscriptionPlan(
+            name='Premium Pro',
+            price_monthly=490,
+            price_yearly=1280,
+            features_json=[
+                '無限使用，免廣告',
+                '無限次 AI 對話與場景照片上傳',
+                '詳細學習分析報告',
+                '每月贈送 1000 J-Points',
+            ],
+            points_grant=1000,
+            is_active=True,
+        ))
+        _db.session.commit()
+
+    # 3. 種入購點方案（idempotent）
+    if not PointPackage.query.first():
+        for pkg in [
+            PointPackage(name='入門包', points=50,  price=50,  tag='',    description='小試牛刀'),
+            PointPackage(name='中包',   points=100, price=90,  tag='推薦', description='最受歡迎的選擇'),
+            PointPackage(name='大包',   points=250, price=160, tag='最划算', description='平均單價最低'),
+        ]:
+            _db.session.add(pkg)
+        _db.session.commit()
 
 # ==========================================
 # 🛎️ 專屬櫃檯：負責接收 Flutter 傳來的聊天包裹
@@ -61,7 +94,7 @@ def chat():
     user_message = request.form.get('message', '')
     chat_history = request.form.get('history', '') 
     topic = request.form.get('topic', '日常對話') 
-    user_level = request.form.get('level', 'N5') # 🌟 接收等級！如果 App 沒傳，預設當作 N5
+    user_level = request.form.get('level', 'N5') # 接收等級！如果 App 沒傳，預設當作 N5
 
     print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 訊息：{user_message}")
 

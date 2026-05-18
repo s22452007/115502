@@ -80,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             
-            // 🌟 Commit 3：調整點點樣式
+            // Commit 3：調整點點樣式
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -102,7 +102,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             const SizedBox(height: 40),
 
-            // 🌟 Commit 3 核心：按鈕無陰影化
+            // Commit 3 核心：按鈕無陰影化
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 32.0,

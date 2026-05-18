@@ -12,7 +12,6 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // UI 元件與其他畫面
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
-import 'package:jpn_learning_app/widgets/profile/profile_achievements_section.dart';
 
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
@@ -266,20 +265,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 6),
                             Text(email, style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
                             
-                            const SizedBox(height: 14), // 增加一點呼吸空間
+                            const SizedBox(height: 14),
                             
-                            // 🌟 核心升級：綠色稱號徽章
+                            // 綠色稱號徽章
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _btnGreenColor.withOpacity(0.12), // 淺綠色背景
-                                border: Border.all(color: _btnGreenColor, width: 1.5), // 主綠色邊框
-                                borderRadius: BorderRadius.circular(20), // 圓潤藥丸造型
+                                color: _btnGreenColor.withOpacity(0.12), 
+                                border: Border.all(color: _btnGreenColor, width: 1.5), 
+                                borderRadius: BorderRadius.circular(20), 
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.stars_rounded, color: _btnGreenColor, size: 18), // 徽章星星圖示
+                                  Icon(Icons.stars_rounded, color: _btnGreenColor, size: 18), 
                                   const SizedBox(width: 6),
                                   Text(
                                     levelTitle, 
@@ -381,14 +380,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onTap: () {} 
                         ),
                         
-                        const SizedBox(height: 12),
-                        _buildFlatInfoTile(label: '稱號認證', value: levelTitle), // 列表也同步顯示稱號
-                        const SizedBox(height: 12),
-
-                        // 成就徽章區塊
-                        ProfileAchievementsSection(isGuest: isGuest, onGuestClick: _handleGuestClick),
+                        // 🌟 修正點：將原先複雜的徽章區塊移除，改成與其他欄位統一的清單格式
+                        _buildListItem(
+                          icon: Icons.military_tech_rounded, 
+                          title: '成就徽章', 
+                          iconColor: _btnGreenColor,
+                          onTap: () => isGuest ? _handleGuestClick('成就徽章') : () {} // 可在此預留點擊跳轉事件
+                        ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
+                        _buildFlatInfoTile(label: '稱號認證', value: levelTitle), 
+                        const SizedBox(height: 8),
+
                         _buildListItem(
                           icon: isGuest ? Icons.login_rounded : Icons.logout_rounded, 
                           title: isGuest ? '登入帳號' : '登出帳號', 

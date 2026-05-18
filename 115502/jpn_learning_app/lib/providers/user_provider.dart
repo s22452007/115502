@@ -35,6 +35,37 @@ class UserProvider extends ChangeNotifier {
   String? get subscriptionPlanName => _subscriptionPlanName;
   String? get billingCycle => _billingCycle;
 
+  // 使用量追蹤
+  int _photoCountToday = 0;
+  int _photoExtraCount = 0;
+  int _aiCountToday = 0;
+  int _aiExtraCount = 0;
+  int _vocabSlot = 50;
+
+  int get photoCountToday => _photoCountToday;
+  int get photoExtraCount => _photoExtraCount;
+  int get aiCountToday => _aiCountToday;
+  int get aiExtraCount => _aiExtraCount;
+  int get vocabSlot => _vocabSlot;
+
+  int get photoDailyLimit => _isPremium ? 20 : 3;
+  int get aiDailyLimit => _isPremium ? 30 : 5;
+
+  void setUsageStatus({
+    int photoCountToday = 0,
+    int photoExtraCount = 0,
+    int aiCountToday = 0,
+    int aiExtraCount = 0,
+    int vocabSlot = 50,
+  }) {
+    _photoCountToday = photoCountToday;
+    _photoExtraCount = photoExtraCount;
+    _aiCountToday = aiCountToday;
+    _aiExtraCount = aiExtraCount;
+    _vocabSlot = vocabSlot;
+    notifyListeners();
+  }
+
   bool get hasActiveSubscription {
     if (!_isPremium) return false;
     if (_subscriptionEndDate == null) return false;
@@ -139,6 +170,11 @@ class UserProvider extends ChangeNotifier {
     _subscriptionStatus = null;
     _subscriptionPlanName = null;
     _billingCycle = null;
+    _photoCountToday = 0;
+    _photoExtraCount = 0;
+    _aiCountToday = 0;
+    _aiExtraCount = 0;
+    _vocabSlot = 50;
     notifyListeners();
   }
 }

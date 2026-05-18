@@ -1187,4 +1187,29 @@ class ApiClient {
       return {'error': '網路連線失敗'};
     }
   }
+
+  static Future<Map<String, dynamic>> useAI(int userId) async {
+    final url = Uri.parse('$baseUrl/user/use_ai');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getUsageStatus(int userId) async {
+    final url = Uri.parse('$baseUrl/user/usage_status/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return {'error': '無法取得使用量'};
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
 }

@@ -60,6 +60,27 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _loadSubscriptionStatus(int userId) async {
+    final provider = context.read<UserProvider>(); // await 前先取出，避免跨 async gap
+    try {
+      final res = await ApiClient.getSubscriptionStatus(userId);
+      if (!mounted) return;
+      if (res.containsKey('is_premium')) {
+        provider.setIsPremium(res['is_premium'] == true);
+      }
+      final sub = res['subscription'];
+      if (sub != null) {
+        provider.setSubscriptionInfo(
+          endDate: sub['end_date'],
+          autoRenew: sub['auto_renew'] ?? false,
+          status: sub['status'],
+          planName: sub['plan_name'],
+          billingCycle: sub['billing_cycle'],
+        );
+      }
+    } catch (_) {}
+  }
+
   int _toInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
     if (value is int) return value;
@@ -101,6 +122,8 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
         if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
         if (result.containsKey('is_premium')) context.read<UserProvider>().setIsPremium(result['is_premium'] == true);
+
+        await _loadSubscriptionStatus(_toInt(result['user_id']));
 
         try { await NotificationService.setLoginStatus(true); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
 
@@ -164,6 +187,9 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
       if (result.containsKey('japanese_level') && result['japanese_level'] != null) context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
       if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
+      if (result.containsKey('is_premium')) context.read<UserProvider>().setIsPremium(result['is_premium'] == true);
+
+      await _loadSubscriptionStatus(_toInt(result['user_id']));
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
       if (result['japanese_level'] != null) {

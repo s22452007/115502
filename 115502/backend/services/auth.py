@@ -103,17 +103,21 @@ def login():
 
         db.session.commit()
 
+        end_date = getattr(user, 'subscription_end_date', None)
         return jsonify({
             "message": "登入成功！",
             "user_id": user.id,
             "email": user.email,
             "japanese_level": user.japanese_level,
             "avatar": user.avatar,
-            "streak_days": user.streak_days, # 把最新的天數傳給前端
-            "j_pts": user.j_pts,             # 順便把點數也傳回去
+            "streak_days": user.streak_days,
+            "j_pts": user.j_pts,
             "daily_scans": user.daily_scans,
             "friend_id": user.friend_id,
-            "username": user.username
+            "username": user.username,
+            "is_premium": bool(getattr(user, 'is_premium', False)),
+            "subscription_end_date": end_date.isoformat() if end_date else None,
+            "auto_renew": bool(getattr(user, 'auto_renew', False)),
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401
@@ -197,7 +201,7 @@ def google_login():
 
     db.session.commit()
 
-    # 把所有的資料回傳給前端，讓前端的 UserProvider 能夠順利運作！
+    end_date = getattr(user, 'subscription_end_date', None)
     return jsonify({
         "message": "Google 登入成功！",
         "user_id": user.id,
@@ -208,5 +212,8 @@ def google_login():
         "j_pts": user.j_pts,
         "daily_scans": user.daily_scans,
         "friend_id": user.friend_id,
-        "username": user.username
+        "username": user.username,
+        "is_premium": bool(getattr(user, 'is_premium', False)),
+        "subscription_end_date": end_date.isoformat() if end_date else None,
+        "auto_renew": bool(getattr(user, 'auto_renew', False)),
     }), 200

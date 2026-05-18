@@ -70,9 +70,29 @@ class _StoreTabState extends State<StoreTab> {
     }
   }
 
+  List<Map<String, dynamic>> _filterItems(bool isPremium) {
+    return _items.where((item) {
+      final id = item['id'] as String;
+      if (id == 'vocab_expand_premium') return isPremium;
+      if (id == 'vocab_expand') return !isPremium;
+      return true;
+    }).toList();
+  }
+
+  IconData _iconFor(String id) {
+    switch (id) {
+      case 'photo_extra': return Icons.camera_alt;
+      case 'ai_extra': return Icons.smart_toy;
+      default: return Icons.bookmark_add;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final jPts = context.watch<UserProvider>().jPts;
+    final user = context.watch<UserProvider>();
+    final jPts = user.jPts;
+    final isPremium = user.isPremium;
+    final displayItems = _filterItems(isPremium);
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -80,7 +100,7 @@ class _StoreTabState extends State<StoreTab> {
         _buildWalletBanner(jPts),
         const SizedBox(height: 24),
         if (_isLoading) const Center(child: CircularProgressIndicator())
-        else ..._items.map((item) => _buildStoreItemCard(item)),
+        else ...displayItems.map((item) => _buildStoreItemCard(item)),
       ],
     );
   }
@@ -115,7 +135,7 @@ class _StoreTabState extends State<StoreTab> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade300)),
       child: Row(
         children: [
-          const Icon(Icons.shopping_bag_outlined, color: Color(0xFF8FB98B), size: 30),
+          Icon(_iconFor(item['id'] as String), color: const Color(0xFF8FB98B), size: 30),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

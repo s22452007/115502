@@ -42,11 +42,24 @@ class User(db.Model):
     auto_renew = db.Column(db.Boolean, default=False)
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
 
-    # 學習小組完成次數（0=第一次，達成後 +1）
+    # 學習小組完成次數（0=第一次，達成後 +1；用於判斷獎勵等級）
     group_completions = db.Column(db.Integer, default=0)
-    # 今日 AI 對話次數（配合每日限制）
-    daily_ai = db.Column(db.Integer, default=0)
-    last_ai_date = db.Column(db.Date, nullable=True)
+
+    # 每週免費組隊次數計數（每週一 0 點重置）
+    group_free_used_this_week = db.Column(db.Integer, default=0)
+    # 同 last_free_group_week 欄位追蹤目前計數對應哪週（格式 '2026-16'）
+
+    # 每日次數計數（台灣時間 0 點重置）
+    photo_count_today = db.Column(db.Integer, default=0)   # 今日已用免費拍照次數
+    ai_count_today    = db.Column(db.Integer, default=0)   # 今日已用免費/訂閱 AI 次數
+    last_reset_date   = db.Column(db.Date, nullable=True)  # 上次重置日期（台灣時間）
+
+    # 永久加購次數（花點數購買，不隨每日重置）
+    photo_extra_count = db.Column(db.Integer, default=0)
+    ai_extra_count    = db.Column(db.Integer, default=0)
+
+    # 單字收藏上限（預設 50，花點數可擴充至 500）
+    vocab_slot = db.Column(db.Integer, default=50)
 
     # 使用者單字紀錄（解鎖 / 收藏）
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
@@ -228,7 +241,9 @@ class SubscriptionPlan(db.Model):
     price_monthly = db.Column(db.Integer, nullable=False)
     price_yearly = db.Column(db.Integer, nullable=False)
     features_json = db.Column(db.JSON, nullable=True)
-    points_grant = db.Column(db.Integer, default=0)   # 每次訂閱/續訂贈送點數
+    points_grant = db.Column(db.Integer, default=0)          # 保留向下相容，新程式用下方欄位
+    points_grant_monthly = db.Column(db.Integer, default=50)  # 月訂贈點
+    points_grant_yearly  = db.Column(db.Integer, default=600) # 年訂贈點
     is_active = db.Column(db.Boolean, default=True)
 
 # D20 使用者訂閱紀錄表 (UserSubscription)

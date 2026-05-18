@@ -111,9 +111,9 @@ class _SubscriptionCheckoutScreenState
             const SizedBox(height: 4),
             Text('有效期至 $endDateStr',
                 style: const TextStyle(color: Colors.grey, fontSize: 13)),
-            if (widget.pointsGrant > 0) ...[
+            if ((res['points_granted'] ?? widget.pointsGrant) > 0) ...[
               const SizedBox(height: 8),
-              Text('已贈送 ${widget.pointsGrant} J-Points！',
+              Text('已贈送 ${res['points_granted'] ?? widget.pointsGrant} J-Points！',
                   style: const TextStyle(color: _gold, fontSize: 13)),
             ],
           ],

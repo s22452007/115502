@@ -68,8 +68,8 @@ class _PremiumTabState extends State<PremiumTab> {
         _buildPlanCard(
           title: 'Premium Pro',
           isPro: true,
-          priceText: _plan != null ? '\$ ${_plan!['price_monthly']}/月  \$ ${_plan!['price_yearly']}/年' : '\$ 490/月  \$ 1280/年',
-          features: _plan != null ? List<String>.from(_plan!['features'] ?? []) : ['無限使用，免廣告', '無限次 AI 對話與照片上傳', '詳細學習分析報告', '每月贈送 1000 Points'],
+          priceText: _plan != null ? 'NT\$ ${_plan!['price_monthly']}/月  |  NT\$ ${_plan!['price_yearly']}/年' : 'NT\$ 99/月  |  NT\$ 899/年',
+          features: _plan != null ? List<String>.from(_plan!['features'] ?? []) : ['每日 20 次拍照辨識', '每日 30 次 AI 對話', '學習小組押金 5 折', '單字擴充 6 折優惠'],
           btnText: isPremium ? '管理訂閱' : '免費試用',
           onTap: () {
             if (isPremium) {
@@ -78,7 +78,12 @@ class _PremiumTabState extends State<PremiumTab> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumTrialScreen()));
             } else {
               Navigator.push(context, MaterialPageRoute(builder: (_) => SubscriptionCheckoutScreen(
-                planId: _plan!['id'], planName: _plan!['name'], priceMonthly: _plan!['price_monthly'], priceYearly: _plan!['price_yearly'], features: List<String>.from(_plan!['features']), pointsGrant: _plan!['points_grant'],
+                planId: _plan!['id'],
+                planName: _plan!['name'],
+                priceMonthly: (_plan!['price_monthly'] as num).toInt(),
+                priceYearly: (_plan!['price_yearly'] as num).toInt(),
+                features: List<String>.from(_plan!['features'] ?? []),
+                pointsGrant: (_plan!['points_grant'] as num).toInt(),
               )));
             }
           },

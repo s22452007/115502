@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from utils.db import db
-from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction, UserBoost
+from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction
 from datetime import datetime, timedelta, timezone
 
 group_bp = Blueprint('group', __name__)
@@ -23,15 +23,32 @@ def get_next_sunday_end():
     return next_sunday.replace(hour=23, minute=59, second=59, microsecond=0)
 
 def handle_deposit_and_free_quota(user):
-    """處理玩家的押金與免費額度，回傳 (success, msg, deposit_amount)"""
+    """
+    處理每週免費次數與押金邏輯，回傳 (success, msg, deposit_amount)。
+    - 免費用戶：每週 1 次免押金
+    - 訂閱用戶：每週 3 次免押金
+    - 超過後：免費用戶押 20 點，訂閱用戶押 10 點
+    """
     current_week = get_current_year_week()
-    is_free = (user.last_free_group_week != current_week)
 
-    if not is_free:
-        # 第二團起：訂閱用戶押 10 點，一般用戶押 20 點
+    # 若是新的一週，重置計數器
+    if getattr(user, 'last_free_group_week', None) != current_week:
+        user.last_free_group_week = current_week
+        user.group_free_used_this_week = 0
+
+    free_quota = 3 if user.is_premium else 1
+    free_used = getattr(user, 'group_free_used_this_week', 0) or 0
+
+    if free_used < free_quota:
+        # 本週還有免費次數
+        user.group_free_used_this_week = free_used + 1
+        return True, "OK", 0
+    else:
+        # 本週免費次數已用完，需要押金
         deposit = 10 if user.is_premium else 20
         if user.j_pts < deposit:
-            return False, f"點數不足 {deposit} 點，無法開啟額外小組對賭！", 0
+            quota_label = '3 次' if user.is_premium else '1 次'
+            return False, f"本週免費額度（{quota_label}）已用完，且點數不足 {deposit} 點押金！", 0
         user.j_pts -= deposit
         feature_key = 'group_deposit_premium' if user.is_premium else 'group_deposit_free'
         db.session.add(PointTransaction(
@@ -43,15 +60,10 @@ def handle_deposit_and_free_quota(user):
             related_feature=feature_key,
         ))
         return True, "OK", deposit
-    else:
-        user.last_free_group_week = current_week
-        return True, "OK", 0  # 免費，無押金
 
 
 def _give_group_reward(user, member, group):
     """按完成次數與訂閱狀態給予獎勵，回傳描述字串。"""
-    now = datetime.now(timezone.utc)
-
     # 等級判斷
     if group.goal_target <= 15:
         tier = 0  # 輕鬆
@@ -77,7 +89,7 @@ def _give_group_reward(user, member, group):
     msg_parts = []
 
     if completions == 0:
-        # 第一次達成：給點數 10/20/40
+        # 第一次達成：10/20/40 點
         pts = [10, 20, 40][tier]
         user.j_pts += pts
         db.session.add(PointTransaction(
@@ -90,8 +102,8 @@ def _give_group_reward(user, member, group):
         ))
         msg_parts.append(f'獲得 {pts} 點')
     elif user.is_premium:
-        # 訂閱用戶後續達成：給點數 5/10/20
-        pts = [5, 10, 20][tier]
+        # 訂閱用戶後續達成：淨得 15/30/50 點（押金 10 點已退還，總收益 25/40/60）
+        pts = [15, 30, 50][tier]
         user.j_pts += pts
         db.session.add(PointTransaction(
             user_id=user.id,
@@ -103,21 +115,18 @@ def _give_group_reward(user, member, group):
         ))
         msg_parts.append(f'獲得 {pts} 點')
     else:
-        # 一般用戶後續達成：給限時道具
-        expire_days = [0, 3, 7][tier]
-        extra_scans = [5, 10, 20][tier]
-        if expire_days == 0:
-            expire_at = now.replace(hour=23, minute=59, second=59, microsecond=0, tzinfo=None)
-            expire_label = '今日'
-        else:
-            expire_at = (now + timedelta(days=expire_days)).replace(tzinfo=None)
-            expire_label = f'{expire_days} 天'
-        db.session.add(UserBoost(user_id=user.id, boost_type='photo_daily', extra_amount=extra_scans, expire_at=expire_at))
-        db.session.add(UserBoost(user_id=user.id, boost_type='ai_daily',   extra_amount=extra_scans, expire_at=expire_at))
-        msg_parts.append(f'拍照 +{extra_scans} 次、AI +{extra_scans} 次（限 {expire_label}）')
-        if tier == 2:
-            db.session.add(UserBoost(user_id=user.id, boost_type='vocab_unlimited', extra_amount=0, expire_at=expire_at))
-            msg_parts.append('收藏暫時無限')
+        # 一般用戶後續達成：淨得 5/10/20 點（押金 20 點已退還，總收益 25/30/40）
+        pts = [5, 10, 20][tier]
+        user.j_pts += pts
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=pts,
+            price=0,
+            payment_method='reward',
+            transaction_type='reward',
+            related_feature='group_completion',
+        ))
+        msg_parts.append(f'獲得 {pts} 點')
 
     if deposit_refund > 0:
         msg_parts.append(f'退還押金 {deposit_refund} 點')
@@ -594,8 +603,19 @@ def check_quota(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "找不到用戶"}), 404
-        
+
     current_week = get_current_year_week()
-    is_free = (user.last_free_group_week != current_week)
-    
-    return jsonify({"is_free": is_free}), 200
+    if getattr(user, 'last_free_group_week', None) != current_week:
+        free_used = 0
+    else:
+        free_used = getattr(user, 'group_free_used_this_week', 0) or 0
+
+    free_quota = 3 if user.is_premium else 1
+    remaining = max(0, free_quota - free_used)
+
+    return jsonify({
+        "is_free": remaining > 0,
+        "free_used": free_used,
+        "free_quota": free_quota,
+        "remaining_free": remaining,
+    }), 200

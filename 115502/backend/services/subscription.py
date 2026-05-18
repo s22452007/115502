@@ -24,7 +24,11 @@ def _perform_lazy_renewal(user, subscription):
     subscription.status = 'active'
     subscription.start_date = now
 
-    grant = subscription.plan.points_grant
+    plan = subscription.plan
+    if subscription.billing_cycle == 'yearly':
+        grant = getattr(plan, 'points_grant_yearly', plan.points_grant)
+    else:
+        grant = getattr(plan, 'points_grant_monthly', plan.points_grant)
     if grant > 0:
         user.j_pts += grant
         db.session.add(PointTransaction(
@@ -55,6 +59,8 @@ def get_plans():
             'price_yearly': p.price_yearly,
             'features': p.features_json or [],
             'points_grant': p.points_grant,
+            'points_grant_monthly': getattr(p, 'points_grant_monthly', p.points_grant),
+            'points_grant_yearly': getattr(p, 'points_grant_yearly', p.points_grant),
         } for p in plans]
     }), 200
 
@@ -136,11 +142,15 @@ def subscribe():
     )
     db.session.add(new_sub)
 
-    if plan.points_grant > 0:
-        user.j_pts += plan.points_grant
+    if billing_cycle == 'yearly':
+        pts_to_grant = getattr(plan, 'points_grant_yearly', plan.points_grant)
+    else:
+        pts_to_grant = getattr(plan, 'points_grant_monthly', plan.points_grant)
+    if pts_to_grant > 0:
+        user.j_pts += pts_to_grant
         db.session.add(PointTransaction(
             user_id=user_id,
-            points=plan.points_grant,
+            points=pts_to_grant,
             price=0,
             payment_method=payment_method,
             transaction_type='subscription_grant',
@@ -156,7 +166,7 @@ def subscribe():
         'message': '訂閱成功！',
         'is_premium': True,
         'end_date': end_date.isoformat(),
-        'points_granted': plan.points_grant,
+        'points_granted': pts_to_grant,
         'total_points': user.j_pts,
     }), 200
 

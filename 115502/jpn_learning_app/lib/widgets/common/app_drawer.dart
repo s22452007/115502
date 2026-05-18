@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
@@ -11,6 +10,7 @@ import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -36,7 +36,12 @@ class AppDrawer extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 80, 24, 30),
             child: Row(
               children: [
-                CircleAvatar(radius: 32, backgroundColor: AppColors.primaryLighter, child: const Icon(Icons.person, color: AppColors.primary)),
+                UserAvatar(
+                  avatarBase64: userProvider.avatar,
+                  friendId: friendId,
+                  originalName: userName,
+                  radius: 32,
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(

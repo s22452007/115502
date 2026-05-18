@@ -93,6 +93,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       if (result.containsKey('streak_days')) {
         userProvider.setStreakDays((result['streak_days'] as num).toInt());
       }
+      // 🌟 新增：同步時一併確保大頭貼與暱稱被鎖定，不因重新整理而消失
+      if (result.containsKey('avatar') && result['avatar'] != null) {
+        userProvider.setAvatar(result['avatar'].toString());
+      }
+      if (result.containsKey('username') && result['username'] != null) {
+        userProvider.setUsername(result['username'].toString());
+      }
     } catch (e) { debugPrint('資料同步錯誤: $e'); }
   }
 
@@ -127,12 +134,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    
-    // 🌟 修正點 1：將時間全部歸零到午夜 00:00:00，確保天數計算 100% 精準
     final today = DateTime(now.year, now.month, now.day);
     final firstDayOfWeek = today.subtract(Duration(days: today.weekday - 1));
-    
-    // 使用 DateTime 建構子來加天數，避免跨越日光節約時間時被吃掉一小時導致算錯天數
     List<DateTime> weekDates = List.generate(7, (i) => DateTime(firstDayOfWeek.year, firstDayOfWeek.month, firstDayOfWeek.day + i));
     List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -291,7 +294,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
-    // 再次取得準確的午夜時間，作為基準點
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -309,13 +311,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final date = weekDates[index];
-              
-              // 🌟 修正點 2：使用精準天數差，取代 .inDays 截斷漏洞
-              // 如果 diffDays = 0 代表是今天，1 代表昨天，-1 代表明天
               final int diffDays = today.difference(date).inDays;
               final bool isToday = diffDays == 0;
               
-              // 條件判斷：日期必須是「今天或過去」且「差值必須小於連續天數」
               bool isCompleted = false;
               if (diffDays >= 0 && diffDays < streakDays) {
                 isCompleted = true;

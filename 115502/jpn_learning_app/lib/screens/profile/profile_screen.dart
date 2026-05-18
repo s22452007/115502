@@ -2,6 +2,7 @@ import 'dart:convert';
 // Flutter 內建與第三方套件
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:provider/provider.dart';
 
 // 專案內的設定與 Provider
@@ -19,7 +20,6 @@ import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'badge_library_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -374,7 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: 'J-Points', 
                           trailingText: '$jPts',
                           iconColor: AppColors.primary,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen()))
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))
                         ),
                         _buildListItem(
                           icon: Icons.folder_special_rounded, 

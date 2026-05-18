@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
-import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
 
 class SubscriptionManagementScreen extends StatefulWidget {
   const SubscriptionManagementScreen({super.key});
@@ -315,7 +315,7 @@ class _SubscriptionManagementScreenState
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (_) => const PremiumScreen())),
+                    MaterialPageRoute(builder: (_) => const StoreDashboardScreen())),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _green,
                   foregroundColor: Colors.white,

@@ -3,7 +3,7 @@
 /// 使用模糊背景和鎖定圖示來阻止用戶互動，並提供登入按鈕
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/screens/premium/premium_screen.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 class PremiumLockedOverlay extends StatelessWidget {
   final Widget child;
@@ -55,7 +55,7 @@ class PremiumLockedOverlay extends StatelessWidget {
                     () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const PremiumScreen(),
+                            builder: (_) => const StoreDashboardScreen(initialIndex: 1),
                           ),
                         ),
                 child: Container(

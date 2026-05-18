@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// 🌟 1. 新增的單字物件結構
+// 1. 新增的單字物件結構
 class VocabItem {
   final String word;
   final String kana;
@@ -15,7 +15,7 @@ class VocabItem {
   });
 }
 
-// 🌟 2. 升級版的場景物件結構 (加上了 vocabularyList)
+// 2. 升級版的場景物件結構 (加上了 vocabularyList)
 class ScenarioItem {
   final String title;
   final String date;
@@ -30,7 +30,7 @@ class ScenarioItem {
   });
 }
 
-// 🌟 3. 測試用的假資料
+// 3. 測試用的假資料
 class FavoritesDataProvider extends ChangeNotifier {
   static final List<ScenarioItem> allFavorites = [
     ScenarioItem(

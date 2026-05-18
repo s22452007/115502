@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       if (result.containsKey('streak_days')) {
         userProvider.setStreakDays((result['streak_days'] as num).toInt());
       }
-      // 🌟 新增：同步時一併確保大頭貼與暱稱被鎖定，不因重新整理而消失
+      // 新增：同步時一併確保大頭貼與暱稱被鎖定，不因重新整理而消失
       if (result.containsKey('avatar') && result['avatar'] != null) {
         userProvider.setAvatar(result['avatar'].toString());
       }

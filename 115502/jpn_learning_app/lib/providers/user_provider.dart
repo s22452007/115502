@@ -86,7 +86,7 @@ class UserProvider extends ChangeNotifier {
   void setStreakDays(int days) { _streakDays = days; notifyListeners(); }
   void setFriendId(String? id) { _friendId = id; notifyListeners(); }
 
-  // 🌟 確保點數更新方法名稱一致
+  // 確保點數更新方法名稱一致
   void setJPts(int pts) {
     _jPts = pts;
     notifyListeners();

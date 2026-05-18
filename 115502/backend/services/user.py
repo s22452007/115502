@@ -292,7 +292,7 @@ def mark_badge_seen():
         # 3. 存回資料庫
         user.notified_levels = levels
         
-        # 🌟 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
+        # 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
         flag_modified(user, "notified_levels")
         
         db.session.commit()

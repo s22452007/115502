@@ -94,7 +94,7 @@ def chat():
     user_message = request.form.get('message', '')
     chat_history = request.form.get('history', '') 
     topic = request.form.get('topic', '日常對話') 
-    user_level = request.form.get('level', 'N5') # 🌟 接收等級！如果 App 沒傳，預設當作 N5
+    user_level = request.form.get('level', 'N5') # 接收等級！如果 App 沒傳，預設當作 N5
 
     print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 訊息：{user_message}")
 

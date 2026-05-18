@@ -13,13 +13,13 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 使用 Padding 或 Margin 讓導航欄不貼齊邊緣，產生懸浮感
+    // 使用 Padding 或 Margin 讓導航欄不貼齊邊緣，產生懸浮感
     return Container(
       margin: const EdgeInsets.fromLTRB(24, 0, 24, 30), // 左右外距 24，底部距離螢幕 30
       height: 70,
       decoration: BoxDecoration(
         color: Colors.white,
-        // 🌟 橢圓形核心：設置非常大的圓角
+        // 橢圓形核心：設置非常大的圓角
         borderRadius: BorderRadius.circular(40), 
         boxShadow: [
           BoxShadow(
@@ -53,7 +53,7 @@ class AppBottomNavBar extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 500),
           curve: Curves.elasticOut, // Q 彈曲線
-          // 🌟 點擊時往上移動 12 單位，範圍更大
+          // 點擊時往上移動 12 單位，範圍更大
           transform: Matrix4.translationValues(0, isSelected ? -12.0 : 0.0, 0), 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

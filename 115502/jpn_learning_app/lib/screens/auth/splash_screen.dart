@@ -49,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 🌟 圖片找不到時自動顯示相機 Icon
+              // 圖片找不到時自動顯示相機 Icon
               Image.asset(
                 'assets/images/logo.png',
                 width: 180,

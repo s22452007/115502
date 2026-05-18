@@ -342,7 +342,7 @@ class Admin(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     
-    # 🌟 錯誤的主因就是缺了下面這兩行！請確保有加上：
+    # 錯誤的主因就是缺了下面這兩行！請確保有加上：
     role = db.Column(db.String(20), default='super_admin', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

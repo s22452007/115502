@@ -42,7 +42,7 @@ add_column("user", "username VARCHAR(30)")
 # 押金對賭機制，紀錄上一次免費參加是哪一週
 add_column("user", "last_free_group_week VARCHAR(10)")
 
-# 🌟 訂閱與 AI 相關欄位
+# 訂閱與 AI 相關欄位
 add_column("user", "is_premium BOOLEAN DEFAULT 0")
 add_column("user", "subscription_end_date DATETIME")
 add_column("user", "auto_renew BOOLEAN DEFAULT 0")
@@ -61,7 +61,7 @@ except sqlite3.OperationalError as e:
 add_column("study_group", "current_progress INTEGER DEFAULT 0")
 add_column("study_group", "reward_points INTEGER DEFAULT 50")
 add_column("study_group", "is_reward_claimed BOOLEAN DEFAULT 0")
-# 🌟 新增：自動結算系統，紀錄小組到期時間
+# 新增：自動結算系統，紀錄小組到期時間
 add_column("study_group", "expire_at DATETIME")
 print("✅ study_group 獎勵機制與到期日欄位確認完畢")
 
@@ -224,7 +224,7 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ user_ability 移除警告：{e}")
 
 # ==========================================
-# 12. 升級 point_transaction (🌟 從 app.py 搬過來的新增欄位)
+# 12. 升級 point_transaction (從 app.py 搬過來的新增欄位)
 # ==========================================
 try:
     # 確保表格存在 (因為有時候舊使用者連這個表都沒有)

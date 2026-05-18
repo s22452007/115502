@@ -32,7 +32,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
 
-  // 🌟 統一全域現代扁平化配色 (與主頁完全一致)
+  // 統一全域現代扁平化配色 (與主頁完全一致)
   final Color _flatCanvasColor = const Color(0xFFF4F7F5); 
   final Color _textColor = const Color(0xFF2C3E50);
   final Color _subTextColor = const Color(0xFF8E9AAB);

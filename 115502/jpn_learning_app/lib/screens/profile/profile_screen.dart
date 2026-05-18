@@ -217,7 +217,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userName = isGuest ? 'Guest' : (userProvider.username ?? email.split('@')[0]);
     final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
     
-    // 🌟 核心轉換：將 N 幾移除，只留下對應稱號
     final levelTitle = _getLevelTitle(rawLevel);
     final progressValue = _getProgressValue(rawLevel);
     
@@ -266,9 +265,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text(userName, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor)),
                             const SizedBox(height: 6),
                             Text(email, style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
-                            const SizedBox(height: 6),
-                            // 🌟 修正：此處已移除 $rawLevel，只單純顯示稱號
-                            Text(levelTitle, style: TextStyle(color: _btnGreenColor, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
+                            
+                            const SizedBox(height: 14), // 增加一點呼吸空間
+                            
+                            // 🌟 核心升級：綠色稱號徽章
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _btnGreenColor.withOpacity(0.12), // 淺綠色背景
+                                border: Border.all(color: _btnGreenColor, width: 1.5), // 主綠色邊框
+                                borderRadius: BorderRadius.circular(20), // 圓潤藥丸造型
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.stars_rounded, color: _btnGreenColor, size: 18), // 徽章星星圖示
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    levelTitle, 
+                                    style: TextStyle(
+                                      color: _btnGreenColor, 
+                                      fontWeight: FontWeight.w900, 
+                                      fontSize: 14, 
+                                      letterSpacing: 1.0
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                             
                             const SizedBox(height: 24),
                             
@@ -358,8 +382,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         
                         const SizedBox(height: 12),
-                        // 🌟 修正：基本資料明細列表中的日文等級，也更換為純稱號 (levelTitle)
-                        _buildFlatInfoTile(label: '日文等級', value: levelTitle),
+                        _buildFlatInfoTile(label: '稱號認證', value: levelTitle), // 列表也同步顯示稱號
                         const SizedBox(height: 12),
 
                         // 成就徽章區塊
@@ -427,7 +450,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 扁平化極簡資料小卡片（唯讀顯示）
+  // 扁平化極簡資料小卡片
   Widget _buildFlatInfoTile({required String label, required String value}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

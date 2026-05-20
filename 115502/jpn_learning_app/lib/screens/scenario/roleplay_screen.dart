@@ -350,7 +350,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             color: AppColors.primaryLighter.withOpacity(0.2),
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Text(
-              '今日對話：$_aiUsed / $_aiMax次' + (_aiExtra > 0 ? ' (+$_aiExtra次備用)' : ''),
+              '今日對話：$_aiUsed / $_aiMax次' + (_aiExtra > 0 ? ' (額外$_aiExtra次)' : ''),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.bold),
             ),

@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-# 1. 自動抓取 upgrade_db.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
+# 1. 自動抓取 upgrade.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # 2. 精準對準 backend/instance/jlens.db
@@ -39,29 +39,35 @@ print("✅ group_member 欄位確認完畢")
 # 2. 升級 user
 # ==========================================
 add_column("user", "username VARCHAR(30)")
-# 押金對賭機制，紀錄上一次免費參加是哪一週
-add_column("user", "last_free_group_week VARCHAR(10)")
+add_column("user", "last_free_group_week VARCHAR(10)") # 押金對賭機制，紀錄上一次免費參加是哪一週
 
 # 訂閱與 AI 相關欄位
 add_column("user", "is_premium BOOLEAN DEFAULT 0")
 add_column("user", "subscription_end_date DATETIME")
 add_column("user", "auto_renew BOOLEAN DEFAULT 0")
 add_column("user", "group_completions INTEGER DEFAULT 0")
-add_column("user", "daily_ai INTEGER DEFAULT 0")
-add_column("user", "last_ai_date DATE")
+
+add_column("user", "photo_count_today INTEGER DEFAULT 0")
+add_column("user", "photo_extra_count INTEGER DEFAULT 0")
+add_column("user", "ai_count_today INTEGER DEFAULT 0")
+add_column("user", "ai_extra_count INTEGER DEFAULT 0")
+add_column("user", "last_reset_date DATE")
+add_column("user", "vocab_slot INTEGER DEFAULT 50")
+add_column("user", "group_free_used_this_week INTEGER DEFAULT 0")
 
 try:
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_username ON user(username);")
     print("✅ user 及其索引、訂閱、對賭額度欄位確認完畢")
 except sqlite3.OperationalError as e:
     print(f"⚠️ username 索引建立警告：{e}")
+
 # ==========================================
 # 3. 升級 study_group (學習小組獎勵機制與到期日)
 # ==========================================
 add_column("study_group", "current_progress INTEGER DEFAULT 0")
 add_column("study_group", "reward_points INTEGER DEFAULT 50")
 add_column("study_group", "is_reward_claimed BOOLEAN DEFAULT 0")
-# 新增：自動結算系統，紀錄小組到期時間
+# 自動結算系統，紀錄小組到期時間
 add_column("study_group", "expire_at DATETIME")
 print("✅ study_group 獎勵機制與到期日欄位確認完畢")
 
@@ -224,7 +230,7 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ user_ability 移除警告：{e}")
 
 # ==========================================
-# 12. 升級 point_transaction (從 app.py 搬過來的新增欄位)
+# 12. 升級 point_transaction (交易紀錄)
 # ==========================================
 try:
     # 確保表格存在 (因為有時候舊使用者連這個表都沒有)
@@ -245,7 +251,13 @@ try:
 except Exception as e:
     print(f"⚠️ point_transaction 建立或升級警告：{e}")
 
-# 儲存並關閉 (這兩行原本就有，加在它們上面就好)
+# ==========================================
+# 13. 升級 subscription_plan
+# ==========================================
+add_column("subscription_plan", "points_grant_monthly INTEGER DEFAULT 50")
+add_column("subscription_plan", "points_grant_yearly INTEGER DEFAULT 600")
+
+# 儲存並關閉
 conn.commit()
 conn.close()
 

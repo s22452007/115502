@@ -334,7 +334,7 @@ class _CameraScreenState extends State<CameraScreen>
               ),
               child: Text(
                 '今日拍照：$_photoCountToday / $_photoDailyLimit次' + 
-                (_photoExtraCount > 0 ? ' (+$_photoExtraCount次備用)' : ''),
+                (_photoExtraCount > 0 ? ' (額外$_photoExtraCount次)' : ''),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white, 

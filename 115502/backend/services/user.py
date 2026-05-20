@@ -383,7 +383,7 @@ def spend_points():
         return jsonify({"error": "找不到此使用者"}), 404
 
     if user.j_pts < points_to_spend:
-        return jsonify({"error": "點數不足", "current_points": user.j_pts}), 400
+        return jsonify({"error": f"點數不足，需要 {points_to_spend} 點"}), 400
 
     # vocab_expand_premium 限訂閱用戶
     if feature == 'vocab_expand_premium' and not user.is_premium:
@@ -468,6 +468,7 @@ def activate_premium():
         "is_premium": True,
     }), 200
 
+
 def _reset_daily_if_needed(user):
     """若非台灣時間今日，重置今日拍照/AI次數。"""
     tw_tz = timezone(timedelta(hours=8))
@@ -500,9 +501,9 @@ def increment_scan():
     elif photo_extra > 0:
         user.photo_extra_count = photo_extra - 1
     else:
-        db.session.commit()  # save reset if it happened
+        db.session.commit()  # 儲存可能發生的跨日重置
         return jsonify({
-            "error": "今日拍照次數已用完，花 30 點加購 5 次",
+            "error": "今日拍照次數已用完，請花 30 點加購 5 次",
             "daily_scans": photo_today,
             "daily_limit": daily_limit,
             "extra_count": 0,
@@ -546,9 +547,9 @@ def use_ai():
     elif ai_extra > 0:
         user.ai_extra_count = ai_extra - 1
     else:
-        db.session.commit()
+        db.session.commit() # 儲存可能發生的跨日重置
         return jsonify({
-            "error": "今日 AI 對話次數已用完，花 30 點加購 5 次",
+            "error": "今日 AI 對話次數已用完，請花 30 點加購 5 次",
             "daily_ai": ai_today,
             "daily_limit": daily_limit,
             "extra_count": 0,
@@ -578,6 +579,7 @@ def get_usage_status(user_id):
     ai_limit = 30 if user.is_premium else 5
 
     return jsonify({
+        "subscription_status": "active" if user.is_premium else "inactive",
         "photo_count_today": getattr(user, 'photo_count_today', 0) or 0,
         "photo_daily_limit": photo_limit,
         "photo_extra_count": getattr(user, 'photo_extra_count', 0) or 0,

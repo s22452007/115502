@@ -55,32 +55,6 @@ app.register_blueprint(store_bp, url_prefix='/api/store')
 with app.app_context():
     db.create_all()  # 建立所有新表
 
-    # 舊資料庫補欄位（每個欄位獨立 try/except，已存在則略過）
-    with db.engine.connect() as _conn:
-        for _sql in [
-            "ALTER TABLE user ADD COLUMN is_premium BOOLEAN DEFAULT 0",
-            "ALTER TABLE user ADD COLUMN subscription_end_date DATETIME",
-            "ALTER TABLE user ADD COLUMN auto_renew BOOLEAN DEFAULT 0",
-            "ALTER TABLE user ADD COLUMN group_completions INTEGER DEFAULT 0",
-            "ALTER TABLE user ADD COLUMN photo_count_today INTEGER DEFAULT 0",
-            "ALTER TABLE user ADD COLUMN ai_count_today INTEGER DEFAULT 0",
-            "ALTER TABLE user ADD COLUMN last_reset_date DATE",
-            "ALTER TABLE user ADD COLUMN photo_extra_count INTEGER DEFAULT 0",
-            "ALTER TABLE user ADD COLUMN ai_extra_count INTEGER DEFAULT 0",
-            "ALTER TABLE user ADD COLUMN vocab_slot INTEGER DEFAULT 50",
-            "ALTER TABLE user ADD COLUMN group_free_used_this_week INTEGER DEFAULT 0",
-            "ALTER TABLE point_transaction ADD COLUMN transaction_type VARCHAR(20) DEFAULT 'purchase'",
-            "ALTER TABLE point_transaction ADD COLUMN related_feature VARCHAR(100)",
-            "ALTER TABLE group_member ADD COLUMN deposit_amount INTEGER DEFAULT 0",
-            "ALTER TABLE subscription_plan ADD COLUMN points_grant_monthly INTEGER DEFAULT 50",
-            "ALTER TABLE subscription_plan ADD COLUMN points_grant_yearly INTEGER DEFAULT 600",
-        ]:
-            try:
-                _conn.execute(db.text(_sql))
-                _conn.commit()
-            except Exception:
-                pass
-
     from models import SubscriptionPlan, PointPackage
     from utils.db import db as _db
 

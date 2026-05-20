@@ -22,6 +22,9 @@ class UserProvider extends ChangeNotifier {
   bool _isPremium = false;
   bool get isPremium => _isPremium;
 
+  bool _trialUsed = false;
+  bool get trialUsed => _trialUsed;
+
   // 訂閱詳細狀態
   String? _subscriptionEndDate;
   bool _autoRenew = false;
@@ -119,6 +122,7 @@ class UserProvider extends ChangeNotifier {
   int get jPts => _jPts;
 
   void setIsPremium(bool value) { _isPremium = value; notifyListeners(); }
+  void setTrialUsed(bool value) { _trialUsed = value; notifyListeners(); }
   void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
   void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
   void setUserId(int? id) { _userId = id; notifyListeners(); }
@@ -177,6 +181,7 @@ class UserProvider extends ChangeNotifier {
     _pendingFriendRequests = 0;
     _badgeProgress = {};
     _isPremium = false;
+    _trialUsed = false;
     _subscriptionEndDate = null;
     _autoRenew = false;
     _subscriptionStatus = null;

@@ -40,6 +40,8 @@ class User(db.Model):
     is_premium = db.Column(db.Boolean, default=False)
     subscription_end_date = db.Column(db.DateTime, nullable=True)
     auto_renew = db.Column(db.Boolean, default=False)
+    trial_used = db.Column(db.Boolean, default=False)          # 是否已使用過免費試用
+    trial_notice_sent = db.Column(db.Boolean, default=False)   # 試用到期前通知是否已發送
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
 
     # 學習小組完成次數（0=第一次，達成後 +1；用於判斷獎勵等級）
@@ -58,8 +60,8 @@ class User(db.Model):
     photo_extra_count = db.Column(db.Integer, default=0)
     ai_extra_count    = db.Column(db.Integer, default=0)
 
-    # 單字收藏上限（預設 50，花點數可擴充至 500）
-    vocab_slot = db.Column(db.Integer, default=50)
+    # 單字收藏上限（預設 100，花點數可擴充至 1000）
+    vocab_slot = db.Column(db.Integer, default=100)
 
     # 使用者單字紀錄（解鎖 / 收藏）
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
@@ -238,8 +240,9 @@ class SubscriptionPlan(db.Model):
     __tablename__ = 'subscription_plan'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    price_monthly = db.Column(db.Integer, nullable=False)
-    price_yearly = db.Column(db.Integer, nullable=False)
+    billing_cycle = db.Column(db.String(10), nullable=True)   # 'monthly' | 'yearly' | None(通用)
+    price_monthly = db.Column(db.Integer, nullable=True)
+    price_yearly = db.Column(db.Integer, nullable=True)
     features_json = db.Column(db.JSON, nullable=True)
     points_grant = db.Column(db.Integer, default=0)          # 保留向下相容，新程式用下方欄位
     points_grant_monthly = db.Column(db.Integer, default=50)  # 月訂贈點
@@ -262,6 +265,17 @@ class UserSubscription(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     plan = db.relationship('SubscriptionPlan')
+
+
+# D21 系統通知表 (Notification)
+class Notification(db.Model):
+    __tablename__ = 'notification'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 # ==========================================

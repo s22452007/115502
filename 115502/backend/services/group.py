@@ -89,8 +89,8 @@ def _give_group_reward(user, member, group):
     msg_parts = []
 
     if completions == 0:
-        # 第一次達成：10/20/40 點
-        pts = [10, 20, 40][tier]
+        # 第一次達成：5/10/20 點
+        pts = [5, 10, 20][tier]
         user.j_pts += pts
         db.session.add(PointTransaction(
             user_id=user.id,
@@ -102,8 +102,8 @@ def _give_group_reward(user, member, group):
         ))
         msg_parts.append(f'獲得 {pts} 點')
     elif user.is_premium:
-        # 訂閱用戶後續達成：淨得 15/30/50 點（押金 10 點已退還，總收益 25/40/60）
-        pts = [15, 30, 50][tier]
+        # 訂閱用戶後續達成：5/8/12 點
+        pts = [5, 8, 12][tier]
         user.j_pts += pts
         db.session.add(PointTransaction(
             user_id=user.id,
@@ -115,8 +115,8 @@ def _give_group_reward(user, member, group):
         ))
         msg_parts.append(f'獲得 {pts} 點')
     else:
-        # 一般用戶後續達成：淨得 5/10/20 點（押金 20 點已退還，總收益 25/30/40）
-        pts = [5, 10, 20][tier]
+        # 一般用戶後續達成：3/5/8 點
+        pts = [3, 5, 8][tier]
         user.j_pts += pts
         db.session.add(PointTransaction(
             user_id=user.id,

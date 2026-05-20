@@ -57,50 +57,99 @@ with app.app_context():
 
     from models import SubscriptionPlan, PointPackage
     from utils.db import db as _db
+    from sqlalchemy import text
 
-    # 訂閱方案：upsert（建立或更新為正確的定價）
-    plan = SubscriptionPlan.query.filter_by(name='Premium Pro').first()
-    if plan:
-        plan.price_monthly = 99
-        plan.price_yearly = 899
-        plan.points_grant_monthly = 50
-        plan.points_grant_yearly = 600
-        plan.points_grant = 50
-        plan.features_json = [
-            '拍照辨識每天 20 次（免費版 3 次）',
-            'AI 對話每天 30 次（免費版 5 次）',
-            '單字收藏擴充 6 折優惠',
-            '學習小組押金 5 折（10 點）',
-            '學習小組達成獎勵更多',
-        ]
+    # ── SQLite 欄位遷移：新增 billing_cycle / price_monthly nullable 支援 ──
+    for col_sql in [
+        'ALTER TABLE subscription_plan ADD COLUMN billing_cycle VARCHAR(10)',
+    ]:
+        try:
+            with _db.engine.connect() as conn:
+                conn.execute(text(col_sql))
+                conn.commit()
+        except Exception:
+            pass  # 欄位已存在，略過
+
+    _FEATURES = [
+        '每天10次拍照辨識',
+        '每天10次AI對話',
+        '單字收藏擴充6折',
+        '學習小組押金5折',
+        '學習小組獎勵加倍',
+    ]
+
+    # ── 月訂閱方案 ──
+    monthly_plan = SubscriptionPlan.query.filter_by(name='Premium Pro 月訂閱').first()
+    if monthly_plan:
+        monthly_plan.price_monthly = 149
+        monthly_plan.price_yearly = None
+        monthly_plan.billing_cycle = 'monthly'
+        monthly_plan.points_grant_monthly = 20
+        monthly_plan.points_grant_yearly = None
+        monthly_plan.points_grant = 20
+        monthly_plan.features_json = _FEATURES
+        monthly_plan.is_active = True
     else:
         _db.session.add(SubscriptionPlan(
-            name='Premium Pro',
-            price_monthly=99,
-            price_yearly=899,
-            features_json=[
-                '拍照辨識每天 20 次（免費版 3 次）',
-                'AI 對話每天 30 次（免費版 5 次）',
-                '單字收藏擴充 6 折優惠',
-                '學習小組押金 5 折（10 點）',
-                '學習小組達成獎勵更多',
-            ],
-            points_grant=50,
-            points_grant_monthly=50,
-            points_grant_yearly=600,
+            name='Premium Pro 月訂閱',
+            billing_cycle='monthly',
+            price_monthly=149,
+            price_yearly=None,
+            features_json=_FEATURES,
+            points_grant=20,
+            points_grant_monthly=20,
+            points_grant_yearly=None,
             is_active=True,
         ))
+
+    # ── 年訂閱方案 ──
+    yearly_plan = SubscriptionPlan.query.filter_by(name='Premium Pro 年訂閱').first()
+    if yearly_plan:
+        yearly_plan.price_monthly = None
+        yearly_plan.price_yearly = 1290
+        yearly_plan.billing_cycle = 'yearly'
+        yearly_plan.points_grant_monthly = None
+        yearly_plan.points_grant_yearly = 300
+        yearly_plan.points_grant = 300
+        yearly_plan.features_json = _FEATURES
+        yearly_plan.is_active = True
+    else:
+        _db.session.add(SubscriptionPlan(
+            name='Premium Pro 年訂閱',
+            billing_cycle='yearly',
+            price_monthly=None,
+            price_yearly=1290,
+            features_json=_FEATURES,
+            points_grant=300,
+            points_grant_monthly=None,
+            points_grant_yearly=300,
+            is_active=True,
+        ))
+
+    # 舊的通用方案停用（若存在）
+    old_plan = SubscriptionPlan.query.filter_by(name='Premium Pro').first()
+    if old_plan:
+        old_plan.is_active = False
+
     _db.session.commit()
 
-    # 購點方案（idempotent）
-    if not PointPackage.query.first():
-        for pkg in [
-            PointPackage(name='入門包', points=50,  price=50,  tag='',      description='小試牛刀'),
-            PointPackage(name='中包',   points=100, price=90,  tag='推薦',   description='最受歡迎的選擇'),
-            PointPackage(name='大包',   points=250, price=160, tag='最划算', description='平均單價最低'),
-        ]:
-            _db.session.add(pkg)
-        _db.session.commit()
+    # 購點方案（idempotent upsert）
+    _PACKAGES = [
+        ('入門包', 70,  50,  '',      '小試牛刀'),
+        ('中包',   140, 90,  '推薦',  '最受歡迎的選擇'),
+        ('大包',   380, 170, '最划算','平均單價最低'),
+    ]
+    for pkg_name, pts, price, tag, desc in _PACKAGES:
+        pkg = PointPackage.query.filter_by(name=pkg_name).first()
+        if pkg:
+            pkg.points = pts
+            pkg.price = price
+            pkg.tag = tag
+            pkg.description = desc
+            pkg.is_active = True
+        else:
+            _db.session.add(PointPackage(name=pkg_name, points=pts, price=price, tag=tag, description=desc))
+    _db.session.commit()
 
 # ==========================================
 # 🛎️ 專屬櫃檯：負責接收 Flutter 傳來的聊天包裹

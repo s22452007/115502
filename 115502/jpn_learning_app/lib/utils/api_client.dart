@@ -160,13 +160,16 @@ class ApiClient {
     }
   }
 
-  // 啟用 Premium
-  static Future<Map<String, dynamic>> activatePremium(int userId) async {
-    final url = Uri.parse('$baseUrl/user/activate_premium');
+  // 啟用免費試用
+  static Future<Map<String, dynamic>> activatePremium(
+    int userId, {
+    String paymentMethod = 'google_pay',
+  }) async {
+    final url = Uri.parse('$baseUrl/subscription/trial');
     try {
       final response = await http.post(url,
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'user_id': userId}));
+          body: jsonEncode({'user_id': userId, 'payment_method': paymentMethod}));
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': '網路連線失敗'};
@@ -1147,6 +1150,30 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
       );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> scheduleYearlyUpgrade(int userId) async {
+    final url = Uri.parse('$baseUrl/subscription/schedule_upgrade');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'payment_method': 'scheduled'}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> cancelScheduleUpgrade(int userId) async {
+    final url = Uri.parse('$baseUrl/subscription/schedule_upgrade/$userId');
+    try {
+      final response = await http.delete(url);
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': '網路連線失敗'};

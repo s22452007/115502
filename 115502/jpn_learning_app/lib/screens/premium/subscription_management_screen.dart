@@ -21,12 +21,14 @@ class _SubscriptionManagementScreenState
   bool _isLoading = true;
   bool _isSubscribed = false;
   bool _isCancelling = false;
+  bool _isScheduling = false;
 
   String? _planName;
   String? _billingCycle;
   String? _endDate;
   bool _autoRenew = false;
   String? _status;
+  String? _pendingUpgradeStart;
 
   @override
   void initState() {
@@ -53,11 +55,16 @@ class _SubscriptionManagementScreenState
         _autoRenew = sub['auto_renew'] ?? false;
         _status = sub['status'];
       }
+      final pending = res['pending_upgrade'];
+      _pendingUpgradeStart = pending?['scheduled_start'];
     });
 
     // 同步 Provider
     final provider = context.read<UserProvider>();
     provider.setIsPremium(res['is_premium'] ?? false);
+    if (res.containsKey('trial_used')) {
+      provider.setTrialUsed(res['trial_used'] == true);
+    }
     if (res['subscription'] != null) {
       final sub = res['subscription'];
       provider.setSubscriptionInfo(
@@ -86,7 +93,7 @@ class _SubscriptionManagementScreenState
               ListTile(
                 leading: const Icon(Icons.workspace_premium, color: _gold),
                 title: const Text('升級為年繳方案 (更划算)'),
-                subtitle: const Text('現省 NT289 並贈送 600 點'),
+                subtitle: const Text('年繳 NT\$1290，現省 NT\$498 並贈送 300 點'),
                 onTap: () => Navigator.pop(ctx, 'upgrade'),
               ),
           ],
@@ -279,7 +286,64 @@ class _SubscriptionManagementScreenState
 
         const SizedBox(height: 24),
 
-        // 取消按鈕（只在 active 時顯示）
+        // 升級至年繳按鈕（月繳 active/trial 且無排程時顯示）
+        if ((_status == 'active' || _status == 'trial') &&
+            _billingCycle != 'yearly') ...[
+          if (_pendingUpgradeStart != null) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8E1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _gold),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.schedule, color: _gold, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '已排程升級至年繳，將於 ${_formatDate(_pendingUpgradeStart)} 生效',
+                        style: const TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _isScheduling ? null : _cancelScheduleUpgrade,
+                    child: const Text('取消排程', style: TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.workspace_premium, size: 18),
+                label: const Text('升級至年繳方案（省更多）'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _gold,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _isScheduling ? null : _scheduleYearlyUpgrade,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Center(
+              child: Text('NT\$1290/年，平均每月只要 NT\$107，贈 300 點', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+
+        // 取消按鈕（只在 active/trial 時顯示）
         if (_status == 'active' || _status == 'trial')
           SizedBox(
             width: double.infinity,
@@ -312,6 +376,34 @@ class _SubscriptionManagementScreenState
         ],
       ],
     );
+  }
+
+  Future<void> _scheduleYearlyUpgrade() async {
+    setState(() => _isScheduling = true);
+    final userId = context.read<UserProvider>().userId!;
+    final res = await ApiClient.scheduleYearlyUpgrade(userId);
+    if (!mounted) return;
+    setState(() => _isScheduling = false);
+    if (res.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'].toString())));
+    } else {
+      setState(() => _pendingUpgradeStart = res['scheduled_start']);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已排程升級至年繳！')));
+    }
+  }
+
+  Future<void> _cancelScheduleUpgrade() async {
+    setState(() => _isScheduling = true);
+    final userId = context.read<UserProvider>().userId!;
+    final res = await ApiClient.cancelScheduleUpgrade(userId);
+    if (!mounted) return;
+    setState(() => _isScheduling = false);
+    if (res.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'].toString())));
+    } else {
+      setState(() => _pendingUpgradeStart = null);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已取消排程升級')));
+    }
   }
 
   Widget _buildNoSubscriptionView() {

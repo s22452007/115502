@@ -360,10 +360,10 @@ def get_transactions(user_id):
 
 # 各 feature 的固定點數成本（server-side）
 _FEATURE_COST = {
-    'photo_extra':          30,
-    'ai_extra':             30,
+    'photo_extra':          60,
+    'ai_extra':             60,
     'vocab_expand':         50,
-    'vocab_expand_premium': 30,
+    'vocab_expand_premium': 35,
 }
 
 # 消費點數解鎖功能（DFD 5.5）
@@ -411,11 +411,11 @@ def spend_points():
         effect_desc = '+5 次 AI 對話（永久）'
 
     elif feature in ('vocab_expand', 'vocab_expand_premium'):
-        current_slot = getattr(user, 'vocab_slot', 50) or 50
-        if current_slot >= 500:
+        current_slot = getattr(user, 'vocab_slot', 100) or 100
+        if current_slot >= 1000:
             db.session.rollback()
-            return jsonify({"error": "單字收藏擴充已達上限（500個）"}), 400
-        add_amount = min(50, 500 - current_slot)
+            return jsonify({"error": "單字收藏擴充已達上限（1000個）"}), 400
+        add_amount = min(50, 1000 - current_slot)
         user.vocab_slot = current_slot + add_amount
         effect_desc = f'+{add_amount} 個收藏位'
 
@@ -425,47 +425,6 @@ def spend_points():
         "message": f"成功使用 {points_to_spend} 點！{effect_desc}",
         "total_points": user.j_pts,
         "effect": effect_desc,
-    }), 200
-
-
-# 啟用試用 Premium（DFD 5.9 trial，7 天）
-@user_bp.route('/activate_premium', methods=['POST'])
-def activate_premium():
-    from models import UserSubscription, SubscriptionPlan
-    from datetime import timedelta
-
-    data = request.get_json()
-    user_id = data.get('user_id')
-
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "找不到使用者"}), 404
-
-    plan = SubscriptionPlan.query.filter_by(is_active=True).first()
-    now = datetime.utcnow()
-    trial_end = now + timedelta(days=7)
-
-    user.is_premium = True
-    user.subscription_end_date = trial_end
-    user.auto_renew = False
-
-    if plan:
-        db.session.add(UserSubscription(
-            user_id=user_id,
-            plan_id=plan.id,
-            billing_cycle='monthly',
-            start_date=now,
-            end_date=trial_end,
-            auto_renew=False,
-            status='trial',
-            payment_method='trial',
-        ))
-
-    db.session.commit()
-    return jsonify({
-        "message": "試用已啟用（7 天）",
-        "end_date": trial_end.isoformat(),
-        "is_premium": True,
     }), 200
 
 
@@ -492,7 +451,7 @@ def increment_scan():
 
     _reset_daily_if_needed(user)
 
-    daily_limit = 20 if user.is_premium else 3
+    daily_limit = 10 if user.is_premium else 2
     photo_today = getattr(user, 'photo_count_today', 0) or 0
     photo_extra = getattr(user, 'photo_extra_count', 0) or 0
 
@@ -503,7 +462,7 @@ def increment_scan():
     else:
         db.session.commit()  # 儲存可能發生的跨日重置
         return jsonify({
-            "error": "今日拍照次數已用完，請花 30 點加購 5 次",
+            "error": "今日拍照次數已用完，請花 60 點加購 5 次",
             "daily_scans": photo_today,
             "daily_limit": daily_limit,
             "extra_count": 0,
@@ -538,7 +497,7 @@ def use_ai():
 
     _reset_daily_if_needed(user)
 
-    daily_limit = 30 if user.is_premium else 5
+    daily_limit = 10 if user.is_premium else 3
     ai_today = getattr(user, 'ai_count_today', 0) or 0
     ai_extra = getattr(user, 'ai_extra_count', 0) or 0
 
@@ -549,7 +508,7 @@ def use_ai():
     else:
         db.session.commit() # 儲存可能發生的跨日重置
         return jsonify({
-            "error": "今日 AI 對話次數已用完，請花 30 點加購 5 次",
+            "error": "今日 AI 對話次數已用完，請花 60 點加購 5 次",
             "daily_ai": ai_today,
             "daily_limit": daily_limit,
             "extra_count": 0,
@@ -575,8 +534,8 @@ def get_usage_status(user_id):
     _reset_daily_if_needed(user)
     db.session.commit()
 
-    photo_limit = 20 if user.is_premium else 3
-    ai_limit = 30 if user.is_premium else 5
+    photo_limit = 10 if user.is_premium else 2
+    ai_limit = 10 if user.is_premium else 3
 
     return jsonify({
         "subscription_status": "active" if user.is_premium else "inactive",
@@ -586,7 +545,7 @@ def get_usage_status(user_id):
         "ai_count_today": getattr(user, 'ai_count_today', 0) or 0,
         "ai_daily_limit": ai_limit,
         "ai_extra_count": getattr(user, 'ai_extra_count', 0) or 0,
-        "vocab_slot": getattr(user, 'vocab_slot', 50) or 50,
+        "vocab_slot": getattr(user, 'vocab_slot', 100) or 100,
     }), 200
 
 # ==========================================

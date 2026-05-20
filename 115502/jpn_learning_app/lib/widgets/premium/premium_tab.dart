@@ -4,6 +4,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_management_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
+import 'package:jpn_learning_app/screens/premium/premium_trial_screen.dart';
 
 class PremiumTab extends StatefulWidget { 
   const PremiumTab({Key? key}) : super(key: key); 
@@ -12,7 +13,8 @@ class PremiumTab extends StatefulWidget {
 }
 
 class _PremiumTabState extends State<PremiumTab> {
-  Map<String, dynamic>? _plan;
+  Map<String, dynamic>? _monthlyPlan;
+  Map<String, dynamic>? _yearlyPlan;
   bool _isLoading = true;
 
   @override
@@ -22,39 +24,82 @@ class _PremiumTabState extends State<PremiumTab> {
     try {
       final res = await ApiClient.getSubscriptionPlans();
       if (!mounted) return;
-      final plans = res['plans'] as List?;
-      if (plans != null && plans.isNotEmpty) {
-        setState(() { _plan = plans.first as Map<String, dynamic>; _isLoading = false; });
-      } else {
-        if (mounted) setState(() => _isLoading = false);
+      final plans = (res['plans'] as List? ?? []).cast<Map<String, dynamic>>();
+      // 找月/年方案；若無 billing_cycle 欄位則以 price 有值判斷
+      Map<String, dynamic>? monthly;
+      Map<String, dynamic>? yearly;
+      for (final p in plans) {
+        final cycle = p['billing_cycle'] as String?;
+        if (cycle == 'monthly') { monthly = p; }
+        else if (cycle == 'yearly') { yearly = p; }
+        else if (monthly == null && (p['price_monthly'] != null && p['price_monthly'] != 0)) { monthly = p; }
+        else if (yearly == null && (p['price_yearly'] != null && p['price_yearly'] != 0)) { yearly = p; }
       }
+      setState(() {
+        _monthlyPlan = monthly ?? (plans.isNotEmpty ? plans.first : null);
+        _yearlyPlan  = yearly  ?? (plans.isNotEmpty ? plans.first : null);
+        _isLoading = false;
+      });
     } catch (e) { if (mounted) setState(() => _isLoading = false); }
   }
 
   void _goToCheckout(String cycle) {
-    if (_plan == null) return;
+    final plan = cycle == 'monthly' ? _monthlyPlan : _yearlyPlan;
+    if (plan == null) return;
     Navigator.push(context, MaterialPageRoute(builder: (_) => SubscriptionCheckoutScreen(
-      planId: _plan!['id'],
+      planId: plan['id'],
       planName: cycle == 'monthly' ? 'Premium (月繳)' : 'Premium Pro (年繳)',
-      priceMonthly: (_plan!['price_monthly'] as num?)?.toInt() ?? 99,
-      priceYearly: (_plan!['price_yearly'] as num?)?.toInt() ?? 899,
-      features: List<String>.from(_plan!['features_json'] ?? [
-        '每日 20 次拍照辨識', '每日 30 次 AI 對話', '單字收藏擴充 6 折', '小組押金 5 折'
+      priceMonthly: (plan['price_monthly'] as num?)?.toInt() ?? 149,
+      priceYearly: (plan['price_yearly'] as num?)?.toInt() ?? 1290,
+      features: List<String>.from(plan['features_json'] ?? [
+        '每日 10 次拍照辨識', '每日 10 次 AI 對話', '單字收藏擴充 6 折', '小組押金 5 折'
       ]),
-      pointsGrantMonthly: (_plan!['points_grant_monthly'] as num?)?.toInt() ?? 50,
-      pointsGrantYearly: (_plan!['points_grant_yearly'] as num?)?.toInt() ?? 600,
-      initialBillingCycle: cycle, // 帶入預設選擇的週期
+      pointsGrantMonthly: (plan['points_grant_monthly'] as num?)?.toInt() ?? 20,
+      pointsGrantYearly: (plan['points_grant_yearly'] as num?)?.toInt() ?? 300,
+      initialBillingCycle: cycle,
     )));
+  }
+
+  void _goToTrialScreen() {
+    final price = (_monthlyPlan?['price_monthly'] as num?)?.toInt() ?? 99;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumTrialScreen(priceMonthly: price)));
   }
 
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
     final isPremium = userProvider.isPremium;
-    // 假設你後端有回傳 billing_cycle，這裡從 provider 讀取
-    final String currentCycle = userProvider.billingCycle ?? ''; 
-    
+    final trialUsed = userProvider.trialUsed;
+    final String currentCycle = userProvider.billingCycle ?? '';
+
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF4E8B4C)));
+
+    // 月繳按鈕邏輯
+    // 情況A: 已訂閱月繳 → 目前方案
+    // 情況A2: 已訂閱（其他週期）→ 切換為月繳
+    // 情況B: 未訂閱 + 未試用 → 開始 7 天免費試用
+    // 情況C: 未訂閱 + 已試用 → 立即訂閱
+    final String monthlyBtnText;
+    final VoidCallback? monthlyOnTap;
+    final String? monthlyBtnSubText;
+
+    if (isPremium && currentCycle == 'monthly') {
+      monthlyBtnText = '目前方案';
+      monthlyOnTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
+      monthlyBtnSubText = null;
+    } else if (isPremium) {
+      monthlyBtnText = '切換為月繳';
+      monthlyOnTap = () => _goToCheckout('monthly');
+      monthlyBtnSubText = null;
+    } else if (!trialUsed) {
+      monthlyBtnText = '開始 7 天免費試用';
+      monthlyOnTap = _goToTrialScreen;
+      monthlyBtnSubText = null;
+    } else {
+      monthlyBtnText = '立即訂閱';
+      monthlyOnTap = () => _goToCheckout('monthly');
+      monthlyBtnSubText = '免費試用資格已使用';
+    }
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -68,9 +113,9 @@ class _PremiumTabState extends State<PremiumTab> {
         _buildPlanCard(
           title: 'Free (免費版)',
           isPro: false,
-          isCurrent: !isPremium, // 如果沒訂閱，這就是目前方案
+          isCurrent: !isPremium,
           priceText: 'NT\$ 0 / 月',
-          features: ['每日最多 3 次 AI 對話', '每日最多 3 次場景照片上傳', '單字收藏上限 50 個', '基本學習結果'],
+          features: ['每日最多 3 次 AI 對話', '每日最多 2 次場景照片上傳', '單字收藏上限 100 個', '基本學習結果'],
           btnText: !isPremium ? '目前方案' : null,
           onTap: null,
         ),
@@ -81,16 +126,13 @@ class _PremiumTabState extends State<PremiumTab> {
           title: 'Premium (月繳)',
           isPro: true,
           isCurrent: isPremium && currentCycle == 'monthly',
-          badgeText: '每月送 50 點',
-          priceText: 'NT\$ 99 / 月',
-          features: ['享 7 天免費試用，隨時可取消', '每日 20 次拍照辨識', '每日 30 次 AI 對話', '單字擴充 6 折、小組押金 5 折'],
-          btnText: (isPremium && currentCycle == 'monthly') 
-              ? '目前方案' 
-              : (isPremium ? '切換為月繳' : '開始 7 天免費試用'),
+          badgeText: '每月送 20 點',
+          priceText: 'NT\$ 149 / 月',
+          features: ['享 7 天免費試用，隨時可取消', '每日 10 次拍照辨識', '每日 10 次 AI 對話', '單字擴充 6 折、小組押金 5 折'],
+          btnText: monthlyBtnText,
+          btnSubText: monthlyBtnSubText,
           btnColor: const Color(0xFF4E8B4C),
-          onTap: (isPremium && currentCycle == 'monthly') 
-              ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
-              : () => _goToCheckout('monthly'),
+          onTap: monthlyOnTap,
         ),
         const SizedBox(height: 16),
 
@@ -99,15 +141,15 @@ class _PremiumTabState extends State<PremiumTab> {
           title: 'Premium Pro (年繳)',
           isPro: true,
           isCurrent: isPremium && currentCycle == 'yearly',
-          badgeText: '最划算！狂贈 600 點',
-          priceText: 'NT\$ 899 / 年',
-          subtitle: '平均每月只要 NT\$ 74，現省 NT\$ 289！',
-          features: ['包含月繳所有特權', '一次性獲得 600 J-Pts', '最划算的長期學習投資'],
-          btnText: (isPremium && currentCycle == 'yearly') 
-              ? '目前方案' 
+          badgeText: '最划算！狂贈 300 點',
+          priceText: 'NT\$ 1290 / 年',
+          subtitle: '平均每月只要 NT\$ 107，現省 NT\$ 498！',
+          features: ['包含月繳所有特權', '一次性獲得 300 J-Pts', '最划算的長期學習投資'],
+          btnText: (isPremium && currentCycle == 'yearly')
+              ? '目前方案'
               : (isPremium ? '切換為年繳' : '立即升級年繳'),
           btnColor: const Color(0xFFC6B13B),
-          onTap: (isPremium && currentCycle == 'yearly') 
+          onTap: (isPremium && currentCycle == 'yearly')
               ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
               : () => _goToCheckout('yearly'),
         ),
@@ -136,12 +178,13 @@ class _PremiumTabState extends State<PremiumTab> {
   Widget _buildPlanCard({
     required String title,
     required bool isPro,
-    required bool isCurrent, // 如果你有加這個參數
+    required bool isCurrent,
     required String priceText,
     String? subtitle,
     String? badgeText,
     required List<String> features,
-    String? btnText, // <--- 加上問號，表示可以傳 null
+    String? btnText,
+    String? btnSubText,
     Color? btnColor,
     VoidCallback? onTap,
   }) {
@@ -175,8 +218,7 @@ class _PremiumTabState extends State<PremiumTab> {
           const SizedBox(height: 12),
           ...features.map((f) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(isPro ? Icons.check_circle : Icons.check, color: isPro ? const Color(0xFF4E8B4C) : Colors.grey, size: 18), const SizedBox(width: 8), Expanded(child: Text(f, style: const TextStyle(color: Color(0xFF555555), height: 1.4)))]))),
           const SizedBox(height: 10),
-          // 🌟 這裡判斷：如果 btnText 有內容才顯示按鈕
-          if (btnText != null && btnText.isNotEmpty)
+          if (btnText != null && btnText.isNotEmpty) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -197,6 +239,16 @@ class _PremiumTabState extends State<PremiumTab> {
                 ),
               ),
             ),
+            if (btnSubText != null) ...[
+              const SizedBox(height: 6),
+              Center(
+                child: Text(
+                  btnSubText,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );

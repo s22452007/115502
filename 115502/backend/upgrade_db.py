@@ -52,7 +52,7 @@ add_column("user", "photo_extra_count INTEGER DEFAULT 0")
 add_column("user", "ai_count_today INTEGER DEFAULT 0")
 add_column("user", "ai_extra_count INTEGER DEFAULT 0")
 add_column("user", "last_reset_date DATE")
-add_column("user", "vocab_slot INTEGER DEFAULT 50")
+add_column("user", "vocab_slot INTEGER DEFAULT 100")
 add_column("user", "group_free_used_this_week INTEGER DEFAULT 0")
 
 try:
@@ -256,6 +256,109 @@ except Exception as e:
 # ==========================================
 add_column("subscription_plan", "points_grant_monthly INTEGER DEFAULT 50")
 add_column("subscription_plan", "points_grant_yearly INTEGER DEFAULT 600")
+
+# ==========================================
+# 14. 升級 user（訂閱相關新欄位）
+# ==========================================
+add_column("user", "trial_used BOOLEAN DEFAULT 0")
+add_column("user", "trial_notice_sent BOOLEAN DEFAULT 0")
+add_column("user", "group_week_reset_date DATE")
+print("✅ user 表訂閱相關欄位確認完畢")
+
+# ==========================================
+# 15. 建立 notification 通知表
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notification (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        content TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id)
+    );
+    """)
+    print("✅ notification 通知表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ notification 建立警告：{e}")
+
+# ==========================================
+# 16. 建立 user_subscription 使用者訂閱紀錄表
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_subscription (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        plan_id INTEGER NOT NULL,
+        billing_cycle VARCHAR(20) NOT NULL,
+        start_date DATETIME NOT NULL,
+        end_date DATETIME NOT NULL,
+        status VARCHAR(20) DEFAULT 'active',
+        auto_renew BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id),
+        FOREIGN KEY(plan_id) REFERENCES subscription_plan(id)
+    );
+    """)
+    print("✅ user_subscription 使用者訂閱紀錄表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user_subscription 建立警告：{e}")
+
+# ==========================================
+# 17. 升級 subscription_plan
+# ==========================================
+add_column("subscription_plan", "billing_cycle VARCHAR(20)")
+add_column("subscription_plan", "price_monthly INTEGER")
+add_column("subscription_plan", "price_yearly INTEGER")
+add_column("subscription_plan", "is_active BOOLEAN DEFAULT 1")
+add_column("subscription_plan", "features TEXT")
+print("✅ subscription_plan 欄位確認完畢")
+
+# ==========================================
+# 18. 修正 subscription_plan：移除 price_monthly / price_yearly 的 NOT NULL 限制
+#     SQLite 不支援 ALTER COLUMN，需要整張表重建
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS subscription_plan_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL,
+        billing_cycle VARCHAR(20),
+        price_monthly INTEGER,
+        price_yearly INTEGER,
+        features_json TEXT,
+        points_grant INTEGER DEFAULT 0,
+        points_grant_monthly INTEGER DEFAULT 50,
+        points_grant_yearly INTEGER DEFAULT 600,
+        is_active BOOLEAN DEFAULT 1
+    );
+    """)
+
+    cursor.execute("""
+    INSERT INTO subscription_plan_new
+        (id, name, billing_cycle, price_monthly, price_yearly,
+         features_json, points_grant, points_grant_monthly,
+         points_grant_yearly, is_active)
+    SELECT id, name, billing_cycle, price_monthly, price_yearly,
+           features_json, points_grant, points_grant_monthly,
+           points_grant_yearly, is_active
+    FROM subscription_plan;
+    """)
+
+    cursor.execute("DROP TABLE subscription_plan;")
+    cursor.execute("ALTER TABLE subscription_plan_new RENAME TO subscription_plan;")
+    print("✅ subscription_plan price 欄位 NOT NULL 限制已移除")
+except Exception as e:
+    print(f"⚠️ subscription_plan 重建警告（可能已完成）：{e}")
+
+# ==========================================
+# 19. 升級 user_subscription：補充 payment_method 欄位
+# ==========================================
+add_column("user_subscription", "payment_method VARCHAR(50)")
+print("✅ user_subscription payment_method 欄位確認完畢")
 
 # 儲存並關閉
 conn.commit()

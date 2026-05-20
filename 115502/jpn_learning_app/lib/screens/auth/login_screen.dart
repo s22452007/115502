@@ -68,6 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (res.containsKey('is_premium')) {
         provider.setIsPremium(res['is_premium'] == true);
       }
+      if (res.containsKey('trial_used')) {
+        provider.setTrialUsed(res['trial_used'] == true);
+      }
       final sub = res['subscription'];
       if (sub != null) {
         provider.setSubscriptionInfo(

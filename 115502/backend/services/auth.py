@@ -9,9 +9,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # 3. 本地端模組 (Local)
 from utils.db import db
 from utils.auth_helper import generate_friend_id
+from utils.subscription_helper import check_and_expire_subscription
 from models import (
-    User, UserAchievement, Achievement, 
-    UserVocab, UserFolder, FriendRequest, Friendship, 
+    User, UserAchievement, Achievement,
+    UserVocab, UserFolder, FriendRequest, Friendship,
     StudyGroup, GroupMember, GroupInvite
 )
 
@@ -102,6 +103,9 @@ def login():
             user.last_scan_date = today
 
         db.session.commit()
+
+        # 登入時同步訂閱過期狀態
+        check_and_expire_subscription(user)
 
         end_date = getattr(user, 'subscription_end_date', None)
         return jsonify({
@@ -200,6 +204,9 @@ def google_login():
         user.last_scan_date = today
 
     db.session.commit()
+
+    # 登入時同步訂閱過期狀態
+    check_and_expire_subscription(user)
 
     end_date = getattr(user, 'subscription_end_date', None)
     return jsonify({

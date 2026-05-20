@@ -103,7 +103,6 @@ def get_status(user_id):
     }), 200
 
 
-# ─── DFD 5.9 ── 訂閱付款（模擬）────────────────────────────────────────────
 @subscription_bp.route('/subscribe', methods=['POST'])
 def subscribe():
     data = request.get_json()
@@ -121,12 +120,15 @@ def subscribe():
         return jsonify({'error': '使用者或方案不存在'}), 404
 
     now = datetime.utcnow()
-    end_date = now + (timedelta(days=365) if billing_cycle == 'yearly' else timedelta(days=30))
+    # 設定試用期：月繳=7天試用，年繳=立即啟用
+    is_trial = (billing_cycle == 'monthly')
+    end_date = now + (timedelta(days=7) if is_trial else timedelta(days=365))
+    
+    # 狀態判斷：試用為 'trial'，年繳直接為 'active'
+    sub_status = 'trial' if is_trial else 'active'
 
     # 將舊的 active 訂閱標為 cancelled
-    old_sub = (UserSubscription.query
-               .filter_by(user_id=user_id, status='active')
-               .first())
+    old_sub = UserSubscription.query.filter_by(user_id=user_id, status='active').first()
     if old_sub:
         old_sub.status = 'cancelled'
 
@@ -137,16 +139,17 @@ def subscribe():
         start_date=now,
         end_date=end_date,
         auto_renew=True,
-        status='active',
+        status=sub_status,
         payment_method=payment_method,
     )
     db.session.add(new_sub)
 
-    if billing_cycle == 'yearly':
-        pts_to_grant = getattr(plan, 'points_grant_yearly', plan.points_grant)
-    else:
-        pts_to_grant = getattr(plan, 'points_grant_monthly', plan.points_grant)
-    if pts_to_grant > 0:
+    # 贈點邏輯：只有在正式訂閱 (active) 時才發送點數
+    pts_to_grant = (getattr(plan, 'points_grant_yearly', plan.points_grant) 
+                    if billing_cycle == 'yearly' 
+                    else getattr(plan, 'points_grant_monthly', plan.points_grant))
+
+    if pts_to_grant > 0 and sub_status == 'active':
         user.j_pts += pts_to_grant
         db.session.add(PointTransaction(
             user_id=user_id,
@@ -163,13 +166,13 @@ def subscribe():
     db.session.commit()
 
     return jsonify({
-        'message': '訂閱成功！',
+        'message': '訂閱成功！' + ('（享 7 天試用）' if is_trial else ''),
         'is_premium': True,
         'end_date': end_date.isoformat(),
-        'points_granted': pts_to_grant,
+        'points_granted': pts_to_grant if sub_status == 'active' else 0, # 如果是試用，告知沒送點
         'total_points': user.j_pts,
+        'status': sub_status
     }), 200
-
 
 # ─── DFD 5.11 ── 取消訂閱（保留效期到到期日）────────────────────────────────
 @subscription_bp.route('/cancel/<int:user_id>', methods=['POST'])

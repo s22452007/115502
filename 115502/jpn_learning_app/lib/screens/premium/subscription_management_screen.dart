@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 class SubscriptionManagementScreen extends StatefulWidget {
   const SubscriptionManagementScreen({super.key});
@@ -71,48 +71,65 @@ class _SubscriptionManagementScreenState
   }
 
   Future<void> _cancelSubscription() async {
-    final confirm = await showDialog<bool>(
+    // 🌟 升級版：取消時提供挽留選項
+    final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('確認取消'),
-        content: const Text('取消後將停止自動續訂，但可繼續使用至到期日。'),
+        title: const Text('確定要取消嗎？'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('取消後將停止自動續訂，您的 Premium 權益將於到期日後終止。'),
+            const SizedBox(height: 15),
+            // 挽留選項：年繳更便宜！
+            if (_billingCycle == 'monthly')
+              ListTile(
+                leading: const Icon(Icons.workspace_premium, color: _gold),
+                title: const Text('升級為年繳方案 (更划算)'),
+                subtitle: const Text('現省 NT289 並贈送 600 點'),
+                onTap: () => Navigator.pop(ctx, 'upgrade'),
+              ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('返回')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('確認取消', style: TextStyle(color: Colors.red)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'back'), child: const Text('我再想想')),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('確認取消', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
-    if (confirm != true || !mounted) return;
 
+    if (choice == 'upgrade') {
+      // 導回商城頁面或直接打開 checkout
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 0)));
+    } else if (choice == 'cancel') {
+      _executeCancellation(); // 執行原本的取消 API
+    }
+  }
+
+  Future<void> _executeCancellation() async {
     setState(() => _isCancelling = true);
     final userId = context.read<UserProvider>().userId!;
     final res = await ApiClient.cancelSubscription(userId);
     if (!mounted) return;
-
     setState(() => _isCancelling = false);
 
     if (!res.containsKey('error')) {
-      setState(() {
-        _autoRenew = false;
-        _status = 'cancelled';
+      setState(() { 
+        _autoRenew = false; 
+        _status = 'cancelled'; 
+        // cancelled 的訂閱在邏輯上依然屬於 "已訂閱 (Premium)" 狀態 (直到到期)
+        _isSubscribed = true; 
       });
+      
+      // 更新 Provider
       context.read<UserProvider>().setSubscriptionInfo(
-        endDate: _endDate,
-        autoRenew: false,
-        status: 'cancelled',
-        planName: _planName,
-        billingCycle: _billingCycle,
+        endDate: _endDate, 
+        autoRenew: false, 
+        status: 'cancelled', 
+        planName: _planName, 
+        billingCycle: _billingCycle
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? '已取消自動續訂')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['error'] ?? '操作失敗，請稍後再試')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已取消自動續訂')));
     }
   }
 
@@ -184,7 +201,7 @@ class _SubscriptionManagementScreenState
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        // 方案卡
+        // 方案卡容器
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -199,29 +216,33 @@ class _SubscriptionManagementScreenState
                 const Icon(Icons.verified, color: _green, size: 28),
                 const SizedBox(width: 10),
                 Text(_planName ?? 'Premium Pro',
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: _textDark)),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark)),
               ]),
               const SizedBox(height: 16),
               _infoRow('計費週期', _cycleLabel(_billingCycle)),
               _infoRow('到期日', _formatDate(_endDate)),
+                            
+              if (_status == 'trial')
+                Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(8)),
+                  child: Text(
+                    '試用期間：自動續訂將於 ${_formatDate(_endDate)} 開啟',
+                    style: TextStyle(color: Colors.amber.shade800, fontSize: 12),
+                  ),
+                ),
+
               const SizedBox(height: 12),
               // 狀態 chip
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _statusColor(_status).withValues(alpha: 0.12),
+                  color: _statusColor(_status).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: _statusColor(_status)),
                 ),
-                child: Text(
-                  _statusLabel(_status),
-                  style: TextStyle(
-                      color: _statusColor(_status),
-                      fontWeight: FontWeight.w600),
-                ),
+                child: Text(_statusLabel(_status), style: TextStyle(color: _statusColor(_status), fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -259,7 +280,7 @@ class _SubscriptionManagementScreenState
         const SizedBox(height: 24),
 
         // 取消按鈕（只在 active 時顯示）
-        if (_status == 'active')
+        if (_status == 'active' || _status == 'trial')
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(

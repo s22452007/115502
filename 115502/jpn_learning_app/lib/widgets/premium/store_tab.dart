@@ -128,14 +128,23 @@ class _StoreTabState extends State<StoreTab> {
   }
 
   Widget _buildStoreItemCard(Map<String, dynamic> item) {
-    final cost = item['cost'].toString();
+    final String itemId = item['id'] as String;
+    final String cost = item['cost'].toString();
+    
+    //  判斷這是不是那個「打折商品」
+    final bool isDiscounted = (itemId == 'vocab_expand_premium');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade300)),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(16), 
+        border: Border.all(color: Colors.grey.shade300)
+      ),
       child: Row(
         children: [
-          Icon(_iconFor(item['id'] as String), color: const Color(0xFF8FB98B), size: 30),
+          Icon(_iconFor(itemId), color: const Color(0xFF8FB98B), size: 30),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -147,10 +156,35 @@ class _StoreTabState extends State<StoreTab> {
               ],
             ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF0F4FF), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            onPressed: () => _showConfirmPurchaseDialog(item),
-            child: Text('$cost 點', style: const TextStyle(color: Color(0xFF3B69CC), fontWeight: FontWeight.bold)),
+          //  將原本只有一個按鈕的地方，包進 Column 裡面
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              //  如果是打折商品，顯示紅色的刪除線原價
+              if (isDiscounted)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2, right: 4),
+                  child: Text(
+                    '50 點', // 原價
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade300,
+                      decoration: TextDecoration.lineThrough, // 刪除線
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF0F4FF), 
+                  elevation: 0, 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+                ),
+                onPressed: () => _showConfirmPurchaseDialog(item),
+                child: Text('$cost 點', style: const TextStyle(color: Color(0xFF3B69CC), fontWeight: FontWeight.bold)),
+              ),
+            ],
           )
         ],
       ),

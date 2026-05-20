@@ -1170,6 +1170,20 @@ class ApiClient {
     }
   }
 
+  static Future<Map<String, dynamic>> payPendingUpgrade(int userId, {String paymentMethod = 'google_pay'}) async {
+    final url = Uri.parse('$baseUrl/subscription/pay_pending');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'payment_method': paymentMethod}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   static Future<Map<String, dynamic>> cancelScheduleUpgrade(int userId) async {
     final url = Uri.parse('$baseUrl/subscription/schedule_upgrade/$userId');
     try {

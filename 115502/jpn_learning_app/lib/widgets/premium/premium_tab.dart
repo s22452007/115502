@@ -65,6 +65,45 @@ class _PremiumTabState extends State<PremiumTab> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumTrialScreen(priceMonthly: price)));
   }
 
+  Future<void> _scheduleYearlyUpgrade() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    final res = await ApiClient.scheduleYearlyUpgrade(userId);
+    if (!mounted) return;
+
+    if (res.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['error'].toString())),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已排程年繳升級，將於目前訂閱到期後生效')),
+    );
+
+    final statusRes = await ApiClient.getSubscriptionStatus(userId);
+    if (!mounted) return;
+    final provider = context.read<UserProvider>();
+    if (statusRes.containsKey('is_premium')) {
+      provider.setIsPremium(statusRes['is_premium'] == true);
+    }
+    if (statusRes.containsKey('trial_used')) {
+      provider.setTrialUsed(statusRes['trial_used'] == true);
+    }
+    if (statusRes['subscription'] != null) {
+      final sub = statusRes['subscription'];
+      provider.setSubscriptionInfo(
+        endDate: sub['end_date'],
+        autoRenew: sub['auto_renew'] ?? false,
+        status: sub['status'],
+        planName: sub['plan_name'],
+        billingCycle: sub['billing_cycle'],
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
@@ -87,6 +126,10 @@ class _PremiumTabState extends State<PremiumTab> {
       monthlyBtnText = '目前方案';
       monthlyOnTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
       monthlyBtnSubText = null;
+    } else if (isPremium && currentCycle == 'yearly') {
+      monthlyBtnText = '前往訂閱管理';
+      monthlyOnTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
+      monthlyBtnSubText = '目前已是年繳方案';
     } else if (isPremium) {
       monthlyBtnText = '切換為月繳';
       monthlyOnTap = () => _goToCheckout('monthly');
@@ -96,7 +139,7 @@ class _PremiumTabState extends State<PremiumTab> {
       monthlyOnTap = _goToTrialScreen;
       monthlyBtnSubText = null;
     } else {
-      monthlyBtnText = '立即訂閱';
+      monthlyBtnText = '立即訂閱月繳';
       monthlyOnTap = () => _goToCheckout('monthly');
       monthlyBtnSubText = '免費試用資格已使用';
     }
@@ -147,11 +190,15 @@ class _PremiumTabState extends State<PremiumTab> {
           features: ['包含月繳所有特權', '一次性獲得 300 J-Pts', '最划算的長期學習投資'],
           btnText: (isPremium && currentCycle == 'yearly')
               ? '目前方案'
-              : (isPremium ? '切換為年繳' : '立即升級年繳'),
+              : (isPremium && currentCycle == 'monthly')
+                  ? '排程升級為年繳'
+                  : (isPremium ? '排程升級為年繳' : '立即升級年繳'),
           btnColor: const Color(0xFFC6B13B),
           onTap: (isPremium && currentCycle == 'yearly')
               ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
-              : () => _goToCheckout('yearly'),
+              : (isPremium && currentCycle == 'monthly')
+                  ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
+                  : (isPremium ? _scheduleYearlyUpgrade : () => _goToCheckout('yearly')),
         ),
       ],
     );

@@ -355,10 +355,11 @@ except Exception as e:
     print(f"⚠️ subscription_plan 重建警告（可能已完成）：{e}")
 
 # ==========================================
-# 19. 升級 user_subscription：補充 payment_method 欄位
+# 19. 升級 user_subscription：補充 payment_method 與 payment_status 欄位
 # ==========================================
 add_column("user_subscription", "payment_method VARCHAR(50)")
-print("✅ user_subscription payment_method 欄位確認完畢")
+add_column("user_subscription", "payment_status VARCHAR(20) DEFAULT 'paid'")
+print("✅ user_subscription payment_method / payment_status 欄位確認完畢")
 
 # 儲存並關閉
 conn.commit()

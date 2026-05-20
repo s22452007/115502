@@ -61,6 +61,7 @@ def get_status(user_id):
     return jsonify({
         'is_premium': user.is_premium,
         'trial_used': bool(getattr(user, 'trial_used', False)),
+        'j_pts': user.j_pts,
         'subscription': {
             'id': sub.id,
             'plan_name': sub.plan.name,
@@ -73,6 +74,7 @@ def get_status(user_id):
         'pending_upgrade': {
             'scheduled_start': pending.start_date.isoformat(),
             'billing_cycle': pending.billing_cycle,
+            'payment_status': pending.payment_status,
         } if pending else None,
     }), 200
 
@@ -93,21 +95,27 @@ def subscribe():
     if not user or not plan:
         return jsonify({'error': '使用者或方案不存在'}), 404
 
-    now = datetime.utcnow()
-    # 設定試用期：月繳=7天試用，年繳=立即啟用
-    is_trial = (billing_cycle == 'monthly')
-    end_date = now + (timedelta(days=7) if is_trial else timedelta(days=365))
-    
-    # 狀態判斷：試用為 'trial'，年繳直接為 'active'
-    sub_status = 'trial' if is_trial else 'active'
+    if billing_cycle not in ['monthly', 'yearly']:
+        return jsonify({'error': 'billing_cycle 只能是 monthly 或 yearly'}), 400
 
-    # 將所有舊的 active/trial 訂閱標為 cancelled，避免重疊
+    now = datetime.utcnow()
+    duration = timedelta(days=30) if billing_cycle == 'monthly' else timedelta(days=365)
+    end_date = now + duration
+    sub_status = 'active'
+
+    # 將所有舊的 active/trial 訂閱標為 cancelled，並移除任何排程升級
     old_subs = (UserSubscription.query
                 .filter_by(user_id=user_id)
                 .filter(UserSubscription.status.in_(['active', 'trial']))
                 .all())
     for old_sub in old_subs:
         old_sub.status = 'cancelled'
+        old_sub.auto_renew = False
+
+    pending_subs = UserSubscription.query.filter_by(user_id=user_id, status='pending').all()
+    for pending in pending_subs:
+        pending.status = 'cancelled'
+        pending.auto_renew = False
 
     new_sub = UserSubscription(
         user_id=user_id,
@@ -143,10 +151,10 @@ def subscribe():
     db.session.commit()
 
     return jsonify({
-        'message': '訂閱成功！' + ('（享 7 天試用）' if is_trial else ''),
+        'message': '訂閱成功！',
         'is_premium': True,
         'end_date': end_date.isoformat(),
-        'points_granted': pts_to_grant if sub_status == 'active' else 0, # 如果是試用，告知沒送點
+        'points_granted': pts_to_grant,
         'total_points': user.j_pts,
         'status': sub_status
     }), 200
@@ -210,21 +218,20 @@ def schedule_upgrade():
     if existing_pending:
         return jsonify({'error': '已有排程升級'}), 400
 
-    yearly_plan = (SubscriptionPlan.query
-                   .filter_by(is_active=True, billing_cycle='yearly')
-                   .first())
-    if not yearly_plan:
-        return jsonify({'error': '找不到年訂閱方案'}), 500
+    plan = SubscriptionPlan.query.filter_by(is_active=True).first()
+    if not plan:
+        return jsonify({'error': '找不到訂閱方案'}), 500
 
     pending_sub = UserSubscription(
         user_id=user_id,
-        plan_id=yearly_plan.id,
+        plan_id=current_sub.plan_id,
         billing_cycle='yearly',
         start_date=current_sub.end_date,
         end_date=current_sub.end_date + timedelta(days=365),
         auto_renew=True,
         status='pending',
         payment_method=payment_method,
+        payment_status='pending',
     )
     db.session.add(pending_sub)
     db.session.commit()
@@ -232,6 +239,39 @@ def schedule_upgrade():
     return jsonify({
         'message': '已排程升級至年繳，將於現有訂閱到期後自動切換',
         'scheduled_start': current_sub.end_date.isoformat(),
+        'payment_status': pending_sub.payment_status,
+    }), 200
+
+
+@subscription_bp.route('/pay_pending', methods=['POST'])
+def pay_pending():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    payment_method = data.get('payment_method', 'google_pay')
+
+    if not user_id:
+        return jsonify({'error': '缺少 user_id'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': '找不到使用者'}), 404
+
+    pending = UserSubscription.query.filter_by(user_id=user_id, status='pending').first()
+    if not pending:
+        return jsonify({'error': '找不到未付款排程'}), 404
+
+    if pending.payment_status == 'paid':
+        return jsonify({'message': '此排程已完成付款'}), 200
+    pending.payment_status = 'paid'
+    pending.payment_method = payment_method
+    db.session.commit()
+
+    check_and_expire_subscription(user)
+
+    return jsonify({
+        'message': '已完成排程付款，年繳方案將依排程時間啟動',
+        'scheduled_start': pending.start_date.isoformat(),
+        'payment_status': pending.payment_status,
     }), 200
 
 
@@ -271,10 +311,7 @@ def start_trial():
         return jsonify({'error': '已有訂閱中，無法再次啟用試用'}), 400
 
     # 優先取月訂閱方案
-    plan = (SubscriptionPlan.query
-            .filter_by(is_active=True, billing_cycle='monthly')
-            .first()
-            or SubscriptionPlan.query.filter_by(is_active=True).first())
+    plan = SubscriptionPlan.query.filter_by(is_active=True).first()
     if not plan:
         return jsonify({'error': '找不到訂閱方案'}), 500
 
@@ -284,7 +321,7 @@ def start_trial():
     new_sub = UserSubscription(
         user_id=user_id,
         plan_id=plan.id,
-        billing_cycle='trial',
+        billing_cycle='monthly',
         start_date=now,
         end_date=end_date,
         auto_renew=True,

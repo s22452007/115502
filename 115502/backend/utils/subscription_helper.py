@@ -11,7 +11,8 @@ def check_and_expire_subscription(user):
     now = datetime.utcnow()
 
     sub = (UserSubscription.query
-           .filter_by(user_id=user.id)
+           .filter(UserSubscription.user_id == user.id,
+                   UserSubscription.status.in_(['active', 'trial', 'cancelled']))
            .order_by(UserSubscription.created_at.desc())
            .first())
 
@@ -27,22 +28,48 @@ def check_and_expire_subscription(user):
     # ── 以下皆為已到期的情況 ──
 
     if sub.status == 'active':
-        if sub.auto_renew:
+        pending = (UserSubscription.query
+                   .filter_by(user_id=user.id, status='pending')
+                   .first())
+        if pending and pending.payment_status == 'paid':
+            _activate_pending_upgrade(user, sub, pending, now)
+        elif pending and pending.payment_status != 'paid':
+            sub.status = 'expired'
+            user.is_premium = False
+            user.auto_renew = False
+        elif sub.auto_renew:
             _try_renew(user, sub, now)
         else:
             sub.status = 'expired'
             user.is_premium = False
+            user.auto_renew = False
 
     elif sub.status == 'trial':
+        pending = (UserSubscription.query
+                   .filter_by(user_id=user.id, status='pending')
+                   .first())
+
         sub.status = 'expired'
         user.is_premium = False
-        if sub.auto_renew:
+        user.auto_renew = False
+
+        if pending:
+            if pending.payment_status == 'paid':
+                _activate_pending_upgrade(user, sub, pending, now)
+        elif sub.auto_renew:
             # 試用到期且 auto_renew=True → 自動轉為正式月訂閱
             _convert_trial_to_paid(user, sub, now)
 
     elif sub.status == 'cancelled':
-        # 已取消且到期 → 確保 is_premium 為 False
-        user.is_premium = False
+        # 已取消且到期：若有已付款的排程年繳，依然啟用；否則保持失效
+        pending = (UserSubscription.query
+                   .filter_by(user_id=user.id, status='pending')
+                   .first())
+        if pending and pending.payment_status == 'paid':
+            _activate_pending_upgrade(user, sub, pending, now)
+        else:
+            user.is_premium = False
+            user.auto_renew = False
 
     db.session.commit()
 
@@ -67,7 +94,12 @@ def _try_renew(user, sub, now):
         pending.end_date = now + timedelta(days=365)
 
         plan = pending.plan
-        grant = getattr(plan, 'points_grant_yearly', plan.points_grant)
+        grant = 0
+        if plan is not None:
+            grant = getattr(plan, 'points_grant_yearly', None)
+            if grant is None:
+                grant = getattr(plan, 'points_grant', 0)
+            grant = grant or 0
         if grant > 0:
             user.j_pts += grant
             db.session.add(PointTransaction(
@@ -92,9 +124,15 @@ def _try_renew(user, sub, now):
     sub.start_date = now
 
     plan = sub.plan
-    grant = (getattr(plan, 'points_grant_yearly', plan.points_grant)
-             if sub.billing_cycle == 'yearly'
-             else getattr(plan, 'points_grant_monthly', plan.points_grant))
+    grant = 0
+    if plan is not None:
+        if sub.billing_cycle == 'yearly':
+            grant = getattr(plan, 'points_grant_yearly', None)
+        else:
+            grant = getattr(plan, 'points_grant_monthly', None)
+        if grant is None:
+            grant = getattr(plan, 'points_grant', 0)
+        grant = grant or 0
     if grant > 0:
         user.j_pts += grant
         db.session.add(PointTransaction(
@@ -111,9 +149,46 @@ def _try_renew(user, sub, now):
     user.auto_renew = True
 
 
+def _activate_pending_upgrade(user, sub, pending, now):
+    """將排程年繳升級啟用，並在到期後開始新的年繳訂閱。"""
+    sub.status = 'expired'
+    pending.status = 'active'
+
+    # 保留原本排程開始時間，若檢查落在之後才觸發，仍以排程時間為起算。
+    start_date = pending.start_date
+    if start_date > now:
+        start_date = now
+    pending.start_date = start_date
+    pending.end_date = start_date + timedelta(days=365)
+
+    plan = pending.plan
+    grant = 0
+    if plan is not None:
+        grant = getattr(plan, 'points_grant_yearly', None)
+        if grant is None:
+            grant = getattr(plan, 'points_grant', 0)
+        grant = grant or 0
+    if grant > 0:
+        user.j_pts += grant
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=grant,
+            price=0,
+            payment_method='auto_renewal',
+            transaction_type='subscription_grant',
+            related_feature='subscription_upgraded_yearly',
+        ))
+
+    user.is_premium = True
+    user.subscription_end_date = pending.end_date
+    user.auto_renew = True
+
+
 def _convert_trial_to_paid(user, sub, now):
     """試用到期且 auto_renew=True，自動建立正式月訂閱並贈點。"""
     plan = sub.plan
+    if plan is None:
+        return
     new_end = now + timedelta(days=30)
     new_sub = UserSubscription(
         user_id=user.id,
@@ -127,7 +202,12 @@ def _convert_trial_to_paid(user, sub, now):
     )
     db.session.add(new_sub)
 
-    grant = getattr(plan, 'points_grant_monthly', plan.points_grant)
+    grant = 0
+    if plan is not None:
+        grant = getattr(plan, 'points_grant_monthly', None)
+        if grant is None:
+            grant = getattr(plan, 'points_grant', 0)
+        grant = grant or 0
     if grant > 0:
         user.j_pts += grant
         db.session.add(PointTransaction(

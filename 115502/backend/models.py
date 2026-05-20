@@ -262,6 +262,7 @@ class UserSubscription(db.Model):
     status = db.Column(db.String(20), nullable=False, default='active')
     # 值：'active' | 'cancelled' | 'expired' | 'trial'
     payment_method = db.Column(db.String(50), nullable=True)
+    payment_status = db.Column(db.String(20), nullable=False, default='paid')  # 'pending' | 'paid'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     plan = db.relationship('SubscriptionPlan')

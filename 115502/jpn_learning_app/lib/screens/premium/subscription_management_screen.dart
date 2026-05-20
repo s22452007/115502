@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 
 class SubscriptionManagementScreen extends StatefulWidget {
   const SubscriptionManagementScreen({super.key});
@@ -29,6 +30,7 @@ class _SubscriptionManagementScreenState
   bool _autoRenew = false;
   String? _status;
   String? _pendingUpgradeStart;
+  String? _pendingPaymentStatus;
 
   @override
   void initState() {
@@ -44,10 +46,13 @@ class _SubscriptionManagementScreenState
     }
     final res = await ApiClient.getSubscriptionStatus(userId);
     if (!mounted) return;
+
+    final sub = res['subscription'];
+    final pending = res['pending_upgrade'];
+
     setState(() {
       _isLoading = false;
       _isSubscribed = res['is_premium'] ?? false;
-      final sub = res['subscription'];
       if (sub != null) {
         _planName = sub['plan_name'];
         _billingCycle = sub['billing_cycle'];
@@ -55,18 +60,20 @@ class _SubscriptionManagementScreenState
         _autoRenew = sub['auto_renew'] ?? false;
         _status = sub['status'];
       }
-      final pending = res['pending_upgrade'];
       _pendingUpgradeStart = pending?['scheduled_start'];
+      _pendingPaymentStatus = pending?['payment_status'];
     });
 
     // 同步 Provider
     final provider = context.read<UserProvider>();
     provider.setIsPremium(res['is_premium'] ?? false);
+    if (res.containsKey('j_pts')) {
+      provider.setJPts((res['j_pts'] as num).toInt());
+    }
     if (res.containsKey('trial_used')) {
       provider.setTrialUsed(res['trial_used'] == true);
     }
-    if (res['subscription'] != null) {
-      final sub = res['subscription'];
+    if (sub != null) {
       provider.setSubscriptionInfo(
         endDate: sub['end_date'],
         autoRenew: sub['auto_renew'] ?? false,
@@ -105,6 +112,7 @@ class _SubscriptionManagementScreenState
       ),
     );
 
+    if (!mounted) return;
     if (choice == 'upgrade') {
       // 導回商城頁面或直接打開 checkout
       Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 0)));
@@ -311,6 +319,33 @@ class _SubscriptionManagementScreenState
                     ),
                   ]),
                   const SizedBox(height: 8),
+                  Text(
+                    _pendingPaymentStatus == 'pending'
+                        ? '尚未付款，屆時完成付款後才會啟動年繳方案。'
+                        : '已完成付款，屆時將自動啟動年繳方案。',
+                    style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isScheduling ? null : _openPendingUpgradePayment,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: _isScheduling
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text('前往付款', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   GestureDetector(
                     onTap: _isScheduling ? null : _cancelScheduleUpgrade,
                     child: const Text('取消排程', style: TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline)),
@@ -387,8 +422,45 @@ class _SubscriptionManagementScreenState
     if (res.containsKey('error')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'].toString())));
     } else {
-      setState(() => _pendingUpgradeStart = res['scheduled_start']);
+      setState(() {
+        _pendingUpgradeStart = res['scheduled_start'];
+        _pendingPaymentStatus = res['payment_status'];
+      });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已排程升級至年繳！')));
+    }
+  }
+
+  Future<void> _openPendingUpgradePayment() async {
+    setState(() => _isScheduling = true);
+    final userId = context.read<UserProvider>().userId!;
+    final success = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubscriptionCheckoutScreen(
+          planId: 0,
+          planName: 'Premium Pro (年繳)',
+          priceMonthly: 0,
+          priceYearly: 1290,
+          features: const [
+            '包含月繳所有特權',
+            '一次性獲得 300 J-Pts',
+            '最划算的長期學習投資',
+          ],
+          pointsGrantMonthly: 0,
+          pointsGrantYearly: 300,
+          initialBillingCycle: 'yearly',
+          isPendingUpgrade: true,
+          pendingUpgradeStart: _pendingUpgradeStart,
+          currentSubscriptionEndDate: _endDate,
+        ),
+      ),
+    ) ?? false;
+    if (!mounted) return;
+    setState(() => _isScheduling = false);
+    if (success) {
+      await _loadStatus();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已完成付款，屆時將自動啟動年繳方案')));
     }
   }
 

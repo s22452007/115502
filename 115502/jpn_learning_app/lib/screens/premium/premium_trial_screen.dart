@@ -369,6 +369,24 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
       }
       provider.setIsPremium(true);
       provider.setTrialUsed(true);
+
+      final statusRes = await ApiClient.getSubscriptionStatus(userId);
+      if (statusRes.containsKey('subscription') && statusRes['subscription'] != null) {
+        final sub = statusRes['subscription'];
+        provider.setSubscriptionInfo(
+          endDate: sub['end_date'],
+          autoRenew: sub['auto_renew'] ?? false,
+          status: sub['status'],
+          planName: sub['plan_name'],
+          billingCycle: sub['billing_cycle'],
+        );
+      }
+      if (statusRes.containsKey('trial_used')) {
+        provider.setTrialUsed(statusRes['trial_used'] == true);
+      }
+      if (statusRes.containsKey('is_premium')) {
+        provider.setIsPremium(statusRes['is_premium'] == true);
+      }
     }
 
     if (!mounted) return;

@@ -131,12 +131,12 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
         backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           '學習小組',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),

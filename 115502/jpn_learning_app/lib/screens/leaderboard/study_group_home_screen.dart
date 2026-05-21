@@ -129,12 +129,10 @@ class StudyGroupHomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F2),
       appBar: AppBar(
-        // 🌟 1. 改成白底
         backgroundColor: Colors.white, 
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          // 🌟 2. 箭頭改成主題綠色 (或 AppColors.textDark 也行)
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary), 
           onPressed: () {
             Navigator.pushAndRemoveUntil(
@@ -146,7 +144,6 @@ class StudyGroupHomeScreen extends StatelessWidget {
         ),
         title: Text(
           groupName,
-          // 🌟 3. 標題改成主題綠色，並稍微把字體調大一點讓它更有精神
           style: const TextStyle(
             color: AppColors.primary, 
             fontWeight: FontWeight.bold,

@@ -13,6 +13,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 // UI 元件與其他畫面
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
@@ -20,6 +21,7 @@ import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'badge_library_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -93,6 +95,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       if (result.containsKey('badge_progress') && result['badge_progress'] != null) {
         userProvider.setBadgeProgress(result['badge_progress']);
+      }
+      if (result.containsKey('is_premium')) {
+        userProvider.setIsPremium(result['is_premium'] == true);
+      }
+      if (result.containsKey('j_pts') && result['j_pts'] != null) {
+        userProvider.setJPts((result['j_pts'] as num).toInt());
       }
 
       setState(() => _isLoading = false);
@@ -264,7 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))
+                            BoxShadow(color: Colors.black.withValues(alpha:0.03), blurRadius: 15, offset: const Offset(0, 5))
                           ],
                         ),
                         child: Column(
@@ -279,7 +287,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.12), 
+                                color: AppColors.primary.withValues(alpha:0.12), 
                                 border: Border.all(color: AppColors.primary, width: 1.5), 
                                 borderRadius: BorderRadius.circular(20), 
                               ),
@@ -350,11 +358,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(4), 
                             decoration: BoxDecoration(color: _flatCanvasColor, shape: BoxShape.circle),
-                            child: CircleAvatar(
+                            child: UserAvatar(
+                              avatarBase64: avatarUrl,
+                              friendId: userProvider.friendId,
+                              originalName: userName,
                               radius: 50,
-                              backgroundColor: AppColors.primaryLighter,
-                              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                              child: (avatarUrl == null || avatarUrl.isEmpty) ? const Icon(Icons.person, size: 50, color: AppColors.primary) : null,
+                              isPremium: userProvider.isPremium,
                             ),
                           ),
                         ),
@@ -382,10 +391,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))
                         ),
                         _buildListItem(
-                          icon: Icons.people_alt_rounded, 
-                          title: '好友綁定', 
+                          icon: Icons.people_alt_rounded,
+                          title: '好友綁定',
                           trailingText: friendId,
-                          onTap: () {} 
+                          onTap: () => isGuest
+                              ? _handleGuestClick('好友綁定')
+                              : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))
                         ),
                         
                         _buildListItem(

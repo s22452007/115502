@@ -266,7 +266,11 @@ def get_profile_data(user_id):
     return jsonify({
         "ability": ability_data,
         "badge_progress": badge_progress,
-        "notified_levels": user.notified_levels or {}
+        "notified_levels": user.notified_levels or {},
+        "avatar": user.avatar,
+        "username": user.username,
+        "is_premium": user.is_premium or False,
+        "j_pts": user.j_pts or 0,
     }), 200
 
 # 標記徽章彈窗已讀 API

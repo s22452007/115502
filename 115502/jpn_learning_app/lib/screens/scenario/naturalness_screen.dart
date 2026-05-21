@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/grammar_tip_screen.dart';
+import 'package:jpn_learning_app/screens/tutor/tutor_home_screen.dart';
 
 class NaturalnessScreen extends StatelessWidget {
   const NaturalnessScreen({Key? key}) : super(key: key);
@@ -66,7 +67,7 @@ class NaturalnessScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             OutlinedButton(
-              onPressed: () {},
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorHomeScreen())),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 52),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),

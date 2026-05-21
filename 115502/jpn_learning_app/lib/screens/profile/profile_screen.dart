@@ -96,6 +96,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (result.containsKey('badge_progress') && result['badge_progress'] != null) {
         userProvider.setBadgeProgress(result['badge_progress']);
       }
+      if (result.containsKey('is_premium')) {
+        userProvider.setIsPremium(result['is_premium'] == true);
+      }
+      if (result.containsKey('j_pts') && result['j_pts'] != null) {
+        userProvider.setJPts((result['j_pts'] as num).toInt());
+      }
 
       setState(() => _isLoading = false);
     } catch (e) {

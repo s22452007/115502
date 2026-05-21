@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 // 2. 第三方套件
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // 🌟 新增：用於判斷新手引導
+import 'package:shared_preferences/shared_preferences.dart'; // 新增：用於判斷新手引導
 
 // 3. 我們自己寫的工具與狀態管理
 import 'package:jpn_learning_app/utils/constants.dart';
@@ -16,8 +16,9 @@ import 'package:jpn_learning_app/services/notification_service.dart';
 // 4. 我們自己寫的畫面 (跳轉用)
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
-import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart'; // 🌟 新增：新手引導頁面
+import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart'; // 新增：新手引導頁面
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,10 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _checkOnboardingStatus(); // 🌟 畫面初始化時檢查是否需要顯示新手引導
+    _checkOnboardingStatus(); // 畫面初始化時檢查是否需要顯示新手引導
   }
 
-  // 🌟 新增：新手引導判斷邏輯
+  // 新增：新手引導判斷邏輯
   Future<void> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final isFirstTime = prefs.getBool('isFirstTime') ?? true;
@@ -57,6 +58,36 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (_) => const OnboardingScreen()),
       );
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadSubscriptionStatus(int userId) async {
+    final provider = context.read<UserProvider>(); // await 前先取出，避免跨 async gap
+    try {
+      final res = await ApiClient.getSubscriptionStatus(userId);
+      if (!mounted) return null;
+      if (res.containsKey('is_premium')) {
+        provider.setIsPremium(res['is_premium'] == true);
+      }
+      if (res.containsKey('trial_used')) {
+        provider.setTrialUsed(res['trial_used'] == true);
+      }
+      if (res.containsKey('j_pts')) {
+        provider.setJPts((res['j_pts'] as num).toInt());
+      }
+      final sub = res['subscription'];
+      if (sub != null) {
+        provider.setSubscriptionInfo(
+          endDate: sub['end_date'],
+          autoRenew: sub['auto_renew'] ?? false,
+          status: sub['status'],
+          planName: sub['plan_name'],
+          billingCycle: sub['billing_cycle'],
+        );
+      }
+      return res;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -102,6 +133,15 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
         if (result.containsKey('is_premium')) context.read<UserProvider>().setIsPremium(result['is_premium'] == true);
 
+        final statusRes = await _loadSubscriptionStatus(_toInt(result['user_id']));
+        final shouldPayPending = await _showPendingUpgradePromptIfNeeded(statusRes);
+        if (shouldPayPending && mounted) {
+          await _openPendingUpgradeCheckout(
+            statusRes?['pending_upgrade']?['scheduled_start'],
+            statusRes?['subscription']?['end_date'],
+          );
+        }
+
         try { await NotificationService.setLoginStatus(true); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
 
         if (result['japanese_level'] != null) {
@@ -127,6 +167,56 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '註冊失敗')));
       }
     }
+  }
+
+  Future<bool> _showPendingUpgradePromptIfNeeded(Map<String, dynamic>? statusRes) async {
+    if (statusRes == null) return false;
+    final pending = statusRes['pending_upgrade'];
+    if (pending == null) return false;
+    if (pending['payment_status'] != 'pending') return false;
+    final scheduledStart = DateTime.tryParse(pending['scheduled_start']?.toString() ?? '');
+    if (scheduledStart == null || scheduledStart.isAfter(DateTime.now())) return false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('年繳升級排程已到期'),
+        content: Text(
+          "您先前排程的年繳升級已於 ${scheduledStart.toLocal().year}-${scheduledStart.toLocal().month.toString().padLeft(2, '0')}-${scheduledStart.toLocal().day.toString().padLeft(2, '0')} 到期，是否要現在付款完成升級？",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('稍後再說')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('前往付款', style: TextStyle(color: Color(0xFF4E8B4C)))),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _openPendingUpgradeCheckout(String? pendingStart, String? currentSubscriptionEndDate) async {
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubscriptionCheckoutScreen(
+          planId: 0,
+          planName: 'Premium Pro (年繳)',
+          priceMonthly: 0,
+          priceYearly: 1290,
+          features: const [
+            '包含月繳所有特權',
+            '一次性獲得 300 J-Pts',
+            '最划算的長期學習投資',
+          ],
+          pointsGrantMonthly: 0,
+          pointsGrantYearly: 300,
+          initialBillingCycle: 'yearly',
+          isPendingUpgrade: true,
+          pendingUpgradeStart: pendingStart,
+          currentSubscriptionEndDate: currentSubscriptionEndDate,
+        ),
+      ),
+    );
   }
 
   Future<void> _handleGoogleLogin() async {
@@ -164,6 +254,16 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<UserProvider>().setDailyScans(_toInt(result['daily_scans']));
       if (result.containsKey('japanese_level') && result['japanese_level'] != null) context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
       if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
+      if (result.containsKey('is_premium')) context.read<UserProvider>().setIsPremium(result['is_premium'] == true);
+
+      final statusRes = await _loadSubscriptionStatus(_toInt(result['user_id']));
+      final shouldPayPending = await _showPendingUpgradePromptIfNeeded(statusRes);
+      if (shouldPayPending && mounted) {
+        await _openPendingUpgradeCheckout(
+          statusRes?['pending_upgrade']?['scheduled_start'],
+          statusRes?['subscription']?['end_date'],
+        );
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
       if (result['japanese_level'] != null) {
@@ -205,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
                     child: Column(
                       children: [
-                        // 🌟 替換點：將 LOGO 放進來，並保留你原本的 Icon 樣式作為防呆
+                        // 替換點：將 LOGO 放進來，並保留你原本的 Icon 樣式作為防呆
                         Image.asset(
                           'assets/images/logo.png',
                           width: 120, // 調整到適合的大小

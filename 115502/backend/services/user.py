@@ -1,6 +1,5 @@
 import re
-from datetime import date, datetime
-from unittest import result
+from datetime import date, datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify
 
@@ -10,9 +9,9 @@ from sqlalchemy.orm.attributes import flag_modified
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
 from models import (
-    User, UserAchievement, UserVocab, UserFolder, UserVocab,
+    User, UserAchievement, UserVocab, UserFolder,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
-    Feedback, PointTransaction, Vocab
+    Feedback, PointTransaction, Vocab,
 )
 
 user_bp = Blueprint('user', __name__)
@@ -292,7 +291,7 @@ def mark_badge_seen():
         # 3. 存回資料庫
         user.notified_levels = levels
         
-        # 🌟 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
+        # 關鍵小技巧：因為改的是 JSON 裡面的值，要手動搖醒 SQLAlchemy
         flag_modified(user, "notified_levels")
         
         db.session.commit()
@@ -342,7 +341,7 @@ def add_points():
     }), 200
 
 
-# 查詢交易紀錄
+# 查詢交易紀錄（DFD 5.6，含購買與消費）
 @user_bp.route('/transactions/<int:user_id>', methods=['GET'])
 def get_transactions(user_id):
     txns = PointTransaction.query.filter_by(user_id=user_id).order_by(PointTransaction.created_at.desc()).all()
@@ -352,9 +351,93 @@ def get_transactions(user_id):
             "points": t.points,
             "price": t.price,
             "payment_method": t.payment_method,
+            "transaction_type": getattr(t, 'transaction_type', 'purchase'),
+            "related_feature": getattr(t, 'related_feature', None),
             "created_at": t.created_at.strftime('%Y-%m-%d %H:%M'),
         })
     return jsonify({"transactions": result}), 200
+
+
+# 各 feature 的固定點數成本（server-side）
+_FEATURE_COST = {
+    'photo_extra':          60,
+    'ai_extra':             60,
+    'vocab_expand':         50,
+    'vocab_expand_premium': 35,
+}
+
+# 消費點數解鎖功能（DFD 5.5）
+@user_bp.route('/spend_points', methods=['POST'])
+def spend_points():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    feature = data.get('feature', 'unknown')
+    # 已知 feature 用 server 定義的成本，否則接受前端傳入
+    points_to_spend = _FEATURE_COST.get(feature, data.get('points', 0))
+
+    if not user_id or points_to_spend <= 0:
+        return jsonify({"error": "缺少使用者 ID 或點數數量錯誤"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    if user.j_pts < points_to_spend:
+        return jsonify({"error": f"點數不足，需要 {points_to_spend} 點"}), 400
+
+    # vocab_expand_premium 限訂閱用戶
+    if feature == 'vocab_expand_premium' and not user.is_premium:
+        return jsonify({"error": "此優惠僅限訂閱用戶使用"}), 403
+
+    user.j_pts -= points_to_spend
+    db.session.add(PointTransaction(
+        user_id=user_id,
+        points=-points_to_spend,
+        price=0,
+        payment_method='points',
+        transaction_type='spend',
+        related_feature=feature,
+    ))
+
+    # 依 feature 給予對應效果
+    effect_desc = ''
+
+    if feature == 'photo_extra':
+        user.photo_extra_count = (getattr(user, 'photo_extra_count', 0) or 0) + 5
+        effect_desc = '+5 次拍照（永久）'
+
+    elif feature == 'ai_extra':
+        user.ai_extra_count = (getattr(user, 'ai_extra_count', 0) or 0) + 5
+        effect_desc = '+5 次 AI 對話（永久）'
+
+    elif feature in ('vocab_expand', 'vocab_expand_premium'):
+        current_slot = getattr(user, 'vocab_slot', 100) or 100
+        if current_slot >= 1000:
+            db.session.rollback()
+            return jsonify({"error": "單字收藏擴充已達上限（1000個）"}), 400
+        add_amount = min(50, 1000 - current_slot)
+        user.vocab_slot = current_slot + add_amount
+        effect_desc = f'+{add_amount} 個收藏位'
+
+    db.session.commit()
+
+    return jsonify({
+        "message": f"成功使用 {points_to_spend} 點！{effect_desc}",
+        "total_points": user.j_pts,
+        "effect": effect_desc,
+    }), 200
+
+
+def _reset_daily_if_needed(user):
+    """若非台灣時間今日，重置今日拍照/AI次數。"""
+    tw_tz = timezone(timedelta(hours=8))
+    today_tw = datetime.now(tw_tz).date()
+    last_reset = getattr(user, 'last_reset_date', None)
+    if last_reset != today_tw:
+        user.photo_count_today = 0
+        user.ai_count_today = 0
+        user.last_reset_date = today_tw
+
 
 # 增加拍照次數
 @user_bp.route('/increment_scan', methods=['POST'])
@@ -366,29 +449,103 @@ def increment_scan():
     if not user:
         return jsonify({"error": "找不到此使用者"}), 404
 
-    today = date.today()
-    # 防呆：如果是新的一天，先歸零
-    if user.last_scan_date != today:
-        user.daily_scans = 0
-        user.last_scan_date = today
+    _reset_daily_if_needed(user)
 
-    # 增加次數 (假設每日目標是 3 次)
-    if user.daily_scans < 3:
-        user.daily_scans += 1
-    
-    # 增加小組的拍照貢獻
+    daily_limit = 10 if user.is_premium else 2
+    photo_today = getattr(user, 'photo_count_today', 0) or 0
+    photo_extra = getattr(user, 'photo_extra_count', 0) or 0
+
+    if photo_today < daily_limit:
+        user.photo_count_today = photo_today + 1
+    elif photo_extra > 0:
+        user.photo_extra_count = photo_extra - 1
+    else:
+        db.session.commit()  # 儲存可能發生的跨日重置
+        return jsonify({
+            "error": "今日拍照次數已用完，請花 60 點加購 5 次",
+            "daily_scans": photo_today,
+            "daily_limit": daily_limit,
+            "extra_count": 0,
+        }), 403
+
+    user.total_scans = (user.total_scans or 0) + 1
+
     member_record = GroupMember.query.filter_by(user_id=user_id).first()
     if member_record:
         member_record.group_scans += 1
-    
-    db.session.commit()
 
-    # 把這次拍照的進度算給小組，並檢查要不要發獎勵！
+    db.session.commit()
     add_group_progress_and_check_reward(user_id=user_id, action_type="scans", amount=1)
 
     return jsonify({
         "message": "進度更新成功！",
-        "daily_scans": user.daily_scans
+        "daily_scans": getattr(user, 'photo_count_today', 0) or 0,
+        "daily_limit": daily_limit,
+        "extra_count": getattr(user, 'photo_extra_count', 0) or 0,
+    }), 200
+
+
+# AI 對話消耗次數
+@user_bp.route('/use_ai', methods=['POST'])
+def use_ai():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    _reset_daily_if_needed(user)
+
+    daily_limit = 10 if user.is_premium else 3
+    ai_today = getattr(user, 'ai_count_today', 0) or 0
+    ai_extra = getattr(user, 'ai_extra_count', 0) or 0
+
+    if ai_today < daily_limit:
+        user.ai_count_today = ai_today + 1
+    elif ai_extra > 0:
+        user.ai_extra_count = ai_extra - 1
+    else:
+        db.session.commit() # 儲存可能發生的跨日重置
+        return jsonify({
+            "error": "今日 AI 對話次數已用完，請花 60 點加購 5 次",
+            "daily_ai": ai_today,
+            "daily_limit": daily_limit,
+            "extra_count": 0,
+        }), 403
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "AI 次數記錄成功",
+        "daily_ai": getattr(user, 'ai_count_today', 0) or 0,
+        "daily_limit": daily_limit,
+        "extra_count": getattr(user, 'ai_extra_count', 0) or 0,
+    }), 200
+
+
+# 查詢今日使用量
+@user_bp.route('/usage_status/<int:user_id>', methods=['GET'])
+def get_usage_status(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
+    _reset_daily_if_needed(user)
+    db.session.commit()
+
+    photo_limit = 10 if user.is_premium else 2
+    ai_limit = 10 if user.is_premium else 3
+
+    return jsonify({
+        "subscription_status": "active" if user.is_premium else "inactive",
+        "photo_count_today": getattr(user, 'photo_count_today', 0) or 0,
+        "photo_daily_limit": photo_limit,
+        "photo_extra_count": getattr(user, 'photo_extra_count', 0) or 0,
+        "ai_count_today": getattr(user, 'ai_count_today', 0) or 0,
+        "ai_daily_limit": ai_limit,
+        "ai_extra_count": getattr(user, 'ai_extra_count', 0) or 0,
+        "vocab_slot": getattr(user, 'vocab_slot', 100) or 100,
     }), 200
 
 # ==========================================

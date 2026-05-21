@@ -9,11 +9,11 @@ import 'package:jpn_learning_app/utils/route_observer.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
-import 'package:jpn_learning_app/screens/premium/buy_points_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
@@ -91,6 +91,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       }
       if (result.containsKey('streak_days')) {
         userProvider.setStreakDays((result['streak_days'] as num).toInt());
+      }
+      // 🌟 新增：同步時一併確保大頭貼與暱稱被鎖定，不因重新整理而消失
+      if (result.containsKey('avatar') && result['avatar'] != null) {
+        userProvider.setAvatar(result['avatar'].toString());
+      }
+      if (result.containsKey('username') && result['username'] != null) {
+        userProvider.setUsername(result['username'].toString());
       }
     } catch (e) { debugPrint('資料同步錯誤: $e'); }
   }
@@ -201,9 +208,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                 ),
                               ),
                               GestureDetector(
-                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyPointsScreen())),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              // initialIndex: 1 代表打開時直接切換到「💰 儲值點數」分頁，因為玩家點擊錢包通常是想看儲值或消費
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1))),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,

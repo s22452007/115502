@@ -144,7 +144,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     label: '輕鬆',
                     value: easyVal,
                     unit: unit,
-                    rewardPoints: rEasy, // 🌟 傳入獎勵點數
+                    rewardPoints: rEasy, // 傳入獎勵點數
                     activeColor: const Color(0XFFC6DB76),
                     isSelected: _selectedTarget == easyVal,
                     onTap: () => setState(() => _selectedTarget = easyVal),
@@ -156,7 +156,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     label: '標準',
                     value: normalVal,
                     unit: unit,
-                    rewardPoints: rNormal, // 🌟 傳入獎勵點數
+                    rewardPoints: rNormal, // 傳入獎勵點數
                     activeColor: const Color(0XFFFFD568),
                     isSelected: _selectedTarget == normalVal,
                     onTap: () => setState(() => _selectedTarget = normalVal),
@@ -168,7 +168,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     label: '爆肝',
                     value: hardVal,
                     unit: unit,
-                    rewardPoints: rHard, // 🌟 傳入獎勵點數
+                    rewardPoints: rHard, // 傳入獎勵點數
                     activeColor: const Color(0XFFFFAFAB),
                     isSelected: _selectedTarget == hardVal,
                     onTap: () => setState(() => _selectedTarget = hardVal),

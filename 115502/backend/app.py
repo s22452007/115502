@@ -12,6 +12,8 @@ from services.user import user_bp
 from services.group import group_bp
 from services.vocabulary import vocab_bp
 from services.tutor import tutor_bp
+from services.subscription import subscription_bp
+from services.store import store_bp
 
 # 👨‍🍳 引入內場廚師 (AI 聊天函數)
 from services.tutor import get_ai_reply
@@ -40,23 +42,114 @@ db.init_app(app)
 
 # 註冊 API 路由 (綁定網址前綴)
 app.register_blueprint(quiz_bp, url_prefix='/api/quiz')
-app.register_blueprint(auth_bp, url_prefix='/api/auth')    
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(scenario_bp, url_prefix='/api/scenario')
-app.register_blueprint(user_bp, url_prefix='/api/user')    
-app.register_blueprint(group_bp, url_prefix='/api/group')  
-app.register_blueprint(vocab_bp, url_prefix='/api/vocab')  
-app.register_blueprint(tutor_bp, url_prefix='/api/tutor')  
+app.register_blueprint(user_bp, url_prefix='/api/user')
+app.register_blueprint(group_bp, url_prefix='/api/group')
+app.register_blueprint(vocab_bp, url_prefix='/api/vocab')
+app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
+app.register_blueprint(subscription_bp, url_prefix='/api/subscription')
+app.register_blueprint(store_bp, url_prefix='/api/store')
 
-# 啟動時自動建立資料表 (如果還沒有的話)
+# 啟動時自動建立資料表與執行遷移
 with app.app_context():
-    db.create_all()
-    # 舊資料庫補欄位（新裝置自動跳過）
-    with db.engine.connect() as conn:
+    db.create_all()  # 建立所有新表
+
+    from models import SubscriptionPlan, PointPackage
+    from utils.db import db as _db
+    from sqlalchemy import text
+
+    # ── SQLite 欄位遷移：新增 billing_cycle / price_monthly nullable 支援 ──
+    for col_sql in [
+        'ALTER TABLE subscription_plan ADD COLUMN billing_cycle VARCHAR(10)',
+    ]:
         try:
-            conn.execute(db.text("ALTER TABLE user ADD COLUMN is_premium BOOLEAN DEFAULT 0"))
-            conn.commit()
+            with _db.engine.connect() as conn:
+                conn.execute(text(col_sql))
+                conn.commit()
         except Exception:
-            pass
+            pass  # 欄位已存在，略過
+
+    _FEATURES = [
+        '每天10次拍照辨識',
+        '每天10次AI對話',
+        '單字收藏擴充6折',
+        '學習小組押金5折',
+        '學習小組獎勵加倍',
+    ]
+
+    # ── 月訂閱方案 ──
+    monthly_plan = SubscriptionPlan.query.filter_by(name='Premium Pro 月訂閱').first()
+    if monthly_plan:
+        monthly_plan.price_monthly = 149
+        monthly_plan.price_yearly = None
+        monthly_plan.billing_cycle = 'monthly'
+        monthly_plan.points_grant_monthly = 20
+        monthly_plan.points_grant_yearly = None
+        monthly_plan.points_grant = 20
+        monthly_plan.features_json = _FEATURES
+        monthly_plan.is_active = True
+    else:
+        _db.session.add(SubscriptionPlan(
+            name='Premium Pro 月訂閱',
+            billing_cycle='monthly',
+            price_monthly=149,
+            price_yearly=None,
+            features_json=_FEATURES,
+            points_grant=20,
+            points_grant_monthly=20,
+            points_grant_yearly=None,
+            is_active=True,
+        ))
+
+    # ── 年訂閱方案 ──
+    yearly_plan = SubscriptionPlan.query.filter_by(name='Premium Pro 年訂閱').first()
+    if yearly_plan:
+        yearly_plan.price_monthly = None
+        yearly_plan.price_yearly = 1290
+        yearly_plan.billing_cycle = 'yearly'
+        yearly_plan.points_grant_monthly = None
+        yearly_plan.points_grant_yearly = 300
+        yearly_plan.points_grant = 300
+        yearly_plan.features_json = _FEATURES
+        yearly_plan.is_active = True
+    else:
+        _db.session.add(SubscriptionPlan(
+            name='Premium Pro 年訂閱',
+            billing_cycle='yearly',
+            price_monthly=None,
+            price_yearly=1290,
+            features_json=_FEATURES,
+            points_grant=300,
+            points_grant_monthly=None,
+            points_grant_yearly=300,
+            is_active=True,
+        ))
+
+    # 舊的通用方案停用（若存在）
+    old_plan = SubscriptionPlan.query.filter_by(name='Premium Pro').first()
+    if old_plan:
+        old_plan.is_active = False
+
+    _db.session.commit()
+
+    # 購點方案（idempotent upsert）
+    _PACKAGES = [
+        ('入門包', 70,  50,  '',      '小試牛刀'),
+        ('中包',   140, 90,  '推薦',  '最受歡迎的選擇'),
+        ('大包',   380, 170, '最划算','平均單價最低'),
+    ]
+    for pkg_name, pts, price, tag, desc in _PACKAGES:
+        pkg = PointPackage.query.filter_by(name=pkg_name).first()
+        if pkg:
+            pkg.points = pts
+            pkg.price = price
+            pkg.tag = tag
+            pkg.description = desc
+            pkg.is_active = True
+        else:
+            _db.session.add(PointPackage(name=pkg_name, points=pts, price=price, tag=tag, description=desc))
+    _db.session.commit()
 
 # ==========================================
 # 🛎️ 專屬櫃檯：負責接收 Flutter 傳來的聊天包裹
@@ -67,7 +160,7 @@ def chat():
     user_message = request.form.get('message', '')
     chat_history = request.form.get('history', '') 
     topic = request.form.get('topic', '日常對話') 
-    user_level = request.form.get('level', 'N5') # 🌟 接收等級！如果 App 沒傳，預設當作 N5
+    user_level = request.form.get('level', 'N5') # 接收等級！如果 App 沒傳，預設當作 N5
 
     print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 訊息：{user_message}")
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/gestures.dart'; // 🌟 加上這行
+import 'package:flutter/gestures.dart'; // 加上這行
 
 import 'package:jpn_learning_app/screens/auth/splash_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';

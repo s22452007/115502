@@ -37,8 +37,31 @@ class User(db.Model):
     notified_levels = db.Column(db.JSON, default={})
 
     # 訂閱狀態
-    is_premium = db.Column(db.Boolean, default=False) 
+    is_premium = db.Column(db.Boolean, default=False)
+    subscription_end_date = db.Column(db.DateTime, nullable=True)
+    auto_renew = db.Column(db.Boolean, default=False)
+    trial_used = db.Column(db.Boolean, default=False)          # 是否已使用過免費試用
+    trial_notice_sent = db.Column(db.Boolean, default=False)   # 試用到期前通知是否已發送
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
+
+    # 學習小組完成次數（0=第一次，達成後 +1；用於判斷獎勵等級）
+    group_completions = db.Column(db.Integer, default=0)
+
+    # 每週免費組隊次數計數（每週一 0 點重置）
+    group_free_used_this_week = db.Column(db.Integer, default=0)
+    # 同 last_free_group_week 欄位追蹤目前計數對應哪週（格式 '2026-16'）
+
+    # 每日次數計數（台灣時間 0 點重置）
+    photo_count_today = db.Column(db.Integer, default=0)   # 今日已用免費拍照次數
+    ai_count_today    = db.Column(db.Integer, default=0)   # 今日已用免費/訂閱 AI 次數
+    last_reset_date   = db.Column(db.Date, nullable=True)  # 上次重置日期（台灣時間）
+
+    # 永久加購次數（花點數購買，不隨每日重置）
+    photo_extra_count = db.Column(db.Integer, default=0)
+    ai_extra_count    = db.Column(db.Integer, default=0)
+
+    # 單字收藏上限（預設 100，花點數可擴充至 1000）
+    vocab_slot = db.Column(db.Integer, default=100)
 
     # 使用者單字紀錄（解鎖 / 收藏）
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
@@ -171,13 +194,88 @@ class UserAchievement(db.Model):
     unlocked_at = db.Column(db.DateTime, default=datetime.utcnow)
     achievement = db.relationship('Achievement')
 
-# 點數交易紀錄表 (PointTransaction)
+# 點數交易紀錄表 (PointTransaction)  D11
 class PointTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    points = db.Column(db.Integer, nullable=False)         # 負數代表消費
+    price = db.Column(db.Integer, nullable=False)          # 消費型紀錄填 0
+    payment_method = db.Column(db.String(50), nullable=False)
+    transaction_type = db.Column(db.String(20), nullable=False, default='purchase')
+    # 值：'purchase' | 'spend' | 'reward' | 'subscription_grant'
+    related_feature = db.Column(db.String(100), nullable=True)
+    # spend 時紀錄功能名，如 'roleplay'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# 購點方案表 (PointPackage)
+class PointPackage(db.Model):
+    __tablename__ = 'point_package'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
     points = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Integer, nullable=False)
-    payment_method = db.Column(db.String(50), nullable=False)
+    tag = db.Column(db.String(20), nullable=True)
+    description = db.Column(db.String(200), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+
+# 使用者限時道具 (UserBoost)
+class UserBoost(db.Model):
+    __tablename__ = 'user_boost'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    boost_type = db.Column(db.String(30), nullable=False)
+    # 值: 'photo_daily' | 'ai_daily' | 'vocab_slots' | 'vocab_unlimited'
+    extra_amount = db.Column(db.Integer, default=0)
+    expire_at = db.Column(db.DateTime, nullable=True)  # null = 永久
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ==========================================
+# 💳 訂閱方案與使用者訂閱紀錄
+# ==========================================
+
+# D19 訂閱方案表 (SubscriptionPlan)
+class SubscriptionPlan(db.Model):
+    __tablename__ = 'subscription_plan'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    billing_cycle = db.Column(db.String(10), nullable=True)   # 'monthly' | 'yearly' | None(通用)
+    price_monthly = db.Column(db.Integer, nullable=True)
+    price_yearly = db.Column(db.Integer, nullable=True)
+    features_json = db.Column(db.JSON, nullable=True)
+    points_grant = db.Column(db.Integer, default=0)          # 保留向下相容，新程式用下方欄位
+    points_grant_monthly = db.Column(db.Integer, default=50)  # 月訂贈點
+    points_grant_yearly  = db.Column(db.Integer, default=600) # 年訂贈點
+    is_active = db.Column(db.Boolean, default=True)
+
+# D20 使用者訂閱紀錄表 (UserSubscription)
+class UserSubscription(db.Model):
+    __tablename__ = 'user_subscription'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('subscription_plan.id'), nullable=False)
+    billing_cycle = db.Column(db.String(10), nullable=False)  # 'monthly' | 'yearly'
+    start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    end_date = db.Column(db.DateTime, nullable=False)
+    auto_renew = db.Column(db.Boolean, default=True)
+    status = db.Column(db.String(20), nullable=False, default='active')
+    # 值：'active' | 'cancelled' | 'expired' | 'trial'
+    payment_method = db.Column(db.String(50), nullable=True)
+    payment_status = db.Column(db.String(20), nullable=False, default='paid')  # 'pending' | 'paid'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    plan = db.relationship('SubscriptionPlan')
+
+
+# D21 系統通知表 (Notification)
+class Notification(db.Model):
+    __tablename__ = 'notification'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -237,7 +335,8 @@ class GroupMember(db.Model):
     group_logins = db.Column(db.Integer, default=0) # 加入小組後的登入天數
 
     has_claimed = db.Column(db.Boolean, default=False)  # 是否已領取獎勵
-    paid_deposit = db.Column(db.Boolean, default=False) # 加入時是否有付 20 點押金
+    paid_deposit = db.Column(db.Boolean, default=False) # 加入時是否有付押金
+    deposit_amount = db.Column(db.Integer, default=0)   # 實際付的押金金額（0=免費, 10=訂閱, 20=一般）
    
 # 小組邀請表 (GroupInvite)
 class GroupInvite(db.Model):
@@ -273,7 +372,7 @@ class Admin(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     
-    # 🌟 錯誤的主因就是缺了下面這兩行！請確保有加上：
+    # 錯誤的主因就是缺了下面這兩行！請確保有加上：
     role = db.Column(db.String(20), default='super_admin', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

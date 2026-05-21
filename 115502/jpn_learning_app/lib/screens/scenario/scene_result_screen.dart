@@ -25,7 +25,7 @@ class SceneResultScreen extends StatefulWidget {
 }
 
 class _SceneResultScreenState extends State<SceneResultScreen> {
-  // 🌟 魔法變數：控制綠色捲簾的當前高度 (一開始預設 550)
+  // 魔法變數：控制綠色捲簾的當前高度 (一開始預設 550)
   double _curtainHeight = 550.0;
   final Set<int> _collectedIds = {};
   final FlutterTts _flutterTts = FlutterTts();
@@ -71,7 +71,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
           ),
 
           // ==========================================
-          // 3. 前景層：🌟 可上下拖拉的綠色捲簾 (裡面裝著白色卡片)
+          // 3. 前景層：可上下拖拉的綠色捲簾 (裡面裝著白色卡片)
           // ==========================================
           Align(
             alignment: Alignment.bottomCenter,
@@ -87,7 +87,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
               ),
               child: Column(
                 children: [
-                  // 🌟 1. 將「上下滑動偵測」限定在最上面的把手區域
+                  // 1. 將「上下滑動偵測」限定在最上面的把手區域
                   GestureDetector(
                     behavior: HitTestBehavior.opaque, // 確保空白處也能滑動
                     onVerticalDragUpdate: (details) {
@@ -117,7 +117,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                     ),
                   ),
 
-                  // 🌟 2. 卡片內容區放入 Expanded 讓他佔滿剩下的空間，並且可以獨立滾動
+                  // 2. 卡片內容區放入 Expanded 讓他佔滿剩下的空間，並且可以獨立滾動
                   Expanded(
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(), // 允許卡片自己滾動！

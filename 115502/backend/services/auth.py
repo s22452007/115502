@@ -9,9 +9,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # 3. 本地端模組 (Local)
 from utils.db import db
 from utils.auth_helper import generate_friend_id
+from utils.subscription_helper import check_and_expire_subscription
 from models import (
-    User, UserAchievement, Achievement, 
-    UserVocab, UserFolder, FriendRequest, Friendship, 
+    User, UserAchievement, Achievement,
+    UserVocab, UserFolder, FriendRequest, Friendship,
     StudyGroup, GroupMember, GroupInvite
 )
 
@@ -103,17 +104,24 @@ def login():
 
         db.session.commit()
 
+        # 登入時同步訂閱過期狀態
+        check_and_expire_subscription(user)
+
+        end_date = getattr(user, 'subscription_end_date', None)
         return jsonify({
             "message": "登入成功！",
             "user_id": user.id,
             "email": user.email,
             "japanese_level": user.japanese_level,
             "avatar": user.avatar,
-            "streak_days": user.streak_days, # 把最新的天數傳給前端
-            "j_pts": user.j_pts,             # 順便把點數也傳回去
+            "streak_days": user.streak_days,
+            "j_pts": user.j_pts,
             "daily_scans": user.daily_scans,
             "friend_id": user.friend_id,
-            "username": user.username
+            "username": user.username,
+            "is_premium": bool(getattr(user, 'is_premium', False)),
+            "subscription_end_date": end_date.isoformat() if end_date else None,
+            "auto_renew": bool(getattr(user, 'auto_renew', False)),
         }), 200
     else:
         return jsonify({"error": "Email 或密碼錯誤"}), 401
@@ -197,7 +205,10 @@ def google_login():
 
     db.session.commit()
 
-    # 把所有的資料回傳給前端，讓前端的 UserProvider 能夠順利運作！
+    # 登入時同步訂閱過期狀態
+    check_and_expire_subscription(user)
+
+    end_date = getattr(user, 'subscription_end_date', None)
     return jsonify({
         "message": "Google 登入成功！",
         "user_id": user.id,
@@ -208,5 +219,8 @@ def google_login():
         "j_pts": user.j_pts,
         "daily_scans": user.daily_scans,
         "friend_id": user.friend_id,
-        "username": user.username
+        "username": user.username,
+        "is_premium": bool(getattr(user, 'is_premium', False)),
+        "subscription_end_date": end_date.isoformat() if end_date else None,
+        "auto_renew": bool(getattr(user, 'auto_renew', False)),
     }), 200

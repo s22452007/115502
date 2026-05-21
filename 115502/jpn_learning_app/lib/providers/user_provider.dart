@@ -22,6 +22,86 @@ class UserProvider extends ChangeNotifier {
   bool _isPremium = false;
   bool get isPremium => _isPremium;
 
+  bool _trialUsed = false;
+  bool get trialUsed => _trialUsed;
+
+  // 訂閱詳細狀態
+  String? _subscriptionEndDate;
+  bool _autoRenew = false;
+  String? _subscriptionStatus;
+  String? _subscriptionPlanName;
+  String? _billingCycle;
+
+  String? get subscriptionEndDate => _subscriptionEndDate;
+  bool get autoRenew => _autoRenew;
+  String? get subscriptionStatus => _subscriptionStatus;
+  String? get subscriptionPlanName => _subscriptionPlanName;
+  String? get billingCycle => _billingCycle;
+
+  // 使用量追蹤
+  int _photoCountToday = 0;
+  int _photoExtraCount = 0;
+  int _aiCountToday = 0;
+  int _aiExtraCount = 0;
+  int _vocabSlot = 50;
+
+  int get photoCountToday => _photoCountToday;
+  int get photoExtraCount => _photoExtraCount;
+  int get aiCountToday => _aiCountToday;
+  int get aiExtraCount => _aiExtraCount;
+  int get vocabSlot => _vocabSlot;
+
+  int get photoDailyLimit => _isPremium ? 20 : 3;
+  int get aiDailyLimit => _isPremium ? 30 : 5;
+
+  void setUsageStatus({
+    int photoCountToday = 0,
+    int photoExtraCount = 0,
+    int aiCountToday = 0,
+    int aiExtraCount = 0,
+    int vocabSlot = 50,
+  }) {
+    _photoCountToday = photoCountToday;
+    _photoExtraCount = photoExtraCount;
+    _aiCountToday = aiCountToday;
+    _aiExtraCount = aiExtraCount;
+    _vocabSlot = vocabSlot;
+    notifyListeners();
+  }
+
+  void updatePhotoUsage({int? countToday, int? extraCount}) {
+    if (countToday != null) _photoCountToday = countToday;
+    if (extraCount != null) _photoExtraCount = extraCount;
+    notifyListeners();
+  }
+
+  void updateAIUsage({int? countToday, int? extraCount}) {
+    if (countToday != null) _aiCountToday = countToday;
+    if (extraCount != null) _aiExtraCount = extraCount;
+    notifyListeners();
+  }
+
+  bool get hasActiveSubscription {
+    if (!_isPremium) return false;
+    if (_subscriptionEndDate == null) return false;
+    return DateTime.tryParse(_subscriptionEndDate!)?.isAfter(DateTime.now()) ?? false;
+  }
+
+  void setSubscriptionInfo({
+    String? endDate,
+    bool autoRenew = false,
+    String? status,
+    String? planName,
+    String? billingCycle,
+  }) {
+    _subscriptionEndDate = endDate;
+    _autoRenew = autoRenew;
+    _subscriptionStatus = status;
+    _subscriptionPlanName = planName;
+    _billingCycle = billingCycle;
+    notifyListeners();
+  }
+
   Map<String, int> _badgeProgress = {};
   Map<String, int> get badgeProgress => _badgeProgress;
 
@@ -42,6 +122,7 @@ class UserProvider extends ChangeNotifier {
   int get jPts => _jPts;
 
   void setIsPremium(bool value) { _isPremium = value; notifyListeners(); }
+  void setTrialUsed(bool value) { _trialUsed = value; notifyListeners(); }
   void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
   void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
   void setUserId(int? id) { _userId = id; notifyListeners(); }
@@ -52,7 +133,7 @@ class UserProvider extends ChangeNotifier {
   void setStreakDays(int days) { _streakDays = days; notifyListeners(); }
   void setFriendId(String? id) { _friendId = id; notifyListeners(); }
 
-  // 🌟 確保點數更新方法名稱一致
+  // 確保點數更新方法名稱一致
   void setJPts(int pts) {
     _jPts = pts;
     notifyListeners();
@@ -100,6 +181,17 @@ class UserProvider extends ChangeNotifier {
     _pendingFriendRequests = 0;
     _badgeProgress = {};
     _isPremium = false;
+    _trialUsed = false;
+    _subscriptionEndDate = null;
+    _autoRenew = false;
+    _subscriptionStatus = null;
+    _subscriptionPlanName = null;
+    _billingCycle = null;
+    _photoCountToday = 0;
+    _photoExtraCount = 0;
+    _aiCountToday = 0;
+    _aiExtraCount = 0;
+    _vocabSlot = 50;
     notifyListeners();
   }
 }

@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-# 1. 自動抓取 upgrade_db.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
+# 1. 自動抓取 upgrade.py 所在的絕對路徑 (也就是 backend 資料夾的位置)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # 2. 精準對準 backend/instance/jlens.db
@@ -30,6 +30,8 @@ add_column("group_member", "group_logins INTEGER DEFAULT 0")
 # 各自領獎與押金機制欄位
 add_column("group_member", "has_claimed BOOLEAN DEFAULT 0")
 add_column("group_member", "paid_deposit BOOLEAN DEFAULT 0")
+# 小組押金紀錄
+add_column("group_member", "deposit_amount INTEGER DEFAULT 0")
 
 print("✅ group_member 欄位確認完畢")
 
@@ -37,12 +39,25 @@ print("✅ group_member 欄位確認完畢")
 # 2. 升級 user
 # ==========================================
 add_column("user", "username VARCHAR(30)")
-# 🌟 新增：押金對賭機制，紀錄上一次免費參加是哪一週
-add_column("user", "last_free_group_week VARCHAR(10)")
+add_column("user", "last_free_group_week VARCHAR(10)") # 押金對賭機制，紀錄上一次免費參加是哪一週
+
+# 訂閱與 AI 相關欄位
+add_column("user", "is_premium BOOLEAN DEFAULT 0")
+add_column("user", "subscription_end_date DATETIME")
+add_column("user", "auto_renew BOOLEAN DEFAULT 0")
+add_column("user", "group_completions INTEGER DEFAULT 0")
+
+add_column("user", "photo_count_today INTEGER DEFAULT 0")
+add_column("user", "photo_extra_count INTEGER DEFAULT 0")
+add_column("user", "ai_count_today INTEGER DEFAULT 0")
+add_column("user", "ai_extra_count INTEGER DEFAULT 0")
+add_column("user", "last_reset_date DATE")
+add_column("user", "vocab_slot INTEGER DEFAULT 100")
+add_column("user", "group_free_used_this_week INTEGER DEFAULT 0")
 
 try:
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_username ON user(username);")
-    print("✅ user 及其索引、對賭額度欄位確認完畢")
+    print("✅ user 及其索引、訂閱、對賭額度欄位確認完畢")
 except sqlite3.OperationalError as e:
     print(f"⚠️ username 索引建立警告：{e}")
 
@@ -52,7 +67,7 @@ except sqlite3.OperationalError as e:
 add_column("study_group", "current_progress INTEGER DEFAULT 0")
 add_column("study_group", "reward_points INTEGER DEFAULT 50")
 add_column("study_group", "is_reward_claimed BOOLEAN DEFAULT 0")
-# 🌟 新增：自動結算系統，紀錄小組到期時間
+# 自動結算系統，紀錄小組到期時間
 add_column("study_group", "expire_at DATETIME")
 print("✅ study_group 獎勵機制與到期日欄位確認完畢")
 
@@ -214,7 +229,139 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ user_ability 移除警告：{e}")
 
-# 儲存並關閉 (這兩行原本就有，加在它們上面就好)
+# ==========================================
+# 12. 升級 point_transaction (交易紀錄)
+# ==========================================
+try:
+    # 確保表格存在 (因為有時候舊使用者連這個表都沒有)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS point_transaction (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        points INTEGER NOT NULL,
+        price INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id)
+    );
+    """)
+    # 補充欄位
+    add_column("point_transaction", "transaction_type VARCHAR(20) DEFAULT 'purchase'")
+    add_column("point_transaction", "related_feature VARCHAR(100)")
+    print("✅ point_transaction 交易紀錄表欄位確認完畢")
+except Exception as e:
+    print(f"⚠️ point_transaction 建立或升級警告：{e}")
+
+# ==========================================
+# 13. 升級 subscription_plan
+# ==========================================
+add_column("subscription_plan", "points_grant_monthly INTEGER DEFAULT 50")
+add_column("subscription_plan", "points_grant_yearly INTEGER DEFAULT 600")
+
+# ==========================================
+# 14. 升級 user（訂閱相關新欄位）
+# ==========================================
+add_column("user", "trial_used BOOLEAN DEFAULT 0")
+add_column("user", "trial_notice_sent BOOLEAN DEFAULT 0")
+add_column("user", "group_week_reset_date DATE")
+print("✅ user 表訂閱相關欄位確認完畢")
+
+# ==========================================
+# 15. 建立 notification 通知表
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notification (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        content TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id)
+    );
+    """)
+    print("✅ notification 通知表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ notification 建立警告：{e}")
+
+# ==========================================
+# 16. 建立 user_subscription 使用者訂閱紀錄表
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_subscription (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        plan_id INTEGER NOT NULL,
+        billing_cycle VARCHAR(20) NOT NULL,
+        start_date DATETIME NOT NULL,
+        end_date DATETIME NOT NULL,
+        status VARCHAR(20) DEFAULT 'active',
+        auto_renew BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id),
+        FOREIGN KEY(plan_id) REFERENCES subscription_plan(id)
+    );
+    """)
+    print("✅ user_subscription 使用者訂閱紀錄表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user_subscription 建立警告：{e}")
+
+# ==========================================
+# 17. 升級 subscription_plan
+# ==========================================
+add_column("subscription_plan", "billing_cycle VARCHAR(20)")
+add_column("subscription_plan", "price_monthly INTEGER")
+add_column("subscription_plan", "price_yearly INTEGER")
+add_column("subscription_plan", "is_active BOOLEAN DEFAULT 1")
+add_column("subscription_plan", "features TEXT")
+print("✅ subscription_plan 欄位確認完畢")
+
+# ==========================================
+# 18. 修正 subscription_plan：移除 price_monthly / price_yearly 的 NOT NULL 限制
+#     SQLite 不支援 ALTER COLUMN，需要整張表重建
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS subscription_plan_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL,
+        billing_cycle VARCHAR(20),
+        price_monthly INTEGER,
+        price_yearly INTEGER,
+        features_json TEXT,
+        points_grant INTEGER DEFAULT 0,
+        points_grant_monthly INTEGER DEFAULT 50,
+        points_grant_yearly INTEGER DEFAULT 600,
+        is_active BOOLEAN DEFAULT 1
+    );
+    """)
+
+    cursor.execute("""
+    INSERT INTO subscription_plan_new
+        (id, name, billing_cycle, price_monthly, price_yearly,
+         features_json, points_grant, points_grant_monthly,
+         points_grant_yearly, is_active)
+    SELECT id, name, billing_cycle, price_monthly, price_yearly,
+           features_json, points_grant, points_grant_monthly,
+           points_grant_yearly, is_active
+    FROM subscription_plan;
+    """)
+
+    cursor.execute("DROP TABLE subscription_plan;")
+    cursor.execute("ALTER TABLE subscription_plan_new RENAME TO subscription_plan;")
+    print("✅ subscription_plan price 欄位 NOT NULL 限制已移除")
+except Exception as e:
+    print(f"⚠️ subscription_plan 重建警告（可能已完成）：{e}")
+
+# ==========================================
+# 19. 升級 user_subscription：補充 payment_method 與 payment_status 欄位
+# ==========================================
+add_column("user_subscription", "payment_method VARCHAR(50)")
+add_column("user_subscription", "payment_status VARCHAR(20) DEFAULT 'paid'")
+print("✅ user_subscription payment_method / payment_status 欄位確認完畢")
+
+# 儲存並關閉
 conn.commit()
 conn.close()
 

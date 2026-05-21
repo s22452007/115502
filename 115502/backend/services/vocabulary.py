@@ -126,29 +126,39 @@ def collect_vocab():
 
     # 檢查是否已收藏
     existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
-    
+
+    if existing and existing.collected_at is not None:
+        return jsonify({"error": "已經收藏過囉！"}), 400
+
+    # 檢查收藏位上限
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+    vocab_slot = getattr(user, 'vocab_slot', 50) or 50
+    collected_count = UserVocab.query.filter(
+        UserVocab.user_id == user_id,
+        UserVocab.collected_at.isnot(None),
+    ).count()
+    if collected_count >= vocab_slot:
+        cost_hint = 30 if user.is_premium else 50
+        return jsonify({
+            "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +50 個位置",
+            "vocab_slot": vocab_slot,
+            "collected_count": collected_count,
+        }), 400
+
     if existing:
-        if existing.collected_at is not None:
-            # 真的已經收藏過了
-            return jsonify({"error": "已經收藏過囉！"}), 400
-        else:
-            # 之前只有解鎖，現在補上收藏時間和資料夾
-            existing.collected_at = datetime.utcnow()
-            existing.folder_id = folder_id
-            db.session.commit()
-            return jsonify({"message": "收藏成功！", "user_vocab_id": existing.id}), 200
+        # 之前只有解鎖，現在補上收藏時間和資料夾
+        existing.collected_at = datetime.utcnow()
+        existing.folder_id = folder_id
+        db.session.commit()
+        return jsonify({"message": "收藏成功！", "user_vocab_id": existing.id}), 200
     else:
-        # 完全沒紀錄，新增一筆 (只有收藏)
+        # 完全沒紀錄，新增一筆
         uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id, collected_at=datetime.utcnow())
         db.session.add(uv)
         db.session.commit()
         return jsonify({"message": "收藏成功！", "user_vocab_id": uv.id}), 201
-    
-    uv = UserVocab(user_id=user_id, vocab_id=vocab_id, folder_id=folder_id)
-    db.session.add(uv)
-    db.session.commit()
-
-    return jsonify({"message": "收藏成功！", "user_vocab_id": uv.id}), 201
 
 # 取消收藏單字
 @vocab_bp.route('/uncollect', methods=['POST'])

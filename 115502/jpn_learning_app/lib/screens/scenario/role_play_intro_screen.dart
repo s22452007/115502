@@ -4,7 +4,7 @@ import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
-  final String topicTitle; // 🌟 用來接收上一頁傳來的主題
+  final String topicTitle; // 用來接收上一頁傳來的主題
 
   const RolePlayIntroScreen({
     Key? key,
@@ -25,7 +25,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     await _flutterTts.speak(text);
   }
 
-  // 🌟 新增的「情境小資料庫」(模擬未來 AI)
+  // 新增的「情境小資料庫」(模擬未來 AI)
   Map<String, dynamic> _getTopicData() {
     String topic = widget.topicTitle;
 
@@ -102,7 +102,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 在這裡呼叫函數，抓取對應的資料
+    // 在這裡呼叫函數，抓取對應的資料
     final topicData = _getTopicData();
     final String currentImage = topicData['image'];
     final List<Map<String, String>> currentVocabs =
@@ -121,7 +121,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             child: Image.network(
               currentImage,
               fit: BoxFit.cover,
-            ), // 🌟 換成 currentImage
+            ), // 換成 currentImage
           ),
 
           // 2. 左上角：返回按鈕
@@ -161,7 +161,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 🌟 顯示從上一頁傳來的主題名稱
+                  // 顯示從上一頁傳來的主題名稱
                   Text(
                     widget.topicTitle,
                     style: TextStyle(
@@ -176,11 +176,11 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
-                      itemCount: currentVocabs.length, // 🌟 根據單字數量決定有幾張卡
+                      itemCount: currentVocabs.length, // 根據單字數量決定有幾張卡
                       itemBuilder: (context, index) {
                         return _buildVocabCard(
                           currentVocabs[index],
-                        ); // 🌟 傳資料給模具
+                        ); // 傳資料給模具
                       },
                     ),
                   ),
@@ -198,7 +198,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                       height: 54,
                       child: ElevatedButton(
                         onPressed: () {
-                          // 🌟 按下後繼續傳遞標題給聊天室
+                          // 按下後繼續傳遞標題給聊天室
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -234,7 +234,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     );
   }
 
-  // 🌟 將模具收進類別裡面，並讓它接收資料
+  // 將模具收進類別裡面，並讓它接收資料
   Widget _buildVocabCard(Map<String, String> vocab) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

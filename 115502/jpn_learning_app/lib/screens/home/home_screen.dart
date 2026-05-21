@@ -17,6 +17,7 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart';
 import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
@@ -174,11 +175,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 15),
               child: Row(
                 children: [
-                  CircleAvatar(
+                  UserAvatar(
+                    avatarBase64: avatarUrl,
+                    friendId: userProvider.friendId,
+                    originalName: userName,
                     radius: 35,
-                    backgroundColor: AppColors.primaryLighter,
-                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                    child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 40, color: AppColors.primary) : null,
+                    isPremium: userProvider.isPremium,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

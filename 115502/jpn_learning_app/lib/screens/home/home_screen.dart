@@ -22,7 +22,6 @@ import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
 import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
-import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -93,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       if (result.containsKey('streak_days')) {
         userProvider.setStreakDays((result['streak_days'] as num).toInt());
       }
-      // 新增：同步時一併確保大頭貼與暱稱被鎖定，不因重新整理而消失
+      // 🌟 新增：同步時一併確保大頭貼與暱稱被鎖定，不因重新整理而消失
       if (result.containsKey('avatar') && result['avatar'] != null) {
         userProvider.setAvatar(result['avatar'].toString());
       }
@@ -134,9 +133,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final firstDayOfWeek = today.subtract(Duration(days: today.weekday - 1));
-    List<DateTime> weekDates = List.generate(7, (i) => DateTime(firstDayOfWeek.year, firstDayOfWeek.month, firstDayOfWeek.day + i));
+    final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
     List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
 
     final userProvider = context.watch<UserProvider>();
@@ -166,22 +164,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           errorBuilder: (c,e,s) => Text("J-LENS", style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900))
         ),
         centerTitle: true,
-        actions: [
-          GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-            child: Container(
-              margin: const EdgeInsets.only(right: 16),
-              alignment: Alignment.center,
-              child: UserAvatar(
-                avatarBase64: avatarUrl,
-                friendId: userProvider.friendId,
-                originalName: userName,
-                radius: 18,
-                isPremium: userProvider.isPremium,
-              ),
-            ),
-          ),
-        ],
+        // 🌟 這裡原本的 actions 區塊（包含頭像的 GestureDetector）已經被完全移除囉！
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -191,12 +174,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 15),
               child: Row(
                 children: [
-                  UserAvatar(
-                    avatarBase64: avatarUrl,
-                    friendId: userProvider.friendId,
-                    originalName: userName,
+                  CircleAvatar(
                     radius: 35,
-                    isPremium: userProvider.isPremium,
+                    backgroundColor: AppColors.primaryLighter,
+                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+                    child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(Icons.person, size: 40, color: AppColors.primary) : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -281,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         currentIndex: _currentIndex,
         onTap: (i) {
           if (i == 0) {
-             // 主頁不動
+             // 已經在主頁
           } else if (i == 1) {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
           } else if (i == 2) {
@@ -298,8 +280,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -314,29 +294,16 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final date = weekDates[index];
-              final int diffDays = today.difference(date).inDays;
-              final bool isToday = diffDays == 0;
-              
-              bool isCompleted = false;
-              if (diffDays >= 0 && diffDays < streakDays) {
-                isCompleted = true;
-              }
-
+              final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
+              bool isCompleted = (now.difference(date).inDays >= 0 && streakDays > now.difference(date).inDays);
               return Column(
                 children: [
                   Text(weekDayNames[index], style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 10),
                   Container(
                     width: 38, height: 38,
-                    decoration: BoxDecoration(
-                      color: isToday ? AppColors.primary : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), 
-                      shape: BoxShape.circle
-                    ),
-                    child: Center(
-                      child: isCompleted 
-                        ? const Icon(Icons.check, color: Colors.white, size: 20) 
-                        : Text(date.day.toString(), style: TextStyle(color: isToday ? Colors.white : _textColor, fontWeight: FontWeight.w900))
-                    ),
+                    decoration: BoxDecoration(color: isToday ? AppColors.primary : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), shape: BoxShape.circle),
+                    child: Center(child: isCompleted ? const Icon(Icons.check, color: Colors.white, size: 20) : Text(date.day.toString(), style: TextStyle(color: isToday ? Colors.white : _textColor, fontWeight: FontWeight.w900))),
                   ),
                 ],
               );

@@ -375,10 +375,17 @@ def user_list():
     keyword = request.args.get('q', '').strip()
     conn = get_db_connection()
 
-    # 檢查 last_seen_at 欄位是否存在
+    # 檢查欄位是否存在
     cols = [row[1] for row in conn.execute("PRAGMA table_info(user)").fetchall()]
-    has_last_seen = 'last_seen_at' in cols
-    last_seen_col = 'u.last_seen_at' if has_last_seen else 'NULL as last_seen_at'
+    has_last_seen   = 'last_seen_at'          in cols
+    has_is_premium  = 'is_premium'            in cols
+    has_trial_used  = 'trial_used'            in cols
+    has_sub_end     = 'subscription_end_date' in cols
+
+    last_seen_col  = 'u.last_seen_at'          if has_last_seen  else 'NULL as last_seen_at'
+    is_premium_col = 'u.is_premium'            if has_is_premium else '0 as is_premium'
+    trial_used_col = 'u.trial_used'            if has_trial_used else '0 as trial_used'
+    sub_end_col    = 'u.subscription_end_date' if has_sub_end    else 'NULL as subscription_end_date'
 
     base_query = f'''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
@@ -388,9 +395,15 @@ def user_list():
                u.avatar,
                DATE(u.created_at) as created_at,
                {last_seen_col},
+               {is_premium_col},
+               {trial_used_col},
+               {sub_end_col},
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
-               (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count
+               (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count,
+               (SELECT sub.status FROM user_subscription sub WHERE sub.user_id = u.id ORDER BY sub.created_at DESC LIMIT 1) as sub_status,
+               (SELECT sub.billing_cycle FROM user_subscription sub WHERE sub.user_id = u.id ORDER BY sub.created_at DESC LIMIT 1) as sub_billing_cycle,
+               (SELECT sp.name FROM user_subscription sub JOIN subscription_plan sp ON sp.id = sub.plan_id WHERE sub.user_id = u.id ORDER BY sub.created_at DESC LIMIT 1) as sub_plan_name
         FROM user u
     '''
     if keyword:

@@ -415,7 +415,7 @@ def spend_points():
         effect_desc = '+5 次 AI 對話（永久）'
 
     elif feature in ('vocab_expand', 'vocab_expand_premium'):
-        current_slot = getattr(user, 'vocab_slot', 100) or 100
+        current_slot = getattr(user, 'vocab_slot', 50) or 50
         if current_slot >= 1000:
             db.session.rollback()
             return jsonify({"error": "單字收藏擴充已達上限（1000個）"}), 400
@@ -541,6 +541,12 @@ def get_usage_status(user_id):
     photo_limit = 10 if user.is_premium else 2
     ai_limit = 10 if user.is_premium else 3
 
+    vocab_slot = getattr(user, 'vocab_slot', 50) or 50
+    vocab_count = UserVocab.query.filter(
+        UserVocab.user_id == user_id,
+        UserVocab.collected_at.isnot(None),
+    ).count()
+
     return jsonify({
         "subscription_status": "active" if user.is_premium else "inactive",
         "photo_count_today": getattr(user, 'photo_count_today', 0) or 0,
@@ -549,7 +555,8 @@ def get_usage_status(user_id):
         "ai_count_today": getattr(user, 'ai_count_today', 0) or 0,
         "ai_daily_limit": ai_limit,
         "ai_extra_count": getattr(user, 'ai_extra_count', 0) or 0,
-        "vocab_slot": getattr(user, 'vocab_slot', 100) or 100,
+        "vocab_slot": vocab_slot,
+        "vocab_count": vocab_count,
     }), 200
 
 # ==========================================

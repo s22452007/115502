@@ -42,22 +42,8 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
       );
 
       if (mounted && result.containsKey('result') && result['result'] != null) {
-        // 分析成功，把今日進度 +1
-        final userId = context.read<UserProvider>().userId;
-        if (userId != null) {
-          // 不是訪客，才呼叫後端 API 增加進度
-          final progressResult = await ApiClient.incrementDailyScan(userId);
-
-          if (mounted && progressResult.containsKey('daily_scans')) {
-            // 把後端算好的最新進度 (例如從 0 變 1)，更新到大腦裡！
-            context.read<UserProvider>().setDailyScans(
-              progressResult['daily_scans'],
-            );
-            // 今天已學習，若每日提醒還沒發就跳過今天
-            await NotificationService.cancelDailyForToday();
-          }
-        }
-
+        // 分析成功，直接導向結果頁面
+        // (計數已在 camera_screen 的 incrementScan 中處理)
         if (!mounted) return;
 
         // 成功後，導向辨識結果頁面

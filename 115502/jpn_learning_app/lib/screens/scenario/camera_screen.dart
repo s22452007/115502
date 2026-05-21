@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/main.dart'; // import cameras
 
 class CameraScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _CameraScreenState extends State<CameraScreen>
   // 使用量顯示
   int _photoCountToday = 0;
   int _photoExtraCount = 0;
-  int _photoDailyLimit = 3;
+  int _photoDailyLimit = 2;
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _CameraScreenState extends State<CameraScreen>
     if (!mounted) return;
     final provider = context.read<UserProvider>();
     setState(() {
-      _photoDailyLimit = provider.isPremium ? 20 : 3;
+      _photoDailyLimit = provider.isPremium ? 10 : 2;
       _photoCountToday = (res['photo_count_today'] as num?)?.toInt() ?? 0;
       _photoExtraCount = (res['photo_extra_count'] as num?)?.toInt() ?? 0;
     });
@@ -73,7 +74,7 @@ class _CameraScreenState extends State<CameraScreen>
     if (status == 403) {
       final used = (res['daily_scans'] as num?)?.toInt() ?? _photoCountToday;
       final limit = (res['daily_limit'] as num?)?.toInt() ?? _photoDailyLimit;
-      _showQuotaExceededDialog(imagePath, used, limit);
+      _showQuotaBottomSheet(imagePath, used, limit);
     } else {
       setState(() {
         _photoCountToday = (res['daily_scans'] as num?)?.toInt() ?? _photoCountToday + 1;
@@ -84,45 +85,79 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  void _showQuotaExceededDialog(String imagePath, int used, int limit) {
+  void _showQuotaBottomSheet(String imagePath, int used, int limit) {
     final provider = context.read<UserProvider>();
     final jPts = provider.jPts;
-    showDialog(
+    final isPremium = provider.isPremium;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('今日拍照次數已用完', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('已使用 $used / $limit 次', style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 12),
-            const Text('花 30 點加購 +5 次（永久有效）', style: TextStyle(fontSize: 15)),
-            const SizedBox(height: 4),
-            Text('目前點數：$jPts J-Pts',
-                style: TextStyle(fontSize: 13, color: jPts >= 30 ? Colors.grey : Colors.red)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5F8F5B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: jPts < 30
-                ? null
-                : () async {
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                const Icon(Icons.camera_alt, color: Colors.orange),
+                const SizedBox(width: 8),
+                const Text('今日拍照次數已用完',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              ]),
+              const SizedBox(height: 6),
+              Text(
+                isPremium ? '訂閱版每天 10 次' : '免費版每天 2 次',
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _buyExtraAndProceed(imagePath, 'photo_extra');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5F8F5B),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  jPts < 60
+                      ? '點數不足（需 60 點，目前 $jPts 點）'
+                      : '花 60 點加購 +5 次（永久）',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (!isPremium) ...[
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () {
                     Navigator.pop(ctx);
-                    await _buyExtraAndProceed(imagePath, 'photo_extra');
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const StoreDashboardScreen()));
                   },
-            child: const Text('加購次數', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFC6B13B),
+                    side: const BorderSide(color: Color(0xFFC6B13B)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('升級訂閱  每天 10 次',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+              const SizedBox(height: 6),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消', style: TextStyle(color: Colors.grey)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -132,13 +167,16 @@ class _CameraScreenState extends State<CameraScreen>
     final userId = provider.userId;
     if (userId == null) return;
 
-    final buyRes = await ApiClient.spendPoints(userId: userId, points: 30, feature: feature);
+    final buyRes = await ApiClient.spendPoints(userId: userId, points: 60, feature: feature);
     if (!mounted) return;
 
-    if ((buyRes['_status'] as num?)?.toInt() != 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(buyRes['error'] ?? '購買失敗')),
-      );
+    final status = (buyRes['_status'] as num?)?.toInt() ?? 0;
+    if (status != 200) {
+      final errMsg = buyRes['error']?.toString() ?? '';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(errMsg.contains('點數不足') ? '點數不足，請先購買點數' : errMsg),
+        backgroundColor: Colors.redAccent,
+      ));
       return;
     }
 
@@ -146,7 +184,7 @@ class _CameraScreenState extends State<CameraScreen>
       provider.setJPts((buyRes['total_points'] as num).toInt());
     }
 
-    // 購買成功後重新嘗試
+    // 購買成功後重新嘗試 increment_scan
     final scanRes = await ApiClient.incrementScan(userId);
     if (!mounted) return;
 
@@ -281,6 +319,7 @@ class _CameraScreenState extends State<CameraScreen>
       cameraController.dispose();
     } else if (state == AppLifecycleState.resumed) {
       _initCamera(cameraController.description);
+      _loadUsageStatus(); // 返回頁面時重新載入使用量
     }
   }
 
@@ -321,28 +360,37 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // 1. 新增：頂部中央的「次數顯示條」
+          // 頂部中央的「次數顯示條」
           Positioned(
-            top: 54, // 對齊左右的按鈕
+            top: 54,
             left: 60,
             right: 60,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '今日拍照：$_photoCountToday / $_photoDailyLimit次' + 
-                (_photoExtraCount > 0 ? ' (額外$_photoExtraCount次)' : ''),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white, 
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+            child: Builder(builder: (_) {
+              final dailyRemaining = (_photoDailyLimit - _photoCountToday).clamp(0, _photoDailyLimit);
+              final effectiveRemaining = dailyRemaining + _photoExtraCount;
+              final countColor = effectiveRemaining <= 0
+                  ? Colors.red.shade300
+                  : effectiveRemaining == 1
+                      ? Colors.orange.shade300
+                      : Colors.white;
+              final extraText = _photoExtraCount > 0 ? ' +$_photoExtraCount次備用' : '';
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-            ),
+                child: Text(
+                  '今日拍照：$_photoCountToday / $_photoDailyLimit 次$extraText',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: countColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              );
+            }),
           ),
 
           // 中央提示框
@@ -351,7 +399,7 @@ class _CameraScreenState extends State<CameraScreen>
               margin: const EdgeInsets.symmetric(horizontal: 40),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(

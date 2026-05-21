@@ -218,13 +218,13 @@ def schedule_upgrade():
     if existing_pending:
         return jsonify({'error': '已有排程升級'}), 400
 
-    plan = SubscriptionPlan.query.filter_by(is_active=True).first()
-    if not plan:
-        return jsonify({'error': '找不到訂閱方案'}), 500
+    yearly_plan = SubscriptionPlan.query.filter_by(billing_cycle='yearly', is_active=True).first()
+    if not yearly_plan:
+        return jsonify({'error': '找不到年訂閱方案'}), 500
 
     pending_sub = UserSubscription(
         user_id=user_id,
-        plan_id=current_sub.plan_id,
+        plan_id=yearly_plan.id,
         billing_cycle='yearly',
         start_date=current_sub.end_date,
         end_date=current_sub.end_date + timedelta(days=365),
@@ -310,8 +310,7 @@ def start_trial():
     if existing:
         return jsonify({'error': '已有訂閱中，無法再次啟用試用'}), 400
 
-    # 優先取月訂閱方案
-    plan = SubscriptionPlan.query.filter_by(is_active=True).first()
+    plan = SubscriptionPlan.query.filter_by(billing_cycle='monthly', is_active=True).first()
     if not plan:
         return jsonify({'error': '找不到訂閱方案'}), 500
 

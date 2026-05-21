@@ -60,8 +60,8 @@ class User(db.Model):
     photo_extra_count = db.Column(db.Integer, default=0)
     ai_extra_count    = db.Column(db.Integer, default=0)
 
-    # 單字收藏上限（預設 100，花點數可擴充至 1000）
-    vocab_slot = db.Column(db.Integer, default=100)
+    # 單字收藏上限（預設 50，花點數可擴充至 1000）
+    vocab_slot = db.Column(db.Integer, default=50)
 
     # 使用者單字紀錄（解鎖 / 收藏）
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)

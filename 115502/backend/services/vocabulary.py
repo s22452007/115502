@@ -140,7 +140,7 @@ def collect_vocab():
         UserVocab.collected_at.isnot(None),
     ).count()
     if collected_count >= vocab_slot:
-        cost_hint = 30 if user.is_premium else 50
+        cost_hint = 35 if user.is_premium else 50
         return jsonify({
             "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +50 個位置",
             "vocab_slot": vocab_slot,

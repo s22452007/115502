@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 class RoleplayScreen extends StatefulWidget {
   final String topicTitle;
@@ -28,7 +29,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
   // 使用量顯示狀態
   int _aiUsed = 0;
-  int _aiMax = 5;
+  int _aiMax = 3;
   int _aiExtra = 0;
 
   @override
@@ -56,13 +57,13 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       setState(() {
         _aiUsed = (res['ai_count_today'] as num?)?.toInt() ?? 0;
         _aiExtra = (res['ai_extra_count'] as num?)?.toInt() ?? 0;
-        _aiMax = res['subscription_status'] == 'active' ? 30 : 5;
+        _aiMax = res['subscription_status'] == 'active' ? 10 : 3;
       });
     }
   }
 
-  // 核心：每次傳訊息前先檢查額度
-  Future<bool> _checkAILimit() async {
+  // 核心：每次傳訊息前先檢查額度，onBoughtRetry 為購買成功後自動重試的動作
+  Future<bool> _checkAILimit({void Function()? onBoughtRetry}) async {
     final provider = context.read<UserProvider>();
     final userId = provider.userId;
     if (userId == null) return false;
@@ -71,92 +72,129 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     if (!mounted) return false;
 
     final status = (res['_status'] as num?)?.toInt() ?? 200;
-    
-    // 遇到 403，跳出加購彈窗
+
     if (status == 403) {
       final used = (res['daily_ai'] as num?)?.toInt() ?? _aiUsed;
       final limit = (res['daily_limit'] as num?)?.toInt() ?? _aiMax;
-      _showQuotaExceededDialog(used, limit);
+      _showQuotaBottomSheet(used, limit, onBoughtRetry ?? () {});
       return false;
     } else {
-      // 成功扣除次數 (200)，更新畫面
       setState(() {
         _aiUsed = (res['daily_ai'] as num?)?.toInt() ?? _aiUsed + 1;
         _aiExtra = (res['extra_count'] as num?)?.toInt() ?? _aiExtra;
       });
-      // provider.updateAIUsage(countToday: _aiUsed, extraCount: _aiExtra);
       return true;
     }
   }
 
-  // 次數用盡的加購彈窗
-  void _showQuotaExceededDialog(int used, int limit) {
-    final jPts = context.read<UserProvider>().jPts;
-    showDialog(
+  // 次數用盡的 BottomSheet
+  void _showQuotaBottomSheet(int used, int limit, void Function() onBoughtRetry) {
+    final provider = context.read<UserProvider>();
+    final jPts = provider.jPts;
+    final isPremium = provider.isPremium;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('今日對話次數已用完', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('已使用 $used / $limit 次', style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 12),
-            const Text('花 30 點加購 +5 次（永久有效）', style: TextStyle(fontSize: 15)),
-            const SizedBox(height: 4),
-            Text('目前點數：$jPts J-Pts',
-                style: TextStyle(fontSize: 13, color: jPts >= 30 ? Colors.grey : Colors.red)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6AA86B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: jPts < 30
-                ? null
-                : () async {
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                const Icon(Icons.smart_toy, color: Colors.orange),
+                const SizedBox(width: 8),
+                const Text('今日AI對話次數已用完',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              ]),
+              const SizedBox(height: 6),
+              Text(
+                isPremium ? '訂閱版每天 10 次' : '免費版每天 3 次',
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _buyExtraAndRetry(onBoughtRetry);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6AA86B),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  jPts < 60
+                      ? '點數不足（需 60 點，目前 $jPts 點）'
+                      : '花 60 點加購 +5 次（永久）',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (!isPremium) ...[
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () {
                     Navigator.pop(ctx);
-                    await _buyExtraAndProceed();
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const StoreDashboardScreen()));
                   },
-            child: const Text('加購次數', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFC6B13B),
+                    side: const BorderSide(color: Color(0xFFC6B13B)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('升級訂閱  每天 10 次',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+              const SizedBox(height: 6),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消', style: TextStyle(color: Colors.grey)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // 花費點數購買次數的邏輯
-  Future<void> _buyExtraAndProceed() async {
+  // 花費 60 點加購 AI 次數，成功後自動執行 onRetry
+  Future<void> _buyExtraAndRetry(void Function() onRetry) async {
     final provider = context.read<UserProvider>();
     final userId = provider.userId;
     if (userId == null) return;
 
-    final buyRes = await ApiClient.spendPoints(userId: userId, points: 30, feature: 'ai_extra');
+    final buyRes = await ApiClient.spendPoints(userId: userId, points: 60, feature: 'ai_extra');
     if (!mounted) return;
 
-    if ((buyRes['_status'] as num?)?.toInt() != 200) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(buyRes['error'] ?? '購買失敗')));
+    final status = (buyRes['_status'] as num?)?.toInt() ?? 0;
+    if (status != 200) {
+      final errMsg = buyRes['error']?.toString() ?? '';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(errMsg.contains('點數不足') ? '點數不足，請先購買點數' : errMsg),
+        backgroundColor: Colors.redAccent,
+      ));
       return;
     }
 
     if (buyRes['total_points'] != null) {
       provider.setJPts((buyRes['total_points'] as num).toInt());
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('加購成功！請再次點擊發送。')));
-    _fetchUsageData(); // 更新最新次數
+    await _fetchUsageData();
+    if (!mounted) return;
+    onRetry(); // 自動重試原本的動作
   }
 
   Future<void> _triggerAIOpening() async {
     // 發送前檢查次數
-    final canProceed = await _checkAILimit();
+    final canProceed = await _checkAILimit(onBoughtRetry: () { _triggerAIOpening(); });
     if (!canProceed) return;
 
     setState(() {
@@ -178,6 +216,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         setState(() {
           _messages.add({'text': response.body, 'isUserMessage': false});
         });
+
+        await _fetchUsageData(); // 開場成功後重新載入使用量
       }
     } catch (e) {
       print('開場請求發生錯誤: $e');
@@ -194,7 +234,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     if (text.isEmpty) return;
 
     // 發送前檢查次數
-    final canProceed = await _checkAILimit();
+    final canProceed = await _checkAILimit(onBoughtRetry: () { _sendMessage(); });
     if (!canProceed) return;
 
     setState(() {
@@ -218,8 +258,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       );
 
       if (response.statusCode == 200 && mounted) {
-        /* 
-          這裡未來需要配合後端改為解析 JSON 
+        /*
+          這裡未來需要配合後端改為解析 JSON
           目前先寫死模擬資料，讓你看 UI 效果
           Map<String, dynamic> data = json.decode(response.body);
         */
@@ -235,6 +275,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           // 模擬功能 4：更新快捷選項 (未來從 data['quick_replies'] 取得)
           _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
         });
+
+        await _fetchUsageData(); // 訊息成功後重新載入使用量
       }
     } catch (e) {
       print('發送請求時發生錯誤: $e');
@@ -345,16 +387,26 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       body: Column(
         children: [
           // 頂部：次數顯示條
-          Container(
-            width: double.infinity,
-            color: AppColors.primaryLighter.withOpacity(0.2),
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: Text(
-              '今日對話：$_aiUsed / $_aiMax次' + (_aiExtra > 0 ? ' (額外$_aiExtra次)' : ''),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.bold),
-            ),
-          ),
+          Builder(builder: (_) {
+            final dailyRemaining = (_aiMax - _aiUsed).clamp(0, _aiMax);
+            final effectiveRemaining = dailyRemaining + _aiExtra;
+            final countColor = effectiveRemaining <= 0
+                ? Colors.red.shade600
+                : effectiveRemaining == 1
+                    ? Colors.orange.shade700
+                    : AppColors.primary;
+            final extraText = _aiExtra > 0 ? ' +$_aiExtra次備用' : '';
+            return Container(
+              width: double.infinity,
+              color: AppColors.primaryLighter.withValues(alpha: 0.2),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: Text(
+                '今日對話：$_aiUsed / $_aiMax 次$extraText',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: countColor, fontWeight: FontWeight.bold),
+              ),
+            );
+          }),
 
           Expanded(
             child: ListView.builder(

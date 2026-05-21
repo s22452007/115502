@@ -52,7 +52,7 @@ add_column("user", "photo_extra_count INTEGER DEFAULT 0")
 add_column("user", "ai_count_today INTEGER DEFAULT 0")
 add_column("user", "ai_extra_count INTEGER DEFAULT 0")
 add_column("user", "last_reset_date DATE")
-add_column("user", "vocab_slot INTEGER DEFAULT 100")
+add_column("user", "vocab_slot INTEGER DEFAULT 50")
 add_column("user", "group_free_used_this_week INTEGER DEFAULT 0")
 
 try:

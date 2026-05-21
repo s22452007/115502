@@ -230,8 +230,14 @@ class _SubscriptionManagementScreenState
               Row(children: [
                 const Icon(Icons.verified, color: _green, size: 28),
                 const SizedBox(width: 10),
-                Text(_planName ?? 'Premium Pro',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark)),
+                Text(
+                  _billingCycle == 'yearly'
+                      ? 'Premium Pro 年訂閱'
+                      : _billingCycle == 'monthly'
+                          ? 'Premium Pro 月訂閱'
+                          : (_planName ?? 'Premium Pro'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark),
+                ),
               ]),
               const SizedBox(height: 16),
               _infoRow('計費週期', _cycleLabel(_billingCycle)),
@@ -253,7 +259,7 @@ class _SubscriptionManagementScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _statusColor(_status).withOpacity(0.12),
+                  color: _statusColor(_status).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: _statusColor(_status)),
                 ),
@@ -432,7 +438,6 @@ class _SubscriptionManagementScreenState
 
   Future<void> _openPendingUpgradePayment() async {
     setState(() => _isScheduling = true);
-    final userId = context.read<UserProvider>().userId!;
     final success = await Navigator.push<bool>(
       context,
       MaterialPageRoute(

@@ -21,30 +21,42 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _folders = [];
+  int _vocabSlot = 50;
+  int _vocabCount = 0;
+  bool _isExpanding = false;
 
   @override
   void initState() {
     super.initState();
-    _loadFolders();
+    _loadAll();
   }
 
-  Future<void> _loadFolders() async {
+  Future<void> _loadAll() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) {
       setState(() => _isLoading = false);
       return;
     }
-
-    final res = await ApiClient.fetchUserFavorites(userId);
+    final results = await Future.wait([
+      ApiClient.fetchUserFavorites(userId),
+      ApiClient.getUsageStatus(userId),
+    ]);
     if (!mounted) return;
-
     setState(() {
       _isLoading = false;
-      if (res.containsKey('favorites')) {
-        _folders = List<Map<String, dynamic>>.from(res['favorites']);
+      final favRes = results[0];
+      final usageRes = results[1];
+      if (favRes.containsKey('favorites')) {
+        _folders = List<Map<String, dynamic>>.from(favRes['favorites']);
+      }
+      if (!usageRes.containsKey('error')) {
+        _vocabSlot = (usageRes['vocab_slot'] as num?)?.toInt() ?? 50;
+        _vocabCount = (usageRes['vocab_count'] as num?)?.toInt() ?? 0;
       }
     });
   }
+
+  Future<void> _loadFolders() => _loadAll();
 
   void _showAddFolderDialog() {
     final controller = TextEditingController();
@@ -232,54 +244,175 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     );
   }
 
-  Widget _buildStatsCard() {
-    final totalVocabs = _folders.fold<int>(
-      0,
-      (sum, f) => sum + ((f['count'] ?? 0) as int),
-    );
-    final folderCount = _folders.where((f) => f['is_default'] != true).length;
+  Future<void> _expandVocabSlot() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+    final isPremium = context.read<UserProvider>().isPremium;
+    final feature = isPremium ? 'vocab_expand_premium' : 'vocab_expand';
+    final cost = isPremium ? 35 : 50;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6AA86B), Color(0xFF8FC98F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    setState(() => _isExpanding = true);
+    final res = await ApiClient.spendPoints(
+      userId: userId,
+      points: cost,
+      feature: feature,
+    );
+    if (!mounted) return;
+    setState(() => _isExpanding = false);
+
+    if (res.containsKey('error')) {
+      final errMsg = res['error'].toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errMsg.contains('點數不足') ? '點數不足，請先購買點數' : errMsg),
+          backgroundColor: Colors.redAccent,
         ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Expanded(
+      );
+    } else {
+      final newPts = (res['total_points'] as num?)?.toInt();
+      if (newPts != null) context.read<UserProvider>().setJPts(newPts);
+      await _loadAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('擴充成功！收藏空間 +50 個'), backgroundColor: Color(0xFF6AA86B)),
+      );
+    }
+  }
+
+  Widget _buildStatsCard() {
+    final folderCount = _folders.where((f) => f['is_default'] != true).length;
+    final ratio = _vocabSlot > 0 ? (_vocabCount / _vocabSlot).clamp(0.0, 1.0) : 0.0;
+    final remaining = (_vocabSlot - _vocabCount).clamp(0, _vocabSlot);
+    final isFull = _vocabCount >= _vocabSlot;
+    final isNearFull = !isFull && _vocabCount >= (_vocabSlot * 0.8).ceil();
+    final isPremium = context.read<UserProvider>().isPremium;
+    final expandCost = isPremium ? 35 : 50;
+
+    return Column(
+      children: [
+        // ── 主統計卡片 ──────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6AA86B), Color(0xFF8FC98F)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '我的學習收藏',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '持續收藏，累積你的日文實力！',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildStatItem('$_vocabCount', '單字'),
+                  const SizedBox(width: 16),
+                  _buildStatItem('$folderCount', '資料夾'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // ── 空間使用進度條 ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '已使用空間：$_vocabCount / $_vocabSlot 個',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.95), fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    '還可收藏 $remaining 個',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 8,
+                  backgroundColor: Colors.white.withValues(alpha: 0.3),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isFull ? Colors.red.shade300 : isNearFull ? Colors.orange.shade300 : Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── 警告 / 擴充區塊 ─────────────────────────────
+        if (isFull) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.red.shade200),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '我的學習收藏',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '持續收藏，累積你的日文實力！',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
-                    fontSize: 13,
+                Row(children: [
+                  Icon(Icons.error_outline, color: Colors.red.shade600, size: 18),
+                  const SizedBox(width: 6),
+                  Text('收藏空間已滿！', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold, fontSize: 14)),
+                ]),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isExpanding ? null : _expandVocabSlot,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6AA86B),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: _isExpanding
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('花 $expandCost 點擴充 +50 個空間', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          _buildStatItem('$totalVocabs', '單字'),
-          const SizedBox(width: 16),
-          _buildStatItem('$folderCount', '資料夾'),
+        ] else if (isNearFull) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 18),
+              const SizedBox(width: 6),
+              Text('收藏空間即將用完！', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w600, fontSize: 13)),
+            ]),
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -290,25 +423,15 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.25),
+            color: Colors.white.withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Center(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12),
-        ),
+        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12)),
       ],
     );
   }

@@ -82,6 +82,23 @@
             background: #fff3cd; color: #856404;
             padding: 2px 9px; border-radius: 50px;
         }
+        .badge-premium {
+            font-size: 0.72rem; font-weight: 700;
+            background: linear-gradient(135deg, #C6B13B, #e8cf5a);
+            color: white; padding: 2px 10px; border-radius: 50px;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .badge-trial {
+            font-size: 0.72rem; font-weight: 700;
+            background: #e8f4fd; color: #0a6bb5;
+            border: 1px solid #b3d9f5;
+            padding: 2px 10px; border-radius: 50px;
+        }
+        .badge-cancelled {
+            font-size: 0.72rem; font-weight: 700;
+            background: #fde8e8; color: #b50a0a;
+            padding: 2px 10px; border-radius: 50px;
+        }
         .user-email { color: #999; font-size: 0.85rem; margin-top: 2px; }
 
         .card-actions { display: flex; gap: 8px; flex-shrink: 0; }
@@ -179,6 +196,23 @@
                         {% if u.japanese_level %}
                         <span class="badge-level">{{ u.japanese_level }}</span>
                         {% endif %}
+                        {% if u.is_premium or u.trial_used %}
+                            {% set tip_parts = [] %}
+                            {% if u.sub_plan_name %}{% set _ = tip_parts.append(u.sub_plan_name) %}{% endif %}
+                            {% if u.sub_billing_cycle == 'monthly' %}{% set _ = tip_parts.append('月繳') %}{% elif u.sub_billing_cycle == 'yearly' %}{% set _ = tip_parts.append('年繳') %}{% endif %}
+                            {% if u.subscription_end_date %}{% set _ = tip_parts.append('到期：' + u.subscription_end_date[:10]) %}{% endif %}
+                            {% set tip = tip_parts | join(' · ') %}
+
+                            {% if u.sub_status == 'trial' %}
+                            <span class="badge-trial" data-bs-toggle="tooltip" title="{{ tip or '試用中' }}"><i class="bi bi-clock"></i> 試用中</span>
+                            {% elif u.sub_status == 'cancelled' %}
+                            <span class="badge-cancelled" data-bs-toggle="tooltip" title="{{ tip or '已取消' }}"><i class="bi bi-x-circle"></i> 已取消</span>
+                            {% elif u.is_premium %}
+                            <span class="badge-premium" data-bs-toggle="tooltip" title="{{ tip }}"><i class="bi bi-patch-check-fill"></i> Premium{% if u.sub_billing_cycle == 'yearly' %} 年繳{% elif u.sub_billing_cycle == 'monthly' %} 月繳{% endif %}</span>
+                            {% else %}
+                            <span style="font-size:0.72rem;color:#aaa;" data-bs-toggle="tooltip" title="試用已結束">已用過試用</span>
+                            {% endif %}
+                        {% endif %}
                     </div>
                     <div class="user-email">{{ u.email }} <span style="color:#ddd;">· #{{ u.id }}</span></div>
                 </div>
@@ -201,6 +235,7 @@
                     {% endif %}
                 </div>
             </div>
+
 
             <div class="card-stats">
                 <div class="stat-item">
@@ -231,6 +266,13 @@
     </main>
 </div>
 <script>
+// 啟動所有 Bootstrap tooltip
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el, { placement: 'top' });
+    });
+});
+
 function relativeTime(dateStr) {
     const now = new Date();
     const past = new Date(dateStr + '+08:00');

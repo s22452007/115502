@@ -129,11 +129,11 @@ class StudyGroupHomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F2),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.white, 
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary), 
           onPressed: () {
             Navigator.pushAndRemoveUntil(
               context,
@@ -144,9 +144,12 @@ class StudyGroupHomeScreen extends StatelessWidget {
         ),
         title: Text(
           groupName,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: AppColors.primary, 
+            fontWeight: FontWeight.bold,
+            fontSize: 18, 
+          ),
         ),
-        // 退出按鈕已經被消滅了！這裡不留任何後路！
       ),
       body: bodyContent,
     );

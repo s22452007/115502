@@ -128,7 +128,7 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F2),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),

@@ -14,15 +14,15 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   // 快速選擇標籤 (加上 Emoji 更生動)
-  final List<String> _categories = const [
-    '🍜 一蘭拉麵',
-    '🎮 遊戲日常',
-    '📖 漫畫展',
-    '✈️ 機場問路',
-    '💼 職場新人',
-    '📺 動畫巡禮',
-    '🍣 迴轉壽司',
-    '🛍️ 藥妝店購物',
+  final List<Map<String, dynamic>> _categories = const [
+    {'icon': Icons.ramen_dining, 'text': '一蘭拉麵'},
+    {'icon': Icons.sports_esports, 'text': '遊戲日常'},
+    {'icon': Icons.menu_book, 'text': '漫畫展'},
+    {'icon': Icons.flight_takeoff, 'text': '機場問路'},
+    {'icon': Icons.work, 'text': '職場新人'},
+    {'icon': Icons.tv, 'text': '動畫巡禮'},
+    {'icon': Icons.set_meal, 'text': '迴轉壽司'},
+    {'icon': Icons.shopping_bag, 'text': '藥妝店購物'},
   ];
 
   @override

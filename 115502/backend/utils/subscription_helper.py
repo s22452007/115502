@@ -49,16 +49,20 @@ def check_and_expire_subscription(user):
                    .filter_by(user_id=user.id, status='pending')
                    .first())
 
-        sub.status = 'expired'
-        user.is_premium = False
-        user.auto_renew = False
-
-        if pending:
-            if pending.payment_status == 'paid':
-                _activate_pending_upgrade(user, sub, pending, now)
-        elif sub.auto_renew:
-            # 試用到期且 auto_renew=True → 自動轉為正式月訂閱
-            _convert_trial_to_paid(user, sub, now)
+        if pending and pending.payment_status == 'paid':
+            # 試用到期且有已付款的年繳排程 → 直接啟用年繳
+            _activate_pending_upgrade(user, sub, pending, now)
+        else:
+            # 沒有年繳排程或尚未付款 → 標記試用過期
+            sub.status = 'expired'
+            user.is_premium = False
+            user.auto_renew = False
+            if pending and pending.payment_status != 'paid':
+                # 排程尚未付款，刪除
+                db.session.delete(pending)
+            elif sub.auto_renew:
+                # 試用到期且 auto_renew=True 且無排程 → 自動轉為正式月訂閱
+                _convert_trial_to_paid(user, sub, now)
 
     elif sub.status == 'cancelled':
         # 已取消且到期：若有已付款的排程年繳，依然啟用；否則保持失效

@@ -300,9 +300,9 @@ class _SubscriptionManagementScreenState
 
         const SizedBox(height: 24),
 
-        // 升級至年繳按鈕（月繳 active/trial 且無排程時顯示）
+        // 升級至年繳按鈕（月繳/試用 active/trial 且無排程時顯示）
         if ((_status == 'active' || _status == 'trial') &&
-            _billingCycle != 'yearly') ...[
+            _billingCycle == 'monthly') ...[
           if (_pendingUpgradeStart != null) ...[
             Container(
               padding: const EdgeInsets.all(14),
@@ -420,6 +420,24 @@ class _SubscriptionManagementScreenState
   }
 
   Future<void> _scheduleYearlyUpgrade() async {
+    final message = _status == 'trial'
+        ? '試用結束後將直接切換為年繳方案（NT\$1290/年），試用期間可隨時取消。'
+        : '訂閱期間升級至年繳方案，待當前月繳到期後自動啟用年繳（NT\$1290/年）。';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('確認升級至年繳'),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('確認升級', style: TextStyle(color: _green))),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirmed) return;
+
     setState(() => _isScheduling = true);
     final userId = context.read<UserProvider>().userId!;
     final res = await ApiClient.scheduleYearlyUpgrade(userId);

@@ -73,6 +73,13 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
 
     setState(() => _isProcessing = true);
 
+    // Demo 模式：模擬 1.5 秒的付款處理
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+
+    // 模擬 API 回應
     final res = widget.isPendingUpgrade
         ? await ApiClient.payPendingUpgrade(userId, paymentMethod: _paymentLabel)
         : await ApiClient.subscribeplan(
@@ -83,7 +90,6 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
           );
 
     if (!mounted) return;
-    setState(() => _isProcessing = false);
 
     if (!res.containsKey('error')) {
       final provider = context.read<UserProvider>();
@@ -240,6 +246,22 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
           _buildPaymentOption('google_pay', 'Google Pay', Icons.payments_outlined),
           const SizedBox(height: 8),
           _buildPaymentOption('card', '信用卡', Icons.credit_card),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFD700)),
+            ),
+            child: const Text(
+              '💡 正式上線後將支援：\n'
+              '✓ Google Pay\n'
+              '✓ 信用卡 / 簽帳金融卡（由綠界安全處理）\n\n'
+              '目前為 Demo 模式，點擊付款將直接模擬成功。',
+              style: TextStyle(fontSize: 12, color: Color(0xFF666666), height: 1.4),
+            ),
+          ),
           const SizedBox(height: 24),
 
           // 訂單摘要

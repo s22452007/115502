@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'credit_card_payment_screen.dart';
-import 'google_play_purchase_sheet.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class PointCheckoutScreen extends StatefulWidget {
   final String title;
@@ -23,7 +24,8 @@ class PointCheckoutScreen extends StatefulWidget {
 }
 
 class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
-  String selectedPayment = 'google_play';
+  String selectedPayment = 'google_pay';
+  bool _isProcessing = false;
 
   static const Color bgColor = Color(0xFFF8F8F8);
   static const Color cardGreen = Color(0xFFEAF0E2);
@@ -37,30 +39,130 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
     switch (selectedPayment) {
       case 'card':
         return '前往安全付款  \$${widget.price}';
-      case 'google_play':
+      case 'google_pay':
       default:
         return '前往 Google Pay  \$${widget.price}';
     }
   }
 
   void _handleCheckout() {
-    if (selectedPayment == 'card') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CreditCardPaymentScreen(
-            points: widget.points,
-            price: widget.price,
+    _showDemoPaymentFlow();
+  }
+
+  void _showDemoPaymentFlow() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 60,
+                height: 60,
+                child: CircularProgressIndicator(
+                  color: primaryGreen,
+                  strokeWidth: 3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '付款處理中...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: deepText,
+                ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    setState(() => _isProcessing = true);
+
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) {
+      setState(() => _isProcessing = false);
+      return;
+    }
+
+    final result = await ApiClient.buyPoints(
+      userId,
+      widget.points,
+      price: widget.price,
+      paymentMethod: selectedPayment == 'card' ? '信用卡' : 'Google Pay',
+    );
+
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+
+    if (result.containsKey('total_points')) {
+      context.read<UserProvider>().setJPts(result['total_points']);
+      _showPaymentSuccessDialog();
     } else {
-      showGooglePlayPurchaseSheet(
-        context: context,
-        points: widget.points,
-        price: widget.price,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error'] ?? '購買失敗')),
       );
     }
+  }
+
+  void _showPaymentSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Column(
+          children: [
+            const Icon(Icons.check_circle, color: primaryGreen, size: 56),
+            const SizedBox(height: 8),
+            const Text('付款成功！', textAlign: TextAlign.center),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('已獲得 ${widget.points} J-Pts', style: const TextStyle(fontWeight: FontWeight.bold, color: deepText)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(8)),
+              child: const Text('點數已加入你的帳戶', style: TextStyle(color: Color(0xFFBFA500), fontWeight: FontWeight.w600, fontSize: 13)),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('完成'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -101,14 +203,23 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                   borderRadius: BorderRadius.circular(28),
                 ),
               ),
-              onPressed: _handleCheckout,
-              child: Text(
-                _bottomButtonText,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              onPressed: _isProcessing ? null : _handleCheckout,
+              child: _isProcessing
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      _bottomButtonText,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -122,7 +233,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
           const SizedBox(height: 18),
           _buildSummaryCard(),
           const SizedBox(height: 18),
-          _buildNoticeCard(),
+          _buildDemoModeNotice(),
         ],
       ),
     );
@@ -243,15 +354,6 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
-            '推薦付款方式',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 12),
           _paymentOption(
             value: 'google_pay',
             title: 'Google Pay',
@@ -259,23 +361,12 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
             icon: Icons.android,
           ),
           const SizedBox(height: 16),
-          const Text(
-            '其他付款方式',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 12),
           _paymentOption(
             value: 'card',
             title: '信用卡 / 簽帳金融卡',
             subtitle: 'Visa、MasterCard、JCB｜由第三方支付平台安全處理',
             icon: Icons.credit_card,
           ),
-          const SizedBox(height: 16),
-          _buildSecurityNotice(),
         ],
       ),
     );
@@ -360,53 +451,6 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
     );
   }
 
-  Widget _buildSecurityNotice() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F8EE),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFD5DEC8)),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.lock_outline,
-            color: primaryGreen,
-            size: 24,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '安全付款說明',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: deepText,
-                  ),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  '付款資訊將由第三方支付平台處理，本系統不會儲存您的完整卡片資料。',
-                  style: TextStyle(
-                    color: subText,
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSummaryCard() {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -471,7 +515,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
     );
   }
 
-  Widget _buildNoticeCard() {
+  Widget _buildDemoModeNotice() {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -483,7 +527,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '購買說明',
+            '💡 Demo 模式說明',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w800,
@@ -492,10 +536,10 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
           ),
           SizedBox(height: 10),
           Text(
-            '• 購買完成後，J-Pts 會立即加入你的帳戶。\n'
-            '• 點數可用於解鎖更多學習互動與分析功能。\n'
-            '• 付款流程將由對應平台處理，提升付款安全性。\n'
-            '• 付款成功後恕不退款，請再次確認購買內容。',
+            '正式上線後將支援：\n'
+            '✓ Google Pay\n'
+            '✓ 信用卡 / 簽帳金融卡（由綠界安全處理）\n\n'
+            '目前為 Demo 模式，點擊付款將直接模擬成功。',
             style: TextStyle(
               color: subText,
               fontSize: 13.5,

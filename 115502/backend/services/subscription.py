@@ -190,7 +190,7 @@ def cancel_subscription(user_id):
     }), 200
 
 
-# ─── 排程升級：月繳 → 年繳（到期後自動切換）────────────────────────────────
+# ─── 排程升級：月繳/試用 → 年繳（到期後自動切換）────────────────────────────────
 @subscription_bp.route('/schedule_upgrade', methods=['POST'])
 def schedule_upgrade():
     data = request.get_json()

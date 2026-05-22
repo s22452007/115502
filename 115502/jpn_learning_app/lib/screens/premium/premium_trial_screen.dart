@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -25,18 +24,6 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
 
   String _paymentMethod = 'google_pay';
   bool _isProcessing = false;
-
-  final _cardNumberCtrl = TextEditingController();
-  final _expiryCtrl = TextEditingController();
-  final _cvvCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _cardNumberCtrl.dispose();
-    _expiryCtrl.dispose();
-    _cvvCtrl.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -189,11 +176,23 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
           const SizedBox(height: 12),
           _buildPaymentOption('google_pay', 'Google Pay', Icons.payments_outlined),
           const SizedBox(height: 8),
-          _buildPaymentOption('credit_card', '信用卡', Icons.credit_card),
-          if (_paymentMethod == 'credit_card') ...[
-            const SizedBox(height: 16),
-            _buildCardForm(),
-          ],
+          _buildPaymentOption('card', '信用卡 / 簽帳金融卡', Icons.credit_card),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFD700)),
+            ),
+            child: const Text(
+              '💡 正式上線後將支援：\n'
+              '✓ Google Pay\n'
+              '✓ 信用卡 / 簽帳金融卡（由綠界安全處理）\n\n'
+              '目前為 Demo 模式，點擊開始試用將直接模擬成功。',
+              style: TextStyle(fontSize: 12, color: Color(0xFF666666), height: 1.4),
+            ),
+          ),
         ],
       ),
     );
@@ -229,90 +228,6 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
     );
   }
 
-  Widget _buildCardForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Divider(color: Color(0xFFE0E8DD)),
-        const SizedBox(height: 8),
-        _buildCardField(
-          controller: _cardNumberCtrl,
-          label: '卡號',
-          hint: '**** **** **** ****',
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            _CardNumberFormatter(),
-          ],
-          maxLength: 19,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildCardField(
-                controller: _expiryCtrl,
-                label: '有效期限',
-                hint: 'MM/YY',
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  _ExpiryFormatter(),
-                ],
-                maxLength: 5,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildCardField(
-                controller: _cvvCtrl,
-                label: '安全碼 (CVV)',
-                hint: '•••',
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                maxLength: 4,
-                obscureText: true,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCardField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required TextInputType keyboardType,
-    List<TextInputFormatter>? inputFormatters,
-    int? maxLength,
-    bool obscureText = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: subText)),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          maxLength: maxLength,
-          obscureText: obscureText,
-          decoration: InputDecoration(
-            hintText: hint,
-            counterText: '',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFD9E7D7))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: green, width: 1.5)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFD9E7D7))),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildBottomButton(BuildContext context) {
     return SafeArea(
       top: false,
@@ -341,17 +256,50 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
   }
 
   Future<void> _handleActivate(BuildContext context) async {
-    if (_paymentMethod == 'credit_card') {
-      final cardNum = _cardNumberCtrl.text.replaceAll(' ', '');
-      if (cardNum.length < 16 || _expiryCtrl.text.length < 5 || _cvvCtrl.text.length < 3) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('請填寫完整的信用卡資訊')),
-        );
-        return;
-      }
-    }
-
     setState(() => _isProcessing = true);
+
+    // 顯示 Loading 對話框
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 60,
+                height: 60,
+                child: CircularProgressIndicator(
+                  color: green,
+                  strokeWidth: 3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '試用啟用中...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: textDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Demo 模式：模擬 1.5 秒的處理
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    if (!mounted) return;
+    Navigator.pop(context); // 關閉 Loading 對話框
 
     // await 前先取出 provider 參照，避免跨 async gap 使用 context
     final provider = context.read<UserProvider>();
@@ -429,38 +377,6 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── 格式化輔助 ─────────────────────────────────────────────────────────────
-
-class _CardNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(TextEditingValue old, TextEditingValue next) {
-    final digits = next.text.replaceAll(' ', '');
-    final buffer = StringBuffer();
-    for (int i = 0; i < digits.length; i++) {
-      if (i > 0 && i % 4 == 0) buffer.write(' ');
-      buffer.write(digits[i]);
-    }
-    final formatted = buffer.toString();
-    return next.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
-class _ExpiryFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(TextEditingValue old, TextEditingValue next) {
-    final digits = next.text.replaceAll('/', '');
-    if (digits.length <= 2) return next.copyWith(text: digits);
-    final formatted = '${digits.substring(0, 2)}/${digits.substring(2)}';
-    return next.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

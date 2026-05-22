@@ -51,8 +51,8 @@ class UserProvider extends ChangeNotifier {
   int get aiExtraCount => _aiExtraCount;
   int get vocabSlot => _vocabSlot;
 
-  int get photoDailyLimit => _isPremium ? 20 : 3;
-  int get aiDailyLimit => _isPremium ? 30 : 5;
+  int get photoDailyLimit => _isPremium ? 10 : 2;
+  int get aiDailyLimit => _isPremium ? 10 : 3;
 
   void setUsageStatus({
     int photoCountToday = 0,

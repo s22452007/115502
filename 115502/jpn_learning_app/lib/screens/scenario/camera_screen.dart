@@ -77,8 +77,8 @@ class _CameraScreenState extends State<CameraScreen>
       _showQuotaBottomSheet(imagePath, used, limit);
     } else {
       setState(() {
-        _photoCountToday = (res['daily_scans'] as num?)?.toInt() ?? _photoCountToday + 1;
-        _photoExtraCount = (res['extra_count'] as num?)?.toInt() ?? _photoExtraCount;
+        _photoCountToday = (res['daily_scans'] as num?)?.toInt() ?? 0;
+        _photoExtraCount = (res['extra_count'] as num?)?.toInt() ?? 0;
       });
       provider.updatePhotoUsage(countToday: _photoCountToday, extraCount: _photoExtraCount);
       await _showNamingDialogAndProceed(imagePath);
@@ -373,7 +373,7 @@ class _CameraScreenState extends State<CameraScreen>
                   : effectiveRemaining == 1
                       ? Colors.orange.shade300
                       : Colors.white;
-              final extraText = _photoExtraCount > 0 ? ' +$_photoExtraCount次備用' : '';
+              final extraText = _photoExtraCount > 0 ? ' 額外$_photoExtraCount次' : '';
               return Container(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 decoration: BoxDecoration(

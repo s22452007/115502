@@ -80,8 +80,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       return false;
     } else {
       setState(() {
-        _aiUsed = (res['daily_ai'] as num?)?.toInt() ?? _aiUsed + 1;
-        _aiExtra = (res['extra_count'] as num?)?.toInt() ?? _aiExtra;
+        _aiUsed = (res['daily_ai'] as num?)?.toInt() ?? 0;
+        _aiExtra = (res['extra_count'] as num?)?.toInt() ?? 0;
       });
       return true;
     }
@@ -395,7 +395,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 : effectiveRemaining == 1
                     ? Colors.orange.shade700
                     : AppColors.primary;
-            final extraText = _aiExtra > 0 ? ' +$_aiExtra次備用' : '';
+            final extraText = _aiExtra > 0 ? ' 額外$_aiExtra次' : '';
             return Container(
               width: double.infinity,
               color: AppColors.primaryLighter.withValues(alpha: 0.2),

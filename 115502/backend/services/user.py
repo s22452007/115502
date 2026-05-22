@@ -462,6 +462,7 @@ def increment_scan():
     if photo_today < daily_limit:
         user.photo_count_today = photo_today + 1
     elif photo_extra > 0:
+        user.photo_count_today = photo_today + 1
         user.photo_extra_count = photo_extra - 1
     else:
         db.session.commit()  # 儲存可能發生的跨日重置
@@ -508,6 +509,7 @@ def use_ai():
     if ai_today < daily_limit:
         user.ai_count_today = ai_today + 1
     elif ai_extra > 0:
+        user.ai_count_today = ai_today + 1
         user.ai_extra_count = ai_extra - 1
     else:
         db.session.commit() # 儲存可能發生的跨日重置
@@ -548,12 +550,10 @@ def get_usage_status(user_id):
     ).count()
 
     return jsonify({
-        "subscription_status": "active" if user.is_premium else "inactive",
+        "is_premium": user.is_premium,
         "photo_count_today": getattr(user, 'photo_count_today', 0) or 0,
-        "photo_daily_limit": photo_limit,
         "photo_extra_count": getattr(user, 'photo_extra_count', 0) or 0,
         "ai_count_today": getattr(user, 'ai_count_today', 0) or 0,
-        "ai_daily_limit": ai_limit,
         "ai_extra_count": getattr(user, 'ai_extra_count', 0) or 0,
         "vocab_slot": vocab_slot,
         "vocab_count": vocab_count,

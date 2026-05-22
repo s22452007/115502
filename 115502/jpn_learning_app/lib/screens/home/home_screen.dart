@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     await _checkPendingFriendRequests(userId);
     await _fetchRecentScenes(userId);
     await _fetchAndCheckBadgeProgress(userId);
+    await _fetchUsageStatus(userId);
   }
 
   Future<void> _fetchAndCheckBadgeProgress(int userId) async {
@@ -122,6 +123,23 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         userProvider.setPendingFriendRequests((result['pending_requests'] as List).length);
       }
     } catch (e) {}
+  }
+
+  Future<void> _fetchUsageStatus(int userId) async {
+    final userProvider = context.read<UserProvider>();
+    try {
+      final res = await ApiClient.getUsageStatus(userId);
+      if (!mounted) return;
+      userProvider.setUsageStatus(
+        photoCountToday: (res['photo_count_today'] as num?)?.toInt() ?? 0,
+        photoExtraCount: (res['photo_extra_count'] as num?)?.toInt() ?? 0,
+        aiCountToday: (res['ai_count_today'] as num?)?.toInt() ?? 0,
+        aiExtraCount: (res['ai_extra_count'] as num?)?.toInt() ?? 0,
+        vocabSlot: (res['vocab_slot'] as num?)?.toInt() ?? 50,
+      );
+    } catch (e) {
+      debugPrint('使用量載入失敗: $e');
+    }
   }
 
   String _getGreeting() {

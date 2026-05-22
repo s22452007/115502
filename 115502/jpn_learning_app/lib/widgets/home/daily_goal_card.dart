@@ -1,26 +1,42 @@
 /// 每日學習目標卡片 Widget
-/// 負責顯示用戶當日的學習目標進度，包括拍照場景數量的進度條和開啟相機按鈕
-/// 這個卡片會根據 UserProvider 的 dailyScans 狀態動態更新進度
+/// 顯示今日拍照次數使用情況
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 
 /// 每日目標卡片組件
-/// 顯示「探索3個新場景」的進度，並提供快速開啟相機的功能
+/// 顯示今日拍照次數進度
 class DailyGoalCard extends StatelessWidget {
-  // 開一個接口，讓老爸 (首頁) 可以把「重新檢查進度」的方法傳進來
   final VoidCallback onReturnFromCamera;
 
   const DailyGoalCard({
-    Key? key, 
-    required this.onReturnFromCamera, // 設為必填
+    Key? key,
+    required this.onReturnFromCamera,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
     final goalGreen = const Color(0xFF6AA86B);
+
+    final photoCountToday = userProvider.photoCountToday;
+    final photoDailyLimit = userProvider.photoDailyLimit;
+    final photoExtraCount = userProvider.photoExtraCount;
+
+    // 計算有效剩餘次數
+    final dailyRemaining = (photoDailyLimit - photoCountToday).clamp(0, photoDailyLimit);
+    final effectiveRemaining = dailyRemaining + photoExtraCount;
+    final progress = (photoCountToday / photoDailyLimit).clamp(0.0, 1.0);
+
+    // 進度條顏色：綠→橘→紅
+    final progressColor = effectiveRemaining <= 0
+        ? Colors.red.shade200
+        : effectiveRemaining == 1
+            ? Colors.orange.shade200
+            : Colors.white;
+
+    final extraText = photoExtraCount > 0 ? ' 額外$photoExtraCount次' : '';
 
     return Container(
       width: double.infinity,
@@ -33,20 +49,23 @@ class DailyGoalCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.track_changes, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('探索3個新場景', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                '今日拍照使用情況',
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
-              value: (userProvider.dailyScans / 3.0).clamp(0.0, 1.0),
+              value: progress,
               backgroundColor: Colors.white.withOpacity(0.3),
-              valueColor: const AlwaysStoppedAnimation(Colors.white),
+              valueColor: AlwaysStoppedAnimation(progressColor),
               minHeight: 8,
             ),
           ),
@@ -54,15 +73,17 @@ class DailyGoalCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('進度 : ${userProvider.dailyScans}/3', style: const TextStyle(color: Colors.white, fontSize: 14)),
+              Text(
+                '進度：$photoCountToday / $photoDailyLimit 次$extraText',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen()))
                     .then((_) {
-                      // 從相機回來後，執行老爸傳進來的方法！
-                      onReturnFromCamera(); 
+                      onReturnFromCamera();
                     });
-                }, // 修復了這裡原本漏掉的逗號
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: goalGreen,

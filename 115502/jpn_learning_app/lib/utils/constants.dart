@@ -11,6 +11,7 @@ class AppColors {
   static const Color textGrey = Color(0xFF7A8C7A);
   static const Color white = Color(0xFFFFFFFF);
   static const Color gold = Color(0xFF88741F);
+  static const Color primary = Color(0xFF6AA86B);
 
   // --- 新增：首頁與解鎖卡片專用色 ---
   static const Color accentGreen = Color(0xFF6AA86B); // 首頁目標卡片、去登入按鈕
@@ -18,6 +19,9 @@ class AppColors {
   static const Color cardBlue = Color(0xFF85B8D6); // 新宿車站卡片 Icon 底色
   static const Color textBlack = Color(0xFF333333); // 首頁深黑標題文字
   static const Color textSub = Color(0xFF888888); // 首頁淺灰副標題文字
+  static const Color primaryLighter = Color(0xFFE8F2E8); // 帶點透明度的淺綠背景色
+  static const Color textDark = Color(0xFF333333);       // 深灰色文字
+  static const Color white = Colors.white;
 }
 
 class AppTextStyles {

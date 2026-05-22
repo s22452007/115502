@@ -52,17 +52,18 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        // 🌟 1. 改為乾淨的白底
+        backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0, // 避免往下滑動時變灰
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        // 改為明確的標題
         title: const Text(
           '手動建立情境',
           style: TextStyle(
-            color:AppColors.primary,
+            color: AppColors.primary, // 🌟 2. 標題改為綠字
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -82,7 +83,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
-                  color: Color(0xFF333333),
+                  color: AppColors.textDark, // 使用常數文字顏色
                 ),
               ),
               const SizedBox(height: 8),
@@ -102,7 +103,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                 decoration: InputDecoration(
                   hintText: '例如：在便利商店買咖啡...',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
-                  prefixIcon: Icon(Icons.search, color: AppColors.primary),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear, color: Colors.grey),
@@ -124,7 +125,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
                   ),
                 ),
               ),
@@ -132,7 +133,11 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 
               const Text(
                 '快速選擇主題',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 16,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -146,7 +151,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                     onTap: () {
                       // 點擊標籤時，自動填入輸入框
                       setState(() {
-                        // 移除 Emoji 只保留文字 (視你的需求而定，這裡保留全部)
                         _searchController.text = category;
                       });
                     },
@@ -156,19 +160,19 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(
-                          0xFF6AA86B,
-                        ).withOpacity(0.1), // 柔和的綠色背景
+                        // 🌟 3. 改用主題色的透明度，質感更柔和
+                        color: AppColors.primary.withOpacity(0.1), 
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF6AA86B).withOpacity(0.3),
+                          color: AppColors.primary.withOpacity(0.2),
                         ),
                       ),
                       child: Text(
                         category,
                         style: const TextStyle(
-                          color: Color(0xFF4A7C59), // 深綠色文字
+                          color: AppColors.primary, // 🌟 4. 統一使用綠字
                           fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -181,28 +185,17 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
               // 送出按鈕
               SizedBox(
                 width: double.infinity,
+                height: 54, // 統一按鈕高度
                 child: ElevatedButton(
                   onPressed: _searchController.text.trim().isEmpty
                       ? null // 如果沒有輸入文字，按鈕反灰不可點
-                      : () {
-                          // 1. 抓取你輸入的文字 (例如：🍜 一蘭拉麵)
-                          String selectedTopic = _searchController.text.trim();
-
-                          // 2. 搭建直達鐵軌！直接跳轉到聊天畫面，並傳遞標題名稱
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RoleplayScreen(topicTitle: selectedTopic),
-                            ),
-                          );
-                        },
+                      : _submitScenario, // 呼叫你寫好的跳轉函式
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6AA86B),
+                    // 🌟 5. 按鈕風格統一為 AppColors.primary
+                    backgroundColor: AppColors.primary.withOpacity(0.9),
                     disabledBackgroundColor: Colors.grey.shade300,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(18), // 統一圓角 18
                     ),
                     elevation: _searchController.text.trim().isEmpty ? 0 : 2,
                   ),
@@ -212,8 +205,8 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                       color: _searchController.text.trim().isEmpty
                           ? Colors.grey.shade500
                           : Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),

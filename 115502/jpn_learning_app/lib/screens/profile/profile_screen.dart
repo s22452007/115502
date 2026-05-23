@@ -388,11 +388,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _buildListItem(
                           icon: Icons.folder_special_rounded, 
                           title: '我的收藏', 
+                          iconColor: AppColors.primary,
                           onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))
                         ),
                         _buildListItem(
                           icon: Icons.people_alt_rounded,
                           title: '好友綁定',
+                          iconColor: AppColors.primary,
                           trailingText: friendId,
                           onTap: () => isGuest
                               ? _handleGuestClick('好友綁定')

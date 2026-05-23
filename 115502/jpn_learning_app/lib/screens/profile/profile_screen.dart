@@ -34,12 +34,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   
-  // 🌟 編輯模式的狀態變數
   bool _isEditing = false;
   bool _isSaving = false;
   final TextEditingController _nameController = TextEditingController();
 
-  // 統一全域現代扁平化配色
   final Color _flatCanvasColor = const Color(0xFFF4F7F5); 
   final Color _textColor = const Color(0xFF2C3E50);
   final Color _subTextColor = const Color(0xFF8E9AAB);
@@ -56,10 +54,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  // ==========================================
-  // UI 轉換邏輯
-  // ==========================================
-  
   String _getLevelTitle(String level) {
     switch (level.toUpperCase().trim()) {
       case 'N5': return '新手上路';
@@ -70,10 +64,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       default: return '尚未認證';
     }
   }
-
-  // ==========================================
-  // 核心邏輯函式區塊
-  // ==========================================
 
   Future<void> _fetchData() async {
     final userProvider = context.read<UserProvider>();
@@ -143,7 +133,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 🌟 確認並儲存編輯狀態
   Future<void> _saveProfile() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
@@ -154,7 +143,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    // 檢查是否沒有變更，直接退出編輯模式即可
     final currentName = context.read<UserProvider>().username ?? '';
     if (newName == currentName) {
       setState(() => _isEditing = false);
@@ -163,7 +151,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isSaving = true);
 
-    // 呼叫 API 檢查名稱是否重複
     final check = await ApiClient.checkUsername(newName, userId: userId);
     if (check['error'] != null) {
       if (!mounted) return;
@@ -178,7 +165,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    // 呼叫 API 更新名稱
     final res = await ApiClient.updateUsername(userId, newName);
     if (!mounted) return;
     
@@ -191,7 +177,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<UserProvider>().setUsername(newName);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱已更新')));
     
-    // 成功後退出編輯模式並關閉載入
     setState(() {
       _isSaving = false;
       _isEditing = false;
@@ -212,7 +197,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
     
     final levelTitle = _getLevelTitle(rawLevel);
-    
     final jPts = userProvider.jPts;
     final friendId = userProvider.friendId ?? '—';
     final avatarUrl = userProvider.avatar;
@@ -238,14 +222,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.only(bottom: 120),
               child: Column(
                 children: [
-                  // 大頭照與白底卡片
                   Stack(
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
                       Container(
-                        margin: const EdgeInsets.only(top: 55, left: 24, right: 24),
-                        padding: const EdgeInsets.fromLTRB(24, 65, 24, 24),
+                        // 🌟 核心調整：margin 左右改為 16，讓卡片更寬
+                        margin: const EdgeInsets.only(top: 55, left: 16, right: 16),
+                        padding: const EdgeInsets.fromLTRB(24, 65, 24, 48),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(30),
@@ -255,7 +239,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: Column(
                           children: [
-                            // 判斷是否為編輯模式：顯示文字 或 顯示編輯輸入框
                             if (_isEditing)
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -268,18 +251,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                                     filled: true,
                                     fillColor: _flatCanvasColor,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                                    ),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
                                   ),
                                 ),
                               )
@@ -288,10 +261,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             
                             const SizedBox(height: 6),
                             Text(email, style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
-                            
                             const SizedBox(height: 14),
                             
-                            // 主色調稱號徽章
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                               decoration: BoxDecoration(
@@ -304,23 +275,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 children: [
                                   const Icon(Icons.stars_rounded, color: AppColors.primary, size: 18), 
                                   const SizedBox(width: 6),
-                                  Text(
-                                    levelTitle, 
-                                    style: const TextStyle(
-                                      color: AppColors.primary, 
-                                      fontWeight: FontWeight.w900, 
-                                      fontSize: 14, 
-                                      letterSpacing: 1.0
-                                    ),
-                                  ),
+                                  Text(levelTitle, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1.0)),
                                 ],
                               ),
                             ),
                             
-                            // 進度條已被移除，留下適當的間距
                             const SizedBox(height: 24),
                             
-                            // 🌟 編輯/確認按鈕
                             SizedBox(
                               width: 180,
                               height: 44,
@@ -335,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           _saveProfile();
                                         } else {
                                           setState(() {
-                                            _nameController.text = userName; // 進入編輯模式時，填入當前名稱
+                                            _nameController.text = userName; 
                                             _isEditing = true;
                                           });
                                         }
@@ -348,28 +309,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
                                 ),
                                 child: _isSaving
-                                  ? const SizedBox(
-                                      width: 20, 
-                                      height: 20, 
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                                    )
-                                  : Text(
-                                      _isEditing ? '確認' : '管理個人檔案', 
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)
-                                    ),
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : Text(_isEditing ? '確認' : '管理個人檔案', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
                               ),
                             )
                           ],
                         ),
                       ),
                       
-                      // 懸浮置中大頭照 (加入編輯圖示)
                       Positioned(
                         top: 0,
                         child: Stack(
                           children: [
                             GestureDetector(
-                              // 只有在編輯模式時才可以點擊更換頭像
                               onTap: _isEditing ? _pickAndUploadImage : null,
                               child: Container(
                                 padding: const EdgeInsets.all(4), 
@@ -383,7 +335,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            // 如果是編輯模式，顯示小小的筆形 ICON
                             if (_isEditing)
                               Positioned(
                                 bottom: 4,
@@ -406,10 +357,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
-                  // 下方細項選單清單
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -432,11 +380,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: '好友綁定',
                           iconColor: AppColors.primary,
                           trailingText: friendId,
-                          onTap: () => isGuest
-                              ? _handleGuestClick('好友綁定')
-                              : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))
+                          onTap: () => isGuest ? _handleGuestClick('好友綁定') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))
                         ),
-                        
                         _buildListItem(
                           icon: Icons.military_tech_rounded, 
                           title: '成就徽章', 
@@ -445,18 +390,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             if (isGuest) {
                               _handleGuestClick('成就徽章');
                             } else {
-                              Navigator.push(
-                                context, 
-                                MaterialPageRoute(builder: (_) => const BadgeLibraryScreen())
-                              );
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()));
                             }
                           }
                         ),
-                        
                         const SizedBox(height: 8),
                         _buildFlatInfoTile(label: '稱號認證', value: levelTitle), 
                         const SizedBox(height: 8),
-
                         _buildListItem(
                           icon: isGuest ? Icons.login_rounded : Icons.logout_rounded, 
                           title: isGuest ? '登入帳號' : '登出帳號', 
@@ -485,21 +425,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 仿照參考圖片的乾淨選單樣式
-  Widget _buildListItem({
-    required IconData icon, 
-    required String title, 
-    String? trailingText, 
-    Color? iconColor, 
-    Color? textColor,
-    required VoidCallback onTap
-  }) {
+  Widget _buildListItem({required IconData icon, required String title, String? trailingText, Color? iconColor, Color? textColor, required VoidCallback onTap}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
       child: ListTile(
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -508,8 +437,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (trailingText != null) 
-              Text(trailingText, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
+            if (trailingText != null) Text(trailingText, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
             const SizedBox(width: 8),
             Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ],
@@ -518,15 +446,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 扁平化極簡資料小卡片
   Widget _buildFlatInfoTile({required String label, required String value}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

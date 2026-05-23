@@ -78,12 +78,12 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
         title: const Text(
           '我的單字探險',
           style: TextStyle(
-            color: Colors.white,
+            color:  AppColors.primary,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),

@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -77,7 +78,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.home_outlined,
                     '回首頁',
-                    iconColor: AppColors.primary,
+                    color: AppColors.primary,
                     onTap: () => Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -87,7 +88,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.person_outline,
                     '個人檔案',
-                    iconColor: AppColors.primary,
+                    color: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -97,7 +98,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.bookmark_border,
                     '單字探險',
-                    iconColor: AppColors.primary,
+                    color: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -109,7 +110,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.people_outline,
                     '好友',
-                    iconColor: AppColors.primary,
+                    color: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -121,7 +122,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.groups_outlined,
                     '學習小組',
-                    iconColor: AppColors.primary,
+                    color: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(

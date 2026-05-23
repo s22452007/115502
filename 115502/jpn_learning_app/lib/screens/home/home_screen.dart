@@ -367,6 +367,7 @@ Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayN
     );
   }
 
+
   Widget _buildSectionHeader(String title, {bool hasGalleryLink = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 15),

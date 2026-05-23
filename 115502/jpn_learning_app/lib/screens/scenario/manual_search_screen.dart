@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
@@ -11,18 +12,19 @@ class ManualSearchScreen extends StatefulWidget {
 
 class _ManualSearchScreenState extends State<ManualSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _scenes = [];
 
-  // 🌟 1. 將單純的字串改為包含 IconData 與文字的 Map 陣列
-  final List<Map<String, dynamic>> _categories = const [
-    {'icon': Icons.ramen_dining, 'text': '一蘭拉麵'},
-    {'icon': Icons.sports_esports, 'text': '遊戲日常'},
-    {'icon': Icons.menu_book, 'text': '漫畫展'},
-    {'icon': Icons.flight_takeoff, 'text': '機場問路'},
-    {'icon': Icons.work, 'text': '職場新人'},
-    {'icon': Icons.tv, 'text': '動畫巡禮'},
-    {'icon': Icons.set_meal, 'text': '迴轉壽司'},
-    {'icon': Icons.shopping_bag, 'text': '藥妝店購物'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadScenes();
+  }
+
+  Future<void> _loadScenes() async {
+    final scenes = await ApiClient.getScenes(quickSelect: true);
+    if (!mounted) return;
+    setState(() => _scenes = scenes);
+  }
 
   @override
   void dispose() {
@@ -134,43 +136,43 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 🌟 2. 修改標籤區塊，渲染 Icon + Text
               Wrap(
                 spacing: 10,
                 runSpacing: 12,
-                children: _categories.map((category) {
-                  // 取出圖示跟文字
-                  final IconData iconData = category['icon'];
-                  final String text = category['text'];
+                children: _scenes.map((scene) {
+                  final int? codepoint = scene['icon_codepoint'] as int?;
+                  final String text = scene['name'] as String;
 
                   return InkWell(
                     borderRadius: BorderRadius.circular(20),
                     onTap: () {
                       setState(() {
-                        _searchController.text = text; // 點擊時只填入文字
+                        _searchController.text = text;
                       });
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14, // 左右 Padding 稍微縮小一點配合 Icon
+                        horizontal: 14,
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1), 
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: AppColors.primary.withOpacity(0.2),
+                          color: AppColors.primary.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min, // 🌟 讓 Row 寬度貼合內容
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            iconData, 
-                            size: 16, // 圖示大小
-                            color: AppColors.primary, // 統一綠色
+                            codepoint != null
+                                ? IconData(codepoint, fontFamily: 'MaterialIcons')
+                                : Icons.category,
+                            size: 16,
+                            color: AppColors.primary,
                           ),
-                          const SizedBox(width: 6), // 圖示跟文字的間距
+                          const SizedBox(width: 6),
                           Text(
                             text,
                             style: const TextStyle(
@@ -196,7 +198,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                       ? null 
                       : _submitScenario, 
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary.withOpacity(0.9),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.9),
                     disabledBackgroundColor: Colors.grey.shade300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18), 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 
 class PremiumTrialScreen extends StatefulWidget {
@@ -28,8 +29,7 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
   @override
   Widget build(BuildContext context) {
     final DateTime trialEnd = DateTime.now().add(const Duration(days: 7));
-    final String trialEndText =
-        '${trialEnd.year}/${trialEnd.month.toString().padLeft(2, '0')}/${trialEnd.day.toString().padLeft(2, '0')}';
+    final String trialEndText = formatDate(trialEnd);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -155,6 +155,8 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
           _featureRow('到期日前可隨時取消', darkCheck: true),
           const SizedBox(height: 10),
           _featureRow('若未取消，將自動續訂月費方案', darkCheck: true),
+          const SizedBox(height: 10),
+          _featureRow('✓ 訂閱成功後每月贈送 20 J-Pts', darkCheck: true),
         ],
       ),
     );

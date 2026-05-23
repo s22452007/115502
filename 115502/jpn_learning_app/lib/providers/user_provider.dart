@@ -31,12 +31,14 @@ class UserProvider extends ChangeNotifier {
   String? _subscriptionStatus;
   String? _subscriptionPlanName;
   String? _billingCycle;
+  String? _pendingUpgradeStart;
 
   String? get subscriptionEndDate => _subscriptionEndDate;
   bool get autoRenew => _autoRenew;
   String? get subscriptionStatus => _subscriptionStatus;
   String? get subscriptionPlanName => _subscriptionPlanName;
   String? get billingCycle => _billingCycle;
+  String? get pendingUpgradeStart => _pendingUpgradeStart;
 
   // 使用量追蹤
   int _photoCountToday = 0;
@@ -123,6 +125,7 @@ class UserProvider extends ChangeNotifier {
 
   void setIsPremium(bool value) { _isPremium = value; notifyListeners(); }
   void setTrialUsed(bool value) { _trialUsed = value; notifyListeners(); }
+  void setPendingUpgradeStart(String? value) { _pendingUpgradeStart = value; notifyListeners(); }
   void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
   void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
   void setUserId(int? id) { _userId = id; notifyListeners(); }
@@ -187,6 +190,7 @@ class UserProvider extends ChangeNotifier {
     _subscriptionStatus = null;
     _subscriptionPlanName = null;
     _billingCycle = null;
+    _pendingUpgradeStart = null;
     _photoCountToday = 0;
     _photoExtraCount = 0;
     _aiCountToday = 0;

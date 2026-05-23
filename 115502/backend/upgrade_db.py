@@ -88,6 +88,14 @@ except Exception as e:
     print(f"⚠️ scene 建立或升級警告：{e}")
 
 # ==========================================
+# 4b. 升級 scene：新增欄位
+# ==========================================
+add_column("scene", "icon_codepoint INTEGER")
+add_column("scene", "show_in_quick_select BOOLEAN DEFAULT 0")
+print("✅ scene icon_codepoint / show_in_quick_select 欄位確認完畢")
+# 注意：場景種入資料已移至 app.py 的 db.create_all() 後管理
+
+# ==========================================
 # 5. 🚀 建立新版相簿與圖鑑系統 (UserPhoto, UserPhotoVocab, UserVocab)
 # ==========================================
 try:

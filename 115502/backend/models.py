@@ -2,6 +2,17 @@ from utils.db import db
 from datetime import datetime, date
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+class TransactionType:
+    PURCHASE = 'purchase'                      # 購買點數
+    SPEND = 'spend'                            # 消費點數
+    REWARD = 'reward'                          # 獎勵點數
+    SUBSCRIPTION_GRANT = 'subscription_grant'  # 訂閱贈點
+    DEPOSIT = 'deposit'                        # 押金扣除
+    DEPOSIT_REFUND = 'deposit_refund'          # 押金退還
+    GROUP_REWARD = 'group_reward'              # 小組達成獎勵
+
+
 # ==========================================
 # 👤 1. 核心使用者系統
 # ==========================================
@@ -87,7 +98,9 @@ class User(db.Model):
 class Scene(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)  # 例如：咖啡廳
-    icon_name = db.Column(db.String(50), nullable=True)   # 存 Flutter 的 Icon 名稱，例如 'local_cafe'
+    icon_name = db.Column(db.String(50), nullable=True)
+    icon_codepoint = db.Column(db.Integer, nullable=True)  # Flutter IconData codepoint，例如 58630
+    show_in_quick_select = db.Column(db.Boolean, default=False)
     vocabs = db.relationship('Vocab', backref='scene', lazy=True)
 
 # 單字字典 (Vocab)

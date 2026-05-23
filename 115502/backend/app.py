@@ -12,7 +12,7 @@ from services.user import user_bp
 from services.group import group_bp
 from services.vocabulary import vocab_bp
 from services.tutor import tutor_bp
-from services.subscription import subscription_bp
+from services.subscription import subscription_bp, MONTHLY_POINTS_GRANT, YEARLY_POINTS_GRANT
 from services.store import store_bp
 
 # 👨‍🍳 引入內場廚師 (AI 聊天函數)
@@ -84,9 +84,9 @@ with app.app_context():
         monthly_plan.price_monthly = 149
         monthly_plan.price_yearly = None
         monthly_plan.billing_cycle = 'monthly'
-        monthly_plan.points_grant_monthly = 20
+        monthly_plan.points_grant_monthly = MONTHLY_POINTS_GRANT
         monthly_plan.points_grant_yearly = None
-        monthly_plan.points_grant = 20
+        monthly_plan.points_grant = MONTHLY_POINTS_GRANT
         monthly_plan.features_json = _FEATURES
         monthly_plan.is_active = True
     else:
@@ -96,8 +96,8 @@ with app.app_context():
             price_monthly=149,
             price_yearly=None,
             features_json=_FEATURES,
-            points_grant=20,
-            points_grant_monthly=20,
+            points_grant=MONTHLY_POINTS_GRANT,
+            points_grant_monthly=MONTHLY_POINTS_GRANT,
             points_grant_yearly=None,
             is_active=True,
         ))
@@ -109,8 +109,8 @@ with app.app_context():
         yearly_plan.price_yearly = 1290
         yearly_plan.billing_cycle = 'yearly'
         yearly_plan.points_grant_monthly = None
-        yearly_plan.points_grant_yearly = 300
-        yearly_plan.points_grant = 300
+        yearly_plan.points_grant_yearly = YEARLY_POINTS_GRANT
+        yearly_plan.points_grant = YEARLY_POINTS_GRANT
         yearly_plan.features_json = _FEATURES
         yearly_plan.is_active = True
     else:
@@ -120,9 +120,9 @@ with app.app_context():
             price_monthly=None,
             price_yearly=1290,
             features_json=_FEATURES,
-            points_grant=300,
+            points_grant=YEARLY_POINTS_GRANT,
             points_grant_monthly=None,
-            points_grant_yearly=300,
+            points_grant_yearly=YEARLY_POINTS_GRANT,
             is_active=True,
         ))
 
@@ -149,6 +149,33 @@ with app.app_context():
             pkg.is_active = True
         else:
             _db.session.add(PointPackage(name=pkg_name, points=pts, price=price, tag=tag, description=desc))
+    _db.session.commit()
+
+    # ── 預設場景種入 ──
+    from models import Scene
+    _SCENES = [
+        {'name': '一蘭拉麵',   'icon_name': 'ramen_dining',   'icon_codepoint': 983114, 'show_in_quick_select': True},
+        {'name': '遊戲日常',   'icon_name': 'sports_esports',  'icon_codepoint': 61218,  'show_in_quick_select': True},
+        {'name': '漫畫展',     'icon_name': 'menu_book',       'icon_codepoint': 61441,  'show_in_quick_select': True},
+        {'name': '機場問路',   'icon_name': 'flight_takeoff',  'icon_codepoint': 58681,  'show_in_quick_select': True},
+        {'name': '職場新人',   'icon_name': 'work',            'icon_codepoint': 59641,  'show_in_quick_select': True},
+        {'name': '動畫巡禮',   'icon_name': 'tv',              'icon_codepoint': 58900,  'show_in_quick_select': True},
+        {'name': '迴轉壽司',   'icon_name': 'set_meal',        'icon_codepoint': 61929,  'show_in_quick_select': True},
+        {'name': '藥妝店購物', 'icon_name': 'shopping_bag',    'icon_codepoint': 61900,  'show_in_quick_select': True},
+    ]
+    for s in _SCENES:
+        existing = Scene.query.filter_by(name=s['name']).first()
+        if not existing:
+            _db.session.add(Scene(
+                name=s['name'],
+                icon_name=s['icon_name'],
+                icon_codepoint=s['icon_codepoint'],
+                show_in_quick_select=s['show_in_quick_select'],
+            ))
+        else:
+            existing.icon_name = s['icon_name']
+            existing.icon_codepoint = s['icon_codepoint']
+            existing.show_in_quick_select = s['show_in_quick_select']
     _db.session.commit()
 
 # ==========================================

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/premium/point_checkout_screen.dart';
 
 class BuyPointsTab extends StatefulWidget {
@@ -133,6 +134,11 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
     final tag = pkg['tag'] as String? ?? '';
     final name = pkg['name'] as String? ?? '$pts Points';
 
+    // 計算每點價格和標籤
+    final double pricePerPoint = price / pts;
+    final String pricePerPointText = '每點約 NT\$${pricePerPoint.toStringAsFixed(2)}';
+    final String badgeText = tag.isEmpty ? _getDefaultBadge(pts) : tag;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -148,24 +154,39 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
                 Row(
                   children: [
                     Text('$pts J-Pts', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    if (tag.isNotEmpty) ...[
+                    if (badgeText.isNotEmpty) ...[
                       const SizedBox(width: 8),
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: const Color(0xFFF0B84B), borderRadius: BorderRadius.circular(8)), child: Text(tag, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold))),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: badgeText == '最划算' ? const Color(0xFFFFB84D) : const Color(0xFFF0B84B),
+                          borderRadius: BorderRadius.circular(8)
+                        ),
+                        child: Text(badgeText, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold))
+                      ),
                     ]
                   ],
                 ),
                 Text(name, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                const SizedBox(height: 4),
+                Text(pricePerPointText, style: const TextStyle(fontSize: 12, color: Color(0xFF888888), fontWeight: FontWeight.w500)),
               ],
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: _green, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PointCheckoutScreen(title: name, points: pts, price: price, badge: tag, subtitle: pkg['description']))),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PointCheckoutScreen(title: name, points: pts, price: price, badge: badgeText, subtitle: pkg['description']))),
             child: Text('NT\$$price', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
         ],
       ),
     );
+  }
+
+  String _getDefaultBadge(int pts) {
+    if (pts >= 370) return '最划算 ★'; // 大包
+    if (pts >= 130) return '熱門';    // 中包
+    return '';                        // 入門
   }
 
   // 📜 交易紀錄卡片 UI
@@ -174,6 +195,15 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
     final pts = txn['points'] as int? ?? 0;
     final isSpend = type == 'spend';
     final rawFeature = txn['related_feature'] as String?;
+
+    // 格式化日期
+    String formattedDate = txn['created_at'] ?? '';
+    if (formattedDate.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(formattedDate);
+        formattedDate = '${formatDate(dt)} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      } catch (_) {}
+    }
     
     // 把英文代號轉換成漂亮的中文名稱
     String getFeatureName(String? featureId) {
@@ -194,37 +224,37 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
     }
     
     // 設定不同類型的圖示、顏色與標題
+    final baseLabel = transactionTypeLabels[type] ?? type;
     IconData icon;
     Color iconColor;
     Color bgColor;
     String titleText;
-    
+
     switch (type) {
       case 'spend':
         icon = Icons.remove_circle_outline;
         iconColor = Colors.red;
         bgColor = Colors.red.shade50;
-        // 使用轉換後的中文名稱
-        titleText = '消費：${getFeatureName(rawFeature)}';
+        titleText = '$baseLabel：${getFeatureName(rawFeature)}';
         break;
       case 'subscription_grant':
         icon = Icons.star;
         iconColor = const Color(0xFFC6B13B);
         bgColor = const Color(0xFFFFF8E1);
-        titleText = '訂閱贈點';
+        titleText = baseLabel;
         break;
       case 'reward':
-        icon = Icons.change_history; // 藍色三角形概念
+        icon = Icons.change_history;
         iconColor = Colors.blue;
         bgColor = Colors.blue.shade50;
-        titleText = '達成獎勵';
+        titleText = baseLabel;
         break;
       case 'purchase':
       default:
         icon = Icons.add_circle_outline;
         iconColor = _green;
         bgColor = _lightGreen;
-        titleText = '購買點數 (${txn['payment_method'] ?? '未知'})';
+        titleText = '$baseLabel (${txn['payment_method'] ?? '未知'})';
         break;
     }
 
@@ -250,7 +280,7 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
               children: [
                 Text(titleText, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _textDark), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(txn['created_at'] ?? '', style: const TextStyle(fontSize: 12, color: _subText)),
+                Text(formattedDate, style: const TextStyle(fontSize: 12, color: _subText)),
               ],
             ),
           ),

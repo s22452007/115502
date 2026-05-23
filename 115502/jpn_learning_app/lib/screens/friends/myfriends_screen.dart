@@ -230,7 +230,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back_ios, color:  AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('我的好友', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),

@@ -4,7 +4,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart'; // 引入 API 工具
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
-
+import 'package:jpn_learning_app/utils/constants.dart';
 // 引入我們剛剛抽離出去的精美卡片積木
 import 'package:jpn_learning_app/widgets/friends/friend_list_card.dart';
 
@@ -233,7 +233,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('我的好友', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        title: const Text('我的好友', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: Icon(Icons.groups_outlined, color: _darkGreen, size: 28),

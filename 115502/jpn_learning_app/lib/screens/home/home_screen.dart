@@ -298,8 +298,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
+Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
     final now = DateTime.now();
+    
+    // 🌟 核心修正 1：將「今天」的時間精準歸零 (00:00:00)
+    final today = DateTime(now.year, now.month, now.day);
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -314,16 +318,45 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final date = weekDates[index];
-              final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
-              bool isCompleted = (now.difference(date).inDays >= 0 && streakDays > now.difference(date).inDays);
+              
+              // 🌟 核心修正 2：將「日曆上的目標日期」也一併歸零
+              final targetDate = DateTime(date.year, date.month, date.day);
+              
+              // 判斷是否為今天
+              final isToday = targetDate.isAtSameMomentAs(today);
+              
+              // 🌟 核心修正 3：計算純日期的天數差
+              // 若 today 是星期六，targetDate 是星期日，這裡算出來就會精準是 -1
+              final diffDays = today.difference(targetDate).inDays;
+              
+              // 🌟 修正 Bug 關鍵邏輯：
+              // 只有當 diffDays >= 0 (代表是今天或過去的日子) 且在連續登入天數 (streakDays) 內，才判定為已打卡。
+              // 因為明天的日子相減會是負數 (-1)，所以絕對不會再提早亮起勾勾！
+              bool isCompleted = diffDays >= 0 && diffDays < streakDays;
+
               return Column(
                 children: [
                   Text(weekDayNames[index], style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 10),
                   Container(
                     width: 38, height: 38,
-                    decoration: BoxDecoration(color: isToday ? AppColors.primary : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), shape: BoxShape.circle),
-                    child: Center(child: isCompleted ? const Icon(Icons.check, color: Colors.white, size: 20) : Text(date.day.toString(), style: TextStyle(color: isToday ? Colors.white : _textColor, fontWeight: FontWeight.w900))),
+                    decoration: BoxDecoration(
+                      color: isToday 
+                        ? AppColors.primary 
+                        : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), 
+                      shape: BoxShape.circle
+                    ),
+                    child: Center(
+                      child: isCompleted 
+                        ? const Icon(Icons.check, color: Colors.white, size: 20) 
+                        : Text(
+                            date.day.toString(), 
+                            style: TextStyle(
+                              color: isToday ? Colors.white : _textColor, 
+                              fontWeight: FontWeight.w900
+                            )
+                          )
+                    ),
                   ),
                 ],
               );

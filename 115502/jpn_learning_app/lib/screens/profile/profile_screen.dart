@@ -34,7 +34,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   
-  // 🌟 新增編輯模式的狀態變數
+  // 🌟 編輯模式的狀態變數
   bool _isEditing = false;
   bool _isSaving = false;
   final TextEditingController _nameController = TextEditingController();
@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose(); // 🌟 記得釋放資源
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -68,17 +68,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case 'N2': return '商務菁英';
       case 'N1': return '日語大師';
       default: return '尚未認證';
-    }
-  }
-
-  double _getProgressValue(String level) {
-    switch (level.toUpperCase().trim()) {
-      case 'N5': return 0.20;
-      case 'N4': return 0.40;
-      case 'N3': return 0.60;
-      case 'N2': return 0.80;
-      case 'N1': return 1.00;
-      default: return 0.0;
     }
   }
 
@@ -154,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 🌟 全新實作：確認並儲存編輯狀態
+  // 🌟 確認並儲存編輯狀態
   Future<void> _saveProfile() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
@@ -223,7 +212,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
     
     final levelTitle = _getLevelTitle(rawLevel);
-    final progressValue = _getProgressValue(rawLevel);
     
     final jPts = userProvider.jPts;
     final friendId = userProvider.friendId ?? '—';
@@ -250,7 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.only(bottom: 120),
               child: Column(
                 children: [
-                  // 大頭照與進度條白底卡片
+                  // 大頭照與白底卡片
                   Stack(
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
@@ -267,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: Column(
                           children: [
-                            // 🌟 判斷是否為編輯模式：顯示文字 或 顯示編輯輸入框
+                            // 判斷是否為編輯模式：顯示文字 或 顯示編輯輸入框
                             if (_isEditing)
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -329,27 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             
-                            const SizedBox(height: 24),
-                            
-                            // 進度條區塊
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: LinearProgressIndicator(
-                                      value: progressValue,
-                                      backgroundColor: const Color(0xFFEBEBEB),
-                                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                                      minHeight: 8,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text('${(progressValue * 100).toInt()}%', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 15)),
-                              ],
-                            ),
-                            
+                            // 進度條已被移除，留下適當的間距
                             const SizedBox(height: 24),
                             
                             // 🌟 編輯/確認按鈕
@@ -395,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       
-                      // 🌟 懸浮置中大頭照 (加入編輯圖示)
+                      // 懸浮置中大頭照 (加入編輯圖示)
                       Positioned(
                         top: 0,
                         child: Stack(

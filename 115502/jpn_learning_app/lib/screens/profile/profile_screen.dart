@@ -33,8 +33,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
+  
+  // 🌟 新增編輯模式的狀態變數
+  bool _isEditing = false;
+  bool _isSaving = false;
+  final TextEditingController _nameController = TextEditingController();
 
-  // 統一全域現代扁平化配色 (與主頁完全一致)
+  // 統一全域現代扁平化配色
   final Color _flatCanvasColor = const Color(0xFFF4F7F5); 
   final Color _textColor = const Color(0xFF2C3E50);
   final Color _subTextColor = const Color(0xFF8E9AAB);
@@ -45,8 +50,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchData();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose(); // 🌟 記得釋放資源
+    super.dispose();
+  }
+
   // ==========================================
-  // UI 轉換邏輯：等級精準對應程度稱號與進度
+  // UI 轉換邏輯
   // ==========================================
   
   String _getLevelTitle(String level) {
@@ -143,80 +154,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _editNickname() async {
+  // 🌟 全新實作：確認並儲存編輯狀態
+  Future<void> _saveProfile() async {
     final userId = context.read<UserProvider>().userId;
-    if (userId == null) {
-      _handleGuestClick('管理個人檔案');
+    if (userId == null) return;
+
+    final newName = _nameController.text.trim();
+    if (newName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱不能為空！')));
       return;
     }
-    
-    final controller = TextEditingController(text: context.read<UserProvider>().username ?? '');
-    String? errorText;
 
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('修改暱稱', style: TextStyle(color: _textColor, fontWeight: FontWeight.w900)),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: TextStyle(color: _textColor, fontWeight: FontWeight.w700),
-            decoration: InputDecoration(
-              hintText: '中文或英文，2～20 字',
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
-              filled: true,
-              fillColor: _flatCanvasColor,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: AppColors.primary, width: 2),
-              ),
-              errorText: errorText,
-            ),
-            onChanged: (_) {
-              if (errorText != null) setDialogState(() => errorText = null);
-            },
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w700))),
-            ElevatedButton(
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isEmpty) {
-                  setDialogState(() => errorText = '請輸入暱稱');
-                  return;
-                }
-                final check = await ApiClient.checkUsername(name, userId: userId);
-                if (check['error'] != null) {
-                  setDialogState(() => errorText = check['error']);
-                  return;
-                }
-                if (check['available'] == false) {
-                  setDialogState(() => errorText = '此暱稱已被使用');
-                  return;
-                }
-                if (ctx.mounted) Navigator.pop(ctx, name);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('確認', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-            ),
-          ],
-        ),
-      ),
-    );
+    // 檢查是否沒有變更，直接退出編輯模式即可
+    final currentName = context.read<UserProvider>().username ?? '';
+    if (newName == currentName) {
+      setState(() => _isEditing = false);
+      return;
+    }
 
-    if (result == null || result.isEmpty) return;
-    final res = await ApiClient.updateUsername(userId, result);
+    setState(() => _isSaving = true);
+
+    // 呼叫 API 檢查名稱是否重複
+    final check = await ApiClient.checkUsername(newName, userId: userId);
+    if (check['error'] != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(check['error'])));
+      setState(() => _isSaving = false);
+      return;
+    }
+    if (check['available'] == false) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('此暱稱已被使用')));
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    // 呼叫 API 更新名稱
+    final res = await ApiClient.updateUsername(userId, newName);
     if (!mounted) return;
+    
     if (res['error'] != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
+      setState(() => _isSaving = false);
       return;
     }
-    context.read<UserProvider>().setUsername(result);
+
+    context.read<UserProvider>().setUsername(newName);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱已更新')));
+    
+    // 成功後退出編輯模式並關閉載入
+    setState(() {
+      _isSaving = false;
+      _isEditing = false;
+    });
   }
 
   void _handleGuestClick(String featureName) {
@@ -272,12 +262,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha:0.03), blurRadius: 15, offset: const Offset(0, 5))
+                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))
                           ],
                         ),
                         child: Column(
                           children: [
-                            Text(userName, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor)),
+                            // 🌟 判斷是否為編輯模式：顯示文字 或 顯示編輯輸入框
+                            if (_isEditing)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: TextField(
+                                  controller: _nameController,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                    filled: true,
+                                    fillColor: _flatCanvasColor,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Text(userName, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor)),
+                            
                             const SizedBox(height: 6),
                             Text(email, style: TextStyle(color: _subTextColor, fontWeight: FontWeight.w600, fontSize: 14)),
                             
@@ -287,7 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha:0.12), 
+                                color: AppColors.primary.withOpacity(0.12), 
                                 border: Border.all(color: AppColors.primary, width: 1.5), 
                                 borderRadius: BorderRadius.circular(20), 
                               ),
@@ -332,40 +352,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             
                             const SizedBox(height: 24),
                             
-                            // 管理個人檔案按鈕
+                            // 🌟 編輯/確認按鈕
                             SizedBox(
                               width: 180,
                               height: 44,
                               child: ElevatedButton(
-                                onPressed: _editNickname,
+                                onPressed: _isSaving 
+                                  ? null 
+                                  : () {
+                                      if (isGuest) {
+                                        _handleGuestClick('管理個人檔案');
+                                      } else {
+                                        if (_isEditing) {
+                                          _saveProfile();
+                                        } else {
+                                          setState(() {
+                                            _nameController.text = userName; // 進入編輯模式時，填入當前名稱
+                                            _isEditing = true;
+                                          });
+                                        }
+                                      }
+                                    },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
                                 ),
-                                child: const Text('管理個人檔案', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                                child: _isSaving
+                                  ? const SizedBox(
+                                      width: 20, 
+                                      height: 20, 
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                    )
+                                  : Text(
+                                      _isEditing ? '確認' : '管理個人檔案', 
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)
+                                    ),
                               ),
                             )
                           ],
                         ),
                       ),
                       
-                      // 懸浮置中大頭照
+                      // 🌟 懸浮置中大頭照 (加入編輯圖示)
                       Positioned(
                         top: 0,
-                        child: GestureDetector(
-                          onTap: _pickAndUploadImage,
-                          child: Container(
-                            padding: const EdgeInsets.all(4), 
-                            decoration: BoxDecoration(color: _flatCanvasColor, shape: BoxShape.circle),
-                            child: UserAvatar(
-                              avatarBase64: avatarUrl,
-                              friendId: userProvider.friendId,
-                              originalName: userName,
-                              radius: 50,
-                              isPremium: userProvider.isPremium,
+                        child: Stack(
+                          children: [
+                            GestureDetector(
+                              // 只有在編輯模式時才可以點擊更換頭像
+                              onTap: _isEditing ? _pickAndUploadImage : null,
+                              child: Container(
+                                padding: const EdgeInsets.all(4), 
+                                decoration: BoxDecoration(color: _flatCanvasColor, shape: BoxShape.circle),
+                                child: UserAvatar(
+                                  avatarBase64: avatarUrl,
+                                  friendId: userProvider.friendId,
+                                  originalName: userName,
+                                  radius: 50,
+                                  isPremium: userProvider.isPremium,
+                                ),
+                              ),
                             ),
-                          ),
+                            // 如果是編輯模式，顯示小小的筆形 ICON
+                            if (_isEditing)
+                              Positioned(
+                                bottom: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: _pickAndUploadImage,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                    ),
+                                    child: const Icon(Icons.edit_rounded, color: Colors.white, size: 16),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],

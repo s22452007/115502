@@ -71,6 +71,11 @@ String formatDate(DateTime date) {
 
 const String baseUrl = 'http://10.0.2.2:5000/api';
 
+Widget buildSceneIcon(int? codepoint, {double size = 28}) {
+  if (codepoint == null) return Icon(Icons.category, size: size);
+  return Icon(IconData(codepoint, fontFamily: 'MaterialIcons'), size: size);
+}
+
 const Map<String, String> transactionTypeLabels = {
   'purchase': '購買點數',
   'spend': '消費點數',

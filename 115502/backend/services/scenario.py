@@ -272,5 +272,27 @@ def rename_photo():
         
     photo.custom_title = new_title
     db.session.commit()
-    
+
     return jsonify({'message': '修改成功', 'custom_title': new_title}), 200
+
+
+@scenario_bp.route('/scenes', methods=['GET'])
+def get_all_scenes():
+    """取得預設場景列表（含 icon_name 與 icon_codepoint）
+    ?quick_select=true → 只回傳 show_in_quick_select=True 的場景
+    """
+    from models import Scene
+    quick_select = request.args.get('quick_select', '').lower() == 'true'
+    query = Scene.query.order_by(Scene.id)
+    if quick_select:
+        query = query.filter_by(show_in_quick_select=True)
+    scenes = query.all()
+    return jsonify([
+        {
+            'id': s.id,
+            'name': s.name,
+            'icon_name': s.icon_name,
+            'icon_codepoint': s.icon_codepoint,
+        }
+        for s in scenes
+    ]), 200

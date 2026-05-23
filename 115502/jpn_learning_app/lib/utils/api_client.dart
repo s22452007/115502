@@ -837,6 +837,18 @@ class ApiClient {
   }
 
   // 取得解鎖場景
+  static Future<List<Map<String, dynamic>>> getScenes({bool quickSelect = false}) async {
+    final uri = Uri.parse('$baseUrl/scenario/scenes').replace(
+      queryParameters: quickSelect ? {'quick_select': 'true'} : null,
+    );
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as List;
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
   static Future<List<dynamic>> getUnlockedScenes(
     int userId, {
     int limit = 3,

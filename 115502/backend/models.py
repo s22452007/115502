@@ -98,7 +98,9 @@ class User(db.Model):
 class Scene(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)  # 例如：咖啡廳
-    icon_name = db.Column(db.String(50), nullable=True)   # 存 Flutter 的 Icon 名稱，例如 'local_cafe'
+    icon_name = db.Column(db.String(50), nullable=True)
+    icon_codepoint = db.Column(db.Integer, nullable=True)  # Flutter IconData codepoint，例如 58630
+    show_in_quick_select = db.Column(db.Boolean, default=False)
     vocabs = db.relationship('Vocab', backref='scene', lazy=True)
 
 # 單字字典 (Vocab)

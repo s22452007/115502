@@ -1,5 +1,4 @@
 import 'dart:convert';
-// Flutter 內建與第三方套件
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
@@ -77,25 +76,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final result = await ApiClient.fetchProfileData(userId);
       if (!mounted) return;
 
-      if (result.containsKey('avatar') && result['avatar'] != null) {
-        userProvider.setAvatar(result['avatar'].toString());
-      }
-      if (result.containsKey('username') && result['username'] != null) {
-        userProvider.setUsername(result['username'].toString());
-      }
-      if (result.containsKey('badge_progress') && result['badge_progress'] != null) {
-        userProvider.setBadgeProgress(result['badge_progress']);
-      }
-      if (result.containsKey('is_premium')) {
-        userProvider.setIsPremium(result['is_premium'] == true);
-      }
-      if (result.containsKey('j_pts') && result['j_pts'] != null) {
-        userProvider.setJPts((result['j_pts'] as num).toInt());
-      }
+      if (result.containsKey('avatar') && result['avatar'] != null) userProvider.setAvatar(result['avatar'].toString());
+      if (result.containsKey('username') && result['username'] != null) userProvider.setUsername(result['username'].toString());
+      if (result.containsKey('badge_progress') && result['badge_progress'] != null) userProvider.setBadgeProgress(result['badge_progress']);
+      if (result.containsKey('is_premium')) userProvider.setIsPremium(result['is_premium'] == true);
+      if (result.containsKey('j_pts') && result['j_pts'] != null) userProvider.setJPts((result['j_pts'] as num).toInt());
 
       setState(() => _isLoading = false);
     } catch (e) {
-      debugPrint('個人檔案抓取發生未知異常: $e');
+      debugPrint('個人檔案抓取異常: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -108,22 +97,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     final picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 300,
-      maxHeight: 300,
-      imageQuality: 50,
-    );
+    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 300, maxHeight: 300, imageQuality: 50);
 
     if (pickedFile != null) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
 
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
       final result = await ApiClient.uploadAvatar(userId, base64String);
 
-      if (!context.mounted) return;
+      if (!mounted) return;
       if (result.containsKey('avatar')) {
         context.read<UserProvider>().setAvatar(result['avatar']);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
@@ -152,14 +136,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isSaving = true);
 
     final check = await ApiClient.checkUsername(newName, userId: userId);
+    if (!mounted) return;
+
     if (check['error'] != null) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(check['error'])));
       setState(() => _isSaving = false);
       return;
     }
     if (check['available'] == false) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('此暱稱已被使用')));
       setState(() => _isSaving = false);
       return;
@@ -227,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     alignment: Alignment.topCenter,
                     children: [
                       Container(
-                        // 🌟 核心調整：margin 左右改為 16，讓卡片更寬
+                        // 🌟 強制設定左右 margin 為 16
                         margin: const EdgeInsets.only(top: 55, left: 16, right: 16),
                         padding: const EdgeInsets.fromLTRB(24, 65, 24, 48),
                         decoration: BoxDecoration(
@@ -265,15 +249,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.12), 
-                                border: Border.all(color: AppColors.primary, width: 1.5), 
-                                borderRadius: BorderRadius.circular(20), 
-                              ),
+                              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), border: Border.all(color: AppColors.primary, width: 1.5), borderRadius: BorderRadius.circular(20)),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.stars_rounded, color: AppColors.primary, size: 18), 
+                                  const Icon(Icons.stars_rounded, color: AppColors.primary, size: 18),
                                   const SizedBox(width: 6),
                                   Text(levelTitle, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1.0)),
                                 ],
@@ -286,22 +266,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               width: 180,
                               height: 44,
                               child: ElevatedButton(
-                                onPressed: _isSaving 
-                                  ? null 
-                                  : () {
-                                      if (isGuest) {
-                                        _handleGuestClick('管理個人檔案');
-                                      } else {
-                                        if (_isEditing) {
-                                          _saveProfile();
-                                        } else {
-                                          setState(() {
-                                            _nameController.text = userName; 
-                                            _isEditing = true;
-                                          });
-                                        }
-                                      }
-                                    },
+                                onPressed: _isSaving ? null : () {
+                                  if (isGuest) {
+                                    _handleGuestClick('管理個人檔案');
+                                  } else {
+                                    if (_isEditing) {
+                                      _saveProfile();
+                                    } else {
+                                      setState(() {
+                                        _nameController.text = userName;
+                                        _isEditing = true;
+                                      });
+                                    }
+                                  }
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   elevation: 0,
@@ -309,8 +287,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
                                 ),
                                 child: _isSaving
-                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                  : Text(_isEditing ? '確認' : '管理個人檔案', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                    : Text(_isEditing ? '確認' : '管理個人檔案', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
                               ),
                             )
                           ],
@@ -343,11 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   onTap: _pickAndUploadImage,
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
-                                    ),
+                                    decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
                                     child: const Icon(Icons.edit_rounded, color: Colors.white, size: 16),
                                   ),
                                 ),
@@ -362,44 +336,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       children: [
-                        _buildListItem(
-                          icon: Icons.monetization_on_rounded, 
-                          title: 'J-Points', 
-                          trailingText: '$jPts',
-                          iconColor: AppColors.primary,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))
-                        ),
-                        _buildListItem(
-                          icon: Icons.folder_special_rounded, 
-                          title: '我的收藏', 
-                          iconColor: AppColors.primary,
-                          onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))
-                        ),
-                        _buildListItem(
-                          icon: Icons.people_alt_rounded,
-                          title: '好友綁定',
-                          iconColor: AppColors.primary,
-                          trailingText: friendId,
-                          onTap: () => isGuest ? _handleGuestClick('好友綁定') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))
-                        ),
-                        _buildListItem(
-                          icon: Icons.military_tech_rounded, 
-                          title: '成就徽章', 
-                          iconColor: AppColors.primary,
-                          onTap: () {
-                            if (isGuest) {
-                              _handleGuestClick('成就徽章');
-                            } else {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()));
-                            }
-                          }
-                        ),
+                        _buildListItem(icon: Icons.monetization_on_rounded, title: 'J-Points', trailingText: '$jPts', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))),
+                        _buildListItem(icon: Icons.folder_special_rounded, title: '我的收藏', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))),
+                        _buildListItem(icon: Icons.people_alt_rounded, title: '好友綁定', iconColor: AppColors.primary, trailingText: friendId, onTap: () => isGuest ? _handleGuestClick('好友綁定') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
+                        _buildListItem(icon: Icons.military_tech_rounded, title: '成就徽章', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('成就徽章') : Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()))),
                         const SizedBox(height: 8),
-                        _buildFlatInfoTile(label: '稱號認證', value: levelTitle), 
+                        _buildFlatInfoTile(label: '稱號認證', value: levelTitle),
                         const SizedBox(height: 8),
                         _buildListItem(
-                          icon: isGuest ? Icons.login_rounded : Icons.logout_rounded, 
-                          title: isGuest ? '登入帳號' : '登出帳號', 
+                          icon: isGuest ? Icons.login_rounded : Icons.logout_rounded,
+                          title: isGuest ? '登入帳號' : '登出帳號',
                           iconColor: isGuest ? AppColors.primary : Colors.redAccent,
                           textColor: isGuest ? _textColor : Colors.redAccent,
                           onTap: () {

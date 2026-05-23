@@ -1,5 +1,3 @@
-
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -50,9 +48,19 @@ class AppDrawer extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(isGuest ? '訪客' : userName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor)),
+                      Text(
+                        isGuest ? '訪客' : userName,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: _textColor,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(isGuest ? '登入解鎖功能' : 'ID：${friendId ?? '—'}', style: TextStyle(fontSize: 13, color: _subTextColor)),
+                      Text(
+                        isGuest ? '登入解鎖功能' : 'ID：${friendId ?? '—'}',
+                        style: TextStyle(fontSize: 13, color: _subTextColor),
+                      ),
                     ],
                   ),
                 ),
@@ -65,17 +73,91 @@ class AppDrawer extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  _buildPillItem(context, Icons.home_outlined, '回首頁', onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()))),
-                  _buildPillItem(context, Icons.person_outline, '個人檔案', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()))),
-                  _buildPillItem(context, Icons.bookmark_border, '單字探險', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()))),
-                  _buildPillItem(context, Icons.people_outline, '好友', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
-                  _buildPillItem(context, Icons.groups_outlined, '學習小組', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen()))),
-                  _buildPillItem(context, Icons.storefront, '商城與會員中心', color: Colors.orange, bgColor: Colors.orange.withOpacity(0.1), onTap: () {
-                    // initialIndex: 0 代表打開時預設顯示「👑 Premium」分頁
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 0)));
-                  }),
+                  _buildPillItem(
+                    context,
+                    Icons.home_outlined,
+                    '回首頁',
+                    iconColor: AppColors.primary,
+                    onTap: () => Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    ),
+                  ),
+                  _buildPillItem(
+                    context,
+                    Icons.person_outline,
+                    '個人檔案',
+                    iconColor: AppColors.primary,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    ),
+                  ),
+                  _buildPillItem(
+                    context,
+                    Icons.bookmark_border,
+                    '單字探險',
+                    iconColor: AppColors.primary,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ResultGalleryV2Screen(),
+                      ),
+                    ),
+                  ),
+                  _buildPillItem(
+                    context,
+                    Icons.people_outline,
+                    '好友',
+                    iconColor: AppColors.primary,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FriendsListScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildPillItem(
+                    context,
+                    Icons.groups_outlined,
+                    '學習小組',
+                    iconColor: AppColors.primary,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudyGroupScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildPillItem(
+                    context,
+                    Icons.storefront,
+                    '商城與會員中心',
+                    color: Colors.orange,
+                    bgColor: Colors.orange.withOpacity(0.1),
+                    onTap: () {
+                      // initialIndex: 0 代表打開時預設顯示「👑 Premium」分頁
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const StoreDashboardScreen(initialIndex: 0),
+                        ),
+                      );
+                    },
+                  ),
                   const Divider(height: 30, thickness: 0.5),
-                  _buildPillItem(context, Icons.settings_outlined, '系統設定', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SystemSettingsScreen()))),
+                  _buildPillItem(
+                    context,
+                    Icons.settings_outlined,
+                    '系統設定',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SystemSettingsScreen(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -83,15 +165,21 @@ class AppDrawer extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
             child: _buildPillItem(
-              context, 
-              isGuest ? Icons.login : Icons.logout, 
+              context,
+              isGuest ? Icons.login : Icons.logout,
               isGuest ? '註冊 / 登入' : '登出帳號',
               color: isGuest ? Colors.blue : Colors.redAccent,
-              bgColor: isGuest ? Colors.blue.withOpacity(0.1) : Colors.redAccent.withOpacity(0.1),
+              bgColor: isGuest
+                  ? Colors.blue.withOpacity(0.1)
+                  : Colors.redAccent.withOpacity(0.1),
               onTap: () {
                 if (!isGuest) userProvider.logout();
-                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
-              }
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (r) => false,
+                );
+              },
             ),
           ),
         ],
@@ -99,7 +187,14 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildPillItem(BuildContext context, IconData icon, String title, {VoidCallback? onTap, Color? color, Color? bgColor}) {
+  Widget _buildPillItem(
+    BuildContext context,
+    IconData icon,
+    String title, {
+    VoidCallback? onTap,
+    Color? color,
+    Color? bgColor,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -114,7 +209,16 @@ class AppDrawer extends StatelessWidget {
               children: [
                 Icon(icon, color: color ?? _textColor, size: 24),
                 const SizedBox(width: 16),
-                Expanded(child: Text(title, style: TextStyle(color: color ?? _textColor, fontWeight: FontWeight.w800, fontSize: 15))),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: color ?? _textColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

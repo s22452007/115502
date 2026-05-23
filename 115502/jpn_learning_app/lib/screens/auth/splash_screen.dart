@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+// 🌟 引入 constants 以使用全域的 AppColors
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -54,7 +56,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 'assets/images/logo.png',
                 width: 180,
                 errorBuilder: (context, error, stackTrace) => 
-                  Icon(Icons.camera_alt_rounded, size: 100, color: _brandColor),
+                  // 🌟 將顏色改為與按鈕一致的 AppColors.primary
+                  Icon(Icons.camera_alt_rounded, size: 100, color: AppColors.primary),
               ),
               const SizedBox(height: 24),
               Text(

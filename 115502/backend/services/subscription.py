@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from utils.db import db
-from models import User, UserSubscription, SubscriptionPlan, PointTransaction
+from models import User, UserSubscription, SubscriptionPlan, PointTransaction, TransactionType
 from utils.subscription_helper import check_and_expire_subscription
 
 subscription_bp = Blueprint('subscription', __name__)
+
+MONTHLY_POINTS_GRANT = 20
+YEARLY_POINTS_GRANT = 300
 
 
 # ─── DFD 5.8 ── 取得訂閱方案清單 ────────────────────────────────────────────
@@ -141,7 +144,7 @@ def subscribe():
             points=pts_to_grant,
             price=0,
             payment_method=payment_method,
-            transaction_type='subscription_grant',
+            transaction_type=TransactionType.SUBSCRIPTION_GRANT,
             related_feature='new_subscription',
         ))
 
@@ -190,12 +193,12 @@ def cancel_subscription(user_id):
     }), 200
 
 
-# ─── 排程升級：月繳/試用 → 年繳（到期後自動切換）────────────────────────────────
+# ─── 排程升級：月繳/試用 → 年繳（付款後建立 pending，到期後自動切換）────────────
 @subscription_bp.route('/schedule_upgrade', methods=['POST'])
 def schedule_upgrade():
     data = request.get_json()
     user_id = data.get('user_id')
-    payment_method = data.get('payment_method', 'scheduled')
+    payment_method = data.get('payment_method', 'google_pay')
 
     user = User.query.get(user_id)
     if not user:
@@ -222,6 +225,11 @@ def schedule_upgrade():
     if not yearly_plan:
         return jsonify({'error': '找不到年訂閱方案'}), 500
 
+    # Demo 模式：模擬付款成功，立即建立已付款的排程並贈點
+    pts_to_grant = (getattr(yearly_plan, 'points_grant_yearly', None) or
+                    getattr(yearly_plan, 'points_grant', None) or
+                    YEARLY_POINTS_GRANT)
+
     pending_sub = UserSubscription(
         user_id=user_id,
         plan_id=yearly_plan.id,
@@ -231,15 +239,29 @@ def schedule_upgrade():
         auto_renew=True,
         status='pending',
         payment_method=payment_method,
-        payment_status='pending',
+        payment_status='paid',  # 付款已完成
     )
     db.session.add(pending_sub)
+
+    # 贈點立即發放
+    user.j_pts += pts_to_grant
+    db.session.add(PointTransaction(
+        user_id=user_id,
+        points=pts_to_grant,
+        price=yearly_plan.price_yearly or 1290,
+        payment_method=payment_method,
+        transaction_type=TransactionType.SUBSCRIPTION_GRANT,
+        related_feature='subscription_upgraded_yearly',
+    ))
+
     db.session.commit()
 
     return jsonify({
-        'message': '已排程升級至年繳，將於現有訂閱到期後自動切換',
+        'message': '已排程升級至年繳，將於月繳到期後自動切換',
         'scheduled_start': current_sub.end_date.isoformat(),
-        'payment_status': pending_sub.payment_status,
+        'payment_status': 'paid',
+        'points_granted': pts_to_grant,
+        'total_points': user.j_pts,
     }), 200
 
 
@@ -276,6 +298,7 @@ def pay_pending():
 
 
 @subscription_bp.route('/schedule_upgrade/<int:user_id>', methods=['DELETE'])
+# 取消排程升級（前端入口已移除，保留供客服人員或未來版本使用）
 def cancel_schedule_upgrade(user_id):
     pending = (UserSubscription.query
                .filter_by(user_id=user_id, status='pending')

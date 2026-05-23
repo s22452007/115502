@@ -1156,13 +1156,13 @@ class ApiClient {
     }
   }
 
-  static Future<Map<String, dynamic>> scheduleYearlyUpgrade(int userId) async {
+  static Future<Map<String, dynamic>> scheduleYearlyUpgrade(int userId, {String paymentMethod = 'google_pay'}) async {
     final url = Uri.parse('$baseUrl/subscription/schedule_upgrade');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'payment_method': 'scheduled'}),
+        body: jsonEncode({'user_id': userId, 'payment_method': paymentMethod}),
       );
       return jsonDecode(response.body);
     } catch (e) {

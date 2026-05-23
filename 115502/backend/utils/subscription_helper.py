@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from utils.db import db
-from models import UserSubscription, PointTransaction, Notification
+from models import UserSubscription, PointTransaction, Notification, TransactionType
 
 
 def check_and_expire_subscription(user):
@@ -111,7 +111,7 @@ def _try_renew(user, sub, now):
                 points=grant,
                 price=0,
                 payment_method='auto_renewal',
-                transaction_type='subscription_grant',
+                transaction_type=TransactionType.SUBSCRIPTION_GRANT,
                 related_feature='subscription_upgraded_yearly',
             ))
 
@@ -154,7 +154,9 @@ def _try_renew(user, sub, now):
 
 
 def _activate_pending_upgrade(user, sub, pending, now):
-    """將排程年繳升級啟用，並在到期後開始新的年繳訂閱。"""
+    """將排程年繳升級啟用，並在到期後開始新的年繳訂閱。
+    注意：贈點已在排程建立時（付款時）立即發放，此處不再重複贈點。
+    """
     sub.status = 'expired'
     pending.status = 'active'
 
@@ -164,24 +166,6 @@ def _activate_pending_upgrade(user, sub, pending, now):
         start_date = now
     pending.start_date = start_date
     pending.end_date = start_date + timedelta(days=365)
-
-    plan = pending.plan
-    grant = 0
-    if plan is not None:
-        grant = getattr(plan, 'points_grant_yearly', None)
-        if grant is None:
-            grant = getattr(plan, 'points_grant', 0)
-        grant = grant or 0
-    if grant > 0:
-        user.j_pts += grant
-        db.session.add(PointTransaction(
-            user_id=user.id,
-            points=grant,
-            price=0,
-            payment_method='auto_renewal',
-            transaction_type='subscription_grant',
-            related_feature='subscription_upgraded_yearly',
-        ))
 
     user.is_premium = True
     user.subscription_end_date = pending.end_date

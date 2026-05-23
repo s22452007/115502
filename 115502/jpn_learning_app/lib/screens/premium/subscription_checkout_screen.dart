@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class SubscriptionCheckoutScreen extends StatefulWidget {
   final int planId;
@@ -61,7 +62,7 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
     if (iso == null) return '—';
     try {
       final dt = DateTime.parse(iso).toLocal();
-      return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+      return formatDate(dt);
     } catch (_) {
       return iso;
     }
@@ -81,7 +82,7 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
 
     // 模擬 API 回應
     final res = widget.isPendingUpgrade
-        ? await ApiClient.payPendingUpgrade(userId, paymentMethod: _paymentLabel)
+        ? await ApiClient.scheduleYearlyUpgrade(userId, paymentMethod: _paymentLabel)
         : await ApiClient.subscribeplan(
             userId: userId,
             planId: widget.planId,
@@ -93,7 +94,13 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
 
     if (!res.containsKey('error')) {
       final provider = context.read<UserProvider>();
-      if (!widget.isPendingUpgrade) {
+      if (widget.isPendingUpgrade) {
+        // 排程升級：贈點已立即發放，同步錢包與排程狀態
+        if (res['total_points'] != null) {
+          provider.setJPts((res['total_points'] as num).toInt());
+        }
+        provider.setPendingUpgradeStart(res['scheduled_start'] as String?);
+      } else {
         provider.setIsPremium(true);
         if (res['total_points'] != null) {
           provider.setJPts((res['total_points'] as num).toInt());
@@ -105,25 +112,6 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
           planName: _planTitle,
           billingCycle: widget.initialBillingCycle,
         );
-      } else {
-        final statusRes = await ApiClient.getSubscriptionStatus(userId);
-        if (!mounted) return;
-        if (statusRes.containsKey('is_premium')) {
-          provider.setIsPremium(statusRes['is_premium'] == true);
-        }
-        if (statusRes.containsKey('trial_used')) {
-          provider.setTrialUsed(statusRes['trial_used'] == true);
-        }
-        final sub = statusRes['subscription'];
-        if (sub != null) {
-          provider.setSubscriptionInfo(
-            endDate: sub['end_date'],
-            autoRenew: sub['auto_renew'] ?? false,
-            status: sub['status'],
-            planName: sub['plan_name'],
-            billingCycle: sub['billing_cycle'],
-          );
-        }
       }
       _showSuccessDialog(res);
     } else {
@@ -136,8 +124,11 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
   void _showSuccessDialog(Map<String, dynamic> res) {
     final titleText = widget.isPendingUpgrade ? '付款成功！' : '訂閱成功！';
     final messageText = widget.isPendingUpgrade
-        ? '年繳升級排程付款已完成，系統將依排程時間啟動年繳方案。'
+        ? '年繳升級排程已建立！'
         : '$_planTitle 已啟用';
+    final scheduledStart = res['scheduled_start'] as String?;
+    final pointsGranted = res['points_granted'] as int? ?? _points;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -155,23 +146,22 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
           children: [
             Text(messageText, style: const TextStyle(fontWeight: FontWeight.bold, color: _textDark)),
             const SizedBox(height: 12),
-            if (!widget.isPendingUpgrade)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(8)),
-                child: Text('🎁 已贈送 $_points J-Points！', style: const TextStyle(color: _gold, fontWeight: FontWeight.bold)),
-              )
-            else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(8)),
+              child: Text('🎁 已獲得 $pointsGranted J-Pts！', style: const TextStyle(color: _gold, fontWeight: FontWeight.bold)),
+            ),
+            if (widget.isPendingUpgrade && scheduledStart != null) ...[
+              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(color: const Color(0xFFEAF4EA), borderRadius: BorderRadius.circular(8)),
                 child: Text(
-                  widget.pendingUpgradeStart != null
-                      ? '排程啟用日：${_formatIsoDate(widget.pendingUpgradeStart)}'
-                      : '排程年繳將依預定時間啟用。',
+                  '月繳到期後將於 ${_formatIsoDate(scheduledStart)} 自動切換年繳',
                   style: const TextStyle(color: _green, fontWeight: FontWeight.bold),
                 ),
               ),
+            ],
           ],
         ),
         actions: [
@@ -226,7 +216,9 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
             decoration: BoxDecoration(color: _isMonthly ? const Color(0xFFEAF4EA) : const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(12)),
             child: Text(
               widget.isPendingUpgrade
-                  ? '⚡ 這是年繳升級排程付款。付款後將依預定時間啟用年繳方案。當前方案效期至 ${_formatIsoDate(widget.currentSubscriptionEndDate)}。'
+                  ? '⚡ 付款後將於 ${_formatIsoDate(widget.currentSubscriptionEndDate)} 自動切換為年繳方案。\n'
+                    '• 贈點 +${widget.pointsGrantYearly} J-Pts 將於付款成功後立即發放。\n'
+                    '• 月繳期間繼續正常使用，到期後無縫切換。'
                   : (_isTrialFlow
                       ? '⭐ 本次訂閱享 7 天免費試用。\n'
                         '• 試用期內隨時可取消，無需負擔任何費用。\n'
@@ -274,14 +266,19 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
                 const Text('訂單摘要', style: TextStyle(fontWeight: FontWeight.bold, color: _textDark)),
                 const Divider(height: 20),
                 _summaryRow(_planTitle, 'NT\$ $_price'),
+                if (widget.isPendingUpgrade)
+                  _summaryRow('生效日', _formatIsoDate(widget.currentSubscriptionEndDate)),
                 if (_isTrialFlow) _summaryRow('首期費用', 'NT\$ 0 (享 7 天免費試用)', valueColor: Colors.green),
-                if (_isMonthly && !_isTrialFlow) _summaryRow('首期費用', 'NT\$ $_price', valueColor: Colors.black),
+                if (_isMonthly && !_isTrialFlow && !widget.isPendingUpgrade)
+                  _summaryRow('首期費用', 'NT\$ $_price', valueColor: Colors.black),
                 _summaryRow(
-                  '🎁 成功訂閱贈送', 
-                  _isMonthly
-                      ? (_isTrialFlow ? '+$_points 點 (試用結束後)' : '+$_points 點')
-                      : '+$_points 點', 
-                  valueColor: _gold
+                  '🎁 成功訂閱贈送',
+                  widget.isPendingUpgrade
+                      ? '+$_points 點（付款時立即贈送）'
+                      : (_isMonthly
+                          ? (_isTrialFlow ? '+$_points 點 (試用結束後)' : '+$_points 點')
+                          : '+$_points 點'),
+                  valueColor: _gold,
                 ),
                 _summaryRow('付款方式', _paymentLabel),
                 const Divider(height: 20),

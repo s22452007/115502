@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 
@@ -30,7 +31,6 @@ class _SubscriptionManagementScreenState
   bool _autoRenew = false;
   String? _status;
   String? _pendingUpgradeStart;
-  String? _pendingPaymentStatus;
 
   @override
   void initState() {
@@ -61,7 +61,6 @@ class _SubscriptionManagementScreenState
         _status = sub['status'];
       }
       _pendingUpgradeStart = pending?['scheduled_start'];
-      _pendingPaymentStatus = pending?['payment_status'];
     });
 
     // 同步 Provider
@@ -82,6 +81,7 @@ class _SubscriptionManagementScreenState
         billingCycle: sub['billing_cycle'],
       );
     }
+    provider.setPendingUpgradeStart(res['pending_upgrade']?['scheduled_start'] as String?);
   }
 
   Future<void> _cancelSubscription() async {
@@ -152,7 +152,7 @@ class _SubscriptionManagementScreenState
     if (iso == null) return '—';
     try {
       final dt = DateTime.parse(iso).toLocal();
-      return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+      return formatDate(dt);
     } catch (_) {
       return iso;
     }
@@ -271,32 +271,33 @@ class _SubscriptionManagementScreenState
 
         const SizedBox(height: 20),
 
-        // 自動續訂區塊
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            children: [
-              Icon(
-                _autoRenew ? Icons.autorenew : Icons.cancel_outlined,
-                color: _autoRenew ? _green : Colors.grey,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _autoRenew ? '自動續訂已開啟' : '自動續訂已關閉',
-                  style: TextStyle(
-                    color: _autoRenew ? _green : Colors.grey,
-                    fontWeight: FontWeight.w600,
+        // 自動續訂區塊（已排程年繳升級時隱藏，月繳自動續訂狀態已無意義）
+        if (_pendingUpgradeStart == null)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              children: [
+                Icon(
+                  _autoRenew ? Icons.autorenew : Icons.cancel_outlined,
+                  color: _autoRenew ? _green : Colors.grey,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _autoRenew ? '自動續訂已開啟' : '自動續訂已關閉',
+                    style: TextStyle(
+                      color: _autoRenew ? _green : Colors.grey,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
 
         const SizedBox(height: 24),
 
@@ -315,46 +316,27 @@ class _SubscriptionManagementScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    const Icon(Icons.schedule, color: _gold, size: 18),
+                    const Icon(Icons.check_circle, color: _gold, size: 18),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '已排程升級至年繳，將於 ${_formatDate(_pendingUpgradeStart)} 生效',
-                        style: const TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
+                    const Text(
+                      '✓ 已排程升級至年繳',
+                      style: TextStyle(color: _gold, fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                   ]),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    _pendingPaymentStatus == 'pending'
-                        ? '尚未付款，屆時完成付款後才會啟動年繳方案。'
-                        : '已完成付款，屆時將自動啟動年繳方案。',
-                    style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w600),
+                    '將於 ${_formatDate(_pendingUpgradeStart)}（月繳到期日）自動切換',
+                    style: const TextStyle(color: _textDark, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isScheduling ? null : _openPendingUpgradePayment,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: _isScheduling
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text('前往付款', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                    ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '月繳期間繼續正常使用，到期後無縫切換年繳。',
+                    style: TextStyle(color: Colors.black54, fontSize: 12),
                   ),
                   const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: _isScheduling ? null : _cancelScheduleUpgrade,
-                    child: const Text('取消排程', style: TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline)),
+                  const Text(
+                    '如需取消請聯繫客服處理退款。',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ),
@@ -384,8 +366,8 @@ class _SubscriptionManagementScreenState
           ],
         ],
 
-        // 取消按鈕（只在 active/trial 時顯示）
-        if (_status == 'active' || _status == 'trial')
+        // 取消按鈕（active/trial 且無排程年繳時顯示）
+        if ((_status == 'active' || _status == 'trial') && _pendingUpgradeStart == null)
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -420,48 +402,12 @@ class _SubscriptionManagementScreenState
   }
 
   Future<void> _scheduleYearlyUpgrade() async {
-    final message = _status == 'trial'
-        ? '試用結束後將直接切換為年繳方案（NT\$1290/年），試用期間可隨時取消。'
-        : '訂閱期間升級至年繳方案，待當前月繳到期後自動啟用年繳（NT\$1290/年）。';
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('確認升級至年繳'),
-        content: Text(message),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('確認升級', style: TextStyle(color: _green))),
-        ],
-      ),
-    ) ?? false;
-
-    if (!confirmed) return;
-
-    setState(() => _isScheduling = true);
-    final userId = context.read<UserProvider>().userId!;
-    final res = await ApiClient.scheduleYearlyUpgrade(userId);
-    if (!mounted) return;
-    setState(() => _isScheduling = false);
-    if (res.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'].toString())));
-    } else {
-      setState(() {
-        _pendingUpgradeStart = res['scheduled_start'];
-        _pendingPaymentStatus = res['payment_status'];
-      });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已排程升級至年繳！')));
-    }
-  }
-
-  Future<void> _openPendingUpgradePayment() async {
-    setState(() => _isScheduling = true);
     final success = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => SubscriptionCheckoutScreen(
           planId: 0,
-          planName: 'Premium Pro (年繳)',
+          planName: 'Premium Pro 年繳',
           priceMonthly: 0,
           priceYearly: 1290,
           features: const [
@@ -473,20 +419,18 @@ class _SubscriptionManagementScreenState
           pointsGrantYearly: 300,
           initialBillingCycle: 'yearly',
           isPendingUpgrade: true,
-          pendingUpgradeStart: _pendingUpgradeStart,
           currentSubscriptionEndDate: _endDate,
         ),
       ),
     ) ?? false;
     if (!mounted) return;
-    setState(() => _isScheduling = false);
     if (success) {
       await _loadStatus();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已完成付款，屆時將自動啟動年繳方案')));
     }
   }
 
+  // 取消排程升級（前端入口已移除，保留供客服人員或未來版本使用）
+  // ignore: unused_element
   Future<void> _cancelScheduleUpgrade() async {
     setState(() => _isScheduling = true);
     final userId = context.read<UserProvider>().userId!;

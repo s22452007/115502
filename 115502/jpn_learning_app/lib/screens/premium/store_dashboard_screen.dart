@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/premium/premium_tab.dart';
 import 'package:jpn_learning_app/widgets/premium/buy_points_tab.dart';
 import 'package:jpn_learning_app/widgets/premium/store_tab.dart';
@@ -16,9 +17,6 @@ class StoreDashboardScreen extends StatefulWidget {
 class _StoreDashboardScreenState extends State<StoreDashboardScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const Color _darkGreen = Color(0xFF5F8F5B);
-  static const Color _bg = Color(0xFFF8F9FA);
-
   @override
   void initState() {
     super.initState();
@@ -34,25 +32,25 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> with Single
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: AppColors.lightBg,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF333333)),
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textDark),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           '商城與會員中心',
-          style: TextStyle(color: Color(0xFF333333), fontWeight: FontWeight.w800),
+          style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w800),
         ),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: _darkGreen,
+          labelColor: AppColors.primary,
           unselectedLabelColor: Colors.grey,
-          indicatorColor: _darkGreen,
+          indicatorColor: AppColors.primary,
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           tabs: const [

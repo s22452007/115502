@@ -11,7 +11,7 @@ from utils.group_helper import add_group_progress_and_check_reward
 from models import (
     User, UserAchievement, UserVocab, UserFolder,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
-    Feedback, PointTransaction, Vocab,
+    Feedback, PointTransaction, Vocab, TransactionType,
 )
 
 user_bp = Blueprint('user', __name__)
@@ -355,7 +355,7 @@ def get_transactions(user_id):
             "points": t.points,
             "price": t.price,
             "payment_method": t.payment_method,
-            "transaction_type": getattr(t, 'transaction_type', 'purchase'),
+            "transaction_type": getattr(t, 'transaction_type', TransactionType.PURCHASE),
             "related_feature": getattr(t, 'related_feature', None),
             "created_at": t.created_at.strftime('%Y-%m-%d %H:%M'),
         })
@@ -399,7 +399,7 @@ def spend_points():
         points=-points_to_spend,
         price=0,
         payment_method='points',
-        transaction_type='spend',
+        transaction_type=TransactionType.SPEND,
         related_feature=feature,
     ))
 

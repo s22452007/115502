@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from utils.db import db
-from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction
+from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction, TransactionType
 from datetime import datetime, timedelta, timezone
 
 group_bp = Blueprint('group', __name__)
@@ -56,7 +56,7 @@ def handle_deposit_and_free_quota(user):
             points=-deposit,
             price=0,
             payment_method='points',
-            transaction_type='spend',
+            transaction_type=TransactionType.SPEND,
             related_feature=feature_key,
         ))
         return True, "OK", deposit
@@ -81,7 +81,7 @@ def _give_group_reward(user, member, group):
             points=deposit_refund,
             price=0,
             payment_method='refund',
-            transaction_type='reward',
+            transaction_type=TransactionType.REWARD,
             related_feature='group_deposit_refund',
         ))
 
@@ -97,7 +97,7 @@ def _give_group_reward(user, member, group):
             points=pts,
             price=0,
             payment_method='reward',
-            transaction_type='reward',
+            transaction_type=TransactionType.REWARD,
             related_feature='group_first_completion',
         ))
         msg_parts.append(f'獲得 {pts} 點')
@@ -110,7 +110,7 @@ def _give_group_reward(user, member, group):
             points=pts,
             price=0,
             payment_method='reward',
-            transaction_type='reward',
+            transaction_type=TransactionType.REWARD,
             related_feature='group_completion',
         ))
         msg_parts.append(f'獲得 {pts} 點')
@@ -123,7 +123,7 @@ def _give_group_reward(user, member, group):
             points=pts,
             price=0,
             payment_method='reward',
-            transaction_type='reward',
+            transaction_type=TransactionType.REWARD,
             related_feature='group_completion',
         ))
         msg_parts.append(f'獲得 {pts} 點')

@@ -55,11 +55,6 @@ class User(db.Model):
     trial_notice_sent = db.Column(db.Boolean, default=False)   # 試用到期前通知是否已發送
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
 
-    # ⚠️ 已廢棄，不再使用
-    # 原本用於判斷獎勵等級，現已改用 paid_deposit 判斷
-    # 保留欄位避免資料庫遷移問題
-    group_completions = db.Column(db.Integer, default=0)
-
     # 每週免費組隊次數計數（每週一 0 點重置）
     group_free_used_this_week = db.Column(db.Integer, default=0)
     # 同 last_free_group_week 欄位追蹤目前計數對應哪週（格式 '2026-16'）
@@ -233,18 +228,6 @@ class PointPackage(db.Model):
     tag = db.Column(db.String(20), nullable=True)
     description = db.Column(db.String(200), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-
-# 使用者限時道具 (UserBoost)
-class UserBoost(db.Model):
-    __tablename__ = 'user_boost'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    boost_type = db.Column(db.String(30), nullable=False)
-    # 值: 'photo_daily' | 'ai_daily' | 'vocab_slots' | 'vocab_unlimited'
-    extra_amount = db.Column(db.Integer, default=0)
-    expire_at = db.Column(db.DateTime, nullable=True)  # null = 永久
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 # ==========================================
 # 💳 訂閱方案與使用者訂閱紀錄

@@ -55,7 +55,9 @@ class User(db.Model):
     trial_notice_sent = db.Column(db.Boolean, default=False)   # 試用到期前通知是否已發送
     # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
 
-    # 學習小組完成次數（0=第一次，達成後 +1；用於判斷獎勵等級）
+    # ⚠️ 已廢棄，不再使用
+    # 原本用於判斷獎勵等級，現已改用 paid_deposit 判斷
+    # 保留欄位避免資料庫遷移問題
     group_completions = db.Column(db.Integer, default=0)
 
     # 每週免費組隊次數計數（每週一 0 點重置）

@@ -4,28 +4,57 @@
 
 根目錄/
 ├── backend/                             [後端：Python Flask 伺服器]
+│   ├── admin_app.py                     # 管理後台入口：註冊後台專用 Blueprint 與管理介面
 │   ├── app.py                           # 伺服器啟動入口：註冊所有 Blueprint 模組與初始化環境
+│   ├── init_admins.py                   # 管理員種子資料腳本：建立預設管理員帳號與權限
 │   ├── models.py                        # 資料庫綱要：定義 User, Vocab, UserPhoto, UserVocab 等實體關係
 │   ├── seed.py                          # 假資料腳本：一鍵清除並重建開發測試用的資料庫內容
+│   ├── test_models.py                   # 測試資料模型與 DB 關聯的單元測試
 │   ├── upgrade_db.py                    # 資料庫工具：用於安全新增欄位或修改現有表結構
 │   ├── requirements.txt                 # 套件清單：列出 Flask, SQLAlchemy 等依賴套件
 │   ├── .env                             # 環境變數：存放 API 金鑰、Secret Key 等機密資訊
 │   ├── instance/                        # 資料庫資料夾：存放 SQLite 實體檔案 jlens.db
 │   ├── static/photos/                   # 靜態資源：存放使用者上傳的場景照片實體檔
+│   ├── templates/                       # HTML 模板：後端頁面及管理介面
+│   │   ├── admin_login.html             # 管理後台登入頁面模板
+│   │   ├── index.html                   # 首頁入口模板
+│   │   ├── admin/                       # 管理後台子頁面
+│   │   │   └── change_password.html     # 管理員修改密碼頁面模板
+│   │   ├── customer/                    # 客戶清單頁面模板
+│   │   │   └── list.html
+│   │   ├── feedback/                    # 反饋列表頁面模板
+│   │   │   └── list.html
+│   │   ├── photo/                       # 相片列表頁面模板
+│   │   │   └── list.html
+│   │   ├── purchase/                    # 購買訂單頁面模板
+│   │   │   └── list.html
+│   │   ├── quiz/                        # 測驗列表頁面模板
+│   │   │   └── list.html
+│   │   ├── user/                        # 使用者明細與列表頁面模板
+│   │   │   ├── detail.html
+│   │   │   └── list.html
+│   │   └── vocab/                       # 單字列表頁面模板
+│   │       └── list.html
 │   ├── utils/                           # 核心工具箱
 │   │   ├── ai_helper.py                 # 封裝 OpenAI/Gemini API，處理圖片辨識與對話生成
-│   │   ├── jwt_helper.py                # 處理 JWT Token 的產生、加密與身份驗證邏輯
 │   │   ├── auth_helper.py               # 授權與 ID 生成相關的小工具
-│   │   └── group_helper.py              # 計算學習小組進度與排行的邏輯
+│   │   ├── db.py                        # 資料庫連線與 Session 管理工具
+│   │   ├── feature_guard.py             # 功能旗標控管：依據訂閱/權限決定功能是否開啟
+│   │   ├── group_helper.py              # 計算學習小組進度與排行的邏輯
+│   │   ├── jwt_helper.py                # 處理 JWT Token 的產生、加密與身份驗證邏輯
+│   │   ├── subscription_helper.py       # 訂閱判斷與 Premium 權限驗證相關工具
+│   │   └── test.py                      # 測試工具：協助單元測試與資料準備
 │   └── services/                        # 控制器層 (Blueprint 路由定義)
 │       ├── auth.py                      # 處理註冊、登入、密碼重設與 Google 驗證
-│       ├── user.py                      # 處理個人資料、能力值、點數與徽章進度抓取
-│       ├── scenario.py                  # 處理 AI 拍照辨識分析與拍照歷史事件 (UserPhoto)
-│       ├── vocabulary.py                # 處理單字圖鑑、收藏狀態 (UserVocab) 與資料夾管理
-│       ├── roleplay.py                  # 處理 AI 角色扮演對話流與語音自然度評分
-│       ├── tutor.py                     # 處理 AI 家教問答紀錄與 FAQ
 │       ├── group.py                     # 處理學習小組的建立、邀請與成員管理
-│       └── quiz.py                      # 處理新手能力測驗題庫與等級判定邏輯
+│       ├── quiz.py                      # 處理新手能力測驗題庫與等級判定邏輯
+│       ├── roleplay.py                  # 處理 AI 角色扮演對話流與語音自然度評分
+│       ├── scenario.py                  # 處理 AI 拍照辨識分析與拍照歷史事件 (UserPhoto)
+│       ├── store.py                     # 處理商店商品、點數購買與訂閱方案查詢
+│       ├── subscription.py              # 處理訂閱邏輯與 Premium 方案管理
+│       ├── tutor.py                     # 處理 AI 家教問答紀錄與 FAQ
+│       ├── user.py                      # 處理個人資料、能力值、點數與徽章進度抓取
+│       └── vocabulary.py                # 處理單字圖鑑、收藏狀態 (UserVocab) 與資料夾管理
 │
 └── jpn_learning_app/                    [前端：Flutter 行動應用程式]
     ├── pubspec.yaml                     # 專案設定檔：管理 Flutter 套件版本與 assets 資源路徑
@@ -52,16 +81,17 @@
         ├── services/                    # API 通訊層 (外送員)
         │   ├── auth_service.dart        # 對接後端 auth 路由，傳送憑證進行認證
         │   ├── ai_service.dart          # 對接 AI 功能，上傳圖片或傳送對話文字
-        │   ├── user_service.dart        # 請求個人檔案、好友列表與排行榜數據
-        │   ├── vocab_service.dart       # 處理單字收藏與資料夾操作的網路請求
-        │   ├── tutor_service.dart       # 傳送家教提問與獲取回覆內容
-        │   ├── notification_service.dart# 處理推播通知與系統訊息提醒
-        │   ├── rank_service.dart        # 獲取全球排行榜與小組排行
-        │   └── api_client.dart          # HTTP 基底：統一管理 baseUrl, Header 與錯誤處理
+        │   ├── user_service.dart        # 請求個人檔案、好友列表與排行榜數據(空)
+        │   ├── tutor_service.dart       # 傳送家教提問與獲取回覆內容(空)
+        │   └── notification_service.dart# 處理推播通知與系統訊息提醒
         │
         ├── utils/                       # 前端工具類
+        │   ├── api_client.dart          # HTTP 基底：統一管理 baseUrl, Header 與錯誤處理
         │   ├── constants.dart           # 定義全域調色盤 (AppColors)、文字樣式與靜態網址
-        │   └── badge_utils.dart         # 封裝徽章等級計算公式 (例如：經驗值如何換算等級)
+        │   ├── badge_utils.dart         # 封裝徽章等級計算公式 (例如：經驗值如何換算等級)
+        │   ├── feature_guard.dart       # 功能旗標控管：根據授權與訂閱狀態決定功能可視性
+        │   ├── helpers.dart             # 常用工具函式：字串、格式與路由處理等小助手
+        │   └── route_observer.dart      # 路由監聽：追蹤頁面導航與頁面切換事件
         │
         ├── screens/                     # 畫面層 (UI Screens)
         │   ├── auth/                    # 1. 認證模組
@@ -84,7 +114,9 @@
         │   │   ├── role_play_intro_screen.dart# 對話前引導：選擇練習角色與難度
         │   │   ├── roleplay_screen.dart # 實戰：與 AI 進行語音/文字對話練習
         │   │   ├── naturalness_screen.dart# 評分：顯示對話自然度、重音與語法修正
-        │   │   └── grammar_tip_screen.dart# 教學：針對該次練習出錯的文法進行小教學
+        │   │   ├── grammar_tip_screen.dart# 教學：針對該次練習出錯的文法進行小教學
+        │   │   ├── manual_search_screen.dart # 手動搜尋場景：輸入文字查詢物品
+        │   │   └── scenario_detail_screen.dart # 情境詳情：單一場景結果與延伸學習
         │   │        
         │   ├── profile/                             # 4. 個人中心模組
         │   │   ├── profile_screen.dart              # 個人主頁：能力雷達圖、金幣與徽章入口
@@ -95,6 +127,7 @@
         │   │   │
         │   │   │   # --- 收藏夾系統 (Favorites) ---
         │   │   ├── photo_folder_v2_screen.dart      # 我的收藏夾首頁：顯示所有資料夾與統計
+        │   │   ├── folder_card.dart                 # 資料夾入口卡片：文件實際位於 screens/profile
         │   │   ├── folder_detail_screen.dart        # 新資料夾內容頁 (點進資料夾後的單字列表)
         │   │   ├── single_vocab_detail_screen.dart  # 單一單字詳情 (從收藏點進去的精美字卡)
         │   │   │
@@ -118,7 +151,9 @@
         │   │
         │   └── premium/                 # 8. 付費與點數模組
         │       ├── premium_screen.dart  # 訂閱頁：展示 Premium 會員權益
-        │       ├── buy_points_screen.dart# 點數商城：購買 J-Points
+        │       ├── subscription_management_screen.dart # 管理訂閱與方案切換頁面
+        │       ├── store_dashboard_screen.dart # 商店主頁：展示可購買方案與促銷
+        │       ├── subscription_checkout_screen.dart # 訂閱結帳頁：確認付款與方案細節
         │       ├── point_checkout_screen.dart# 結帳確認：點數轉換計算
         │       ├── credit_card_payment_screen.dart# 支付頁面：信用卡資訊輸入
         │       ├── google_play_purchase_sheet.dart# 內購底板：模擬 App Store 付款流程
@@ -141,9 +176,9 @@
             ├── profile/                 # 個人檔案零件
             │   ├── profile_header.dart  # 大頭貼與經驗值進度條
             │   ├── profile_radar_section.dart# 個人能力雷達圖卡片區塊
-            │   └── profile_achievements_section.dart# 核心成就徽章展示區塊
+            │   ├── profile_achievements_section.dart# 核心成就徽章展示區塊
             │   │
-            │   └── folder/                          # 收藏夾專屬零件包
+            │   ├── folder/                          # 收藏夾專屬零件包
             │       └── folder_card.dart             # 首頁的資料夾小卡片 (含重新命名/刪除功能)
             │
             ├── scenario/                # 情境零件
@@ -153,7 +188,7 @@
             │   ├── found_user_card.dart        # 搜尋到的用戶卡片 (含大頭貼邏輯)
             │   ├── pending_request_card.dart   # 待確認的好友邀請卡片 (含大頭貼邏輯)
             │   ├── my_id_card.dart            # 我的專屬 ID 卡片
-                └── friend_list_card.dart      # 我的好友列表專用卡片
+            │   └── friend_list_card.dart      # 我的好友列表專用卡片
             │
             ├── study_group/                   # 學習小組專用零件包
             │   ├── task_type_card.dart        # (設定頁) 任務類型選項卡片 (拍照/打卡)
@@ -165,6 +200,12 @@
             │   ├── ranking_list_card.dart     # (首頁) 底部本週貢獻排行榜名單
             │   ├── invite_friend_card.dart    # (建立/邀請頁) 好友名單卡片 (打勾選取)
             │   └── group_invite_card.dart     # (收件匣) 別人邀請我的卡片 (接受/拒絕)
+            │
+            ├── premium/                 # 付費方案元件
+            │   ├── buy_points_tab.dart   # 點數分頁：顯示 J-Points 購買選項
+            │   ├── premium_tab.dart      # Premium 分頁：展示會員福利與方案比較
+            │   ├── plan_card.dart       # 方案展示卡片：展示不同訂閱方案與價格
+            │   └── store_tab.dart        # 商店分頁：展示可購買商品與推薦內容
             │
             └── dialogs/                 # 彈窗組件
                 ├── level_up_dialog.dart # 恭喜升級/獲得徽章的慶祝動畫彈窗

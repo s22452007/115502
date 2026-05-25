@@ -423,6 +423,94 @@ def user_list():
     return render_template('user/list.html', users=users, keyword=keyword)
 
 
+@app.route('/user/<int:user_id>')
+@admin_login_required
+def user_detail(user_id):
+    conn = get_db_connection()
+
+    user = conn.execute('SELECT * FROM user WHERE id = ?', (user_id,)).fetchone()
+    if not user:
+        conn.close()
+        return redirect(url_for('user_list'))
+    user = dict(user)
+    user['last_seen_at'] = utc_to_tw(user.get('last_seen_at') or '')
+    user['created_at']   = utc_to_tw(user.get('created_at') or '')
+
+    try:
+        subscriptions = conn.execute('''
+            SELECT us.id, us.status, us.billing_cycle, us.start_date, us.end_date,
+                   us.auto_renew, us.created_at, sp.name as plan_name
+            FROM user_subscription us
+            LEFT JOIN subscription_plan sp ON sp.id = us.plan_id
+            WHERE us.user_id = ?
+            ORDER BY us.created_at DESC
+        ''', (user_id,)).fetchall()
+        subscriptions = [{**dict(s),
+            'created_at': utc_to_tw(s['created_at']),
+            'start_date': utc_to_tw(s['start_date'] or ''),
+            'end_date':   utc_to_tw(s['end_date'] or '')} for s in subscriptions]
+    except: subscriptions = []
+
+    try:
+        transactions = conn.execute('''
+            SELECT id, transaction_type, points, price, payment_method, created_at
+            FROM point_transaction WHERE user_id = ?
+            ORDER BY created_at DESC LIMIT 30
+        ''', (user_id,)).fetchall()
+        transactions = [{**dict(t), 'created_at': utc_to_tw(t['created_at'])} for t in transactions]
+    except: transactions = []
+
+    try:
+        photo_count = conn.execute('SELECT COUNT(*) FROM user_photo WHERE user_id = ?', (user_id,)).fetchone()[0]
+        photos = conn.execute('''
+            SELECT p.id, p.image_path, p.custom_title, p.created_at, s.name as scene_name
+            FROM user_photo p LEFT JOIN scene s ON s.id = p.scene_id
+            WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 6
+        ''', (user_id,)).fetchall()
+        photos = [{**dict(p), 'created_at': utc_to_tw(p['created_at'])} for p in photos]
+    except: photo_count = 0; photos = []
+
+    try:
+        vocab_count = conn.execute(
+            'SELECT COUNT(*) FROM user_vocab WHERE user_id = ?', (user_id,)
+        ).fetchone()[0]
+    except: vocab_count = 0
+
+    try:
+        friends = conn.execute('''
+            SELECT u.id, u.username, u.email, u.friend_id, u.japanese_level
+            FROM friendship f JOIN user u ON u.id = f.friend_id
+            WHERE f.user_id = ?
+        ''', (user_id,)).fetchall()
+        friends = [dict(f) for f in friends]
+    except: friends = []
+
+    try:
+        feedbacks = conn.execute('''
+            SELECT id, feedback_type, content, reply, replied_at, created_at
+            FROM feedback WHERE user_id = ? ORDER BY created_at DESC
+        ''', (user_id,)).fetchall()
+        feedbacks = [{**dict(f),
+            'created_at': utc_to_tw(f['created_at']),
+            'replied_at': utc_to_tw(f['replied_at'] or '')} for f in feedbacks]
+    except: feedbacks = []
+
+    try:
+        groups = conn.execute('''
+            SELECT sg.id, sg.name, sg.description, gm.role, gm.joined_at
+            FROM group_member gm JOIN study_group sg ON sg.id = gm.group_id
+            WHERE gm.user_id = ?
+        ''', (user_id,)).fetchall()
+        groups = [{**dict(g), 'joined_at': utc_to_tw(g['joined_at'] or '')} for g in groups]
+    except: groups = []
+
+    conn.close()
+    return render_template('user/detail.html',
+        user=user, subscriptions=subscriptions, transactions=transactions,
+        photos=photos, photo_count=photo_count, vocab_count=vocab_count,
+        friends=friends, feedbacks=feedbacks, groups=groups)
+
+
 # ==========================================
 # [測驗題目管理]
 # ==========================================

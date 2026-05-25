@@ -40,29 +40,26 @@ class SubscriptionCheckoutScreen extends StatefulWidget {
 }
 
 class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen> {
-  static const _green = Color(0xFF4E8B4C);
-  static const _gold = Color(0xFFC6B13B);
-  static const _textDark = Color(0xFF333333);
-  static const _bg = Color(0xFFF8F8F8);
+  // 🌟 扁平化配色常量
+  static const Color _bgColor = Color(0xFFF4F7F5);
+  static const Color _textDark = Color(0xFF2C3E50);
+  static const Color _subText = Color(0xFF8E9AAB);
 
   String _paymentMethod = 'google_pay';
   bool _isProcessing = false;
 
-  // 使用 ?? 0 確保就算資料有問題也不會產生紅色毛毛蟲
   bool get _isMonthly => widget.initialBillingCycle == 'monthly';
   int get _price => (_isMonthly ? widget.priceMonthly : widget.priceYearly) ?? 0;
   int get _points => (_isMonthly ? widget.pointsGrantMonthly : widget.pointsGrantYearly) ?? 0;
-  
   String get _planTitle => _isMonthly ? 'Premium (月繳)' : 'Premium Pro (年繳)';
-  String get _paymentLabel => _paymentMethod == 'card' ? '信用卡' : 'Google Pay';
-
   bool get _isTrialFlow => _isMonthly && widget.isTrialPurchase;
 
+  // 輔助函式：日期格式化 (若你的專案有 utils，請確保可呼叫)
   String _formatIsoDate(String? iso) {
     if (iso == null) return '—';
     try {
       final dt = DateTime.parse(iso).toLocal();
-      return formatDate(dt);
+      return "${dt.year}/${dt.month}/${dt.day}";
     } catch (_) {
       return iso;
     }
@@ -71,112 +68,59 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
   Future<void> _handleConfirm() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
-
     setState(() => _isProcessing = true);
-
-    // Demo 模式：模擬 1.5 秒的付款處理
     await Future.delayed(const Duration(milliseconds: 1500));
-
     if (!mounted) return;
     setState(() => _isProcessing = false);
 
-    // 模擬 API 回應
     final res = widget.isPendingUpgrade
-        ? await ApiClient.scheduleYearlyUpgrade(userId, paymentMethod: _paymentLabel)
+        ? await ApiClient.scheduleYearlyUpgrade(userId, paymentMethod: _paymentMethod)
         : await ApiClient.subscribeplan(
             userId: userId,
             planId: widget.planId,
             billingCycle: widget.initialBillingCycle,
-            paymentMethod: _paymentLabel,
+            paymentMethod: _paymentMethod,
           );
 
     if (!mounted) return;
-
     if (!res.containsKey('error')) {
       final provider = context.read<UserProvider>();
       if (widget.isPendingUpgrade) {
-        // 排程升級：贈點已立即發放，同步錢包與排程狀態
-        if (res['total_points'] != null) {
-          provider.setJPts((res['total_points'] as num).toInt());
-        }
+        if (res['total_points'] != null) provider.setJPts((res['total_points'] as num).toInt());
         provider.setPendingUpgradeStart(res['scheduled_start'] as String?);
       } else {
         provider.setIsPremium(true);
-        if (res['total_points'] != null) {
-          provider.setJPts((res['total_points'] as num).toInt());
-        }
-        provider.setSubscriptionInfo(
-          endDate: res['end_date'],
-          autoRenew: true,
-          status: 'active',
-          planName: _planTitle,
-          billingCycle: widget.initialBillingCycle,
-        );
+        if (res['total_points'] != null) provider.setJPts((res['total_points'] as num).toInt());
+        provider.setSubscriptionInfo(endDate: res['end_date'], autoRenew: true, status: 'active', planName: _planTitle, billingCycle: widget.initialBillingCycle);
       }
       _showSuccessDialog(res);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['error'] ?? '付款失敗，請稍後再試')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'] ?? '付款失敗')));
     }
   }
 
   void _showSuccessDialog(Map<String, dynamic> res) {
-    final titleText = widget.isPendingUpgrade ? '付款成功！' : '訂閱成功！';
-    final messageText = widget.isPendingUpgrade
-        ? '年繳升級排程已建立！'
-        : '$_planTitle 已啟用';
-    final scheduledStart = res['scheduled_start'] as String?;
-    final pointsGranted = res['points_granted'] as int? ?? _points;
-
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(
-          children: [
-            const Icon(Icons.check_circle, color: _green, size: 56),
-            const SizedBox(height: 8),
-            Text(titleText, textAlign: TextAlign.center),
-          ],
-        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(messageText, style: const TextStyle(fontWeight: FontWeight.bold, color: _textDark)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(8)),
-              child: Text('🎁 已獲得 $pointsGranted J-Pts！', style: const TextStyle(color: _gold, fontWeight: FontWeight.bold)),
-            ),
-            if (widget.isPendingUpgrade && scheduledStart != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: const Color(0xFFEAF4EA), borderRadius: BorderRadius.circular(8)),
-                child: Text(
-                  '月繳到期後將於 ${_formatIsoDate(scheduledStart)} 自動切換年繳',
-                  style: const TextStyle(color: _green, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+            const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 64),
+            const SizedBox(height: 16),
+            const Text('付款成功！', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: _textDark)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () { Navigator.pop(ctx); Navigator.pop(context, true); },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: const Text('開始使用', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            )
           ],
         ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context, true);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('開始使用'),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -184,129 +128,81 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(backgroundColor: _green, foregroundColor: Colors.white, title: const Text('確認訂閱內容'), elevation: 0),
+      backgroundColor: _bgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _textDark, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('確認訂閱內容', style: TextStyle(color: _textDark, fontWeight: FontWeight.w900)),
+        centerTitle: true,
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // 方案卡
+          // 方案卡片
           Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: _isMonthly ? _green : _gold, width: 2)),
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(_planTitle, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: _isMonthly ? _green : _gold)),
-                    Text('NT\$ $_price / ${_isMonthly ? '月' : '年'}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _textDark)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ...widget.features.map((f) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(children: [Icon(Icons.check_circle, color: _isMonthly ? _green : _gold, size: 18), const SizedBox(width: 8), Expanded(child: Text(f, style: const TextStyle(fontSize: 14, color: Color(0xFF555555)) ))]))),
+                Text(_planTitle, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: AppColors.primary)),
+                const SizedBox(height: 8),
+                Text('NT\$ $_price / ${_isMonthly ? '月' : '年'}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 28, color: _textDark)),
+                const SizedBox(height: 16),
+                ...widget.features.map((f) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(children: [
+                    const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(f, style: const TextStyle(fontSize: 14, color: _textDark, fontWeight: FontWeight.w600))),
+                  ]),
+                )),
               ],
             ),
           ),
           const SizedBox(height: 20),
 
-          // 提示文字 (解決你的 UX 疑慮)
+          // 提示卡片 (扁平化背景)
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: _isMonthly ? const Color(0xFFEAF4EA) : const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: const Color(0xFFEDF3EF), borderRadius: BorderRadius.circular(20)),
             child: Text(
-              widget.isPendingUpgrade
-                  ? '⚡ 付款後將於 ${_formatIsoDate(widget.currentSubscriptionEndDate)} 自動切換為年繳方案。\n'
-                    '• 贈點 +${widget.pointsGrantYearly} J-Pts 將於付款成功後立即發放。\n'
-                    '• 月繳期間繼續正常使用，到期後無縫切換。'
-                  : (_isTrialFlow
-                      ? '⭐ 本次訂閱享 7 天免費試用。\n'
-                        '• 試用期內隨時可取消，無需負擔任何費用。\n'
-                        '• 若到期未取消，系統將自動按月續訂扣款。'
-                      : (_isMonthly
-                          ? '⭐ 選擇月繳方案，訂閱將立即啟動並於每月自動續訂。'
-                          : '⚡ 年繳方案享激省優惠。\n'
-                            '• 確認訂閱後將立即扣款 NT\$ $_price。\n'
-                            '• 隨時可取消自動續訂，效期至一年後結束。')),
-              style: const TextStyle(fontSize: 13.5, color: Color(0xFF555555), height: 1.5),
+              _isTrialFlow ? '⭐ 本次訂閱享 7 天免費試用。' : '⭐ 訂閱即享 Premium 完整權益與無限收藏。',
+              style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w700, height: 1.5),
             ),
           ),
           const SizedBox(height: 24),
 
-          const Text('付款方式', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _textDark)),
-          const SizedBox(height: 8),
-          _buildPaymentOption('google_pay', 'Google Pay', Icons.payments_outlined),
-          const SizedBox(height: 8),
-          _buildPaymentOption('card', '信用卡', Icons.credit_card),
+          // 付款方式
+          const Text('付款方式', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _textDark)),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFFD700)),
-            ),
-            child: const Text(
-              '💡 正式上線後將支援：\n'
-              '✓ Google Pay\n'
-              '✓ 信用卡 / 簽帳金融卡（由綠界安全處理）\n\n'
-              '目前為 Demo 模式，點擊付款將直接模擬成功。',
-              style: TextStyle(fontSize: 12, color: Color(0xFF666666), height: 1.4),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // 訂單摘要
-          Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE0E0E0))),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('訂單摘要', style: TextStyle(fontWeight: FontWeight.bold, color: _textDark)),
-                const Divider(height: 20),
-                _summaryRow(_planTitle, 'NT\$ $_price'),
-                if (widget.isPendingUpgrade)
-                  _summaryRow('生效日', _formatIsoDate(widget.currentSubscriptionEndDate)),
-                if (_isTrialFlow) _summaryRow('首期費用', 'NT\$ 0 (享 7 天免費試用)', valueColor: Colors.green),
-                if (_isMonthly && !_isTrialFlow && !widget.isPendingUpgrade)
-                  _summaryRow('首期費用', 'NT\$ $_price', valueColor: Colors.black),
-                _summaryRow(
-                  '🎁 成功訂閱贈送',
-                  widget.isPendingUpgrade
-                      ? '+$_points 點（付款時立即贈送）'
-                      : (_isMonthly
-                          ? (_isTrialFlow ? '+$_points 點 (試用結束後)' : '+$_points 點')
-                          : '+$_points 點'),
-                  valueColor: _gold,
-                ),
-                _summaryRow('付款方式', _paymentLabel),
-                const Divider(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('今日結帳總計', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textDark)),
-                    Text(_isTrialFlow ? 'NT\$ 0' : 'NT\$ $_price', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: Colors.redAccent)),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _buildPaymentOption('google_pay', 'Google Pay', Icons.payments_rounded),
+          const SizedBox(height: 12),
+          _buildPaymentOption('card', '信用卡', Icons.credit_card_rounded),
           const SizedBox(height: 32),
 
+          // 結帳按鈕 (大氣的扁平化按鈕)
           SizedBox(
             width: double.infinity,
+            height: 56,
             child: ElevatedButton(
               onPressed: _isProcessing ? null : _handleConfirm,
-              style: ElevatedButton.styleFrom(backgroundColor: _isMonthly ? _green : _gold, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
               child: _isProcessing 
-                ? const CircularProgressIndicator(color: Colors.white)
-                : Text(
-                    _isTrialFlow
-              ? '同意規則並開始 7 天試用'
-              : (widget.isPendingUpgrade ? '確認付款' : (_isMonthly ? '立即訂閱月繳' : '$_paymentLabel  NT\$ $_price')),
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
+                      _isTrialFlow ? '確認試用' : '立即支付 NT\$ $_price',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
             ),
           ),
         ],
@@ -319,30 +215,20 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
     return GestureDetector(
       onTap: () => setState(() => _paymentMethod = value),
       child: Container(
-        decoration: BoxDecoration(color: isSelected ? const Color(0xFFEAF4EA) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? _green : const Color(0xFFE0E0E0), width: isSelected ? 2 : 1)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEDF3EF) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
-            Radio<String>(value: value, groupValue: _paymentMethod, onChanged: (v) => setState(() => _paymentMethod = v!), activeColor: _green),
-            const SizedBox(width: 4),
-            Icon(icon, color: _green, size: 22),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: _textDark, fontSize: 15)),
+            Icon(icon, color: isSelected ? AppColors.primary : _subText, size: 24),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: isSelected ? AppColors.primary : _textDark, fontSize: 16)),
+            const Spacer(),
+            if (isSelected) const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 22),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _summaryRow(String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF777777), fontSize: 14)),
-          Text(value, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: valueColor ?? _textDark)),
-        ],
       ),
     );
   }

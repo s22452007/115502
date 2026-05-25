@@ -212,6 +212,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       _isTyping = true;
     });
     try {
+      final userLevel = context.read<UserProvider>().japaneseLevel;
+      final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
+
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(
         url,

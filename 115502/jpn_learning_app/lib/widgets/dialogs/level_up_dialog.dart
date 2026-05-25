@@ -14,11 +14,11 @@ class LevelUpDialog extends StatelessWidget {
       context: context,
       barrierDismissible: true, // 允許點擊外部關閉
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withOpacity(0.5), // 扁平化通常搭配較乾淨的半透明黑底
-      transitionDuration: const Duration(milliseconds: 500), 
+      barrierColor: Colors.black.withOpacity(0.6), // 稍微調暗一點，讓發光更明顯
+      transitionDuration: const Duration(milliseconds: 600), // 彈出時間稍微拉長一點點
       pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (context, anim1, anim2, child) {
-        // 保留果凍彈出動畫，但時間與曲線微調讓它更俐落
+        // 保留果凍彈出動畫
         final curvedValue = Curves.elasticOut.transform(anim1.value);
         return Transform.scale(
           scale: curvedValue,
@@ -43,18 +43,18 @@ class LevelUpDialog extends StatelessWidget {
     // ==========================================
     // 扁平化配色系統 (以綠色為主)
     // ==========================================
-    const Color primaryGreen = Color(0xFF4A7C59); // 主題綠
-    const Color lightGreenBg = Color(0xFFEDF3EF); // 徽章圓形底色 (極淡的綠)
+    const Color primaryGreen = Color(0xFF4A7C59); // 主題綠 (扁平)
+    const Color vibrantGlowGreen = Color(0xFF00E676); // 用來發光的亮綠色
     const Color darkTextColor = Color(0xFF2C3E50); // 深色文字
     const Color grayTextColor = Color(0xFF8E9AAB); // 次要敘述文字
 
     // ==========================================
-    // 智慧文案與單色 Icon 判斷邏輯 (取代原本的 Emoji)
+    // 智慧文案與單色 Icon 判斷邏輯
     // ==========================================
     String topTitle = '恭喜升級';
     String descText = '你的努力有了回報！繼續保持下去！';
     String buttonText = '太棒了';
-    IconData topIcon = Icons.military_tech_rounded; // 預設單色小圖示
+    IconData topIcon = Icons.military_tech_rounded; 
 
     if (badgeId == 'level_01') {
       if (level == 1) {
@@ -79,29 +79,54 @@ class LevelUpDialog extends StatelessWidget {
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24), // 扁平化風格常用的大圓角
-          // 徹底移除 BoxShadow，達到真正的 Flat Design
+          borderRadius: BorderRadius.circular(28), // 圓角稍微加大，更有勳章盒感
+          // 🌟 卡片外圍加上超淡淡的發光，讓卡片更輕盈
+          boxShadow: [
+            BoxShadow(
+              color: primaryGreen.withOpacity(0.05),
+              blurRadius: 30,
+              spreadRadius: 2,
+              offset: const Offset(0, 10),
+            )
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ---------------- 單色扁平化圖示區塊 ----------------
+            // ---------------- 🌟 重點：發光勳章區塊 (實體化、邊框、發光) ----------------
             Container(
-              padding: const EdgeInsets.all(28),
-              decoration: const BoxDecoration(
-                color: lightGreenBg,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white, // 改為純白底色凸顯 Icon
                 shape: BoxShape.circle,
+                // 1. 🌟 加入實體深綠色圓形邊框 (勳章感)
+                border: Border.all(color: primaryGreen, width: 4),
+                // 2. 🌟 霓虹發光特效 (層疊 BoxShadow)
+                boxShadow: [
+                  // 內層：強烈綠色光暈
+                  BoxShadow(
+                    color: vibrantGlowGreen.withOpacity(0.6),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                  // 外層：擴散的淡淡綠色光圈
+                  BoxShadow(
+                    color: vibrantGlowGreen.withOpacity(0.2),
+                    blurRadius: 50,
+                    spreadRadius: 15,
+                  ),
+                ],
               ),
               child: Icon(
                 iconData, 
-                color: primaryGreen, 
-                size: 64,
+                color: primaryGreen, // 保持單色 Icon
+                size: 70, // 稍微加大 Icon 尺寸
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 32),
             
             // ---------------- 小標題 (帶單色 Icon) ----------------
             Row(
@@ -148,7 +173,7 @@ class LevelUpDialog extends StatelessWidget {
                 ),
               ),
             
-            // ---------------- 內文描述 ----------------
+            // ---------------- 內文描述 (扁平化極簡) ----------------
             Text(
               descText,
               textAlign: TextAlign.center,
@@ -161,15 +186,15 @@ class LevelUpDialog extends StatelessWidget {
             ),
             const SizedBox(height: 36),
             
-            // ---------------- 扁平化確認按鈕 ----------------
+            // ---------------- 扁平化確認按鈕 (綠色為主) ----------------
             SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryGreen, // 純綠底色
-                  elevation: 0, // 移除陰影
+                  backgroundColor: primaryGreen, 
+                  elevation: 0, 
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),

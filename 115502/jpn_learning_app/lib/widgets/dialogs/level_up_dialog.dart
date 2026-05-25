@@ -1,4 +1,4 @@
-/// 徽章升級慶祝對話框 (扁平化極簡綠色版)
+/// 徽章升級慶祝對話框 (扁平綠色 + 黃金發光裝飾版)
 /// 負責在用戶徽章等級提升時顯示動畫慶祝對話框
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
@@ -14,11 +14,11 @@ class LevelUpDialog extends StatelessWidget {
       context: context,
       barrierDismissible: true, // 允許點擊外部關閉
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withOpacity(0.5), // 扁平化通常搭配較乾淨的半透明黑底
-      transitionDuration: const Duration(milliseconds: 500), 
+      barrierColor: Colors.black.withOpacity(0.65), // 加深一點點背景，讓金光更耀眼
+      transitionDuration: const Duration(milliseconds: 600), 
       pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (context, anim1, anim2, child) {
-        // 保留果凍彈出動畫，但時間與曲線微調讓它更俐落
+        // 果凍彈出動畫
         final curvedValue = Curves.elasticOut.transform(anim1.value);
         return Transform.scale(
           scale: curvedValue,
@@ -41,20 +41,21 @@ class LevelUpDialog extends StatelessWidget {
     final String badgeTitle = info['title'] as String;
 
     // ==========================================
-    // 扁平化配色系統 (以綠色為主)
+    // 配色系統：主體扁平綠 + 裝飾黃金發光
     // ==========================================
-    const Color primaryGreen = Color(0xFF4A7C59); // 主題綠
-    const Color lightGreenBg = Color(0xFFEDF3EF); // 徽章圓形底色 (極淡的綠)
+    const Color primaryGreen = Color(0xFF4A7C59); // 主題綠 (扁平)
+    const Color goldGlow = Color(0xFFFFD700);     // 亮金色 (發光與裝飾)
+    const Color darkGold = Color(0xFFFFB300);     // 深金色 (增加星星層次)
     const Color darkTextColor = Color(0xFF2C3E50); // 深色文字
     const Color grayTextColor = Color(0xFF8E9AAB); // 次要敘述文字
 
     // ==========================================
-    // 智慧文案與單色 Icon 判斷邏輯 (取代原本的 Emoji)
+    // 智慧文案與單色 Icon 判斷邏輯
     // ==========================================
     String topTitle = '恭喜升級';
     String descText = '你的努力有了回報！繼續保持下去！';
     String buttonText = '太棒了';
-    IconData topIcon = Icons.military_tech_rounded; // 預設單色小圖示
+    IconData topIcon = Icons.military_tech_rounded; 
 
     if (badgeId == 'level_01') {
       if (level == 1) {
@@ -79,29 +80,82 @@ class LevelUpDialog extends StatelessWidget {
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24), // 扁平化風格常用的大圓角
-          // 徹底移除 BoxShadow，達到真正的 Flat Design
+          borderRadius: BorderRadius.circular(28), 
+          // 淡淡卡片背景光，讓整體更輕盈
+          boxShadow: [
+            BoxShadow(
+              color: primaryGreen.withOpacity(0.05),
+              blurRadius: 30,
+              spreadRadius: 2,
+              offset: const Offset(0, 10),
+            )
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ---------------- 單色扁平化圖示區塊 ----------------
-            Container(
-              padding: const EdgeInsets.all(28),
-              decoration: const BoxDecoration(
-                color: lightGreenBg,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                iconData, 
-                color: primaryGreen, 
-                size: 64,
-              ),
+            // ---------------- 🌟 升級版：金色發光與外圍裝飾的勳章 ----------------
+            Stack(
+              clipBehavior: Clip.none, // 允許裝飾的星星稍微超出邊界
+              alignment: Alignment.center,
+              children: [
+                // 1. 金色霓虹發光底層 (Golden Aura)
+                Container(
+                  width: 100, // 控制發光範圍
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      // 內層：強烈金色光暈
+                      BoxShadow(color: goldGlow.withOpacity(0.65), blurRadius: 30, spreadRadius: 6),
+                      // 外層：擴散的淡淡金色光圈
+                      BoxShadow(color: goldGlow.withOpacity(0.25), blurRadius: 60, spreadRadius: 20),
+                    ],
+                  ),
+                ),
+                
+                // 2. 外圍金色裝飾 (漂浮的星星與閃光)
+                Positioned(
+                  top: -10, 
+                  left: -15, 
+                  child: Icon(Icons.auto_awesome_rounded, color: goldGlow, size: 32),
+                ),
+                Positioned(
+                  bottom: -5, 
+                  right: -20, 
+                  child: Icon(Icons.star_rounded, color: darkGold, size: 28),
+                ),
+                Positioned(
+                  top: 15, 
+                  right: -10, 
+                  child: Icon(Icons.circle, color: goldGlow.withOpacity(0.8), size: 8),
+                ),
+                Positioned(
+                  bottom: 20, 
+                  left: -25, 
+                  child: Icon(Icons.star_border_rounded, color: darkGold, size: 22),
+                ),
+
+                // 3. 實體深綠色外框 + 白底單色圖示 (核心徽章)
+                Container(
+                  padding: const EdgeInsets.all(26),
+                  decoration: BoxDecoration(
+                    color: Colors.white, 
+                    shape: BoxShape.circle,
+                    border: Border.all(color: primaryGreen, width: 4.5), // 厚實的金屬感邊框
+                  ),
+                  child: Icon(
+                    iconData, 
+                    color: primaryGreen, // 保持扁平化單色 Icon
+                    size: 68,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 36),
             
             // ---------------- 小標題 (帶單色 Icon) ----------------
             Row(
@@ -168,8 +222,8 @@ class LevelUpDialog extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryGreen, // 純綠底色
-                  elevation: 0, // 移除陰影
+                  backgroundColor: primaryGreen, 
+                  elevation: 0, 
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),

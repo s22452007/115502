@@ -25,9 +25,9 @@ def get_next_sunday_end():
 def handle_deposit_and_free_quota(user):
     """
     處理每週免費次數與押金邏輯，回傳 (success, msg, deposit_amount)。
-    - 免費用戶：每週 1 次免押金
-    - 訂閱用戶：每週 3 次免押金
-    - 超過後：免費用戶押 20 點，訂閱用戶押 10 點
+    - 免費用戶：每週 1 次免押金，超過後押 20 點
+    - 訂閱用戶：每週 3 次免押金，超過後押 10 點
+    加入成功後無論免費或付押金都會計入本週次數。
     """
     current_week = get_current_year_week()
 
@@ -40,16 +40,17 @@ def handle_deposit_and_free_quota(user):
     free_used = getattr(user, 'group_free_used_this_week', 0) or 0
 
     if free_used < free_quota:
-        # 本週還有免費次數
+        # 本週免費額度內：免押金
         user.group_free_used_this_week = free_used + 1
         return True, "OK", 0
     else:
-        # 本週免費次數已用完，需要押金
+        # 本週免費額度已用完：需要押金
         deposit = 10 if user.is_premium else 20
         if user.j_pts < deposit:
             quota_label = '3 次' if user.is_premium else '1 次'
             return False, f"本週免費額度（{quota_label}）已用完，且點數不足 {deposit} 點押金！", 0
         user.j_pts -= deposit
+        user.group_free_used_this_week = free_used + 1
         feature_key = 'group_deposit_premium' if user.is_premium else 'group_deposit_free'
         db.session.add(PointTransaction(
             user_id=user.id,
@@ -63,8 +64,8 @@ def handle_deposit_and_free_quota(user):
 
 
 def _give_group_reward(user, member, group):
-    """按完成次數與訂閱狀態給予獎勵，回傳描述字串。"""
-    # 等級判斷
+    """按本週加入次數（是否付押金）與訂閱狀態給予獎勵，回傳描述字串。"""
+    # 目標難度分級
     if group.goal_target <= 15:
         tier = 0  # 輕鬆
     elif group.goal_target <= 30:
@@ -85,56 +86,35 @@ def _give_group_reward(user, member, group):
             related_feature='group_deposit_refund',
         ))
 
-    completions = getattr(user, 'group_completions', 0) or 0
-    msg_parts = []
-
-    if completions == 0:
-        # 第一次達成：5/10/20 點
+    # 依「是否付押金」判斷獎勵等級
+    if not member.paid_deposit:
+        # 本週第一次加入（免押金）：較多獎勵 5/10/20
         pts = [5, 10, 20][tier]
-        user.j_pts += pts
-        db.session.add(PointTransaction(
-            user_id=user.id,
-            points=pts,
-            price=0,
-            payment_method='reward',
-            transaction_type=TransactionType.REWARD,
-            related_feature='group_first_completion',
-        ))
-        msg_parts.append(f'獲得 {pts} 點')
+        related_feature = 'group_first_completion'
     elif user.is_premium:
-        # 訂閱用戶後續達成：5/8/12 點
+        # 本週第二次起 + 訂閱用戶：5/8/12
         pts = [5, 8, 12][tier]
-        user.j_pts += pts
-        db.session.add(PointTransaction(
-            user_id=user.id,
-            points=pts,
-            price=0,
-            payment_method='reward',
-            transaction_type=TransactionType.REWARD,
-            related_feature='group_completion',
-        ))
-        msg_parts.append(f'獲得 {pts} 點')
+        related_feature = 'group_completion'
     else:
-        # 一般用戶後續達成：3/5/8 點
+        # 本週第二次起 + 免費用戶：3/5/8
         pts = [3, 5, 8][tier]
-        user.j_pts += pts
-        db.session.add(PointTransaction(
-            user_id=user.id,
-            points=pts,
-            price=0,
-            payment_method='reward',
-            transaction_type=TransactionType.REWARD,
-            related_feature='group_completion',
-        ))
-        msg_parts.append(f'獲得 {pts} 點')
+        related_feature = 'group_completion'
 
+    user.j_pts += pts
+    db.session.add(PointTransaction(
+        user_id=user.id,
+        points=pts,
+        price=0,
+        payment_method='reward',
+        transaction_type=TransactionType.REWARD,
+        related_feature=related_feature,
+    ))
+
+    msg_parts = [f'獲得 {pts} 點']
     if deposit_refund > 0:
         msg_parts.append(f'退還押金 {deposit_refund} 點')
 
-    if hasattr(user, 'group_completions'):
-        user.group_completions = completions + 1
-
-    return '、'.join(msg_parts) if msg_parts else '達成獎勵已發放'
+    return '、'.join(msg_parts)
 
 
 # ==========================================

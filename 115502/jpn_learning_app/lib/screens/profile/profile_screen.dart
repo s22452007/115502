@@ -197,7 +197,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     alignment: Alignment.topCenter,
                     children: [
                       Container(
-                        // 🌟 margin 左右設為 24，與下方清單對齊
                         margin: EdgeInsets.only(top: 55, left: _sidePadding, right: _sidePadding),
                         padding: const EdgeInsets.fromLTRB(24, 65, 24, 48),
                         decoration: BoxDecoration(
@@ -207,21 +206,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: Column(
                           children: [
+                            // 🌟 移除了多餘的 Padding，讓 TextField 與 Text 完全切齊對齊
                             if (_isEditing)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: TextField(
-                                  controller: _nameController,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor),
-                                  decoration: InputDecoration(
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                                    filled: true,
-                                    fillColor: _flatCanvasColor,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
-                                  ),
+                              TextField(
+                                controller: _nameController,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                  filled: true,
+                                  fillColor: _flatCanvasColor,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
                                 ),
                               )
                             else

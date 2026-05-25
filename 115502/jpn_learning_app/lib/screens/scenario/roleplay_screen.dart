@@ -37,11 +37,22 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     super.initState();
     _fetchUsageData(); // 初始化時抓取使用量
 
+    final userLevel = context.read<UserProvider>().japaneseLevel;
+    final displayLevel = userLevel.isNotEmpty ? userLevel : 'N5';
+
+    // --- 測試用：顯示目前讀取到的等級 ---
     _messages.add({
-      'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
+      'text': '*** 目前使用者的等級：$displayLevel ***\n\n歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
       'isUserMessage': false,
-      'furiganaText': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', // 未來後端可提供標音版本
+      'furiganaText': '*** 目前使用者的等級：$displayLevel ***\n\n歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', 
     });
+
+    // --- 原本的開場訊息（未來不需要顯示等級時，解開這段並刪除上面那段即可） ---
+    // _messages.add({
+    //   'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
+    //   'isUserMessage': false,
+    //   'furiganaText': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', // 未來後端可提供標音版本
+    // });
 
     // 模擬：一進來先給幾個快捷選項
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
@@ -201,13 +212,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       _isTyping = true;
     });
     try {
+      final userLevel = context.read<UserProvider>().japaneseLevel;
+      final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
+
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(
         url,
         body: {
           'message': '[幫我開場]',
           'topic': widget.topicTitle,
-          'level': 'N4',
+          'level': levelToPass,
           'history': '',
         },
       );
@@ -246,13 +260,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     _controller.clear();
 
     try {
+      final userLevel = context.read<UserProvider>().japaneseLevel;
+      final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
+
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(
         url,
         body: {
           'message': text,
           'topic': widget.topicTitle,
-          'level': 'N4',
+          'level': levelToPass,
           'history': '',
         },
       );

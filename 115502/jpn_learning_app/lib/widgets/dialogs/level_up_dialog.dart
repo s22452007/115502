@@ -1,4 +1,4 @@
-/// 徽章升級慶祝對話框 (扁平化極簡綠色版)
+/// 徽章升級慶祝對話框 (扁平綠色 + 黃金發光裝飾版)
 /// 負責在用戶徽章等級提升時顯示動畫慶祝對話框
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
@@ -14,11 +14,11 @@ class LevelUpDialog extends StatelessWidget {
       context: context,
       barrierDismissible: true, // 允許點擊外部關閉
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withOpacity(0.6), // 稍微調暗一點，讓發光更明顯
-      transitionDuration: const Duration(milliseconds: 600), // 彈出時間稍微拉長一點點
+      barrierColor: Colors.black.withOpacity(0.65), // 加深一點點背景，讓金光更耀眼
+      transitionDuration: const Duration(milliseconds: 600), 
       pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (context, anim1, anim2, child) {
-        // 保留果凍彈出動畫
+        // 果凍彈出動畫
         final curvedValue = Curves.elasticOut.transform(anim1.value);
         return Transform.scale(
           scale: curvedValue,
@@ -41,10 +41,11 @@ class LevelUpDialog extends StatelessWidget {
     final String badgeTitle = info['title'] as String;
 
     // ==========================================
-    // 扁平化配色系統 (以綠色為主)
+    // 配色系統：主體扁平綠 + 裝飾黃金發光
     // ==========================================
     const Color primaryGreen = Color(0xFF4A7C59); // 主題綠 (扁平)
-    const Color vibrantGlowGreen = Color(0xFF00E676); // 用來發光的亮綠色
+    const Color goldGlow = Color(0xFFFFD700);     // 亮金色 (發光與裝飾)
+    const Color darkGold = Color(0xFFFFB300);     // 深金色 (增加星星層次)
     const Color darkTextColor = Color(0xFF2C3E50); // 深色文字
     const Color grayTextColor = Color(0xFF8E9AAB); // 次要敘述文字
 
@@ -82,8 +83,8 @@ class LevelUpDialog extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28), // 圓角稍微加大，更有勳章盒感
-          // 🌟 卡片外圍加上超淡淡的發光，讓卡片更輕盈
+          borderRadius: BorderRadius.circular(28), 
+          // 淡淡卡片背景光，讓整體更輕盈
           boxShadow: [
             BoxShadow(
               color: primaryGreen.withOpacity(0.05),
@@ -96,37 +97,65 @@ class LevelUpDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ---------------- 🌟 重點：發光勳章區塊 (實體化、邊框、發光) ----------------
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white, // 改為純白底色凸顯 Icon
-                shape: BoxShape.circle,
-                // 1. 🌟 加入實體深綠色圓形邊框 (勳章感)
-                border: Border.all(color: primaryGreen, width: 4),
-                // 2. 🌟 霓虹發光特效 (層疊 BoxShadow)
-                boxShadow: [
-                  // 內層：強烈綠色光暈
-                  BoxShadow(
-                    color: vibrantGlowGreen.withOpacity(0.6),
-                    blurRadius: 30,
-                    spreadRadius: 5,
+            // ---------------- 🌟 升級版：金色發光與外圍裝飾的勳章 ----------------
+            Stack(
+              clipBehavior: Clip.none, // 允許裝飾的星星稍微超出邊界
+              alignment: Alignment.center,
+              children: [
+                // 1. 金色霓虹發光底層 (Golden Aura)
+                Container(
+                  width: 100, // 控制發光範圍
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      // 內層：強烈金色光暈
+                      BoxShadow(color: goldGlow.withOpacity(0.65), blurRadius: 30, spreadRadius: 6),
+                      // 外層：擴散的淡淡金色光圈
+                      BoxShadow(color: goldGlow.withOpacity(0.25), blurRadius: 60, spreadRadius: 20),
+                    ],
                   ),
-                  // 外層：擴散的淡淡綠色光圈
-                  BoxShadow(
-                    color: vibrantGlowGreen.withOpacity(0.2),
-                    blurRadius: 50,
-                    spreadRadius: 15,
+                ),
+                
+                // 2. 外圍金色裝飾 (漂浮的星星與閃光)
+                Positioned(
+                  top: -10, 
+                  left: -15, 
+                  child: Icon(Icons.auto_awesome_rounded, color: goldGlow, size: 32),
+                ),
+                Positioned(
+                  bottom: -5, 
+                  right: -20, 
+                  child: Icon(Icons.star_rounded, color: darkGold, size: 28),
+                ),
+                Positioned(
+                  top: 15, 
+                  right: -10, 
+                  child: Icon(Icons.circle, color: goldGlow.withOpacity(0.8), size: 8),
+                ),
+                Positioned(
+                  bottom: 20, 
+                  left: -25, 
+                  child: Icon(Icons.star_border_rounded, color: darkGold, size: 22),
+                ),
+
+                // 3. 實體深綠色外框 + 白底單色圖示 (核心徽章)
+                Container(
+                  padding: const EdgeInsets.all(26),
+                  decoration: BoxDecoration(
+                    color: Colors.white, 
+                    shape: BoxShape.circle,
+                    border: Border.all(color: primaryGreen, width: 4.5), // 厚實的金屬感邊框
                   ),
-                ],
-              ),
-              child: Icon(
-                iconData, 
-                color: primaryGreen, // 保持單色 Icon
-                size: 70, // 稍微加大 Icon 尺寸
-              ),
+                  child: Icon(
+                    iconData, 
+                    color: primaryGreen, // 保持扁平化單色 Icon
+                    size: 68,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
             
             // ---------------- 小標題 (帶單色 Icon) ----------------
             Row(
@@ -173,7 +202,7 @@ class LevelUpDialog extends StatelessWidget {
                 ),
               ),
             
-            // ---------------- 內文描述 (扁平化極簡) ----------------
+            // ---------------- 內文描述 ----------------
             Text(
               descText,
               textAlign: TextAlign.center,
@@ -186,7 +215,7 @@ class LevelUpDialog extends StatelessWidget {
             ),
             const SizedBox(height: 36),
             
-            // ---------------- 扁平化確認按鈕 (綠色為主) ----------------
+            // ---------------- 扁平化確認按鈕 ----------------
             SizedBox(
               width: double.infinity,
               height: 54,

@@ -15,51 +15,41 @@ class FolderCard extends StatelessWidget {
     required this.onDelete,
   }) : super(key: key);
 
-  // 🌟 智慧圖示判斷：根據資料夾名稱給予對應的 ICON，沒有關聯的就回傳 null (空白)
+  // 🌟 升級版：智慧圖示判斷，涵蓋更多你提到的生活單字
   IconData? _getIconForFolder(String name, bool isDefault) {
-    if (isDefault) return Icons.star_rounded; // 預設相簿給予一顆星星
+    if (isDefault) return Icons.star_rounded; 
     
     final lowerName = name.toLowerCase();
     
-    // 飲食相關
-    if (lowerName.contains('吃') || lowerName.contains('食') || lowerName.contains('餐') || lowerName.contains('喝') || lowerName.contains('food')) {
-      return Icons.restaurant_rounded;
-    } 
-    // 交通相關
-    else if (lowerName.contains('車') || lowerName.contains('行') || lowerName.contains('交通') || lowerName.contains('站') || lowerName.contains('traffic')) {
+    // 1. 食物與點心 (草莓, 布丁等)
+    if (lowerName.contains('吃') || lowerName.contains('食') || lowerName.contains('餐') || 
+        lowerName.contains('草莓') || lowerName.contains('布丁') || lowerName.contains('蛋糕') || 
+        lowerName.contains('食物') || lowerName.contains('food')) {
+      return Icons.restaurant_menu_rounded;
+    }
+    // 2. 動物相關 (狗, 魚)
+    else if (lowerName.contains('狗') || lowerName.contains('貓') || lowerName.contains('魚') || 
+             lowerName.contains('動物') || lowerName.contains('pet')) {
+      return Icons.pets_rounded;
+    }
+    // 3. 交通
+    else if (lowerName.contains('車') || lowerName.contains('交通') || lowerName.contains('站')) {
       return Icons.directions_transit_rounded;
-    } 
-    // 購物相關
-    else if (lowerName.contains('買') || lowerName.contains('購') || lowerName.contains('錢') || lowerName.contains('shop')) {
+    }
+    // 4. 購物
+    else if (lowerName.contains('買') || lowerName.contains('店') || lowerName.contains('商品')) {
       return Icons.shopping_bag_rounded;
-    } 
-    // 旅遊相關
-    else if (lowerName.contains('玩') || lowerName.contains('遊') || lowerName.contains('旅') || lowerName.contains('景') || lowerName.contains('travel')) {
-      return Icons.flight_takeoff_rounded;
-    } 
-    // 服飾相關
-    else if (lowerName.contains('衣') || lowerName.contains('服') || lowerName.contains('穿') || lowerName.contains('clothes')) {
-      return Icons.checkroom_rounded;
-    } 
-    // 居住相關
-    else if (lowerName.contains('住') || lowerName.contains('家') || lowerName.contains('屋') || lowerName.contains('宿') || lowerName.contains('home')) {
-      return Icons.home_rounded;
-    } 
-    // 學習相關
-    else if (lowerName.contains('學') || lowerName.contains('書') || lowerName.contains('課') || lowerName.contains('考') || lowerName.contains('study')) {
+    }
+    // 5. 旅遊/風景
+    else if (lowerName.contains('旅遊') || lowerName.contains('風景') || lowerName.contains('景點')) {
+      return Icons.landscape_rounded;
+    }
+    // 6. 學習
+    else if (lowerName.contains('學習') || lowerName.contains('書') || lowerName.contains('單字')) {
       return Icons.menu_book_rounded;
-    } 
-    // 醫療相關
-    else if (lowerName.contains('病') || lowerName.contains('醫') || lowerName.contains('藥') || lowerName.contains('hospital')) {
-      return Icons.local_hospital_rounded;
-    } 
-    // 如果後端未來有支援傳送自訂 icon 則使用後端的
-    else if (folder['icon_codepoint'] != null) {
-      return IconData(folder['icon_codepoint'] as int, fontFamily: 'MaterialIcons');
     }
     
-    // 沒配對到任何相關詞彙，就直接回傳 null (畫面會留白)
-    return null; 
+    return null; // 找不到對應 ICON 時回傳 null，呈現空白
   }
 
   @override
@@ -70,17 +60,14 @@ class FolderCard extends StatelessWidget {
     final String folderName = folder['name'] ?? '預設相簿';
     final bool isDefault = folder['is_default'] == true;
     
-    // 🌟 修正問題：將 'vocab_count' 修正為後端真實傳遞的 'count'，數字就不會是 0 了
+    // 🌟 修正：確保取用真實的計數欄位
     final int vocabCount = (folder['count'] as num?)?.toInt() ?? 0;
-    
-    // 取得我們剛剛寫好的智慧 ICON
     final IconData? folderIcon = _getIconForFolder(folderName, isDefault);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 🌟 正方形相簿主體
         AspectRatio(
           aspectRatio: 1.0, 
           child: GestureDetector(
@@ -92,22 +79,15 @@ class FolderCard extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  // 置中的圖示：如果有圖示就顯示，沒有 (null) 就顯示空白組件 (SizedBox.shrink)
                   Center(
                     child: folderIcon != null 
-                        ? Icon(
-                            folderIcon, 
-                            color: AppColors.primary,
-                            size: 36,
-                          )
-                        : const SizedBox.shrink(), // 👈 這裡達成了「沒有的話就空白」的需求
+                        ? Icon(folderIcon, color: AppColors.primary, size: 36)
+                        : const SizedBox.shrink(), // 🌟 沒有相關字詞就保持空白
                   ),
                   
-                  // 右上角的更多操作選單
                   if (!isDefault)
                     Positioned(
-                      top: 4,
-                      right: 4,
+                      top: 4, right: 4,
                       child: PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert_rounded, color: AppColors.primary, size: 18), 
                         padding: EdgeInsets.zero,
@@ -145,7 +125,6 @@ class FolderCard extends StatelessWidget {
           ),
         ),
         
-        // 🌟 下方的相簿名稱與單字數
         Padding(
           padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
           child: Column(
@@ -156,21 +135,12 @@ class FolderCard extends StatelessWidget {
                 folderName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13, 
-                ),
+                style: const TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 13),
               ),
               const SizedBox(height: 2),
-              // 這裡就會顯示真實的總數量了！
               Text(
                 '$vocabCount 個單字',
-                style: const TextStyle(
-                  color: subColor,
-                  fontSize: 11, 
-                  fontWeight: FontWeight.w600,
-                ),
+                style: const TextStyle(color: subColor, fontSize: 11, fontWeight: FontWeight.w600),
               ),
             ],
           ),

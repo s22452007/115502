@@ -221,7 +221,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         body: {
           'message': '[幫我開場]',
           'topic': widget.topicTitle,
-          'level': 'N4',
+          'level': levelToPass,
           'history': '',
         },
       );
@@ -260,13 +260,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     _controller.clear();
 
     try {
+      final userLevel = context.read<UserProvider>().japaneseLevel;
+      final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
+
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
       final response = await http.post(
         url,
         body: {
           'message': text,
           'topic': widget.topicTitle,
-          'level': 'N4',
+          'level': levelToPass,
           'history': '',
         },
       );

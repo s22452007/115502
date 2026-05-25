@@ -32,7 +32,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
-  
   bool _isEditing = false;
   bool _isSaving = false;
   final TextEditingController _nameController = TextEditingController();
@@ -40,6 +39,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final Color _flatCanvasColor = const Color(0xFFF4F7F5); 
   final Color _textColor = const Color(0xFF2C3E50);
   final Color _subTextColor = const Color(0xFF8E9AAB);
+
+  // 🌟 統一設定左右邊距為 24
+  final double _sidePadding = 24.0; 
 
   @override
   void initState() {
@@ -102,11 +104,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (pickedFile != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
-
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
       final result = await ApiClient.uploadAvatar(userId, base64String);
-
       if (!mounted) return;
       if (result.containsKey('avatar')) {
         context.read<UserProvider>().setAvatar(result['avatar']);
@@ -120,24 +120,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _saveProfile() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
-
     final newName = _nameController.text.trim();
     if (newName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱不能為空！')));
       return;
     }
-
     final currentName = context.read<UserProvider>().username ?? '';
     if (newName == currentName) {
       setState(() => _isEditing = false);
       return;
     }
-
     setState(() => _isSaving = true);
-
     final check = await ApiClient.checkUsername(newName, userId: userId);
     if (!mounted) return;
-
     if (check['error'] != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(check['error'])));
       setState(() => _isSaving = false);
@@ -148,23 +143,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isSaving = false);
       return;
     }
-
     final res = await ApiClient.updateUsername(userId, newName);
     if (!mounted) return;
-    
     if (res['error'] != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
       setState(() => _isSaving = false);
       return;
     }
-
     context.read<UserProvider>().setUsername(newName);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱已更新')));
-    
-    setState(() {
-      _isSaving = false;
-      _isEditing = false;
-    });
+    setState(() { _isSaving = false; _isEditing = false; });
   }
 
   void _handleGuestClick(String featureName) {
@@ -175,11 +163,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
     final isGuest = userProvider.userId == null;
-
     final email = isGuest ? '登入後同步資料' : (userProvider.email ?? '—');
     final userName = isGuest ? 'Guest' : (userProvider.username ?? email.split('@')[0]);
     final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
-    
     final levelTitle = _getLevelTitle(rawLevel);
     final jPts = userProvider.jPts;
     final friendId = userProvider.friendId ?? '—';
@@ -211,33 +197,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     alignment: Alignment.topCenter,
                     children: [
                       Container(
-                        // 🌟 強制設定左右 margin 為 16
-                        margin: const EdgeInsets.only(top: 55, left: 16, right: 16),
+                        margin: EdgeInsets.only(top: 55, left: _sidePadding, right: _sidePadding),
                         padding: const EdgeInsets.fromLTRB(24, 65, 24, 48),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))
-                          ],
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))],
                         ),
                         child: Column(
                           children: [
+                            // 🌟 移除了多餘的 Padding，讓 TextField 與 Text 完全切齊對齊
                             if (_isEditing)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: TextField(
-                                  controller: _nameController,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor),
-                                  decoration: InputDecoration(
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                                    filled: true,
-                                    fillColor: _flatCanvasColor,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
-                                  ),
+                              TextField(
+                                controller: _nameController,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                  filled: true,
+                                  fillColor: _flatCanvasColor,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
                                 ),
                               )
                             else
@@ -333,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 20),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: EdgeInsets.symmetric(horizontal: _sidePadding),
                     child: Column(
                       children: [
                         _buildListItem(icon: Icons.monetization_on_rounded, title: 'J-Points', trailingText: '$jPts', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))),

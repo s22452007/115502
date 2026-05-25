@@ -32,6 +32,16 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
   bool _isStarred = true; 
   final FlutterTts _flutterTts = FlutterTts();
 
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    await _flutterTts.setLanguage("ja-JP");
+  }
+
   Future<void> _speakWord(String text) async {
     await _flutterTts.setLanguage("ja-JP");
     await _flutterTts.speak(text);

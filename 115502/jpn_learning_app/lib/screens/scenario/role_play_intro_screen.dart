@@ -20,6 +20,16 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
   final Color _darkGreen = const Color(0xFF4A7A4D);
   final FlutterTts _flutterTts = FlutterTts();
 
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    await _flutterTts.setLanguage("ja-JP");
+  }
+
   Future<void> _speak(String text) async {
     await _flutterTts.setLanguage("ja-JP");
     await _flutterTts.speak(text);

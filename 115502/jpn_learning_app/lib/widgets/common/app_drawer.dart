@@ -74,11 +74,12 @@ class AppDrawer extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+                  // 🌟 這裡改成 iconColor: AppColors.primary (文字會自動預設為黑色)
                   _buildPillItem(
                     context,
                     Icons.home_outlined,
                     '回首頁',
-                    color: AppColors.primary,
+                    iconColor: AppColors.primary,
                     onTap: () => Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -88,7 +89,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.person_outline,
                     '個人檔案',
-                    color: AppColors.primary,
+                    iconColor: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -98,7 +99,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.bookmark_border,
                     '單字探險',
-                    color: AppColors.primary,
+                    iconColor: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -110,7 +111,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.people_outline,
                     '好友',
-                    color: AppColors.primary,
+                    iconColor: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -122,7 +123,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.groups_outlined,
                     '學習小組',
-                    color: AppColors.primary,
+                    iconColor: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -134,10 +135,10 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.storefront,
                     '商城與會員中心',
-                    color: Colors.orange,
+                    iconColor: Colors.orange,
+                    textColor: Colors.orange, // 保持商城按鈕的跳色
                     bgColor: Colors.orange.withOpacity(0.1),
                     onTap: () {
-                      // initialIndex: 0 代表打開時預設顯示「👑 Premium」分頁
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -152,6 +153,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.settings_outlined,
                     '系統設定',
+                    // 沒有傳入 iconColor，所以 Icon 也是預設黑色
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -169,7 +171,8 @@ class AppDrawer extends StatelessWidget {
               context,
               isGuest ? Icons.login : Icons.logout,
               isGuest ? '註冊 / 登入' : '登出帳號',
-              color: isGuest ? Colors.blue : Colors.redAccent,
+              iconColor: isGuest ? Colors.blue : Colors.redAccent,
+              textColor: isGuest ? Colors.blue : Colors.redAccent, // 保持登出按鈕的跳色
               bgColor: isGuest
                   ? Colors.blue.withOpacity(0.1)
                   : Colors.redAccent.withOpacity(0.1),
@@ -188,13 +191,15 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
+  // 🌟 將 color 拆分為 iconColor 與 textColor
   Widget _buildPillItem(
     BuildContext context,
     IconData icon,
     String title, {
     VoidCallback? onTap,
-    Color? color,
-    Color? bgColor,
+    Color? iconColor, // 控制 Icon 顏色
+    Color? textColor, // 控制 文字 顏色
+    Color? bgColor,   // 控制 背景 顏色
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -208,13 +213,15 @@ class AppDrawer extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                Icon(icon, color: color ?? _textColor, size: 24),
+                // 🌟 Icon 使用 iconColor，沒給的話就用預設的 _textColor
+                Icon(icon, color: iconColor ?? _textColor, size: 24),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      color: color ?? _textColor,
+                      // 🌟 文字使用 textColor，沒給的話就用預設的 _textColor (黑色)
+                      color: textColor ?? _textColor,
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
                     ),

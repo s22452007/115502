@@ -184,16 +184,17 @@ def delete_account():
             (Friendship.user_id == user_id) | (Friendship.friend_id == user_id)
         ).delete(synchronize_session=False)
 
-        # 處理小組：如果是組長就解散，否則退出
-        hosted_groups = StudyGroup.query.filter_by(host_id=user_id).all()
-        for group in hosted_groups:
-            GroupInvite.query.filter_by(group_id=group.id).delete()
-            GroupMember.query.filter_by(group_id=group.id).delete()
-            db.session.delete(group)
-
+        # 處理小組：移除成員紀錄，若小組因此變空就順帶解散
+        member_records = GroupMember.query.filter_by(user_id=user_id).all()
+        group_ids = [m.group_id for m in member_records]
         GroupMember.query.filter_by(user_id=user_id).delete()
         GroupInvite.query.filter_by(receiver_id=user_id).delete()
         GroupInvite.query.filter_by(sender_id=user_id).delete()
+        for gid in group_ids:
+            if GroupMember.query.filter_by(group_id=gid).count() == 0:
+                group = StudyGroup.query.get(gid)
+                if group:
+                    db.session.delete(group)
 
         db.session.delete(user)
         db.session.commit()

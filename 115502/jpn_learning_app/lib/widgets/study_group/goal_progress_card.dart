@@ -9,17 +9,14 @@ class GoalProgressCard extends StatelessWidget {
   final int current;
   final int goal;
   final String type;
-  final int rewardPoints;
   final int groupId;
 
-  // 因為領完就直接退出了，所以不需要 hasClaimed 來判斷灰底狀態了！
   const GoalProgressCard({
     Key? key,
     required this.progress,
     required this.current,
     required this.goal,
     required this.type,
-    required this.rewardPoints,
     required this.groupId,
   }) : super(key: key);
 
@@ -76,7 +73,7 @@ class GoalProgressCard extends StatelessWidget {
               // 達標後一律顯示金黃色的領獎按鈕
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.card_giftcard, size: 24),
-                label: Text("領取 $rewardPoints 點並結業！", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                label: const Text("領取獎勵並結業！", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber.shade600, 
                   foregroundColor: Colors.white,

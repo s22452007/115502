@@ -64,11 +64,7 @@ except sqlite3.OperationalError as e:
 # 3. 升級 study_group (學習小組獎勵機制與到期日)
 # ==========================================
 add_column("study_group", "current_progress INTEGER DEFAULT 0")
-add_column("study_group", "reward_points INTEGER DEFAULT 50")
-add_column("study_group", "is_reward_claimed BOOLEAN DEFAULT 0")
-# 自動結算系統，紀錄小組到期時間
-add_column("study_group", "expire_at DATETIME")
-print("✅ study_group 獎勵機制與到期日欄位確認完畢")
+print("✅ study_group 進度欄位確認完畢")
 
 # ==========================================
 # 4. 升級 Scene (確保單字目錄的 icon 欄位存在)
@@ -376,6 +372,38 @@ try:
     print("✅ user_boost 資料表已成功移除！")
 except sqlite3.OperationalError as e:
     print(f"⚠️ user_boost 移除警告：{e}")
+
+# 重建 study_group：移除 host_id 與 expire_at 欄位
+try:
+    cursor.execute("PRAGMA table_info(study_group);")
+    sg_cols = [row[1] for row in cursor.fetchall()]
+
+    if 'host_id' not in sg_cols and 'expire_at' not in sg_cols:
+        print("✅ study_group 已不含廢棄欄位，跳過重建。")
+    else:
+        cursor.execute("ALTER TABLE study_group RENAME TO study_group_old;")
+
+        cursor.execute("""
+        CREATE TABLE study_group (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(100) DEFAULT '日語學習小隊',
+            created_at DATETIME,
+            goal_type VARCHAR(50) NOT NULL DEFAULT 'scans',
+            goal_target INTEGER NOT NULL DEFAULT 30,
+            current_progress INTEGER DEFAULT 0
+        );
+        """)
+
+        new_sg_cols = ['id', 'name', 'created_at', 'goal_type', 'goal_target',
+                       'current_progress']
+        copy_sg_cols = [c for c in new_sg_cols if c in sg_cols]
+        cols_str = ', '.join(copy_sg_cols)
+        cursor.execute(f"INSERT INTO study_group ({cols_str}) SELECT {cols_str} FROM study_group_old;")
+        cursor.execute("DROP TABLE study_group_old;")
+
+        print("✅ study_group host_id / expire_at / reward_points / is_reward_claimed 廢棄欄位已移除！")
+except Exception as e:
+    print(f"⚠️ study_group 重建警告（可能已完成）：{e}")
 
 # 重建 user 資料表以移除 group_completions 欄位
 # （SQLite 不支援 DROP COLUMN，需重建資料表）

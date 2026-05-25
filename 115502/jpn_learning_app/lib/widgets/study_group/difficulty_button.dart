@@ -4,7 +4,6 @@ class DifficultyButton extends StatelessWidget {
   final String label;
   final int value;
   final String unit;
-  final int rewardPoints;
   final Color activeColor;
   final bool isSelected;
   final VoidCallback onTap;
@@ -14,7 +13,6 @@ class DifficultyButton extends StatelessWidget {
     required this.label,
     required this.value,
     required this.unit,
-    required this.rewardPoints,
     required this.activeColor,
     required this.isSelected,
     required this.onTap,
@@ -61,34 +59,6 @@ class DifficultyButton extends StatelessWidget {
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.white.withOpacity(0.8) : const Color(0xFF888888),
-              ),
-            ),
-            const SizedBox(height: 14),
-            
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.black.withOpacity(0.12) : Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.stars_rounded, 
-                    size: 14,
-                    color: isSelected ? Colors.yellowAccent.shade100 : Colors.orange.shade600,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '+$rewardPoints 點', 
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: isSelected ? Colors.white : Colors.orange.shade700,
-                    ),
-                  ),
-                ],
               ),
             ),
           ],

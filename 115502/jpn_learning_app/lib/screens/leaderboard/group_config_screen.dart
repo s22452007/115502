@@ -24,10 +24,9 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
 
   Map<String, dynamic> _getDifficultyConfig() {
     if (_selectedTaskType == 'logins') {
-      return {'unit': '天', 'easy': 15, 'normal': 25, 'hard': 35, 'r_easy': 30, 'r_normal': 50, 'r_hard': 100};
+      return {'unit': '天', 'easy': 15, 'normal': 25, 'hard': 35};
     } else {
-      // scans 和其他預設
-      return {'unit': '次', 'easy': 15, 'normal': 30, 'hard': 50, 'r_easy': 30, 'r_normal': 50, 'r_hard': 100};
+      return {'unit': '次', 'easy': 15, 'normal': 30, 'hard': 50};
     }
   }
 
@@ -73,11 +72,6 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
     final int normalVal = config['normal'];
     final int hardVal = config['hard'];
     
-    // 獎勵
-    final int rEasy = config['r_easy'];
-    final int rNormal = config['r_normal'];
-    final int rHard = config['r_hard'];
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -144,7 +138,6 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     label: '輕鬆',
                     value: easyVal,
                     unit: unit,
-                    rewardPoints: rEasy, // 傳入獎勵點數
                     activeColor: const Color(0XFFC6DB76),
                     isSelected: _selectedTarget == easyVal,
                     onTap: () => setState(() => _selectedTarget = easyVal),
@@ -156,7 +149,6 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     label: '標準',
                     value: normalVal,
                     unit: unit,
-                    rewardPoints: rNormal, // 傳入獎勵點數
                     activeColor: const Color(0XFFFFD568),
                     isSelected: _selectedTarget == normalVal,
                     onTap: () => setState(() => _selectedTarget = normalVal),
@@ -168,7 +160,6 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
                     label: '爆肝',
                     value: hardVal,
                     unit: unit,
-                    rewardPoints: rHard, // 傳入獎勵點數
                     activeColor: const Color(0XFFFFAFAB),
                     isSelected: _selectedTarget == hardVal,
                     onTap: () => setState(() => _selectedTarget = hardVal),

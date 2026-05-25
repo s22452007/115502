@@ -490,7 +490,7 @@ class ApiClient {
 
   // 建立學習小組 API
   static Future<Map<String, dynamic>> createGroup(
-    int hostId,
+    int userId,
     String groupName,
     List<String> friendIds,
     String goalType,
@@ -502,7 +502,7 @@ class ApiClient {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'host_id': hostId,
+          'user_id': userId,
           'name': groupName,
           'friend_ids': friendIds,
           'goal_type': goalType,

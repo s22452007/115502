@@ -27,7 +27,6 @@ class StudyGroupHomeScreen extends StatelessWidget {
 
     final String goalType = groupData['goal_type'] ?? 'scans';
     final int goalTarget = groupData['goal_target'] ?? 30;
-    final int rewardPoints = groupData['reward_points'] ?? 50;
     final int groupId = groupData['group_id'] ?? 0;
 
     final int currentTotal = groupData['current_progress'] as int? ?? 0;
@@ -51,7 +50,6 @@ class StudyGroupHomeScreen extends StatelessWidget {
             current: currentTotal,
             goal: goalTarget,
             type: goalType,
-            rewardPoints: rewardPoints,
             groupId: groupId,
           ),
           const SizedBox(height: 16),

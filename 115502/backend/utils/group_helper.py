@@ -16,16 +16,7 @@ def add_group_progress_and_check_reward(user_id, action_type, amount=1):
     if not group:
         return
 
-    # 2. 如果他做的動作，剛好是隊長設定的目標，且還沒發過獎勵
-    if group.goal_type == action_type and not group.is_reward_claimed:
-        
-        # 直接把進度灌給小組！
+    # 2. 如果他做的動作，剛好是隊長設定的目標，累加進度
+    if group.goal_type == action_type:
         group.current_progress += amount
-        
-        # 3. 判斷是否達標
-        if group.current_progress >= group.goal_target:
-            # 把領獎開關鎖起來，避免未來重複發錢
-            group.is_reward_claimed = True 
-            
-        # 統一存檔
         db.session.commit()

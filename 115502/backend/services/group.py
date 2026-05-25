@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from utils.db import db
 from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction, TransactionType
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 group_bp = Blueprint('group', __name__)
 
@@ -14,13 +14,6 @@ def get_current_year_week():
     year, week, _ = now.isocalendar()
     return f"{year}-{week}"
 
-def get_next_sunday_end():
-    """取得這個星期日 23:59:59 的 UTC 時間"""
-    now = datetime.now(timezone.utc)
-    # weekday(): 禮拜一是 0，禮拜日是 6
-    days_until_sunday = 6 - now.weekday()
-    next_sunday = now + timedelta(days=days_until_sunday)
-    return next_sunday.replace(hour=23, minute=59, second=59, microsecond=0)
 
 def handle_deposit_and_free_quota(user):
     """
@@ -130,12 +123,11 @@ def get_my_group(user_id):
     
     # -----------------------------------------------------
     # 終極清道夫 (Lazy Evaluation)：時間到了嗎？
+    # 以 ISO 週次比對：建立週 < 當前週 → 該小組已過期
     # -----------------------------------------------------
     now = datetime.now(timezone.utc)
-    # SQLite 拿出來的時間沒有時區，要手動幫它掛上 UTC 以便比較
-    expire_time = group.expire_at.replace(tzinfo=timezone.utc) if group.expire_at.tzinfo is None else group.expire_at
-    
-    if now > expire_time:
+    created = group.created_at.replace(tzinfo=timezone.utc) if group.created_at.tzinfo is None else group.created_at
+    if now.isocalendar()[:2] > created.isocalendar()[:2]:
         # 結算時間到！判斷是否達標
         is_success = group.current_progress >= group.goal_target
         
@@ -179,8 +171,7 @@ def get_my_group(user_id):
                 "nickname": original_name, # 注意：排行榜通常不顯示備註，直接顯示原名即可
                 "avatar": u.avatar,
                 "japanese_level": u.japanese_level, # 打包日語程度
-                "is_host": u.id == group.host_id,
-                "group_scans": m.group_scans, 
+                "group_scans": m.group_scans,
                 "group_points": m.group_points,              
                 "group_logins": m.group_logins 
             })
@@ -205,8 +196,7 @@ def get_my_group(user_id):
         "group_name": group.name,
         "goal_type": group.goal_type,     
         "goal_target": group.goal_target, 
-        "current_progress": group.current_progress, 
-        "reward_points": group.reward_points,       
+        "current_progress": group.current_progress,
         "members": member_data,              # 正式成員
         "pending_invites": pending_data,     # 把邀請中的名單也一起交給前端！
         "has_claimed": member_record.has_claimed # 傳遞此用戶是否已領獎！
@@ -218,19 +208,19 @@ def get_my_group(user_id):
 @group_bp.route('/create', methods=['POST'])
 def create_group():
     data = request.get_json()
-    host_id = data.get('host_id')
+    user_id = data.get('user_id')
     group_name = data.get('name', '日語學習小隊')
-    friend_ids = data.get('friend_ids', []) 
-    goal_type = data.get('goal_type', 'logins') # 預設改為登入
+    friend_ids = data.get('friend_ids', [])
+    goal_type = data.get('goal_type', 'logins')
     goal_target = data.get('goal_target', 35)
 
-    if not host_id:
-        return jsonify({"error": "缺少房主 ID"}), 400
+    if not user_id:
+        return jsonify({"error": "缺少使用者 ID"}), 400
 
-    if GroupMember.query.filter_by(user_id=host_id).first():
+    if GroupMember.query.filter_by(user_id=user_id).first():
         return jsonify({"error": "系統偵測到您已在其他小組中，無法重複建立！"}), 400
-        
-    user = User.query.get(host_id)
+
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "找不到用戶"}), 404
 
@@ -241,41 +231,19 @@ def create_group():
     paid_deposit = deposit_amount > 0
 
     try:
-        # 根據「目標類型」與「目標數值」，動態決定首次達成獎勵點數
-        calculated_reward = 10  # 預設防呆值
-
-        if goal_type == 'scans':
-            if goal_target <= 15:
-                calculated_reward = 10
-            elif goal_target <= 30:
-                calculated_reward = 20
-            else:
-                calculated_reward = 40
-
-        elif goal_type == 'logins':
-            if goal_target <= 15:
-                calculated_reward = 10
-            elif goal_target <= 25:
-                calculated_reward = 20
-            else:
-                calculated_reward = 40
-
-        # 建立小組，並計算結算日
+        # 建立小組
         new_group = StudyGroup(
-            name=group_name, 
-            host_id=host_id, 
-            goal_type=goal_type, 
+            name=group_name,
+            goal_type=goal_type,
             goal_target=goal_target,
-            reward_points=calculated_reward, # 動態計算的獎勵
-            expire_at=get_next_sunday_end() 
         )
         db.session.add(new_group)
-        db.session.flush() 
-        
+        db.session.flush()
+
         initial_logins = 1 if goal_type == 'logins' else 0
         host_member = GroupMember(
             group_id=new_group.id,
-            user_id=host_id,
+            user_id=user_id,
             group_logins=initial_logins,
             paid_deposit=paid_deposit,
             deposit_amount=deposit_amount,
@@ -289,7 +257,7 @@ def create_group():
             if friend_user:
                 existing_invite = GroupInvite.query.filter_by(group_id=new_group.id, receiver_id=friend_user.id, status='pending').first()
                 if not existing_invite:
-                    new_invite = GroupInvite(group_id=new_group.id, sender_id=host_id, receiver_id=friend_user.id)
+                    new_invite = GroupInvite(group_id=new_group.id, sender_id=user_id, receiver_id=friend_user.id)
                     db.session.add(new_invite)
                 
         db.session.commit()
@@ -552,7 +520,7 @@ def claim_reward():
     member = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
 
     if not group or not member:
-        return jsonify({"error": "找不到小組或你已不在小組中"}), 404
+        return jsonify({"error": "獎勵已領取或你已不在此小組中"}), 404
 
     if group.current_progress < group.goal_target:
         return jsonify({"error": "任務尚未達成，還不能領獎喔！"}), 400

@@ -306,15 +306,12 @@ class Friendship(db.Model):
 class StudyGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), default="日語學習小隊") # 小組名稱
-    host_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 紀錄誰是「房主/創建者」
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    goal_type = db.Column(db.String(50), nullable=False, default='scans') 
-    goal_target = db.Column(db.Integer, nullable=False, default=30)       
-    expire_at = db.Column(db.DateTime, nullable=False)  # 紀錄這個小組何時到期 (週日 23:59)
+    goal_type = db.Column(db.String(50), nullable=False, default='scans')
+    goal_target = db.Column(db.Integer, nullable=False, default=30)
 
     # === 獎勵機制專用 ===
     current_progress = db.Column(db.Integer, default=0) # 小組當前總進度
-    reward_points = db.Column(db.Integer, default=50)   # 達標後，有貢獻的成員每人可獲得的點數 (j_pts)
     
     # 關聯：一個小組可以有多個成員
     members = db.relationship('GroupMember', backref='group', lazy=True, cascade="all, delete-orphan")

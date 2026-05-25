@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>使用者詳細資料 - {{ user.username or user.email }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root { --green: #5c8364; --green-light: #dce7de; --bg: #f4f7f5; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green); font-weight: bold; border-right: 4px solid var(--green); }
+        .sidebar-menu a i { color: var(--green); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+        .main-content { flex: 1; padding: 36px 44px; overflow-x: hidden; }
+        .section-card { background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
+        .section-header { padding: 16px 22px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+        .section-header h6 { margin: 0; font-size: 1rem; font-weight: 700; color: #333; }
+        .section-body { padding: 18px 22px; }
+        .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .stat-box { background: white; border-radius: 14px; padding: 16px 20px; min-width: 110px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; }
+        .stat-box .val { font-size: 1.6rem; font-weight: 900; color: var(--green); }
+        .stat-box .lbl { font-size: 0.75rem; color: #aaa; margin-top: 3px; }
+        .user-header { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; align-items: center; gap: 20px; }
+        .user-avatar-lg { width: 72px; height: 72px; border-radius: 50%; background: var(--green-light); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: bold; flex-shrink: 0; }
+        .badge-status { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 50px; }
+        .badge-premium { background: linear-gradient(135deg,#C6B13B,#e8cf5a); color: white; }
+        .badge-free { background: #eee; color: #888; }
+        .badge-trial { background: #e8f4fd; color: #0a6bb5; border: 1px solid #b3d9f5; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        th { background: #f8f9fa; color: #888; font-weight: 600; padding: 9px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        td { padding: 9px 12px; border-bottom: 1px solid #f5f5f5; color: #444; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .empty { text-align: center; color: #bbb; padding: 24px; font-size: 0.9rem; }
+        .chip { display: inline-block; padding: 2px 9px; border-radius: 50px; font-size: 0.72rem; font-weight: 600; }
+        .chip-green { background: var(--green-light); color: var(--green); }
+        .chip-blue  { background: #e8f4fd; color: #0a6bb5; }
+        .chip-red   { background: #fde8e8; color: #b50a0a; }
+        .chip-grey  { background: #eee; color: #888; }
+        .chip-gold  { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li><a href="/user/list" class="active"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
+            <hr style="margin: 15px 20px; border-color: rgba(0,0,0,0.1);">
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <!-- 返回 -->
+        <a href="/user/list" class="btn btn-sm btn-outline-secondary mb-3">
+            <i class="bi bi-arrow-left me-1"></i> 返回使用者列表
+        </a>
+
+        <!-- 使用者基本資料 -->
+        <div class="user-header">
+            {% if user.avatar %}
+            <img src="{{ user.avatar }}" class="user-avatar-lg" style="object-fit:cover;">
+            {% else %}
+            <div class="user-avatar-lg">{{ (user.username or user.email)[0]|upper }}</div>
+            {% endif %}
+            <div style="flex:1;">
+                <div style="font-size:1.3rem;font-weight:900;color:#222;">
+                    {{ user.username or '未設定暱稱' }}
+                    {% if user.japanese_level %}
+                    <span class="chip chip-gold ms-1">{{ user.japanese_level }}</span>
+                    {% endif %}
+                    {% if user.is_premium %}
+                    <span class="badge-status badge-premium ms-1"><i class="bi bi-patch-check-fill"></i> Premium</span>
+                    {% elif user.trial_used %}
+                    <span class="badge-status badge-free ms-1">已用過試用</span>
+                    {% else %}
+                    <span class="badge-status badge-free ms-1">免費版</span>
+                    {% endif %}
+                </div>
+                <div style="color:#999;font-size:0.88rem;margin-top:4px;">
+                    {{ user.email }} &nbsp;·&nbsp; #{{ user.id }} &nbsp;·&nbsp; 好友ID：{{ user.friend_id or '—' }}
+                </div>
+                <div style="color:#bbb;font-size:0.8rem;margin-top:4px;">
+                    註冊：{{ user.created_at }} &nbsp;·&nbsp; 上次登入：{{ user.last_seen_at or '從未登入' }}
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <form action="/customer/delete/{{ user.id }}" method="POST"
+                      onsubmit="return confirm('確定刪除「{{ user.username or user.email }}」？所有資料將永久消失！');">
+                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill me-1"></i>刪除帳號</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 統計數字 -->
+        <div class="stat-row">
+            <div class="stat-box"><div class="val">{{ user.j_pts or 0 }}</div><div class="lbl">J-Pts</div></div>
+            <div class="stat-box"><div class="val">{{ vocab_count }}</div><div class="lbl">收藏單字</div></div>
+            <div class="stat-box"><div class="val">{{ photo_count }}</div><div class="lbl">上傳照片</div></div>
+            <div class="stat-box"><div class="val">{{ friends|length }}</div><div class="lbl">好友數</div></div>
+            <div class="stat-box"><div class="val">{{ user.streak_days or 0 }}</div><div class="lbl">連續天數</div></div>
+            <div class="stat-box"><div class="val">{{ groups|length }}</div><div class="lbl">學習小組</div></div>
+        </div>
+
+        <!-- 訂閱紀錄 -->
+        <div class="section-card">
+            <div class="section-header">
+                <i class="bi bi-patch-check-fill" style="color:var(--green);"></i>
+                <h6>訂閱紀錄</h6>
+                <span class="ms-auto text-muted" style="font-size:0.8rem;">共 {{ subscriptions|length }} 筆</span>
+            </div>
+            <div class="section-body" style="padding:0;">
+                {% if subscriptions %}
+                <table>
+                    <thead><tr><th>方案</th><th>類型</th><th>狀態</th><th>開始</th><th>到期</th><th>自動續訂</th></tr></thead>
+                    <tbody>
+                    {% for s in subscriptions %}
+                    <tr>
+                        <td>{{ s.plan_name or '—' }}</td>
+                        <td>{{ '年繳' if s.billing_cycle == 'yearly' else '月繳' if s.billing_cycle == 'monthly' else s.billing_cycle or '—' }}</td>
+                        <td>
+                            {% if s.status == 'active' %}<span class="chip chip-green">生效中</span>
+                            {% elif s.status == 'trial' %}<span class="chip chip-blue">試用中</span>
+                            {% elif s.status == 'cancelled' %}<span class="chip chip-red">已取消</span>
+                            {% elif s.status == 'expired' %}<span class="chip chip-grey">已到期</span>
+                            {% else %}<span class="chip chip-grey">{{ s.status }}</span>{% endif %}
+                        </td>
+                        <td>{{ s.start_date or '—' }}</td>
+                        <td>{{ s.end_date or '—' }}</td>
+                        <td>{{ '是' if s.auto_renew else '否' }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty"><i class="bi bi-patch-check"></i> 無訂閱紀錄</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 點數交易 -->
+        <div class="section-card">
+            <div class="section-header">
+                <i class="bi bi-coin" style="color:var(--green);"></i>
+                <h6>點數交易明細</h6>
+                <span class="ms-auto text-muted" style="font-size:0.8rem;">最近 30 筆</span>
+            </div>
+            <div class="section-body" style="padding:0;">
+                {% if transactions %}
+                <table>
+                    <thead><tr><th>類型</th><th>點數</th><th>金額</th><th>付款方式</th><th>時間</th></tr></thead>
+                    <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td>{{ t.transaction_type or '—' }}</td>
+                        <td style="font-weight:700;color:{% if (t.points or 0) > 0 %}var(--green){% else %}#e74c3c{% endif %};">
+                            {{ '+' if (t.points or 0) > 0 else '' }}{{ t.points or 0 }}
+                        </td>
+                        <td>{{ 'NT$' + t.price|string if t.price else '—' }}</td>
+                        <td>{{ t.payment_method or '—' }}</td>
+                        <td style="color:#aaa;">{{ t.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty"><i class="bi bi-coin"></i> 無交易紀錄</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <!-- 好友列表 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-people-fill" style="color:var(--green);"></i>
+                    <h6>好友列表</h6>
+                    <span class="ms-auto text-muted" style="font-size:0.8rem;">{{ friends|length }} 人</span>
+                </div>
+                <div class="section-body" style="padding:0;">
+                    {% if friends %}
+                    <table>
+                        <thead><tr><th>暱稱</th><th>好友ID</th><th>等級</th></tr></thead>
+                        <tbody>
+                        {% for f in friends %}
+                        <tr>
+                            <td><a href="/user/{{ f.id }}" style="color:var(--green);text-decoration:none;">{{ f.username or f.email }}</a></td>
+                            <td style="color:#aaa;">{{ f.friend_id or '—' }}</td>
+                            <td>{% if f.japanese_level %}<span class="chip chip-gold">{{ f.japanese_level }}</span>{% else %}—{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty"><i class="bi bi-people"></i> 無好友</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 學習小組 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-collection-fill" style="color:var(--green);"></i>
+                    <h6>學習小組</h6>
+                    <span class="ms-auto text-muted" style="font-size:0.8rem;">{{ groups|length }} 組</span>
+                </div>
+                <div class="section-body" style="padding:0;">
+                    {% if groups %}
+                    <table>
+                        <thead><tr><th>小組名稱</th><th>角色</th><th>加入時間</th></tr></thead>
+                        <tbody>
+                        {% for g in groups %}
+                        <tr>
+                            <td>{{ g.name or '—' }}</td>
+                            <td>{% if g.role == 'owner' %}<span class="chip chip-gold">組長</span>{% else %}<span class="chip chip-grey">成員</span>{% endif %}</td>
+                            <td style="color:#aaa;">{{ g.joined_at or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty"><i class="bi bi-collection"></i> 未加入任何小組</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 最近上傳照片 -->
+        {% if photos %}
+        <div class="section-card">
+            <div class="section-header">
+                <i class="bi bi-image-fill" style="color:var(--green);"></i>
+                <h6>最近上傳照片</h6>
+                <span class="ms-auto text-muted" style="font-size:0.8rem;">共 {{ photo_count }} 張，顯示最近 6 張</span>
+            </div>
+            <div class="section-body">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+                {% for p in photos %}
+                <div style="border-radius:10px;overflow:hidden;background:#f8f9fa;position:relative;">
+                    {% if p.image_path %}
+                    <img src="{{ p.image_path }}" style="width:100%;height:120px;object-fit:cover;" onerror="this.style.display='none'">
+                    {% endif %}
+                    <div style="padding:8px;font-size:0.78rem;color:#888;">
+                        {{ p.scene_name or p.custom_title or '未命名' }}<br>
+                        <span style="color:#bbb;">{{ p.created_at }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 意見回饋 -->
+        {% if feedbacks %}
+        <div class="section-card">
+            <div class="section-header">
+                <i class="bi bi-chat-dots-fill" style="color:var(--green);"></i>
+                <h6>意見回饋</h6>
+                <span class="ms-auto text-muted" style="font-size:0.8rem;">{{ feedbacks|length }} 筆</span>
+            </div>
+            <div class="section-body" style="padding:0;">
+                <table>
+                    <thead><tr><th>類型</th><th>內容</th><th>狀態</th><th>時間</th></tr></thead>
+                    <tbody>
+                    {% for f in feedbacks %}
+                    <tr>
+                        <td>{{ f.feedback_type or '—' }}</td>
+                        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ f.content }}</td>
+                        <td>{% if f.reply %}<span class="chip chip-green">已回覆</span>{% else %}<span class="chip chip-grey">待回覆</span>{% endif %}</td>
+                        <td style="color:#aaa;white-space:nowrap;">{{ f.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </main>
+</div>
+</body>
+</html>

@@ -278,7 +278,7 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                         color: deepText,
                       ),
                     ),
-                    if (widget.badge != null) ...[
+                    if (widget.badge != null && widget.badge!.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(

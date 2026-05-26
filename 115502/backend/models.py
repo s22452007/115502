@@ -12,69 +12,52 @@ class TransactionType:
     DEPOSIT_REFUND = 'deposit_refund'          # 押金退還
     GROUP_REWARD = 'group_reward'              # 小組達成獎勵
 
-
 # ==========================================
-# 👤 1. 核心使用者系統
+# 👤 1. 核心系統層
 # ==========================================
 
-# 使用者表 (User)
+# T01: 使用者資料表
 class User(db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False) # 儲存「加密後」的密碼
+    password_hash = db.Column(db.String(256), nullable=False)
     username = db.Column(db.String(30), unique=True, nullable=True)
     friend_id = db.Column(db.String(20), unique=True, nullable=True)
-    japanese_level = db.Column(db.String(50), nullable=True)  # 儲存日語程度
-    avatar = db.Column(db.Text, nullable=True)  # 用來存圖片的 Base64 字串
-    
+    japanese_level = db.Column(db.String(50), nullable=True)
+    avatar = db.Column(db.Text, nullable=True)
     ai_cheat_sheet = db.Column(db.Text, nullable=True)
-
-    j_pts = db.Column(db.Integer, default=0)         
+    # 點數與活躍度
+    j_pts = db.Column(db.Integer, default=0)
     streak_days = db.Column(db.Integer, default=1)
     last_login_date = db.Column(db.Date, nullable=True)
     last_seen_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_free_group_week = db.Column(db.String(10), nullable=True)  # 紀錄他上一次「免費」參加小組是哪一週 (格式如 '2026-15')
-
-    # 今日拍照次數與最後拍照日期
+    # 拍照紀錄與限制
     daily_scans = db.Column(db.Integer, default=0)
     last_scan_date = db.Column(db.Date, nullable=True)
-
-    # 徽章新增的計數器
-    total_active_days = db.Column(db.Integer, default=0) # 對應：學習馬拉松
-    total_scans = db.Column(db.Integer, default=0)       # 對應：快門獵人
-    
-    # 記錄他看過哪些徽章彈窗 (紀錄通知過，避免重複通知)
+    photo_count_today = db.Column(db.Integer, default=0)
+    photo_extra_count = db.Column(db.Integer, default=0)
+    # AI 服務限制
+    ai_count_today = db.Column(db.Integer, default=0)
+    ai_extra_count = db.Column(db.Integer, default=0)
+    last_reset_date = db.Column(db.Date, nullable=True)
+    # 徽章與成就
+    total_active_days = db.Column(db.Integer, default=0)
+    total_scans = db.Column(db.Integer, default=0)
     notified_levels = db.Column(db.JSON, default={})
-
-    # 訂閱狀態
+    # 訂閱與小組狀態
     is_premium = db.Column(db.Boolean, default=False)
     subscription_end_date = db.Column(db.DateTime, nullable=True)
     auto_renew = db.Column(db.Boolean, default=False)
-    trial_used = db.Column(db.Boolean, default=False)          # 是否已使用過免費試用
-    trial_notice_sent = db.Column(db.Boolean, default=False)   # 試用到期前通知是否已發送
-    # 裡面會存類似這樣： {"level_01": 3, "streak_01": 1, "camera_01": 2}
-
-    # 每週免費組隊次數計數（每週一 0 點重置）
+    trial_used = db.Column(db.Boolean, default=False)
+    trial_notice_sent = db.Column(db.Boolean, default=False)
+    last_free_group_week = db.Column(db.String(10), nullable=True)
     group_free_used_this_week = db.Column(db.Integer, default=0)
-    # 同 last_free_group_week 欄位追蹤目前計數對應哪週（格式 '2026-16'）
-
-    # 每日次數計數（台灣時間 0 點重置）
-    photo_count_today = db.Column(db.Integer, default=0)   # 今日已用免費拍照次數
-    ai_count_today    = db.Column(db.Integer, default=0)   # 今日已用免費/訂閱 AI 次數
-    last_reset_date   = db.Column(db.Date, nullable=True)  # 上次重置日期（台灣時間）
-
-    # 永久加購次數（花點數購買，不隨每日重置）
-    photo_extra_count = db.Column(db.Integer, default=0)
-    ai_extra_count    = db.Column(db.Integer, default=0)
-
-    # 單字收藏上限（預設 50，花點數可擴充至 1000）
     vocab_slot = db.Column(db.Integer, default=50)
 
-    # 使用者單字紀錄（解鎖 / 收藏）
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)
-#   abilities = db.relationship('UserAbility', backref='user', uselist=False, lazy=True) # 一對一關聯
 
 # # 使用者能力值表 (UserAbility) - 雷達圖專用
 # class UserAbility(db.Model):
@@ -86,187 +69,182 @@ class User(db.Model):
 #     culture = db.Column(db.Float, default=0.2)
 #     speaking = db.Column(db.Float, default=0.2)
 
-
-# ==========================================
-# 📖 2. 系統教材內容 (場景、單字、測驗題庫)
-# ==========================================
-
-# 場景表 (Scene)
-class Scene(db.Model):
+# T02: 系統管理者資料表
+class Admin(db.Model):
+    __tablename__ = 'admin'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)  # 例如：咖啡廳
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), default='super_admin', nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# ==========================================
+# 📖 2. 系統教材內容
+# ==========================================
+
+# T03: 場景資料表
+class Scene(db.Model):
+    __tablename__ = 'scene'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False) # 例如：咖啡廳
     icon_name = db.Column(db.String(50), nullable=True)
-    icon_codepoint = db.Column(db.Integer, nullable=True)  # Flutter IconData codepoint，例如 58630
+    icon_codepoint = db.Column(db.Integer, nullable=True) # Flutter Icon 代碼
     show_in_quick_select = db.Column(db.Boolean, default=False)
     vocabs = db.relationship('Vocab', backref='scene', lazy=True)
 
-# 單字字典 (Vocab)
+# T04: 單字字典表
 class Vocab(db.Model):
+    __tablename__ = 'vocab'
     id = db.Column(db.Integer, primary_key=True)
-    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False) # 紀錄這個單字屬於哪個場景
-    word = db.Column(db.String(100), nullable=False) # 單字的日文原型或漢字
-    kana = db.Column(db.String(100), nullable=False) # 單字的假名拼音
-    meaning = db.Column(db.String(200), nullable=False)  # 單字的中文解釋
-    # --- 難度分級例句 ---
-    sentence_basic = db.Column(db.String(255), nullable=True)       # 初級例句 (N5, N4)
-    sentence_inter = db.Column(db.String(255), nullable=True)       # 中級例句 (N3)
-    sentence_upper_inter = db.Column(db.String(255), nullable=True) # 中高級例句 (N2)
-    sentence_advanced = db.Column(db.String(255), nullable=True)    # 高級例句 (N1)
-
-    # --- 語音檔路徑 (支援單字與各級例句發音) ---
     audio_word = db.Column(db.String(100), nullable=True)     # 單字本身的發音檔
     audio_basic = db.Column(db.String(100), nullable=True)    # 初級例句發音檔
     audio_inter = db.Column(db.String(100), nullable=True)    # 中級例句發音檔
     audio_upper = db.Column(db.String(100), nullable=True)    # 中高級例句發音檔
     audio_adv = db.Column(db.String(100), nullable=True)      # 高級例句發音檔
+    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=False) # 所屬場景
+    word = db.Column(db.String(100), nullable=False) # 日文原型/漢字
+    kana = db.Column(db.String(100), nullable=False) # 假名拼音
+    meaning = db.Column(db.String(200), nullable=False) # 中文解釋
+    # 例句分級
+    sentence_basic = db.Column(db.String(255), nullable=True) # N5-N4
+    sentence_inter = db.Column(db.String(255), nullable=True) # N3
+    sentence_upper_inter = db.Column(db.String(255), nullable=True) # N2
+    sentence_advanced = db.Column(db.String(255), nullable=True) # N1
+    # 語音路徑
 
-# 測驗題目表 (QuizQuestion) - 用於新手程度判定
+# T05: 測驗題目表
 class QuizQuestion(db.Model):
+    __tablename__ = 'quiz_question'
     id = db.Column(db.Integer, primary_key=True)
-    stage = db.Column(db.String(50), nullable=False)       # 階段名稱 (例：第一階段：超級新手)
-    level_tag = db.Column(db.String(20), nullable=False)   # 難度標籤 (例：N5, N4, N3...)
-    question = db.Column(db.Text, nullable=False)          # 題目內容
-    option_a = db.Column(db.String(100), nullable=False)   # 選項 A
-    option_b = db.Column(db.String(100), nullable=False)   # 選項 B
-    option_c = db.Column(db.String(100), nullable=False)   # 選項 C
-    option_d = db.Column(db.String(100), nullable=False)   # 選項 D
-    correct_answer = db.Column(db.String(1), nullable=False) # 正確答案 ('A', 'B', 'C', 'D')
-
+    stage = db.Column(db.String(50), nullable=False) # 階段名稱
+    level_tag = db.Column(db.String(20), nullable=False) # 難度 (N5-N1)
+    question = db.Column(db.Text, nullable=False) # 題目內容
+    option_a = db.Column(db.String(100), nullable=False)
+    option_b = db.Column(db.String(100), nullable=False)
+    option_c = db.Column(db.String(100), nullable=False)
+    option_d = db.Column(db.String(100), nullable=False)
+    correct_answer = db.Column(db.String(1), nullable=False) # 正確答案 (A/B/C/D)
 
 # ==========================================
-# 🗂️ 3. 使用者學習紀錄 (場景解鎖、單字收藏)
+# 🗂️ 3. 使用者學習紀錄
 # ==========================================
 
-# 照片事件表(UserPhoto) - 主檔
-# 記錄使用者的每一次「拍照動態」
+# T06: 使用者照片事件表
 class UserPhoto(db.Model):
+    __tablename__ = 'user_photo'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=True) # 系統判斷的大場景
-    image_path = db.Column(db.String(255), nullable=False) # 使用者拍的照片
-    custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂的名稱 (例如：新宿一蘭)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow) # 拍照時間
-
-    # 關聯：這張照片包含哪些單字明細
+    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=True) # AI 辨識出的場景
+    image_path = db.Column(db.String(255), nullable=False)
+    custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂名稱
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     photo_vocabs = db.relationship('UserPhotoVocab', backref='photo', lazy=True, cascade="all, delete-orphan")
-    scene = db.relationship('Scene') # 讓 UserPhoto 可以找到對應的 Scene 物件
 
-# 照片包含的單字(UserPhotoVocab) - 明細檔
-# 記錄「某張照片裡，具體辨識出了哪幾個單字」
+# T07: 照片辨識單字明細表
 class UserPhotoVocab(db.Model):
+    __tablename__ = 'user_photo_vocab'
     id = db.Column(db.Integer, primary_key=True)
     photo_id = db.Column(db.Integer, db.ForeignKey('user_photo.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
-    
-    vocab = db.relationship('Vocab')
 
-# 使用者「單字收藏夾」(UserVocab) - 狀態檔
-# 記錄使用者跨越所有照片的「全域單字收藏進度」
+# T08: 使用者單字收藏表
 class UserVocab(db.Model):
     __tablename__ = 'user_vocab'
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'vocab_id', name='uq_user_vocab_user_vocab'),
-    )
-
+    __table_args__ = (db.UniqueConstraint('user_id', 'vocab_id', name='uq_user_vocab_user_vocab'),)
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
-    
-    # 這裡只剩下跟「收藏」有關的欄位！照片路徑跟標題都移走了
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
-    collected_at = db.Column(db.DateTime, nullable=True) # 有時間代表有按星星收藏
-    
-    vocab = db.relationship('Vocab')
+    collected_at = db.Column(db.DateTime, nullable=True)
 
-# 使用者自訂資料夾表 (UserFolder)
+# T09: 使用者自訂資料夾表
 class UserFolder(db.Model):
+    __tablename__ = 'user_folder'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# ==========================================
+# 🤝 4. 社交與學習小組系統
+# ==========================================
+
+# T10: 好友邀請表
+class FriendRequest(db.Model):
+    __tablename__ = 'friend_request'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending') # pending, accepted, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# T11: 好友關係表
+class Friendship(db.Model):
+    __tablename__ = 'friendship'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    friend_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    nickname = db.Column(db.String(50), nullable=True) # 好友備註
+
+# T12: 學習小組表
+class StudyGroup(db.Model):
+    __tablename__ = 'study_group'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), default="日語學習小隊")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    goal_type = db.Column(db.String(50), nullable=False, default='scans')
+    goal_target = db.Column(db.Integer, nullable=False, default=30)
+    current_progress = db.Column(db.Integer, default=0)
+    members = db.relationship('GroupMember', backref='group', lazy=True, cascade="all, delete-orphan")
+    invites = db.relationship('GroupInvite', backref='group', lazy=True, cascade="all, delete-orphan")
+
+# T13: 小組成員表
+class GroupMember(db.Model):
+    __tablename__ = 'group_member'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('study_group.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # 貢獻紀錄
+    group_scans = db.Column(db.Integer, default=0)
+    group_points = db.Column(db.Integer, default=0)
+    group_logins = db.Column(db.Integer, default=0)
+    # 獎勵與押金
+    has_claimed = db.Column(db.Boolean, default=False)
+    paid_deposit = db.Column(db.Boolean, default=False)
+    deposit_amount = db.Column(db.Integer, default=0)
+
+# T14: 小組邀請表
+class GroupInvite(db.Model):
+    __tablename__ = 'group_invite'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('study_group.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ==========================================
-# 🏆 4. 成就、任務與交易系統
+# 🏆 5. 成就、通知與回饋
 # ==========================================
 
-# 系統徽章/成就 (Achievement)
+# T15: 系統成就表
 class Achievement(db.Model):
+    __tablename__ = 'achievement'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False) 
     description = db.Column(db.String(255), nullable=True)
 
-# 使用者已解鎖的徽章 (UserAchievement)
+# T16: 使用者成就解鎖紀錄表
 class UserAchievement(db.Model):
+    __tablename__ = 'user_achievement'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     achievement_id = db.Column(db.Integer, db.ForeignKey('achievement.id'), nullable=False)
     unlocked_at = db.Column(db.DateTime, default=datetime.utcnow)
-    achievement = db.relationship('Achievement')
 
-# 點數交易紀錄表 (PointTransaction)  D11
-class PointTransaction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    points = db.Column(db.Integer, nullable=False)         # 負數代表消費
-    price = db.Column(db.Integer, nullable=False)          # 消費型紀錄填 0
-    payment_method = db.Column(db.String(50), nullable=False)
-    transaction_type = db.Column(db.String(20), nullable=False, default='purchase')
-    # 值：'purchase' | 'spend' | 'reward' | 'subscription_grant'
-    related_feature = db.Column(db.String(100), nullable=True)
-    # spend 時紀錄功能名，如 'roleplay'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-# 購點方案表 (PointPackage)
-class PointPackage(db.Model):
-    __tablename__ = 'point_package'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    points = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Integer, nullable=False)
-    tag = db.Column(db.String(20), nullable=True)
-    description = db.Column(db.String(200), nullable=True)
-    is_active = db.Column(db.Boolean, default=True)
-
-# ==========================================
-# 💳 訂閱方案與使用者訂閱紀錄
-# ==========================================
-
-# D19 訂閱方案表 (SubscriptionPlan)
-class SubscriptionPlan(db.Model):
-    __tablename__ = 'subscription_plan'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    billing_cycle = db.Column(db.String(10), nullable=True)   # 'monthly' | 'yearly' | None(通用)
-    price_monthly = db.Column(db.Integer, nullable=True)
-    price_yearly = db.Column(db.Integer, nullable=True)
-    features_json = db.Column(db.JSON, nullable=True)
-    points_grant = db.Column(db.Integer, default=0)          # 保留向下相容，新程式用下方欄位
-    points_grant_monthly = db.Column(db.Integer, default=50)  # 月訂贈點
-    points_grant_yearly  = db.Column(db.Integer, default=600) # 年訂贈點
-    is_active = db.Column(db.Boolean, default=True)
-
-# D20 使用者訂閱紀錄表 (UserSubscription)
-class UserSubscription(db.Model):
-    __tablename__ = 'user_subscription'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    plan_id = db.Column(db.Integer, db.ForeignKey('subscription_plan.id'), nullable=False)
-    billing_cycle = db.Column(db.String(10), nullable=False)  # 'monthly' | 'yearly'
-    start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    end_date = db.Column(db.DateTime, nullable=False)
-    auto_renew = db.Column(db.Boolean, default=True)
-    status = db.Column(db.String(20), nullable=False, default='active')
-    # 值：'active' | 'cancelled' | 'expired' | 'trial'
-    payment_method = db.Column(db.String(50), nullable=True)
-    payment_status = db.Column(db.String(20), nullable=False, default='paid')  # 'pending' | 'paid'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    plan = db.relationship('SubscriptionPlan')
-
-
-# D21 系統通知表 (Notification)
+# T17: 系統通知紀錄表
 class Notification(db.Model):
     __tablename__ = 'notification'
     id = db.Column(db.Integer, primary_key=True)
@@ -276,79 +254,9 @@ class Notification(db.Model):
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
-# ==========================================
-# 🤝 5. 社交與好友系統
-# ==========================================
-
-# 好友邀請表 (FriendRequest)
-class FriendRequest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending') # pending, accepted, rejected
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-# 確立好友關係表 (Friendship)
-class Friendship(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    friend_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    nickname = db.Column(db.String(50), nullable=True)     # 幫朋友改名！
-
-
-# ==========================================
-# 🛡️ 6. 學習小組 (公會) 系統
-# ==========================================
-
-# 學習小組本體 (StudyGroup)
-class StudyGroup(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), default="日語學習小隊") # 小組名稱
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    goal_type = db.Column(db.String(50), nullable=False, default='scans')
-    goal_target = db.Column(db.Integer, nullable=False, default=30)
-
-    # === 獎勵機制專用 ===
-    current_progress = db.Column(db.Integer, default=0) # 小組當前總進度
-    
-    # 關聯：一個小組可以有多個成員
-    members = db.relationship('GroupMember', backref='group', lazy=True, cascade="all, delete-orphan")
-    invites = db.relationship('GroupInvite', backref='group', lazy=True, cascade="all, delete-orphan")
-
-# 小組成員名單 (GroupMember)
-class GroupMember(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey('study_group.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    # 專屬這個小組的貢獻紀錄
-    group_scans = db.Column(db.Integer, default=0)  # 加入小組後的拍照次數
-    group_points = db.Column(db.Integer, default=0) # 加入小組後的獲得點數
-    group_logins = db.Column(db.Integer, default=0) # 加入小組後的登入天數
-
-    has_claimed = db.Column(db.Boolean, default=False)  # 是否已領取獎勵
-    paid_deposit = db.Column(db.Boolean, default=False) # 加入時是否有付押金
-    deposit_amount = db.Column(db.Integer, default=0)   # 實際付的押金金額（0=免費, 10=訂閱, 20=一般）
-   
-# 小組邀請表 (GroupInvite)
-class GroupInvite(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey('study_group.id'), nullable=False)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 邀請人 (組長)
-    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 被邀請人 (朋友)
-    status = db.Column(db.String(20), default='pending') # 狀態：pending(待處理), accepted(已接受), rejected(已拒絕)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-# ==========================================
-# 💬 7. 系統回饋與其他
-# ==========================================
-
-# 意見回饋表 (Feedback)
+# T18: 系統回饋表
 class Feedback(db.Model):
+    __tablename__ = 'feedback'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     email = db.Column(db.String(120), nullable=True)
@@ -359,22 +267,71 @@ class Feedback(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ==========================================
-# 🛡️ 系統管理者 (Admin) 資料表
+# 💳 6. 商業邏輯 (購點與訂閱)
 # ==========================================
-class Admin(db.Model):
-    __tablename__ = 'admin'
+
+# T19: 購點方案表
+class PointPackage(db.Model):
+    __tablename__ = 'point_package'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    
-    # 錯誤的主因就是缺了下面這兩行！請確保有加上：
-    role = db.Column(db.String(20), default='super_admin', nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    points = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Integer, nullable=False)
+    tag = db.Column(db.String(20), nullable=True)
+    description = db.Column(db.String(200), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+
+# T20: 訂閱方案資料表
+class SubscriptionPlan(db.Model):
+    __tablename__ = 'subscription_plan'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    billing_cycle = db.Column(db.String(10), nullable=True) # monthly/yearly
+    price_monthly = db.Column(db.Integer, nullable=True)
+    price_yearly = db.Column(db.Integer, nullable=True)
+    features_json = db.Column(db.JSON, nullable=True) # 訂閱功能清單
+    points_grant_monthly = db.Column(db.Integer, default=50) # 月訂贈點
+    points_grant_yearly = db.Column(db.Integer, default=600) # 年訂贈點
+    is_active = db.Column(db.Boolean, default=True)
+
+# T21: 使用者訂閱紀錄表
+class UserSubscription(db.Model):
+    __tablename__ = 'user_subscription'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('subscription_plan.id'), nullable=False)
+    billing_cycle = db.Column(db.String(10), nullable=False)
+    start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    end_date = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='active') # active/cancelled/expired
+    auto_renew = db.Column(db.Boolean, default=True)
+    payment_method = db.Column(db.String(50), nullable=True)
+    payment_status = db.Column(db.String(20), nullable=False, default='paid')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def set_password(self, password):
-        from werkzeug.security import generate_password_hash
-        self.password_hash = generate_password_hash(password)
+# T22: 點數交易紀錄表
+class PointTransaction(db.Model):
+    __tablename__ = 'point_transaction'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    points = db.Column(db.Integer, nullable=False) # 正/負數
+    price = db.Column(db.Integer, nullable=False)
+    transaction_type = db.Column(db.String(20), nullable=False) # purchase/spend/reward...
+    related_feature = db.Column(db.String(100), nullable=True) # 功能來源
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def check_password(self, password):
-        from werkzeug.security import check_password_hash
-        return check_password_hash(self.password_hash, password)
+# ==========================================
+# 🛡️ 7. 系統日誌
+# ==========================================
+
+# T23: 系統操作異動日誌表
+class SystemLog(db.Model):
+    __tablename__ = 'system_log'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # 操作者
+    action = db.Column(db.String(20), nullable=False) # INSERT, UPDATE, DELETE
+    target_table = db.Column(db.String(50), nullable=False) # 操作目標資料表
+    target_id = db.Column(db.Integer, nullable=False) # 目標紀錄 ID
+    old_value = db.Column(db.JSON, nullable=True) # 變更前資料 (JSON)
+    new_value = db.Column(db.JSON, nullable=True) # 變更後資料 (JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

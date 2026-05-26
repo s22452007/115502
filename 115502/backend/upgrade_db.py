@@ -477,6 +477,27 @@ try:
 except Exception as e:
     print(f"⚠️ group_completions 移除警告（可能已完成）：{e}")
 
+# ==========================================
+# 21. 建立 T23 system_log (稽核日誌表)
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS system_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        action VARCHAR(20) NOT NULL,
+        target_table VARCHAR(50) NOT NULL,
+        target_id INTEGER NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id)
+    );
+    """)
+    print("✅ system_log (稽核日誌表) 建立成功！")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ system_log 建立警告：{e}")
+    
 # 儲存並關閉
 conn.commit()
 conn.close()

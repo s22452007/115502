@@ -74,7 +74,7 @@ class AppDrawer extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // 🌟 這裡改成 iconColor: AppColors.primary (文字會自動預設為黑色)
+                  //iconColor: AppColors.primary (文字會自動預設為黑色)
                   _buildPillItem(
                     context,
                     Icons.home_outlined,

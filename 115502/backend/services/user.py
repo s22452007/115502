@@ -374,63 +374,68 @@ _FEATURE_COST = {
 # 消費點數解鎖功能（DFD 5.5）
 @user_bp.route('/spend_points', methods=['POST'])
 def spend_points():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    feature = data.get('feature', 'unknown')
-    # 已知 feature 用 server 定義的成本，否則接受前端傳入
-    points_to_spend = _FEATURE_COST.get(feature, data.get('points', 0))
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        feature = data.get('feature', 'unknown')
+        # 已知 feature 用 server 定義的成本，否則接受前端傳入
+        points_to_spend = _FEATURE_COST.get(feature, data.get('points', 0))
 
-    if not user_id or points_to_spend <= 0:
-        return jsonify({"error": "缺少使用者 ID 或點數數量錯誤"}), 400
+        if not user_id or points_to_spend <= 0:
+            return jsonify({"error": "缺少使用者 ID 或點數數量錯誤"}), 400
 
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "找不到此使用者"}), 404
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "找不到此使用者"}), 404
 
-    if user.j_pts < points_to_spend:
-        return jsonify({"error": f"點數不足，需要 {points_to_spend} 點"}), 400
+        if user.j_pts < points_to_spend:
+            return jsonify({"error": f"點數不足，需要 {points_to_spend} 點"}), 400
 
-    # vocab_expand_premium 限訂閱用戶
-    if feature == 'vocab_expand_premium' and not user.is_premium:
-        return jsonify({"error": "此優惠僅限訂閱用戶使用"}), 403
+        # vocab_expand_premium 限訂閱用戶
+        if feature == 'vocab_expand_premium' and not user.is_premium:
+            return jsonify({"error": "此優惠僅限訂閱用戶使用"}), 403
 
-    user.j_pts -= points_to_spend
-    db.session.add(PointTransaction(
-        user_id=user_id,
-        points=-points_to_spend,
-        price=0,
-        payment_method='points',
-        transaction_type=TransactionType.SPEND,
-        related_feature=feature,
-    ))
+        user.j_pts -= points_to_spend
+        db.session.add(PointTransaction(
+            user_id=user_id,
+            points=-points_to_spend,
+            price=0,
+            payment_method='points',
+            transaction_type=TransactionType.SPEND,
+            related_feature=feature,
+        ))
 
-    # 依 feature 給予對應效果
-    effect_desc = ''
+        # 依 feature 給予對應效果
+        effect_desc = ''
 
-    if feature == 'photo_extra':
-        user.photo_extra_count = (getattr(user, 'photo_extra_count', 0) or 0) + 5
-        effect_desc = '+5 次拍照（永久）'
+        if feature == 'photo_extra':
+            user.photo_extra_count = (getattr(user, 'photo_extra_count', 0) or 0) + 5
+            effect_desc = '+5 次拍照（永久）'
 
-    elif feature == 'ai_extra':
-        user.ai_extra_count = (getattr(user, 'ai_extra_count', 0) or 0) + 5
-        effect_desc = '+5 次 AI 對話（永久）'
+        elif feature == 'ai_extra':
+            user.ai_extra_count = (getattr(user, 'ai_extra_count', 0) or 0) + 5
+            effect_desc = '+5 次 AI 對話（永久）'
 
-    elif feature in ('vocab_expand', 'vocab_expand_premium'):
-        current_slot = getattr(user, 'vocab_slot', 50) or 50
-        if current_slot >= 1000:
-            db.session.rollback()
-            return jsonify({"error": "單字收藏擴充已達上限（1000個）"}), 400
-        add_amount = min(50, 1000 - current_slot)
-        user.vocab_slot = current_slot + add_amount
-        effect_desc = f'+{add_amount} 個收藏位'
+        elif feature in ('vocab_expand', 'vocab_expand_premium'):
+            current_slot = getattr(user, 'vocab_slot', 50) or 50
+            if current_slot >= 1000:
+                db.session.rollback()
+                return jsonify({"error": "單字收藏擴充已達上限（1000個）"}), 400
+            add_amount = min(50, 1000 - current_slot)
+            user.vocab_slot = current_slot + add_amount
+            effect_desc = f'+{add_amount} 個收藏位'
 
-    db.session.commit()
+        db.session.commit()
 
-    return jsonify({
-        "message": f"成功使用 {points_to_spend} 點！{effect_desc}",
-        "total_points": user.j_pts,
-        "effect": effect_desc,
-    }), 200
+        return jsonify({
+            "message": f"成功使用 {points_to_spend} 點！{effect_desc}",
+            "total_points": user.j_pts,
+            "effect": effect_desc,
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"[server error] {type(e).__name__}: {e}"}), 500
 
 
 def _reset_daily_if_needed(user):

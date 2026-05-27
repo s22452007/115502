@@ -1229,7 +1229,7 @@ class ApiClient {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return {...data, '_status': response.statusCode};
     } catch (e) {
-      return {'error': '網路連線失敗', '_status': 0};
+      return {'error': '[debug] $e', '_status': 0};
     }
   }
 

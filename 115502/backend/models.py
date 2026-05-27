@@ -316,6 +316,7 @@ class PointTransaction(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     points = db.Column(db.Integer, nullable=False) # 正/負數
     price = db.Column(db.Integer, nullable=False)
+    payment_method = db.Column(db.String(50), nullable=True)
     transaction_type = db.Column(db.String(20), nullable=False) # purchase/spend/reward...
     related_feature = db.Column(db.String(100), nullable=True) # 功能來源
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

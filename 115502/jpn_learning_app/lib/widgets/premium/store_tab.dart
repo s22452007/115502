@@ -58,15 +58,28 @@ class _StoreTabState extends State<StoreTab> {
       return;
     }
 
-    final res = await ApiClient.spendPoints(userId: userId, points: cost, feature: item['id']);
-    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF5F8F5B))),
+    );
 
-    if (res.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error']), backgroundColor: Colors.redAccent));
-    } else {
-      final newPts = (res['total_points'] as num?)?.toInt() ?? userPts - cost;
-      context.read<UserProvider>().setJPts(newPts);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('🎉 兌換成功！${item['description']}'), backgroundColor: const Color(0xFF5F8F5B)));
+    try {
+      final res = await ApiClient.spendPoints(userId: userId, points: cost, feature: item['id']);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (res.containsKey('error')) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error']), backgroundColor: Colors.redAccent));
+      } else {
+        final newPts = (res['total_points'] as num?)?.toInt() ?? userPts - cost;
+        context.read<UserProvider>().setJPts(newPts);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('🎉 兌換成功！${item['description']}'), backgroundColor: const Color(0xFF5F8F5B)));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('網路連線失敗，請稍後再試'), backgroundColor: Colors.redAccent));
     }
   }
 
@@ -83,6 +96,7 @@ class _StoreTabState extends State<StoreTab> {
     switch (id) {
       case 'photo_extra': return Icons.camera_alt;
       case 'ai_extra': return Icons.smart_toy;
+      case 'group_deposit': return Icons.groups;
       default: return Icons.bookmark_add;
     }
   }

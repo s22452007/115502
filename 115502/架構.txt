@@ -30,6 +30,8 @@
 │   │   │   └── list.html
 │   │   ├── quiz/                        # 測驗列表頁面模板
 │   │   │   └── list.html
+│   │   ├── store/                       # (新增) 商城與付費方案管理頁面模板
+│   │   │   └── list.html
 │   │   ├── user/                        # 使用者明細與列表頁面模板
 │   │   │   ├── detail.html
 │   │   │   └── list.html
@@ -54,7 +56,8 @@
 │       ├── subscription.py              # 處理訂閱邏輯與 Premium 方案管理
 │       ├── tutor.py                     # 處理 AI 家教問答紀錄與 FAQ
 │       ├── user.py                      # 處理個人資料、能力值、點數與徽章進度抓取
-│       └── vocabulary.py                # 處理單字圖鑑、收藏狀態 (UserVocab) 與資料夾管理
+│       ├── vocabulary.py                # 處理單字圖鑑、收藏狀態 (UserVocab) 與資料夾管理
+│       └── notification.py              # (新增) 處理系統公告、個人推播通知與邀請提醒
 │
 └── jpn_learning_app/                    [前端：Flutter 行動應用程式]
     ├── pubspec.yaml                     # 專案設定檔：管理 Flutter 套件版本與 assets 資源路徑
@@ -69,6 +72,7 @@
         │   ├── scenario.dart            # 拍照場景事件模型
         │   ├── badge_model.dart         # 徽章名稱與達成門檻模型
         │   ├── leaderboard.dart         # 排行榜進度資料模型
+        │   ├── notification_model.dart  # (新增) 通知訊息資料模型
         │   └── question.dart            # 測驗題庫題目格式模型
         │
         ├── providers/                   # 狀態管理層 (資料管家)
@@ -81,9 +85,10 @@
         ├── services/                    # API 通訊層 (外送員)
         │   ├── auth_service.dart        # 對接後端 auth 路由，傳送憑證進行認證
         │   ├── ai_service.dart          # 對接 AI 功能，上傳圖片或傳送對話文字
-        │   ├── user_service.dart        # 請求個人檔案、好友列表與排行榜數據(空)
-        │   ├── tutor_service.dart       # 傳送家教提問與獲取回覆內容(空)
-        │   └── notification_service.dart# 處理推播通知與系統訊息提醒
+        │   ├── user_service.dart        # 請求個人檔案、好友列表與排行榜數據
+        │   ├── tutor_service.dart       # 傳送家教提問與獲取回覆內容
+        │   ├── notification_service.dart# 處理推播通知與系統訊息提醒
+        │   └── audio_service.dart       # (新增) 處理語音播放 (單字發音) 與語音轉文字串接
         │
         ├── utils/                       # 前端工具類
         │   ├── api_client.dart          # HTTP 基底：統一管理 baseUrl, Header 與錯誤處理
@@ -104,7 +109,8 @@
         │   │   └── test_result_screen.dart# 測驗結果：判定初始等級與落點分析
         │   │        
         │   ├── home/                    # 2. 首頁模組
-        │   │   └── home_screen.dart     # 首頁：顯示每日目標、學習火種與捷徑
+        │   │   ├── home_screen.dart     # 首頁：顯示每日目標、學習火種與捷徑
+        │   │   └── notification_screen.dart # (新增) 通知中心：查看系統公告、好友與小組邀請
         │   │
         │   ├── scenario/                # 3. 核心辨識模組
         │   │   ├── camera_screen.dart   # 相機：負責拍照取景與圖片預覽
@@ -118,20 +124,26 @@
         │   │   ├── manual_search_screen.dart # 手動搜尋場景：輸入文字查詢物品
         │   │   └── scenario_detail_screen.dart # 情境詳情：單一場景結果與延伸學習
         │   │        
-        │   ├── profile/                             # 4. 個人中心模組
+        │   ├── quiz/                    # (新增) 4. 測驗與複習模組
+        │   │   ├── daily_quiz_screen.dart   # 每日情境測驗：根據收藏單字自動產生單選題
+        │   │   ├── flashcard_screen.dart    # 閃卡複習：針對單字庫進行翻牌背誦
+        │   │   └── quiz_result_screen.dart  # 測驗結算：顯示正確率與獲得的經驗值/金幣
+        │   │
+        │   ├── profile/                 # 5. 個人中心模組
         │   │   ├── profile_screen.dart              # 個人主頁：能力雷達圖、金幣與徽章入口
         │   │   ├── personal_info_screen.dart        # 基本資料：修改暱稱、大頭貼
         │   │   ├── change_password_screen.dart      # 帳號安全：修改密碼
-        │   │   ├── system_settings_screen.dart      # 系統設定：字體大小、意見回饋、通知開關
+        │   │   ├── system_settings_screen.dart      # 系統設定：字體大小、通知開關
+        │   │   ├── feedback_screen.dart             # (新增) 意見回饋：填寫表單並上傳截圖給後台
         │   │   ├── badge_library_screen.dart        # 徽章庫：查看所有成就達成進度
         │   │   │
         │   │   │   # --- 收藏夾系統 (Favorites) ---
         │   │   ├── photo_folder_v2_screen.dart      # 我的收藏夾首頁：顯示所有資料夾與統計
-        │   │   ├── folder_card.dart                 # 資料夾入口卡片：文件實際位於 screens/profile
+        │   │   ├── folder_card.dart                 # 資料夾入口卡片
         │   │   ├── folder_detail_screen.dart        # 新資料夾內容頁 (點進資料夾後的單字列表)
         │   │   ├── single_vocab_detail_screen.dart  # 單一單字詳情 (從收藏點進去的精美字卡)
         │   │   │
-        │   ├── leaderboard/             # 5. 排行與小組模組
+        │   ├── leaderboard/             # 6. 排行與小組模組
         │   │   ├── leaderboard_screen.dart# 總榜：顯示全體使用者的積分排行
         │   │   ├── study_group_home_screen.dart# 小組大廳：建立或加入學習小組
         │   │   ├── study_group_screen.dart# 小組看板：顯示組員進度與共同目標
@@ -139,20 +151,20 @@
         │   │   ├── group_invites_screen.dart# 邀請中心：處理加入申請
         │   │   └── invite_group_members_screen.dart# 邀請組員：搜尋並拉人進組
         │   │
-        │   ├── friends/                 # 6. 社交模組
+        │   ├── friends/                 # 7. 社交模組
         │   │   ├── addfriends_screen.dart# 搜尋好友：發送申請
         │   │   ├── myfriends_screen.dart# 好友列表：顯示目前麻吉與狀態
         │   │   └── chat_screen.dart     # 聊天室：與好友進行文字交流
         │   │
-        │   ├── tutor/                   # 7. AI 家教模組
+        │   ├── tutor/                   # 8. AI 家教模組
         │   │   ├── tutor_home_screen.dart# 家教大廳：歷史問答清單與熱門 FAQ
         │   │   ├── ask_question_screen.dart# 提問頁面：針對特定情境發問
         │   │   └── tutor_answer_screen.dart# 答案頁面：AI 家教的深入解析回覆
         │   │
-        │   └── premium/                 # 8. 付費與點數模組
+        │   └── premium/                 # 9. 付費與商城模組
         │       ├── premium_screen.dart  # 訂閱頁：展示 Premium 會員權益
         │       ├── subscription_management_screen.dart # 管理訂閱與方案切換頁面
-        │       ├── store_dashboard_screen.dart # 商店主頁：展示可購買方案與促銷
+        │       ├── store_dashboard_screen.dart # 商店主頁：展示虛擬道具與方案
         │       ├── subscription_checkout_screen.dart # 訂閱結帳頁：確認付款與方案細節
         │       ├── point_checkout_screen.dart# 結帳確認：點數轉換計算
         │       ├── credit_card_payment_screen.dart# 支付頁面：信用卡資訊輸入
@@ -165,7 +177,7 @@
             │   ├── bottom_nav_bar.dart  # 底部主導航列 (五大功能)
             │   ├── radar_chart.dart     # 五角能力分佈圖繪製元件
             │   ├── status_chip.dart     # 各類小標籤 (如等級、狀態)
-            │   ├── user_avatar.dart
+            │   ├── user_avatar.dart     # 處理使用者頭像顯示邏輯
             │   └── premium_locked_overlay.dart# 鎖定層：提示功能需付費解鎖
             │            
             ├── home/                    # 首頁零件
@@ -182,7 +194,7 @@
             │       └── folder_card.dart             # 首頁的資料夾小卡片 (含重新命名/刪除功能)
             │
             ├── scenario/                # 情境零件
-            │   └── vocab_card.dart      # 單字清單條目元件
+            │   └── vocab_card.dart      # 單字清單條目元件 (含發音播放按鈕)
             │
             ├── friends/                # 好友零件
             │   ├── found_user_card.dart        # 搜尋到的用戶卡片 (含大頭貼邏輯)
@@ -199,6 +211,7 @@
             │   ├── goal_progress_card.dart    # (首頁) 中間進度條與達標的「領獎按鈕」
             │   ├── ranking_list_card.dart     # (首頁) 底部本週貢獻排行榜名單
             │   ├── invite_friend_card.dart    # (建立/邀請頁) 好友名單卡片 (打勾選取)
+            │   ├── rules_card.dart            # (新增) 群組規範與公告展示卡片
             │   └── group_invite_card.dart     # (收件匣) 別人邀請我的卡片 (接受/拒絕)
             │
             ├── premium/                 # 付費方案元件
@@ -207,6 +220,6 @@
             │   ├── plan_card.dart       # 方案展示卡片：展示不同訂閱方案與價格
             │   └── store_tab.dart        # 商店分頁：展示可購買商品與推薦內容
             │
-            └── dialogs/                 # 彈窗組件
+            └── dialogs/                  # 彈窗組件
                 ├── level_up_dialog.dart # 恭喜升級/獲得徽章的慶祝動畫彈窗
                 └── vocab_bottom_sheet.dart# 選擇資料夾收藏單字的底部選單

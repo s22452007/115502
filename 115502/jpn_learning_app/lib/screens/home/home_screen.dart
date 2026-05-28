@@ -173,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu_rounded, size: 30),
-            color: _textColor,
+            color:  AppColors.primary,
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),

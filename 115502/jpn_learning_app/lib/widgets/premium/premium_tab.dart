@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:jpn_learning_app/widgets/premium/plan_card.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_management_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 import 'package:jpn_learning_app/screens/premium/premium_trial_screen.dart';
@@ -18,6 +17,10 @@ class _PremiumTabState extends State<PremiumTab> {
   Map<String, dynamic>? _monthlyPlan;
   Map<String, dynamic>? _yearlyPlan;
   bool _isLoading = true;
+
+  // 🌟 與儲值點數分頁完全統一的扁平化配色設定
+  static const Color _textDark = Color(0xFF2C3E50);
+  static const Color _subText = Color(0xFF8E9AAB);
 
   @override
   void initState() { super.initState(); _loadPlans(); _loadSubscriptionStatus(); }
@@ -36,7 +39,6 @@ class _PremiumTabState extends State<PremiumTab> {
       final res = await ApiClient.getSubscriptionPlans();
       if (!mounted) return;
       final plans = (res['plans'] as List? ?? []).cast<Map<String, dynamic>>();
-      // 找月/年方案；若無 billing_cycle 欄位則以 price 有值判斷
       Map<String, dynamic>? monthly;
       Map<String, dynamic>? yearly;
       for (final p in plans) {
@@ -80,7 +82,7 @@ class _PremiumTabState extends State<PremiumTab> {
     if (iso == null) return '';
     try {
       final dt = DateTime.parse(iso).toLocal();
-      return formatDate(dt);
+      return "${dt.year}/${dt.month}/${dt.day}";
     } catch (_) {
       return iso;
     }
@@ -92,16 +94,10 @@ class _PremiumTabState extends State<PremiumTab> {
     final isPremium = userProvider.isPremium;
     final trialUsed = userProvider.trialUsed;
     final String currentCycle = userProvider.billingCycle ?? '';
-
     final pendingUpgradeStart = userProvider.pendingUpgradeStart;
 
-    if (_isLoading) return Center(child: const CircularProgressIndicator(color: AppColors.primary));
+    if (_isLoading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
 
-    // 月繳按鈕邏輯
-    // 情況A: 已訂閱月繳 → 目前方案
-    // 情況A2: 已訂閱（其他週期）→ 切換為月繳
-    // 情況B: 未訂閱 + 未試用 → 開始 7 天免費試用
-    // 情況C: 未訂閱 + 已試用 → 立即訂閱
     final String monthlyBtnText;
     final VoidCallback? monthlyOnTap;
     final String? monthlyBtnSubText;
@@ -133,27 +129,25 @@ class _PremiumTabState extends State<PremiumTab> {
       children: [
         if (isPremium) ...[
           _buildManagementBanner(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
         ],
 
-        // Free 方案
-        PlanCard(
+        // 1. Free 方案卡片
+        _buildFlatPlanCard(
           title: 'Free (免費版)',
-          isPro: false,
           isCurrent: !isPremium,
           priceText: 'NT\$ 0 / 月',
           features: ['每日最多 3 次 AI 對話', '每日最多 2 次場景照片上傳', '單字收藏上限 50 個', '基本學習結果'],
           btnText: !isPremium ? '目前方案' : null,
           onTap: null,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
 
-        // 月繳方案
-        PlanCard(
+        // 2. 月繳方案卡片
+        _buildFlatPlanCard(
           title: 'Premium (月繳)',
-          isPro: true,
           isCurrent: isPremium && currentCycle == 'monthly',
-          badgeText: '每月送 20 點',
+          badgeText: '每月贈送 20 點', 
           priceText: 'NT\$ 149 / 月',
           features: ['享 7 天免費試用，隨時可取消', '每日 10 次拍照辨識', '每日 10 次 AI 對話', '單字擴充 7 折、小組押金 5 折'],
           btnText: monthlyBtnText,
@@ -161,17 +155,16 @@ class _PremiumTabState extends State<PremiumTab> {
           btnColor: AppColors.primary,
           onTap: monthlyOnTap,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
 
-        // 年繳方案
-        PlanCard(
+        // 3. 年繳方案卡片
+        _buildFlatPlanCard(
           title: 'Premium Pro (年繳)',
-          isPro: true,
           isCurrent: isPremium && currentCycle == 'yearly',
-          badgeText: '最划算！狂贈 300 點',
+          badgeText: '年度精選 贈送 300 點', 
           priceText: 'NT\$ 1290 / 年',
           subtitle: '平均每月只要 NT\$ 107，現省 NT\$ 498！',
-          features: ['包含月繳所有特權', '一次性獲得 300 J-Pts', '最划算的長期學習投資'],
+          features: ['包含月繳所有特權', '一次性獲得 300 J-Pts', '最劃算的長期學習投資'],
           isScheduledUpgrade: isPremium && currentCycle == 'monthly' && pendingUpgradeStart != null,
           scheduledDate: _formatIsoDate(pendingUpgradeStart),
           btnText: (isPremium && currentCycle == 'yearly')
@@ -179,7 +172,7 @@ class _PremiumTabState extends State<PremiumTab> {
               : (isPremium && pendingUpgradeStart != null)
                   ? null
                   : (isPremium ? '排程升級為年繳' : '立即升級年繳'),
-          btnColor: AppColors.secondary,
+          btnColor: const Color(0xFFFF7043), // 🌟 與儲值點數的「最划算橘色」遙相呼應
           onTap: (isPremium && currentCycle == 'yearly')
               ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
               : (isPremium && pendingUpgradeStart == null)
@@ -190,17 +183,132 @@ class _PremiumTabState extends State<PremiumTab> {
     );
   }
 
+  // 🌟 與儲值分頁完全同款的「扁平化精緻方案組件」
+  Widget _buildFlatPlanCard({
+    required String title,
+    required String priceText,
+    required List<String> features,
+    required bool isCurrent,
+    String? badgeText,
+    String? subtitle,
+    String? btnText,
+    String? btnSubText,
+    Color? btnColor,
+    VoidCallback? onTap,
+    bool isScheduledUpgrade = false,
+    String? scheduledDate,
+  }) {
+    final Color mainColor = btnColor ?? AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24), // 24級高雅圓角
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isCurrent ? AppColors.primary : _textDark)),
+              if (badgeText != null && badgeText.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: title.contains('Pro') ? const Color(0xFFFF7043) : AppColors.primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(badgeText, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(priceText, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textDark)),
+          if (subtitle != null && subtitle.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ],
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Divider(color: Color(0xFFEDF3EF), height: 1, thickness: 1), // 極輕極淡分隔線
+          ),
+          ...features.map((f) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: isCurrent ? AppColors.primary : AppColors.primary.withOpacity(0.3), size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Text(f, style: const TextStyle(fontSize: 14, color: _textDark, fontWeight: FontWeight.w600))),
+              ],
+            ),
+          )),
+          if (isScheduledUpgrade && scheduledDate != null && scheduledDate.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(12)),
+              child: Text('將於 $scheduledDate 自動切換為此方案', style: const TextStyle(fontSize: 13, color: Color(0xFFF57F17), fontWeight: FontWeight.w700)),
+            ),
+          ],
+          if (btnText != null) ...[
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isCurrent ? const Color(0xFFEDF3EF) : mainColor,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: onTap,
+                child: Text(
+                  btnText, 
+                  style: TextStyle(
+                    color: isCurrent ? AppColors.primary : Colors.white, 
+                    fontWeight: FontWeight.w900, 
+                    fontSize: 15
+                  )
+                ),
+              ),
+            ),
+          ],
+          if (btnSubText != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.center,
+              child: Text(btnSubText, style: const TextStyle(fontSize: 12, color: _subText, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildManagementBanner() {
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen())),
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.primary, width: 1.5)),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.08), 
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: const Row(
           children: [
-            Icon(Icons.verified, color: AppColors.primary, size: 24), SizedBox(width: 10),
-            Expanded(child: Text('您已訂閱 Premium，點此管理訂閱資訊', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
-            Icon(Icons.chevron_right, color: AppColors.primary),
+            Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 22), 
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '您已訂閱 Premium，點此管理訂閱資訊', 
+                style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 14)
+              )
+            ),
+            // 🌟 修正點：已換成系統確切支援的標準 arrow_forward_ios，紅線完全清除
+            Icon(Icons.arrow_forward_ios, color: AppColors.primary, size: 16),
           ],
         ),
       ),

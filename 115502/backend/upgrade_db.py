@@ -78,6 +78,8 @@ try:
     );
     """)
     add_column("scene", "icon_name VARCHAR(50)")
+    add_column("vocab", "updated_by INTEGER")
+    add_column("vocab", "updated_at DATETIME")
     print("✅ scene 場景表確認完畢")
 except Exception as e:
     print(f"⚠️ scene 建立或升級警告：{e}")
@@ -160,6 +162,10 @@ add_column("vocab", "audio_basic VARCHAR(100)")
 add_column("vocab", "audio_inter VARCHAR(100)")
 add_column("vocab", "audio_upper VARCHAR(100)")
 add_column("vocab", "audio_adv VARCHAR(100)")
+# 來源與編輯紀錄
+add_column("vocab", "source VARCHAR(10) DEFAULT 'ai'")
+add_column("vocab", "updated_by INTEGER")
+add_column("vocab", "updated_at DATETIME")
 
 print("✅ vocab 單字表擴充成功 (已支援分級例句與獨立語音檔)！")
 
@@ -497,6 +503,49 @@ try:
     print("✅ system_log (稽核日誌表) 建立成功！")
 except sqlite3.OperationalError as e:
     print(f"⚠️ system_log 建立警告：{e}")
+
+# ==========================================
+# 22. 新增 updated_by / updated_at 欄位
+# ==========================================
+# quiz_question
+add_column("quiz_question", "updated_by INTEGER")
+add_column("quiz_question", "updated_at DATETIME")
+print("✅ quiz_question updated_by / updated_at 欄位確認完畢")
+
+# achievement
+add_column("achievement", "icon_codepoint INTEGER")
+add_column("achievement", "updated_by INTEGER")
+add_column("achievement", "updated_at DATETIME")
+print("✅ achievement icon_codepoint / updated_by / updated_at 欄位確認完畢")
+
+# feedback
+add_column("feedback", "replied_by INTEGER")
+print("✅ feedback replied_by 欄位確認完畢")
+
+# point_package
+add_column("point_package", "updated_by INTEGER")
+add_column("point_package", "updated_at DATETIME")
+print("✅ point_package updated_by / updated_at 欄位確認完畢")
+
+# subscription_plan
+add_column("subscription_plan", "updated_by INTEGER")
+add_column("subscription_plan", "updated_at DATETIME")
+print("✅ subscription_plan updated_by / updated_at 欄位確認完畢")
+
+# ==========================================
+# 25. user_subscription 防止重複有效訂閱索引
+# ==========================================
+try:
+    cursor.execute("DROP INDEX IF EXISTS uq_user_active_subscription;")
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_user_active_subscription
+        ON user_subscription(user_id)
+        WHERE start_date <= CURRENT_TIMESTAMP
+        AND end_date > CURRENT_TIMESTAMP;
+    """)
+    print("✅ user_subscription 防重複有效訂閱索引建立完畢")
+except Exception as e:
+    print(f"⚠️ 索引建立警告：{e}")
     
 # 儲存並關閉
 conn.commit()

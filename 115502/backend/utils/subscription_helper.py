@@ -3,6 +3,22 @@ from utils.db import db
 from models import UserSubscription, PointTransaction, Notification, TransactionType
 
 
+def get_subscription_status(subscription):
+    """
+    動態計算訂閱狀態，不依賴資料庫欄位
+    回傳值：'trial' | 'active' | 'cancelled' | 'expired'
+    """
+    now = datetime.utcnow()
+
+    if subscription.end_date < now:
+        return 'expired'
+    if subscription.billing_cycle == 'trial':
+        return 'trial'
+    if not subscription.auto_renew:
+        return 'cancelled'
+    return 'active'
+
+
 def check_and_expire_subscription(user):
     """
     統一過期判斷邏輯（修正1）。
@@ -12,7 +28,7 @@ def check_and_expire_subscription(user):
 
     sub = (UserSubscription.query
            .filter(UserSubscription.user_id == user.id,
-                   UserSubscription.status.in_(['active', 'trial', 'cancelled']))
+                   UserSubscription.start_date <= now)
            .order_by(UserSubscription.created_at.desc())
            .first())
 
@@ -25,52 +41,53 @@ def check_and_expire_subscription(user):
     if sub.end_date >= now:
         return  # 尚未到期，不需要處理
 
-    # ── 以下皆為已到期的情況 ──
+    # ── 以下皆為已到期的情況，用 billing_cycle / auto_renew 判斷原始狀態 ──
 
-    if sub.status == 'active':
+    if sub.billing_cycle == 'trial':
+        # 原本是試用中
         pending = (UserSubscription.query
-                   .filter_by(user_id=user.id, status='pending')
+                   .filter(UserSubscription.user_id == user.id,
+                           UserSubscription.start_date > now,
+                           UserSubscription.auto_renew == True)
+                   .first())
+
+        if pending and pending.payment_status == 'paid':
+            _activate_pending_upgrade(user, sub, pending, now)
+        else:
+            user.is_premium = False
+            user.auto_renew = False
+            if pending and pending.payment_status != 'paid':
+                db.session.delete(pending)
+            elif sub.auto_renew:
+                _convert_trial_to_paid(user, sub, now)
+
+    elif not sub.auto_renew:
+        # 原本是已取消
+        pending = (UserSubscription.query
+                   .filter(UserSubscription.user_id == user.id,
+                           UserSubscription.start_date > now,
+                           UserSubscription.auto_renew == True)
+                   .first())
+        if pending and pending.payment_status == 'paid':
+            _activate_pending_upgrade(user, sub, pending, now)
+        else:
+            user.is_premium = False
+            user.auto_renew = False
+
+    else:
+        # 原本是 active（auto_renew=True, billing_cycle != 'trial'）
+        pending = (UserSubscription.query
+                   .filter(UserSubscription.user_id == user.id,
+                           UserSubscription.start_date > now,
+                           UserSubscription.auto_renew == True)
                    .first())
         if pending and pending.payment_status == 'paid':
             _activate_pending_upgrade(user, sub, pending, now)
         elif pending and pending.payment_status != 'paid':
-            sub.status = 'expired'
             user.is_premium = False
             user.auto_renew = False
         elif sub.auto_renew:
             _try_renew(user, sub, now)
-        else:
-            sub.status = 'expired'
-            user.is_premium = False
-            user.auto_renew = False
-
-    elif sub.status == 'trial':
-        pending = (UserSubscription.query
-                   .filter_by(user_id=user.id, status='pending')
-                   .first())
-
-        if pending and pending.payment_status == 'paid':
-            # 試用到期且有已付款的年繳排程 → 直接啟用年繳
-            _activate_pending_upgrade(user, sub, pending, now)
-        else:
-            # 沒有年繳排程或尚未付款 → 標記試用過期
-            sub.status = 'expired'
-            user.is_premium = False
-            user.auto_renew = False
-            if pending and pending.payment_status != 'paid':
-                # 排程尚未付款，刪除
-                db.session.delete(pending)
-            elif sub.auto_renew:
-                # 試用到期且 auto_renew=True 且無排程 → 自動轉為正式月訂閱
-                _convert_trial_to_paid(user, sub, now)
-
-    elif sub.status == 'cancelled':
-        # 已取消且到期：若有已付款的排程年繳，依然啟用；否則保持失效
-        pending = (UserSubscription.query
-                   .filter_by(user_id=user.id, status='pending')
-                   .first())
-        if pending and pending.payment_status == 'paid':
-            _activate_pending_upgrade(user, sub, pending, now)
         else:
             user.is_premium = False
             user.auto_renew = False
@@ -83,17 +100,16 @@ def _try_renew(user, sub, now):
     payment_success = True  # TODO: 串接真實金流後替換此邏輯
 
     if not payment_success:
-        sub.status = 'expired'
         user.is_premium = False
         return
 
     # 若有排程中的年繳升級，優先啟用
     pending = (UserSubscription.query
-               .filter_by(user_id=user.id, status='pending')
+               .filter(UserSubscription.user_id == user.id,
+                       UserSubscription.start_date > now,
+                       UserSubscription.auto_renew == True)
                .first())
     if pending:
-        sub.status = 'expired'
-        pending.status = 'active'
         pending.start_date = now
         pending.end_date = now + timedelta(days=365)
 
@@ -124,7 +140,6 @@ def _try_renew(user, sub, now):
     delta = timedelta(days=365) if sub.billing_cycle == 'yearly' else timedelta(days=30)
     while sub.end_date < now:
         sub.end_date += delta
-    sub.status = 'active'
     sub.start_date = now
 
     plan = sub.plan
@@ -157,10 +172,6 @@ def _activate_pending_upgrade(user, sub, pending, now):
     """將排程年繳升級啟用，並在到期後開始新的年繳訂閱。
     注意：贈點已在排程建立時（付款時）立即發放，此處不再重複贈點。
     """
-    sub.status = 'expired'
-    pending.status = 'active'
-
-    # 保留原本排程開始時間，若檢查落在之後才觸發，仍以排程時間為起算。
     start_date = pending.start_date
     if start_date > now:
         start_date = now
@@ -185,7 +196,6 @@ def _convert_trial_to_paid(user, sub, now):
         start_date=now,
         end_date=new_end,
         auto_renew=True,
-        status='active',
         payment_method='auto_convert',
     )
     db.session.add(new_sub)
@@ -214,7 +224,7 @@ def _convert_trial_to_paid(user, sub, now):
 
 def _check_trial_notice(user, sub, now):
     """若試用剩餘 24 小時內且尚未通知，寫入通知並標記已發送（修正6）。"""
-    if sub.status != 'trial':
+    if get_subscription_status(sub) != 'trial':
         return
     if getattr(user, 'trial_notice_sent', False):
         return

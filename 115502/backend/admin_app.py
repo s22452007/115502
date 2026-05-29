@@ -401,7 +401,11 @@ def user_list():
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count,
-               (SELECT sub.status FROM user_subscription sub WHERE sub.user_id = u.id ORDER BY sub.created_at DESC LIMIT 1) as sub_status,
+               (SELECT CASE WHEN sub.end_date < datetime('now') THEN 'expired'
+                            WHEN sub.billing_cycle = 'trial' THEN 'trial'
+                            WHEN sub.auto_renew = 0 THEN 'cancelled'
+                            ELSE 'active' END
+                FROM user_subscription sub WHERE sub.user_id = u.id ORDER BY sub.created_at DESC LIMIT 1) as sub_status,
                (SELECT sub.billing_cycle FROM user_subscription sub WHERE sub.user_id = u.id ORDER BY sub.created_at DESC LIMIT 1) as sub_billing_cycle,
                (SELECT sp.name FROM user_subscription sub JOIN subscription_plan sp ON sp.id = sub.plan_id WHERE sub.user_id = u.id ORDER BY sub.created_at DESC LIMIT 1) as sub_plan_name
         FROM user u
@@ -438,7 +442,12 @@ def user_detail(user_id):
 
     try:
         subscriptions = conn.execute('''
-            SELECT us.id, us.status, us.billing_cycle, us.start_date, us.end_date,
+            SELECT us.id,
+                   CASE WHEN us.end_date < datetime('now') THEN 'expired'
+                        WHEN us.billing_cycle = 'trial' THEN 'trial'
+                        WHEN us.auto_renew = 0 THEN 'cancelled'
+                        ELSE 'active' END as status,
+                   us.billing_cycle, us.start_date, us.end_date,
                    us.auto_renew, us.created_at, sp.name as plan_name
             FROM user_subscription us
             LEFT JOIN subscription_plan sp ON sp.id = us.plan_id

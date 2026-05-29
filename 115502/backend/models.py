@@ -1,7 +1,9 @@
 from utils.db import db
-from datetime import datetime, date
+from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
+TW = timezone(timedelta(hours=8))
+created_at = db.Column(db.DateTime, default=lambda: datetime.now(TW))
 
 class TransactionType:
     PURCHASE = 'purchase'                      # 購買點數
@@ -91,6 +93,8 @@ class Scene(db.Model):
     icon_codepoint = db.Column(db.Integer, nullable=True) # Flutter Icon 代碼
     show_in_quick_select = db.Column(db.Boolean, default=False)
     vocabs = db.relationship('Vocab', backref='scene', lazy=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
 
 # T04: 單字字典表
 class Vocab(db.Model):
@@ -111,6 +115,10 @@ class Vocab(db.Model):
     sentence_upper_inter = db.Column(db.String(255), nullable=True) # N2
     sentence_advanced = db.Column(db.String(255), nullable=True) # N1
     # 語音路徑
+    # 來源與編輯紀錄
+    source = db.Column(db.String(10), nullable=False, default='ai') # 'ai'（Gemini生成）| 'admin'（管理者手動新增）
+    updated_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
 
 # T05: 測驗題目表
 class QuizQuestion(db.Model):
@@ -124,6 +132,8 @@ class QuizQuestion(db.Model):
     option_c = db.Column(db.String(100), nullable=False)
     option_d = db.Column(db.String(100), nullable=False)
     correct_answer = db.Column(db.String(1), nullable=False) # 正確答案 (A/B/C/D)
+    updated_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # ==========================================
 # 🗂️ 3. 使用者學習紀錄
@@ -235,6 +245,9 @@ class Achievement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False) 
     description = db.Column(db.String(255), nullable=True)
+    icon_codepoint = db.Column(db.Integer, nullable=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # T16: 使用者成就解鎖紀錄表
 class UserAchievement(db.Model):
@@ -263,6 +276,7 @@ class Feedback(db.Model):
     feedback_type = db.Column(db.String(50), nullable=False)
     content = db.Column(db.Text, nullable=False)
     reply = db.Column(db.Text, nullable=True)
+    replied_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
     replied_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -280,6 +294,8 @@ class PointPackage(db.Model):
     tag = db.Column(db.String(20), nullable=True)
     description = db.Column(db.String(200), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # T20: 訂閱方案資料表
 class SubscriptionPlan(db.Model):
@@ -293,6 +309,8 @@ class SubscriptionPlan(db.Model):
     points_grant_monthly = db.Column(db.Integer, default=50) # 月訂贈點
     points_grant_yearly = db.Column(db.Integer, default=600) # 年訂贈點
     is_active = db.Column(db.Boolean, default=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # T21: 使用者訂閱紀錄表
 class UserSubscription(db.Model):
@@ -303,7 +321,6 @@ class UserSubscription(db.Model):
     billing_cycle = db.Column(db.String(10), nullable=False)
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     end_date = db.Column(db.DateTime, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='active') # active/cancelled/expired
     auto_renew = db.Column(db.Boolean, default=True)
     payment_method = db.Column(db.String(50), nullable=True)
     payment_status = db.Column(db.String(20), nullable=False, default='paid')
@@ -329,7 +346,8 @@ class PointTransaction(db.Model):
 class SystemLog(db.Model):
     __tablename__ = 'system_log'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # 操作者
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # 操作者(使用者)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True) # 操作者(管理員)
     action = db.Column(db.String(20), nullable=False) # INSERT, UPDATE, DELETE
     target_table = db.Column(db.String(50), nullable=False) # 操作目標資料表
     target_id = db.Column(db.Integer, nullable=False) # 目標紀錄 ID

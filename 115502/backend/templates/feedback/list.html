@@ -197,10 +197,6 @@
                             data-bs-target="#replyModal{{ f.id }}">
                         {% if f.reply %}修改回覆{% else %}回覆{% endif %}
                     </button>
-                    <form action="/feedback/delete/{{ f.id }}" method="POST"
-                          onsubmit="return confirm('確定刪除此回饋？');" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
-                    </form>
                 </div>
             </div>
             {% else %}

@@ -218,9 +218,12 @@
                 </div>
                 <div class="card-actions">
                     <a href="/user/{{ u.id }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person-lines-fill me-1"></i> 詳情</a>
-                    <form action="/customer/delete/{{ u.id }}" method="POST"
-                          onsubmit="return confirm('確定刪除「{{ u.username or u.email }}」？\n所有資料將永久消失！');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill me-1"></i> 刪除</button>
+                    <form action="/user/suspend/{{ u.id }}" method="POST"
+                          onsubmit="return confirm('{% if u.is_suspended %}確定解除停用「{{ u.username or u.email }}」？{% else %}確定停用「{{ u.username or u.email }}」？該帳號將無法登入。{% endif %}');">
+                        <button type="submit" class="btn btn-sm {% if u.is_suspended %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                            <i class="bi bi-{% if u.is_suspended %}unlock-fill{% else %}slash-circle{% endif %} me-1"></i>
+                            {% if u.is_suspended %}解除停用{% else %}停用{% endif %}
+                        </button>
                     </form>
                 </div>
             </div>

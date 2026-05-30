@@ -57,6 +57,7 @@ class User(db.Model):
     last_free_group_week = db.Column(db.String(10), nullable=True)
     group_free_used_this_week = db.Column(db.Integer, default=0)
     vocab_slot = db.Column(db.Integer, default=50)
+    is_suspended = db.Column(db.Boolean, default=False)
 
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)

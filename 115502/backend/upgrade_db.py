@@ -546,7 +546,12 @@ try:
     print("✅ user_subscription 防重複有效訂閱索引建立完畢")
 except Exception as e:
     print(f"⚠️ 索引建立警告：{e}")
-    
+
+# 在你的 upgrade.py 的 Scene 區段下方加入：
+add_column("scene", "updated_by VARCHAR(50)")
+add_column("scene", "updated_at DATETIME")
+print("✅ scene 表：已補齊 updated_by 與 updated_at")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

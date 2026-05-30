@@ -108,9 +108,12 @@
                 </div>
             </div>
             <div style="text-align:right;">
-                <form action="/customer/delete/{{ user.id }}" method="POST"
-                      onsubmit="return confirm('確定刪除「{{ user.username or user.email }}」？所有資料將永久消失！');">
-                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill me-1"></i>刪除帳號</button>
+                <form action="/user/suspend/{{ user.id }}" method="POST"
+                      onsubmit="return confirm('{% if user.is_suspended %}確定解除停用「{{ user.username or user.email }}」？{% else %}確定停用「{{ user.username or user.email }}」？該帳號將無法登入。{% endif %}');">
+                    <button class="btn btn-sm {% if user.is_suspended %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                        <i class="bi bi-{% if user.is_suspended %}unlock-fill{% else %}slash-circle{% endif %} me-1"></i>
+                        {% if user.is_suspended %}解除停用{% else %}停用帳號{% endif %}
+                    </button>
                 </form>
             </div>
         </div>

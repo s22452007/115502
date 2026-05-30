@@ -226,29 +226,17 @@ def adjust_pts(user_id):
     conn.close()
     return redirect(url_for('customer_list'))
 
-@app.route('/customer/delete/<int:user_id>', methods=['POST'])
+@app.route('/user/suspend/<int:user_id>', methods=['POST'])
 @admin_login_required
-def delete_user(user_id):
+def toggle_suspend_user(user_id):
     conn = get_db_connection()
-    # user_photo_vocab 依賴 user_photo，要先刪
-    conn.execute('''
-        DELETE FROM user_photo_vocab WHERE photo_id IN
-        (SELECT id FROM user_photo WHERE user_id = ?)
-    ''', (user_id,))
-    conn.execute('DELETE FROM user_photo WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM user_vocab WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM user_folder WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM user_ability WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM user_achievement WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM point_transaction WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM friendship WHERE user_id = ? OR friend_id = ?', (user_id, user_id))
-    conn.execute('DELETE FROM friend_request WHERE sender_id = ? OR receiver_id = ?', (user_id, user_id))
-    conn.execute('DELETE FROM group_member WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM feedback WHERE user_id = ?', (user_id,))
-    conn.execute('DELETE FROM user WHERE id = ?', (user_id,))
-    conn.commit()
+    row = conn.execute('SELECT is_suspended FROM user WHERE id = ?', (user_id,)).fetchone()
+    if row:
+        new_val = 0 if row['is_suspended'] else 1
+        conn.execute('UPDATE user SET is_suspended = ? WHERE id = ?', (new_val, user_id))
+        conn.commit()
     conn.close()
-    return redirect(url_for('customer_list'))
+    return redirect(request.referrer or url_for('user_list'))
 
 
 @app.route('/purchase/list')
@@ -377,15 +365,17 @@ def user_list():
 
     # 檢查欄位是否存在
     cols = [row[1] for row in conn.execute("PRAGMA table_info(user)").fetchall()]
-    has_last_seen   = 'last_seen_at'          in cols
-    has_is_premium  = 'is_premium'            in cols
-    has_trial_used  = 'trial_used'            in cols
-    has_sub_end     = 'subscription_end_date' in cols
+    has_last_seen    = 'last_seen_at'          in cols
+    has_is_premium   = 'is_premium'            in cols
+    has_trial_used   = 'trial_used'            in cols
+    has_sub_end      = 'subscription_end_date' in cols
+    has_is_suspended = 'is_suspended'          in cols
 
-    last_seen_col  = 'u.last_seen_at'          if has_last_seen  else 'NULL as last_seen_at'
-    is_premium_col = 'u.is_premium'            if has_is_premium else '0 as is_premium'
-    trial_used_col = 'u.trial_used'            if has_trial_used else '0 as trial_used'
-    sub_end_col    = 'u.subscription_end_date' if has_sub_end    else 'NULL as subscription_end_date'
+    last_seen_col    = 'u.last_seen_at'          if has_last_seen    else 'NULL as last_seen_at'
+    is_premium_col   = 'u.is_premium'            if has_is_premium   else '0 as is_premium'
+    trial_used_col   = 'u.trial_used'            if has_trial_used   else '0 as trial_used'
+    sub_end_col      = 'u.subscription_end_date' if has_sub_end      else 'NULL as subscription_end_date'
+    is_suspended_col = 'u.is_suspended'          if has_is_suspended else '0 as is_suspended'
 
     base_query = f'''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
@@ -398,6 +388,7 @@ def user_list():
                {is_premium_col},
                {trial_used_col},
                {sub_end_col},
+               {is_suspended_col},
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count,

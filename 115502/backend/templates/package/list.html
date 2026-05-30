@@ -50,7 +50,7 @@
         .pkg-stat { flex: 1; }
         .pkg-stat-val { font-size: 1.1rem; font-weight: bold; color: #333; }
         .pkg-stat-lbl { font-size: 0.72rem; color: #aaa; }
-        .pkg-actions { display: flex; gap: 8px; margin-top: 4px; }
+        .pkg-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
         .pkg-desc { font-size: 0.82rem; color: #888; }
     </style>
 </head>
@@ -159,7 +159,8 @@
                         <i class="bi bi-pencil me-1"></i>修改
                     </button>
                     <form action="/package/toggle/{{ p.id }}" method="POST" class="flex-fill">
-                        <button type="submit" class="btn btn-sm w-100 {% if p.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                        <button type="submit" class="btn btn-sm w-100"
+                            style="{% if p.is_active %}background:#fef2f2;color:#e53e3e;border:1.5px solid #fca5a5;{% else %}background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;{% endif %}">
                             {% if p.is_active %}<i class="bi bi-eye-slash me-1"></i>下架{% else %}<i class="bi bi-eye me-1"></i>上架{% endif %}
                         </button>
                     </form>

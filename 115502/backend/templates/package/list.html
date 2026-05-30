@@ -40,18 +40,18 @@
         .pkg-status.on  { background: var(--green-light); color: var(--green); }
         .pkg-status.off { background: #f0f0f0; color: #999; }
         .pkg-name { font-size: 1.05rem; font-weight: bold; color: #222; padding-right: 70px; }
-        .pkg-tag  { display: inline-block; font-size: 0.72rem; font-weight: 700; background: #fff3cd; color: #856404; padding: 2px 8px; border-radius: 6px; margin-top: 2px; }
+        .pkg-tag  { display: inline-block; font-size: 0.72rem; font-weight: 700; background: #fff3cd; color: #856404; padding: 2px 8px; border-radius: 6px; margin-top: 4px; }
         .pkg-pts  { font-size: 2rem; font-weight: 900; color: var(--green); line-height: 1; }
         .pkg-pts span { font-size: 0.9rem; font-weight: 600; color: #888; }
         .pkg-price { font-size: 1rem; font-weight: 700; color: #333; }
         .pkg-price small { color: #aaa; font-weight: 400; font-size: 0.8rem; }
+        .pkg-desc { font-size: 0.82rem; color: #888; min-height: 1.2rem; margin-top: 4px; }
         .pkg-divider { border: none; border-top: 1px solid #f0f0f0; margin: 0; }
         .pkg-stats { display: flex; gap: 16px; }
         .pkg-stat { flex: 1; }
         .pkg-stat-val { font-size: 1.1rem; font-weight: bold; color: #333; }
         .pkg-stat-lbl { font-size: 0.72rem; color: #aaa; }
         .pkg-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
-        .pkg-desc { font-size: 0.82rem; color: #888; }
     </style>
 </head>
 <body>
@@ -129,12 +129,14 @@
 
                 <div>
                     <div class="pkg-name">{{ p.name }}</div>
-                    {% if p.tag %}<span class="pkg-tag">{{ p.tag }}</span>{% endif %}
-                    {% if p.description %}<div class="pkg-desc mt-1">{{ p.description }}</div>{% endif %}
+                    <div class="pkg-desc">{{ p.description or '' }}</div>
                 </div>
 
                 <div>
-                    <div class="pkg-pts">{{ p.points }} <span>J-Pts</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="pkg-pts">{{ p.points }} <span>J-Pts</span></div>
+                        {% if p.tag %}<span class="pkg-tag">{{ p.tag }}</span>{% endif %}
+                    </div>
                     <div class="pkg-price mt-1">NT$ {{ p.price }}
                         <small>（每點 NT$ {{ '%.2f'|format(p.price / p.points) }}）</small>
                     </div>

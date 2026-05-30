@@ -239,6 +239,57 @@ def toggle_suspend_user(user_id):
     return redirect(request.referrer or url_for('user_list'))
 
 
+@app.route('/package/list')
+@admin_login_required
+def package_list():
+    conn = get_db_connection()
+    packages = conn.execute('SELECT * FROM point_package ORDER BY price ASC').fetchall()
+    conn.close()
+    return render_template('package/list.html', packages=[dict(p) for p in packages])
+
+@app.route('/package/add', methods=['POST'])
+@admin_login_required
+def package_add():
+    name  = request.form.get('name', '').strip()
+    points = request.form.get('points', 0)
+    price  = request.form.get('price', 0)
+    tag    = request.form.get('tag', '').strip()
+    desc   = request.form.get('description', '').strip()
+    if name and points and price:
+        conn = get_db_connection()
+        conn.execute('INSERT INTO point_package (name, points, price, tag, description, is_active) VALUES (?,?,?,?,?,1)',
+                     (name, int(points), int(price), tag or None, desc or None))
+        conn.commit()
+        conn.close()
+    return redirect(url_for('package_list'))
+
+@app.route('/package/edit/<int:pkg_id>', methods=['POST'])
+@admin_login_required
+def package_edit(pkg_id):
+    name   = request.form.get('name', '').strip()
+    points = request.form.get('points', 0)
+    price  = request.form.get('price', 0)
+    tag    = request.form.get('tag', '').strip()
+    desc   = request.form.get('description', '').strip()
+    if name and points and price:
+        conn = get_db_connection()
+        conn.execute('UPDATE point_package SET name=?, points=?, price=?, tag=?, description=? WHERE id=?',
+                     (name, int(points), int(price), tag or None, desc or None, pkg_id))
+        conn.commit()
+        conn.close()
+    return redirect(url_for('package_list'))
+
+@app.route('/package/toggle/<int:pkg_id>', methods=['POST'])
+@admin_login_required
+def package_toggle(pkg_id):
+    conn = get_db_connection()
+    row = conn.execute('SELECT is_active FROM point_package WHERE id=?', (pkg_id,)).fetchone()
+    if row:
+        conn.execute('UPDATE point_package SET is_active=? WHERE id=?', (0 if row['is_active'] else 1, pkg_id))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('package_list'))
+
 @app.route('/purchase/list')
 @admin_login_required
 def purchase_list():

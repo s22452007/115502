@@ -80,6 +80,9 @@ class Admin(db.Model):
     role = db.Column(db.String(20), default='super_admin', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
 # ==========================================
 # 📖 2. 系統教材內容
 # ==========================================

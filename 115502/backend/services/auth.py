@@ -59,6 +59,9 @@ def login():
     if not user:
         return jsonify({"error": "尚未註冊過"}), 401
 
+    if getattr(user, 'is_suspended', False):
+        return jsonify({"error": "此帳號已被停用，請聯繫客服"}), 403
+
     # 如果帳號密碼正確
     if check_password_hash(user.password_hash, password):
 

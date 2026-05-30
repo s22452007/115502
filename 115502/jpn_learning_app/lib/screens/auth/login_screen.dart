@@ -151,7 +151,32 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '登入失敗')));
+        final errMsg = result['error'] ?? '登入失敗';
+        if (errMsg.contains('停用')) {
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(children: [
+                Icon(Icons.block, color: Colors.red),
+                SizedBox(width: 8),
+                Text('帳號已停用', style: TextStyle(fontWeight: FontWeight.bold)),
+              ]),
+              content: const Text('此帳號已被停用，如有疑問請聯繫客服。', style: TextStyle(height: 1.5)),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                  child: const Text('確定'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg)));
+        }
       }
     } else {
       final result = await ApiClient.register(email, password);

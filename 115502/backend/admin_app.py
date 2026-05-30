@@ -244,8 +244,26 @@ def toggle_suspend_user(user_id):
 def package_list():
     conn = get_db_connection()
     packages = conn.execute('SELECT * FROM point_package ORDER BY price ASC').fetchall()
+    packages = [dict(p) for p in packages]
+
+    # 計算每個方案的購買次數與累計營收
+    for p in packages:
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt, COALESCE(SUM(price),0) as revenue FROM point_transaction WHERE points=? AND price=? AND transaction_type='purchase'",
+            (p['points'], p['price'])
+        ).fetchone()
+        p['buy_count'] = row['cnt'] if row else 0
+        p['revenue']   = row['revenue'] if row else 0
+
+    # 整體統計
+    total_revenue  = sum(p['revenue'] for p in packages)
+    total_purchases = sum(p['buy_count'] for p in packages)
+    active_count   = sum(1 for p in packages if p['is_active'])
+
     conn.close()
-    return render_template('package/list.html', packages=[dict(p) for p in packages])
+    return render_template('package/list.html', packages=packages,
+                           total_revenue=total_revenue, total_purchases=total_purchases,
+                           active_count=active_count)
 
 @app.route('/package/add', methods=['POST'])
 @admin_login_required

@@ -117,6 +117,27 @@ def admin_login():
             
     return render_template('admin_login.html')
 
+@app.route('/admin/forgot_password', methods=['GET', 'POST'])
+def admin_forgot_password():
+    error = None
+    success = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        new_pw = request.form.get('new_password', '')
+        confirm_pw = request.form.get('confirm_password', '')
+        admin = Admin.query.filter_by(username=username).first()
+        if not admin:
+            error = '找不到此帳號'
+        elif len(new_pw) < 6:
+            error = '密碼至少需要 6 個字元'
+        elif new_pw != confirm_pw:
+            error = '兩次輸入的密碼不一致'
+        else:
+            admin.set_password(new_pw)
+            db.session.commit()
+            success = f'帳號 {username} 的密碼已成功重設，請重新登入。'
+    return render_template('admin/forgot_password.html', error=error, success=success)
+
 @app.route('/logout')
 def admin_logout():
     session.clear()

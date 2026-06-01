@@ -120,8 +120,19 @@
                 </div>
                 <div class="bstat">
                     <div class="bstat-val">{{ plans|sum(attribute='active_users') }}</div>
-                    <div class="bstat-lbl">目前訂閱人數</div>
+                    <div class="bstat-lbl">付費訂閱人數</div>
                 </div>
+                <div class="bstat">
+                    <div class="bstat-val" style="color:#888;">{{ free_users }}</div>
+                    <div class="bstat-lbl">免費用戶</div>
+                </div>
+                {% set total = (plans|sum(attribute='active_users')) + free_users %}
+                {% if total > 0 %}
+                <div class="bstat">
+                    <div class="bstat-val" style="color:#4a7a54;">{{ ((plans|sum(attribute='active_users')) / total * 100)|round(1) }}%</div>
+                    <div class="bstat-lbl">付費轉換率</div>
+                </div>
+                {% endif %}
             </div>
         </div>
 

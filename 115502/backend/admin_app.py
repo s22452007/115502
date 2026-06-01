@@ -86,6 +86,10 @@ def admin_root():
 # ==========================================
 # 🚪 3. 登入與登出系統
 # ==========================================
+@app.route('/login-preview')
+def login_preview():
+    return render_template('admin_login_preview.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':

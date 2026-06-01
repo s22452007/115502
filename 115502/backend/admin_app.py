@@ -253,6 +253,55 @@ def toggle_suspend_user(user_id):
     return redirect(request.referrer or url_for('user_list'))
 
 
+@app.route('/plan/list')
+@super_admin_required
+def plan_list():
+    conn = get_db_connection()
+    plans = conn.execute('SELECT * FROM subscription_plan ORDER BY id ASC').fetchall()
+    plans = [dict(p) for p in plans]
+    for p in plans:
+        count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM user_subscription WHERE plan_id=? AND status='active'",
+            (p['id'],)
+        ).fetchone()
+        p['active_users'] = count['cnt'] if count else 0
+    conn.close()
+    return render_template('plan/list.html', plans=plans)
+
+@app.route('/plan/edit/<int:plan_id>', methods=['POST'])
+@super_admin_required
+def plan_edit(plan_id):
+    name = request.form.get('name', '').strip()
+    price_monthly = request.form.get('price_monthly') or None
+    price_yearly  = request.form.get('price_yearly') or None
+    pts_monthly   = request.form.get('points_grant_monthly') or None
+    pts_yearly    = request.form.get('points_grant_yearly') or None
+    if name:
+        conn = get_db_connection()
+        conn.execute('''UPDATE subscription_plan SET name=?, price_monthly=?, price_yearly=?,
+                        points_grant_monthly=?, points_grant_yearly=? WHERE id=?''',
+                     (name,
+                      int(price_monthly) if price_monthly else None,
+                      int(price_yearly)  if price_yearly  else None,
+                      int(pts_monthly)   if pts_monthly   else None,
+                      int(pts_yearly)    if pts_yearly    else None,
+                      plan_id))
+        conn.commit()
+        conn.close()
+    return redirect(url_for('plan_list'))
+
+@app.route('/plan/toggle/<int:plan_id>', methods=['POST'])
+@super_admin_required
+def plan_toggle(plan_id):
+    conn = get_db_connection()
+    row = conn.execute('SELECT is_active FROM subscription_plan WHERE id=?', (plan_id,)).fetchone()
+    if row:
+        conn.execute('UPDATE subscription_plan SET is_active=? WHERE id=?',
+                     (0 if row['is_active'] else 1, plan_id))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('plan_list'))
+
 @app.route('/package/list')
 @super_admin_required
 def package_list():

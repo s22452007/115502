@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLens Admin — 登入設計預覽</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { overflow: hidden; font-family: "微軟正黑體", sans-serif; }
+
+        /* ── Switcher ── */
+        .switcher {
+            position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+            z-index: 9999; background: white; border-radius: 100px; padding: 4px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.1); display: flex; gap: 2px;
+            border: 1px solid #ebebeb;
+        }
+        .sw-btn {
+            padding: 7px 22px; border-radius: 100px; border: none; cursor: pointer;
+            font-size: 0.78rem; font-weight: 700; font-family: "微軟正黑體", sans-serif;
+            color: #aaa; background: transparent; transition: all 0.15s;
+        }
+        .sw-btn:hover { color: #555; }
+        .sw-btn.active { background: #4E8B4C; color: white; }
+
+        .design { display: none; height: 100vh; width: 100vw; }
+        .design.active { display: flex; }
+
+        /* ── Shared input style (matching app) ── */
+        .fi { position: relative; margin-bottom: 14px; }
+        .fi-icon {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            color: #4E8B4C; font-size: 1rem; pointer-events: none;
+        }
+        .fi-eye {
+            position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+            color: rgba(0,0,0,0.2); cursor: pointer; font-size: 0.95rem;
+        }
+        .fi-eye:hover { color: rgba(0,0,0,0.5); }
+        .fi-chevron {
+            position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+            color: rgba(0,0,0,0.2); font-size: 0.82rem; pointer-events: none;
+        }
+        .inp, .sel {
+            width: 100%;
+            background: #F4F7F5;
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 15px 46px;
+            font-size: 0.9rem;
+            color: #2C3E50;
+            font-family: "微軟正黑體", sans-serif;
+            outline: none;
+            transition: border-color 0.15s, background 0.15s;
+            appearance: none;
+        }
+        .inp:focus, .sel:focus {
+            border-color: #4E8B4C;
+            background: white;
+        }
+        .inp::placeholder { color: rgba(0,0,0,0.22); }
+
+        /* ── Shared button (pill, no shadow) ── */
+        .s-btn {
+            width: 100%; height: 56px;
+            background: #4E8B4C; color: white;
+            border: none; border-radius: 100px;
+            font-size: 1rem; font-weight: 800;
+            cursor: pointer; letter-spacing: 1px;
+            font-family: "微軟正黑體", sans-serif;
+            transition: opacity 0.15s;
+        }
+        .s-btn:hover { opacity: 0.87; }
+
+        /* foot */
+        .foot { text-align: center; font-size: 0.67rem; color: #ccc; }
+
+
+        /* ════════════════════════════════════════
+           A — App-style 置中卡片
+        ════════════════════════════════════════ */
+        #dA {
+            background: #F4F7F5;
+            align-items: center; justify-content: center;
+        }
+        #dA .card {
+            background: white;
+            border-radius: 32px;
+            width: 390px;
+            overflow: hidden;
+        }
+        #dA .card-body { padding: 48px 36px 36px; }
+
+        #dA .brand {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 36px;
+            padding-bottom: 28px;
+            border-bottom: 1px solid #f2f2f2;
+        }
+        #dA .brand-icon {
+            width: 52px; height: 52px;
+            background: #EAF4EA;
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: #4E8B4C;
+            flex-shrink: 0;
+        }
+        #dA .brand-name { font-size: 1.1rem; font-weight: 900; color: #4E8B4C; letter-spacing: 1px; }
+        #dA .brand-sub { font-size: 0.72rem; color: rgba(0,0,0,0.28); margin-top: 2px; }
+
+        #dA .title { font-size: 1.65rem; font-weight: 900; color: #2C3E50; margin-bottom: 4px; }
+        #dA .sub { font-size: 0.8rem; color: rgba(0,0,0,0.3); margin-bottom: 28px; }
+
+        #dA .card-foot {
+            background: #fafafa;
+            border-top: 1px solid #f2f2f2;
+            padding: 16px 36px;
+        }
+
+
+        /* ════════════════════════════════════════
+           B — 左右分割，純平色
+        ════════════════════════════════════════ */
+        #dB { background: white; }
+
+        #dB .b-left {
+            width: 42%;
+            display: flex; align-items: center; justify-content: center;
+            padding: 60px;
+            border-right: 1px solid #f0f0f0;
+        }
+        #dB .b-brand { text-align: center; }
+        #dB .b-icon-wrap {
+            width: 96px; height: 96px;
+            background: #EAF4EA;
+            border-radius: 28px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 2.6rem; color: #4E8B4C;
+            margin-bottom: 20px;
+        }
+        #dB .b-title {
+            font-size: 2rem; font-weight: 900; color: #2C3E50;
+            letter-spacing: 1px; margin-bottom: 8px;
+        }
+        #dB .b-sub { font-size: 0.82rem; color: rgba(0,0,0,0.3); line-height: 1.6; }
+
+        #dB .b-right {
+            flex: 1;
+            background: #F4F7F5;
+            display: flex; align-items: center; justify-content: center;
+            padding: 60px;
+        }
+        #dB .b-card {
+            background: white;
+            border-radius: 24px;
+            padding: 44px 40px;
+            width: 100%; max-width: 360px;
+        }
+        #dB .b-form-title { font-size: 1.45rem; font-weight: 900; color: #2C3E50; margin-bottom: 4px; }
+        #dB .b-form-sub { font-size: 0.78rem; color: rgba(0,0,0,0.3); margin-bottom: 28px; }
+        #dB .b-foot { margin-top: 24px; }
+
+
+        /* ════════════════════════════════════════
+           C — 綠色頂部 + 卡片上浮
+        ════════════════════════════════════════ */
+        #dC { flex-direction: column; background: #F4F7F5; }
+
+        #dC .c-top {
+            background: #4E8B4C;
+            height: 220px;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        #dC .c-top-icon {
+            width: 64px; height: 64px;
+            background: rgba(255,255,255,0.18);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; color: white;
+            margin-bottom: 14px;
+        }
+        #dC .c-top-name {
+            font-size: 1.3rem; font-weight: 900; color: white; letter-spacing: 3px;
+        }
+        #dC .c-top-sub { font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: 4px; letter-spacing: 1px; }
+
+        #dC .c-body {
+            flex: 1;
+            display: flex; align-items: flex-start; justify-content: center;
+            padding-top: 0;
+        }
+        #dC .c-card {
+            background: white;
+            border-radius: 28px;
+            padding: 40px 40px 32px;
+            width: 400px;
+            margin-top: -32px;
+        }
+        #dC .c-title { font-size: 1.4rem; font-weight: 900; color: #2C3E50; margin-bottom: 4px; }
+        #dC .c-sub { font-size: 0.78rem; color: rgba(0,0,0,0.3); margin-bottom: 26px; }
+        #dC .c-foot { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="switcher">
+    <button class="sw-btn active" onclick="show('dA',this)">A &nbsp;置中卡片</button>
+    <button class="sw-btn" onclick="show('dB',this)">B &nbsp;左右分割</button>
+    <button class="sw-btn" onclick="show('dC',this)">C &nbsp;綠頂浮卡</button>
+</div>
+
+
+<!-- ════ DESIGN A ════ -->
+<div id="dA" class="design active">
+    <div class="card">
+        <div class="card-body">
+            <div class="brand">
+                <div class="brand-icon"><i class="bi bi-camera-fill"></i></div>
+                <div>
+                    <div class="brand-name">J-LENS</div>
+                    <div class="brand-sub">Admin System</div>
+                </div>
+            </div>
+
+            <div class="title">管理者登入</div>
+            <div class="sub">請選擇帳號並輸入密碼</div>
+
+            <div class="fi">
+                <i class="bi bi-person-fill fi-icon"></i>
+                <select class="sel">
+                    <option value="" disabled selected>選擇管理者帳號</option>
+                    <option>11156001</option><option>11156006</option>
+                    <option>11156015</option><option>11156039</option>
+                    <option>11156047</option>
+                </select>
+                <i class="bi bi-chevron-down fi-chevron"></i>
+            </div>
+            <div class="fi">
+                <i class="bi bi-lock-fill fi-icon"></i>
+                <input class="inp" type="password" placeholder="密碼" id="pwA">
+                <i class="bi bi-eye-slash-fill fi-eye" onclick="togglePw('pwA',this)"></i>
+            </div>
+
+            <div style="margin-top:8px;">
+                <button class="s-btn">登入</button>
+            </div>
+        </div>
+        <div class="card-foot foot">© 2026 JLens Project Team &nbsp;·&nbsp; 管理者專用</div>
+    </div>
+</div>
+
+
+<!-- ════ DESIGN B ════ -->
+<div id="dB" class="design">
+    <div class="b-left">
+        <div class="b-brand">
+            <div class="b-icon-wrap"><i class="bi bi-camera-fill"></i></div>
+            <div class="b-title">J-LENS</div>
+            <div class="b-sub">後台管理系統<br>Admin System</div>
+        </div>
+    </div>
+    <div class="b-right">
+        <div class="b-card">
+            <div class="b-form-title">管理者登入</div>
+            <div class="b-form-sub">請選擇帳號並輸入密碼</div>
+
+            <div class="fi">
+                <i class="bi bi-person-fill fi-icon"></i>
+                <select class="sel">
+                    <option value="" disabled selected>選擇管理者帳號</option>
+                    <option>11156001</option><option>11156006</option>
+                    <option>11156015</option><option>11156039</option>
+                    <option>11156047</option>
+                </select>
+                <i class="bi bi-chevron-down fi-chevron"></i>
+            </div>
+            <div class="fi">
+                <i class="bi bi-lock-fill fi-icon"></i>
+                <input class="inp" type="password" placeholder="密碼" id="pwB">
+                <i class="bi bi-eye-slash-fill fi-eye" onclick="togglePw('pwB',this)"></i>
+            </div>
+
+            <div style="margin-top:8px;">
+                <button class="s-btn">登入</button>
+            </div>
+            <div class="b-foot foot">© 2026 JLens Project Team &nbsp;·&nbsp; 管理者專用</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════ DESIGN C ════ -->
+<div id="dC" class="design">
+    <div class="c-top">
+        <div class="c-top-icon"><i class="bi bi-camera-fill"></i></div>
+        <div class="c-top-name">J-LENS</div>
+        <div class="c-top-sub">Admin System</div>
+    </div>
+    <div class="c-body">
+        <div class="c-card">
+            <div class="c-title">管理者登入</div>
+            <div class="c-sub">請選擇帳號並輸入密碼</div>
+
+            <div class="fi">
+                <i class="bi bi-person-fill fi-icon"></i>
+                <select class="sel">
+                    <option value="" disabled selected>選擇管理者帳號</option>
+                    <option>11156001</option><option>11156006</option>
+                    <option>11156015</option><option>11156039</option>
+                    <option>11156047</option>
+                </select>
+                <i class="bi bi-chevron-down fi-chevron"></i>
+            </div>
+            <div class="fi">
+                <i class="bi bi-lock-fill fi-icon"></i>
+                <input class="inp" type="password" placeholder="密碼" id="pwC">
+                <i class="bi bi-eye-slash-fill fi-eye" onclick="togglePw('pwC',this)"></i>
+            </div>
+
+            <div style="margin-top:8px;">
+                <button class="s-btn">登入</button>
+            </div>
+            <div class="c-foot foot">© 2026 JLens Project Team &nbsp;·&nbsp; 管理者專用</div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function show(id, btn) {
+        document.querySelectorAll('.design').forEach(d => d.classList.remove('active'));
+        document.querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+    }
+    function togglePw(id, el) {
+        const inp = document.getElementById(id);
+        const isPass = inp.type === 'password';
+        inp.type = isPass ? 'text' : 'password';
+        el.classList.toggle('bi-eye-slash-fill', !isPass);
+        el.classList.toggle('bi-eye-fill', isPass);
+    }
+</script>
+</body>
+</html>

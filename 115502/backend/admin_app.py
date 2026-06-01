@@ -62,6 +62,16 @@ def admin_login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def super_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_user' not in session:
+            return redirect(url_for('admin_login'))
+        if session.get('role') != 'super_admin':
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # ==========================================
 # 🏠 2. 首頁導航 (解決無限迴圈的關鍵)
 # ==========================================
@@ -240,7 +250,7 @@ def toggle_suspend_user(user_id):
 
 
 @app.route('/package/list')
-@admin_login_required
+@super_admin_required
 def package_list():
     conn = get_db_connection()
     packages = conn.execute('SELECT * FROM point_package ORDER BY price ASC').fetchall()
@@ -266,7 +276,7 @@ def package_list():
                            active_count=active_count)
 
 @app.route('/package/add', methods=['POST'])
-@admin_login_required
+@super_admin_required
 def package_add():
     name  = request.form.get('name', '').strip()
     points = request.form.get('points', 0)
@@ -282,7 +292,7 @@ def package_add():
     return redirect(url_for('package_list'))
 
 @app.route('/package/edit/<int:pkg_id>', methods=['POST'])
-@admin_login_required
+@super_admin_required
 def package_edit(pkg_id):
     name   = request.form.get('name', '').strip()
     points = request.form.get('points', 0)
@@ -298,7 +308,7 @@ def package_edit(pkg_id):
     return redirect(url_for('package_list'))
 
 @app.route('/package/toggle/<int:pkg_id>', methods=['POST'])
-@admin_login_required
+@super_admin_required
 def package_toggle(pkg_id):
     conn = get_db_connection()
     row = conn.execute('SELECT is_active FROM point_package WHERE id=?', (pkg_id,)).fetchone()

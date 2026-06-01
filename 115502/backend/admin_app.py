@@ -289,6 +289,29 @@ def plan_list():
     conn.close()
     return render_template('plan/list.html', plans=plans)
 
+@app.route('/plan/add', methods=['POST'])
+@super_admin_required
+def plan_add():
+    name = request.form.get('name', '').strip()
+    billing_cycle = request.form.get('billing_cycle', 'monthly')
+    price_monthly = request.form.get('price_monthly')
+    price_yearly = request.form.get('price_yearly')
+    pts_monthly = request.form.get('points_grant_monthly')
+    pts_yearly = request.form.get('points_grant_yearly')
+    if name and billing_cycle:
+        conn = get_db_connection()
+        conn.execute('''INSERT INTO subscription_plan
+                        (name, billing_cycle, price_monthly, price_yearly, points_grant_monthly, points_grant_yearly, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, 1)''',
+                     (name, billing_cycle,
+                      int(price_monthly) if price_monthly else None,
+                      int(price_yearly)  if price_yearly  else None,
+                      int(pts_monthly)   if pts_monthly   else None,
+                      int(pts_yearly)    if pts_yearly    else None))
+        conn.commit()
+        conn.close()
+    return redirect(url_for('plan_list'))
+
 @app.route('/plan/edit/<int:plan_id>', methods=['POST'])
 @super_admin_required
 def plan_edit(plan_id):

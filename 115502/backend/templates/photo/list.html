@@ -71,7 +71,7 @@
             <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
             <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
             <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
-            {% if session.get('role') == 'super_admin' %}<li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>{% endif %}
+            {% if session.get('role') == 'super_admin' %}<li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li><li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>{% endif %}
             <li><a href="/photo/list" class="active"><i class="bi bi-image"></i> 照片管控</a></li>
             <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
             <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
@@ -136,4 +136,5 @@
 </div>
 </body>
 </html>
+
 

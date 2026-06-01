@@ -8,8 +8,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         :root { --green: #5c8364; --green-light: #dce7de; --bg: #f4f7f5; }
-        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
         .layout { display: flex; min-height: 100vh; }
+
+        /* ── Sidebar ── */
         .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
         .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
@@ -20,38 +22,107 @@
         .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green); flex-shrink: 0; }
         .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
         .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
-        .main-content { flex: 1; padding: 40px 48px; overflow-x: hidden; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .page-title { color: var(--green); font-weight: bold; margin: 0; font-size: 1.5rem; }
 
-        /* 統計卡片 */
-        .stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
-        .stat-card { background: white; border-radius: 14px; padding: 20px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 16px; }
-        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
-        .stat-val { font-size: 1.6rem; font-weight: 900; color: #222; line-height: 1; }
-        .stat-lbl { font-size: 0.8rem; color: #999; margin-top: 4px; }
+        /* ── 主內容 ── */
+        .main-content { flex: 1; overflow-x: hidden; }
 
-        /* 方案卡片 */
-        .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-        .pkg-card { background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 22px; display: flex; flex-direction: column; gap: 14px; position: relative; transition: box-shadow 0.2s; }
-        .pkg-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .pkg-card.inactive { opacity: 0.6; }
-        .pkg-status { position: absolute; top: 16px; right: 16px; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 50px; }
-        .pkg-status.on  { background: var(--green-light); color: var(--green); }
-        .pkg-status.off { background: #f0f0f0; color: #999; }
-        .pkg-name { font-size: 1.05rem; font-weight: bold; color: #222; padding-right: 70px; }
-        .pkg-tag  { display: inline-block; font-size: 0.72rem; font-weight: 700; background: #fff3cd; color: #856404; padding: 2px 8px; border-radius: 6px; margin-top: 4px; }
-        .pkg-pts  { font-size: 2rem; font-weight: 900; color: var(--green); line-height: 1; }
-        .pkg-pts span { font-size: 0.9rem; font-weight: 600; color: #888; }
-        .pkg-price { font-size: 1rem; font-weight: 700; color: #333; }
-        .pkg-price small { color: #aaa; font-weight: 400; font-size: 0.8rem; }
-        .pkg-desc { font-size: 0.82rem; color: #888; min-height: 1.2rem; margin-top: 4px; }
-        .pkg-divider { border: none; border-top: 1px solid #f0f0f0; margin: 0; }
-        .pkg-stats { display: flex; gap: 16px; }
-        .pkg-stat { flex: 1; }
-        .pkg-stat-val { font-size: 1.1rem; font-weight: bold; color: #333; }
-        .pkg-stat-lbl { font-size: 0.72rem; color: #aaa; }
-        .pkg-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
+        /* ── 頁首 ── */
+        .page-banner {
+            background: white;
+            padding: 36px 48px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .banner-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+        .banner-title { font-size: 1.5rem; font-weight: bold; color: var(--green); margin: 0; }
+        .btn-add {
+            background: var(--green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-add:hover { background: #4a6e52; color: white; }
+
+        .banner-stats { display: flex; gap: 40px; padding-bottom: 28px; }
+        .bstat { display: flex; align-items: baseline; gap: 6px; }
+        .bstat-val { font-size: 1.4rem; font-weight: 900; color: var(--green); }
+        .bstat-lbl { font-size: 0.8rem; color: #aaa; }
+
+        /* ── 方案區 ── */
+        .pkg-section { padding: 32px 48px; }
+        .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+        .pkg-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s, transform 0.15s;
+        }
+        .pkg-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.11); transform: translateY(-2px); }
+        .pkg-card.inactive { opacity: 0.55; }
+
+        .pkg-card-header {
+            padding: 18px 20px 14px;
+            border-bottom: 1px solid #f2f2f2;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .pkg-name { font-size: 1rem; font-weight: 800; color: #1a1a1a; }
+        .pkg-tag { font-size: 0.7rem; font-weight: 700; background: #f5f0dc; color: #7a6010; padding: 2px 9px; border-radius: 4px; white-space: nowrap; }
+        .pkg-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+        .pkg-status-dot.on { background: #22c55e; }
+        .pkg-status-dot.off { background: #d1d5db; }
+
+        .pkg-card-body { padding: 18px 20px; flex: 1; }
+        .pkg-pts-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+        .pkg-pts-num { font-size: 2.2rem; font-weight: 900; color: var(--green); line-height: 1; }
+        .pkg-pts-unit { font-size: 0.85rem; color: #aaa; font-weight: 600; }
+        .pkg-price-row { font-size: 0.95rem; font-weight: 700; color: #444; }
+        .pkg-price-per { font-size: 0.78rem; color: #bbb; font-weight: 400; margin-left: 6px; }
+        .pkg-desc { font-size: 0.8rem; color: #aaa; margin-top: 8px; min-height: 1rem; }
+
+        .pkg-card-stats {
+            display: flex;
+            border-top: 1px solid #f5f5f5;
+            background: #fafafa;
+        }
+        .pkg-cstat { flex: 1; padding: 12px 16px; text-align: center; }
+        .pkg-cstat:first-child { border-right: 1px solid #f0f0f0; }
+        .pkg-cstat-val { font-size: 1rem; font-weight: 800; color: #222; }
+        .pkg-cstat-lbl { font-size: 0.7rem; color: #bbb; margin-top: 2px; }
+
+        .pkg-card-footer {
+            padding: 12px 16px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid #f2f2f2;
+        }
+        .btn-edit {
+            flex: 1; padding: 8px; font-size: 0.82rem; font-weight: 700;
+            border: 1.5px solid #e0e0e0; background: white; border-radius: 7px;
+            color: #555; cursor: pointer; transition: 0.15s;
+        }
+        .btn-edit:hover { border-color: #aaa; color: #222; }
+        .btn-toggle-off {
+            flex: 1; padding: 8px; font-size: 0.82rem; font-weight: 700;
+            border: 1.5px solid #fca5a5; background: #fff5f5; border-radius: 7px;
+            color: #dc2626; cursor: pointer; transition: 0.15s;
+        }
+        .btn-toggle-off:hover { background: #fee2e2; }
+        .btn-toggle-on {
+            flex: 1; padding: 8px; font-size: 0.82rem; font-weight: 700;
+            border: 1.5px solid #86efac; background: #f0fdf4; border-radius: 7px;
+            color: #16a34a; cursor: pointer; transition: 0.15s;
+        }
+        .btn-toggle-on:hover { background: #dcfce7; }
     </style>
 </head>
 <body>
@@ -69,7 +140,7 @@
             <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
             <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
             <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
-            <li><a href="/package/list" class="active"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
+            {% if session.get('role') == 'super_admin' %}<li><a href="/package/list" class="active"><i class="bi bi-box-seam"></i> 點數方案管理</a></li><li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>{% endif %}
             <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
             <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
             <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
@@ -81,138 +152,119 @@
     </aside>
 
     <main class="main-content">
-        <div class="page-header">
-            <h3 class="page-title"><i class="bi bi-box-seam me-2"></i>點數方案管理</h3>
-            <button class="btn btn-sm text-white px-4" style="background:var(--green);" data-bs-toggle="modal" data-bs-target="#addModal">
-                <i class="bi bi-plus-lg me-1"></i> 新增方案
-            </button>
-        </div>
-
-        <!-- 統計 -->
-        <div class="stat-cards">
-            <div class="stat-card">
-                <div class="stat-icon" style="background:#e8f5e9;">
-                    <i class="bi bi-cash-coin" style="color:var(--green);"></i>
-                </div>
-                <div>
-                    <div class="stat-val">NT$ {{ '{:,}'.format(total_revenue) }}</div>
-                    <div class="stat-lbl">累計總營收</div>
-                </div>
+        <!-- Banner -->
+        <div class="page-banner">
+            <div class="banner-top">
+                <h3 class="banner-title"><i class="bi bi-box-seam me-2"></i>點數方案管理</h3>
+                <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addModal">+ 新增方案</button>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background:#fff3e0;">
-                    <i class="bi bi-bag-check" style="color:#e67e22;"></i>
+            <div class="banner-stats">
+                <div class="bstat">
+                    <div class="bstat-val">NT$ {{ '{:,}'.format(total_revenue) }}</div>
+                    <div class="bstat-lbl">累計總營收</div>
                 </div>
-                <div>
-                    <div class="stat-val">{{ total_purchases }}</div>
-                    <div class="stat-lbl">累計購買次數</div>
+                <div class="bstat">
+                    <div class="bstat-val">{{ total_purchases }}</div>
+                    <div class="bstat-lbl">累計購買次數</div>
                 </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background:#e8f4fd;">
-                    <i class="bi bi-box-seam" style="color:#2980b9;"></i>
-                </div>
-                <div>
-                    <div class="stat-val">{{ active_count }} / {{ packages|length }}</div>
-                    <div class="stat-lbl">上架中方案</div>
+                <div class="bstat">
+                    <div class="bstat-val">{{ active_count }} / {{ packages|length }}</div>
+                    <div class="bstat-lbl">上架中方案</div>
                 </div>
             </div>
         </div>
 
         <!-- 方案卡片 -->
-        <div class="pkg-grid">
-            {% for p in packages %}
-            <div class="pkg-card {% if not p.is_active %}inactive{% endif %}">
-                <span class="pkg-status {% if p.is_active %}on{% else %}off{% endif %}">
-                    {% if p.is_active %}上架中{% else %}已下架{% endif %}
-                </span>
-
-                <div>
-                    <div class="pkg-name">{{ p.name }}</div>
-                    <div class="pkg-desc">{{ p.description or '' }}</div>
-                </div>
-
-                <div>
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <div class="pkg-pts">{{ p.points }} <span>J-Pts</span></div>
-                        {% if p.tag %}<span class="pkg-tag">{{ p.tag }}</span>{% endif %}
+        <div class="pkg-section">
+            <div class="pkg-grid">
+                {% for p in packages %}
+                <div class="pkg-card {% if not p.is_active %}inactive{% endif %}">
+                    <div class="pkg-card-header">
+                        <div>
+                            <div class="pkg-name">{{ p.name }}</div>
+                            {% if p.tag %}<span class="pkg-tag mt-1 d-inline-block">{{ p.tag }}</span>{% endif %}
+                        </div>
+                        <div class="pkg-status-dot {% if p.is_active %}on{% else %}off{% endif %}" title="{% if p.is_active %}上架中{% else %}已下架{% endif %}"></div>
                     </div>
-                    <div class="pkg-price mt-1">NT$ {{ p.price }}
-                        <small>（每點 NT$ {{ '%.2f'|format(p.price / p.points) }}）</small>
+
+                    <div class="pkg-card-body">
+                        <div class="pkg-pts-row">
+                            <span class="pkg-pts-num">{{ p.points }}</span>
+                            <span class="pkg-pts-unit">J-Pts</span>
+                        </div>
+                        <div class="pkg-price-row">
+                            NT$ {{ p.price }}
+                            <span class="pkg-price-per">每點 NT$ {{ '%.2f'|format(p.price / p.points) }}</span>
+                        </div>
+                        <div class="pkg-desc">{{ p.description or '' }}</div>
                     </div>
-                </div>
 
-                <hr class="pkg-divider">
-
-                <div class="pkg-stats">
-                    <div class="pkg-stat">
-                        <div class="pkg-stat-val">{{ p.buy_count }}</div>
-                        <div class="pkg-stat-lbl">購買次數</div>
+                    <div class="pkg-card-stats">
+                        <div class="pkg-cstat">
+                            <div class="pkg-cstat-val">{{ p.buy_count }}</div>
+                            <div class="pkg-cstat-lbl">購買次數</div>
+                        </div>
+                        <div class="pkg-cstat">
+                            <div class="pkg-cstat-val">NT$ {{ '{:,}'.format(p.revenue) }}</div>
+                            <div class="pkg-cstat-lbl">累計營收</div>
+                        </div>
                     </div>
-                    <div class="pkg-stat">
-                        <div class="pkg-stat-val">NT$ {{ '{:,}'.format(p.revenue) }}</div>
-                        <div class="pkg-stat-lbl">累計營收</div>
-                    </div>
-                </div>
 
-                <div class="pkg-actions">
-                    <button class="btn btn-sm btn-outline-secondary flex-fill"
-                            data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">
-                        <i class="bi bi-pencil me-1"></i>修改
-                    </button>
-                    <form action="/package/toggle/{{ p.id }}" method="POST" class="flex-fill">
-                        <button type="submit" class="btn btn-sm w-100"
-                            style="{% if p.is_active %}background:#fef2f2;color:#e53e3e;border:1.5px solid #fca5a5;{% else %}background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;{% endif %}">
-                            {% if p.is_active %}<i class="bi bi-eye-slash me-1"></i>下架{% else %}<i class="bi bi-eye me-1"></i>上架{% endif %}
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- 修改 Modal -->
-            <div class="modal fade" id="editModal{{ p.id }}" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <form action="/package/edit/{{ p.id }}" method="POST">
-                            <div class="modal-header">
-                                <h5 class="modal-title fw-bold">修改方案</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">方案名稱</label>
-                                    <input type="text" name="name" class="form-control" value="{{ p.name }}" required>
-                                </div>
-                                <div class="row g-2 mb-3">
-                                    <div class="col">
-                                        <label class="form-label fw-bold">點數</label>
-                                        <input type="number" name="points" class="form-control" value="{{ p.points }}" min="1" required>
-                                    </div>
-                                    <div class="col">
-                                        <label class="form-label fw-bold">售價 (NT$)</label>
-                                        <input type="number" name="price" class="form-control" value="{{ p.price }}" min="1" required>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">標籤</label>
-                                    <input type="text" name="tag" class="form-control" value="{{ p.tag or '' }}" placeholder="如：最划算、熱門">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">說明</label>
-                                    <input type="text" name="description" class="form-control" value="{{ p.description or '' }}">
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                                <button type="submit" class="btn text-white" style="background:var(--green);">儲存</button>
-                            </div>
+                    <div class="pkg-card-footer">
+                        <button class="btn-edit" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">修改</button>
+                        <form action="/package/toggle/{{ p.id }}" method="POST" class="flex-fill d-flex">
+                            <button type="submit" class="{% if p.is_active %}btn-toggle-off{% else %}btn-toggle-on{% endif %} w-100">
+                                {% if p.is_active %}下架{% else %}上架{% endif %}
+                            </button>
                         </form>
                     </div>
                 </div>
+
+                <!-- 修改 Modal -->
+                <div class="modal fade" id="editModal{{ p.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="/package/edit/{{ p.id }}" method="POST">
+                                <div class="modal-header">
+                                    <h5 class="modal-title fw-bold">修改方案</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">方案名稱</label>
+                                        <input type="text" name="name" class="form-control" value="{{ p.name }}" required>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col">
+                                            <label class="form-label fw-bold">點數</label>
+                                            <input type="number" name="points" class="form-control" value="{{ p.points }}" min="1" required>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label fw-bold">售價 (NT$)</label>
+                                            <input type="number" name="price" class="form-control" value="{{ p.price }}" min="1" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">標籤</label>
+                                        <input type="text" name="tag" class="form-control" value="{{ p.tag or '' }}" placeholder="如：最划算、熱門">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">說明</label>
+                                        <input type="text" name="description" class="form-control" value="{{ p.description or '' }}">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn text-white" style="background:var(--green);">儲存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-5 w-100">尚無任何方案，點右上角新增</div>
+                {% endfor %}
             </div>
-            {% else %}
-            <div class="text-center text-muted py-5 w-100">尚無任何方案，點右上角新增</div>
-            {% endfor %}
         </div>
     </main>
 </div>

@@ -117,6 +117,27 @@ def admin_login():
             
     return render_template('admin_login.html')
 
+@app.route('/admin/forgot_password', methods=['GET', 'POST'])
+def admin_forgot_password():
+    error = None
+    success = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        new_pw = request.form.get('new_password', '')
+        confirm_pw = request.form.get('confirm_password', '')
+        admin = Admin.query.filter_by(username=username).first()
+        if not admin:
+            error = '找不到此帳號'
+        elif len(new_pw) < 6:
+            error = '密碼至少需要 6 個字元'
+        elif new_pw != confirm_pw:
+            error = '兩次輸入的密碼不一致'
+        else:
+            admin.set_password(new_pw)
+            db.session.commit()
+            success = f'帳號 {username} 的密碼已成功重設，請重新登入。'
+    return render_template('admin/forgot_password.html', error=error, success=success)
+
 @app.route('/logout')
 def admin_logout():
     session.clear()
@@ -252,6 +273,55 @@ def toggle_suspend_user(user_id):
     conn.close()
     return redirect(request.referrer or url_for('user_list'))
 
+
+@app.route('/plan/list')
+@super_admin_required
+def plan_list():
+    conn = get_db_connection()
+    plans = conn.execute('SELECT * FROM subscription_plan ORDER BY id ASC').fetchall()
+    plans = [dict(p) for p in plans]
+    for p in plans:
+        count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM user_subscription WHERE plan_id=? AND status='active'",
+            (p['id'],)
+        ).fetchone()
+        p['active_users'] = count['cnt'] if count else 0
+    conn.close()
+    return render_template('plan/list.html', plans=plans)
+
+@app.route('/plan/edit/<int:plan_id>', methods=['POST'])
+@super_admin_required
+def plan_edit(plan_id):
+    name = request.form.get('name', '').strip()
+    price_monthly = request.form.get('price_monthly') or None
+    price_yearly  = request.form.get('price_yearly') or None
+    pts_monthly   = request.form.get('points_grant_monthly') or None
+    pts_yearly    = request.form.get('points_grant_yearly') or None
+    if name:
+        conn = get_db_connection()
+        conn.execute('''UPDATE subscription_plan SET name=?, price_monthly=?, price_yearly=?,
+                        points_grant_monthly=?, points_grant_yearly=? WHERE id=?''',
+                     (name,
+                      int(price_monthly) if price_monthly else None,
+                      int(price_yearly)  if price_yearly  else None,
+                      int(pts_monthly)   if pts_monthly   else None,
+                      int(pts_yearly)    if pts_yearly    else None,
+                      plan_id))
+        conn.commit()
+        conn.close()
+    return redirect(url_for('plan_list'))
+
+@app.route('/plan/toggle/<int:plan_id>', methods=['POST'])
+@super_admin_required
+def plan_toggle(plan_id):
+    conn = get_db_connection()
+    row = conn.execute('SELECT is_active FROM subscription_plan WHERE id=?', (plan_id,)).fetchone()
+    if row:
+        conn.execute('UPDATE subscription_plan SET is_active=? WHERE id=?',
+                     (0 if row['is_active'] else 1, plan_id))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('plan_list'))
 
 @app.route('/package/list')
 @super_admin_required

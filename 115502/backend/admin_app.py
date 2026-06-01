@@ -286,8 +286,11 @@ def plan_list():
             (p['id'],)
         ).fetchone()
         p['active_users'] = count['cnt'] if count else 0
+    free_users = conn.execute(
+        "SELECT COUNT(*) FROM user WHERE is_premium = 0 OR is_premium IS NULL"
+    ).fetchone()[0]
     conn.close()
-    return render_template('plan/list.html', plans=plans)
+    return render_template('plan/list.html', plans=plans, free_users=free_users)
 
 @app.route('/plan/add', methods=['POST'])
 @super_admin_required

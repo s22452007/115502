@@ -332,6 +332,7 @@ class UserSubscription(db.Model):
     payment_method = db.Column(db.String(50), nullable=True)
     payment_status = db.Column(db.String(20), nullable=False, default='paid')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    plan = db.relationship('SubscriptionPlan', backref='subscriptions', lazy=True)
 
 # T22: 點數交易紀錄表
 class PointTransaction(db.Model):

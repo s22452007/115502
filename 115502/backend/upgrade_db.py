@@ -536,24 +536,77 @@ add_column("subscription_plan", "updated_at DATETIME")
 print("✅ subscription_plan updated_by / updated_at 欄位確認完畢")
 
 # ==========================================
-# 25. user_subscription 防止重複有效訂閱索引
+# 25. user_subscription 清除舊的 partial index（SQLite 不支援 WHERE 內用非確定性函數）
 # ==========================================
 try:
     cursor.execute("DROP INDEX IF EXISTS uq_user_active_subscription;")
-    cursor.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_user_active_subscription
-        ON user_subscription(user_id)
-        WHERE start_date <= CURRENT_TIMESTAMP
-        AND end_date > CURRENT_TIMESTAMP;
-    """)
-    print("✅ user_subscription 防重複有效訂閱索引建立完畢")
+    print("✅ user_subscription 舊版 partial index 已清除")
 except Exception as e:
-    print(f"⚠️ 索引建立警告：{e}")
+    print(f"⚠️ 索引清除警告：{e}")
 
 # 在你的 upgrade.py 的 Scene 區段下方加入：
 add_column("scene", "updated_by VARCHAR(50)")
 add_column("scene", "updated_at DATETIME")
 print("✅ scene 表：已補齊 updated_by 與 updated_at")
+
+# ==========================================
+# 26. 重建 user_subscription（移除 NOT NULL 的 status 欄位）
+# ==========================================
+try:
+    cursor.execute("PRAGMA table_info(user_subscription);")
+    us_cols = [row[1] for row in cursor.fetchall()]
+
+    if 'status' not in us_cols:
+        print("✅ user_subscription 不含 status 欄位，跳過重建。")
+    else:
+        # 1. 備份現有資料
+        cursor.execute(
+            "CREATE TABLE user_subscription_backup AS SELECT * FROM user_subscription;"
+        )
+
+        # 2. 刪除舊表（連同索引一起）
+        cursor.execute("DROP INDEX IF EXISTS uq_user_active_subscription;")
+        cursor.execute("DROP TABLE user_subscription;")
+
+        # 3. 建立新表（依照 models.py UserSubscription，不含 status）
+        cursor.execute("""
+            CREATE TABLE user_subscription (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                plan_id INTEGER NOT NULL,
+                billing_cycle VARCHAR(10) NOT NULL,
+                start_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                end_date DATETIME NOT NULL,
+                auto_renew BOOLEAN DEFAULT 1,
+                payment_method VARCHAR(50),
+                payment_status VARCHAR(20) NOT NULL DEFAULT 'paid',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES user(id),
+                FOREIGN KEY(plan_id) REFERENCES subscription_plan(id)
+            );
+        """)
+
+        # 4. 還原資料（只複製新表有的欄位，自動排除 status）
+        target_cols = ['id', 'user_id', 'plan_id', 'billing_cycle',
+                       'start_date', 'end_date', 'auto_renew',
+                       'payment_method', 'payment_status', 'created_at']
+        copy_cols = [c for c in target_cols if c in us_cols]
+        cols_str = ', '.join(copy_cols)
+        cursor.execute(
+            f"INSERT INTO user_subscription ({cols_str}) SELECT {cols_str} FROM user_subscription_backup;"
+        )
+
+        # 5. 刪除暫存表
+        cursor.execute("DROP TABLE user_subscription_backup;")
+
+        # 6. 重建一般索引（加速 user_id 查詢，不需 partial index）
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_user_subscription_user ON user_subscription(user_id);"
+        )
+
+        print("✅ user_subscription status 欄位已移除，資料完整保留！")
+except Exception as e:
+    print(f"⚠️ user_subscription 重建警告：{e}")
 
 # 儲存並關閉
 conn.commit()

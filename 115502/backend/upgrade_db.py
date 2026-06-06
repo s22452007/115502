@@ -168,6 +168,8 @@ add_column("vocab", "source VARCHAR(10) DEFAULT 'ai'")
 add_column("vocab", "updated_by INTEGER")
 add_column("vocab", "updated_at DATETIME")
 
+# 補全舊資料：凡是 source 為 NULL 的一律標記為 'ai'
+cursor.execute("UPDATE vocab SET source = 'ai' WHERE source IS NULL;")
 print("✅ vocab 單字表擴充成功 (已支援分級例句與獨立語音檔)！")
 
 # ==========================================

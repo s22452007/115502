@@ -86,7 +86,8 @@ def analyze_scene():
                     sentence_basic=sentence.get('japanese', ''),
                     sentence_inter=sentence.get('japanese_inter', ''),
                     sentence_upper_inter=sentence.get('japanese_upper', ''),
-                    sentence_advanced=sentence.get('japanese_adv', '')
+                    sentence_advanced=sentence.get('japanese_adv', ''),
+                    source='ai'
                 )
                 db.session.add(v)
                 db.session.flush() # 取得 v.id

@@ -6,8 +6,7 @@ import os
 from flask import session, flash, redirect, url_for, render_template, request
 from functools import wraps
 from utils.db import db
-from models import Admin
-from models import Admin, Vocab  # <--- 加上 Vocab
+from models import Admin, Vocab, SystemLog
 
 
 def utc_to_tw(utc_str):
@@ -302,15 +301,21 @@ def plan_add():
     pts_monthly = request.form.get('points_grant_monthly')
     pts_yearly = request.form.get('points_grant_yearly')
     if name and billing_cycle:
+        admin_id = session.get('admin_id')
+        now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db_connection()
-        conn.execute('''INSERT INTO subscription_plan
-                        (name, billing_cycle, price_monthly, price_yearly, points_grant_monthly, points_grant_yearly, is_active)
-                        VALUES (?, ?, ?, ?, ?, ?, 1)''',
+        cur = conn.execute('''INSERT INTO subscription_plan
+                        (name, billing_cycle, price_monthly, price_yearly, points_grant_monthly, points_grant_yearly, is_active, updated_by, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)''',
                      (name, billing_cycle,
                       int(price_monthly) if price_monthly else None,
                       int(price_yearly)  if price_yearly  else None,
                       int(pts_monthly)   if pts_monthly   else None,
-                      int(pts_yearly)    if pts_yearly    else None))
+                      int(pts_yearly)    if pts_yearly    else None,
+                      admin_id, now))
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+            (admin_id, 'INSERT', 'subscription_plan', cur.lastrowid, now))
         conn.commit()
         conn.close()
     return redirect(url_for('plan_list'))
@@ -324,15 +329,20 @@ def plan_edit(plan_id):
     pts_monthly   = request.form.get('points_grant_monthly') or None
     pts_yearly    = request.form.get('points_grant_yearly') or None
     if name:
+        admin_id = session.get('admin_id')
+        now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db_connection()
         conn.execute('''UPDATE subscription_plan SET name=?, price_monthly=?, price_yearly=?,
-                        points_grant_monthly=?, points_grant_yearly=? WHERE id=?''',
+                        points_grant_monthly=?, points_grant_yearly=?, updated_by=?, updated_at=? WHERE id=?''',
                      (name,
                       int(price_monthly) if price_monthly else None,
                       int(price_yearly)  if price_yearly  else None,
                       int(pts_monthly)   if pts_monthly   else None,
                       int(pts_yearly)    if pts_yearly    else None,
-                      plan_id))
+                      admin_id, now, plan_id))
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+            (admin_id, 'UPDATE', 'subscription_plan', plan_id, now))
         conn.commit()
         conn.close()
     return redirect(url_for('plan_list'))
@@ -384,9 +394,15 @@ def package_add():
     tag    = request.form.get('tag', '').strip()
     desc   = request.form.get('description', '').strip()
     if name and points and price:
+        admin_id = session.get('admin_id')
+        now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db_connection()
-        conn.execute('INSERT INTO point_package (name, points, price, tag, description, is_active) VALUES (?,?,?,?,?,1)',
-                     (name, int(points), int(price), tag or None, desc or None))
+        cur = conn.execute(
+            'INSERT INTO point_package (name, points, price, tag, description, is_active, updated_by, updated_at) VALUES (?,?,?,?,?,1,?,?)',
+            (name, int(points), int(price), tag or None, desc or None, admin_id, now))
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+            (admin_id, 'INSERT', 'point_package', cur.lastrowid, now))
         conn.commit()
         conn.close()
     return redirect(url_for('package_list'))
@@ -400,9 +416,15 @@ def package_edit(pkg_id):
     tag    = request.form.get('tag', '').strip()
     desc   = request.form.get('description', '').strip()
     if name and points and price:
+        admin_id = session.get('admin_id')
+        now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db_connection()
-        conn.execute('UPDATE point_package SET name=?, points=?, price=?, tag=?, description=? WHERE id=?',
-                     (name, int(points), int(price), tag or None, desc or None, pkg_id))
+        conn.execute(
+            'UPDATE point_package SET name=?, points=?, price=?, tag=?, description=?, updated_by=?, updated_at=? WHERE id=?',
+            (name, int(points), int(price), tag or None, desc or None, admin_id, now, pkg_id))
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+            (admin_id, 'UPDATE', 'point_package', pkg_id, now))
         conn.commit()
         conn.close()
     return redirect(url_for('package_list'))
@@ -515,10 +537,14 @@ def feedback_reply(feedback_id):
     reply = request.form.get('reply', '').strip()
     if not reply:
         return redirect(url_for('feedback_list'))
+    admin_id = session.get('admin_id')
     now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db_connection()
-    conn.execute('UPDATE feedback SET reply = ?, replied_at = ? WHERE id = ?',
-                 (reply, now, feedback_id))
+    conn.execute('UPDATE feedback SET reply = ?, replied_at = ?, replied_by = ? WHERE id = ?',
+                 (reply, now, admin_id, feedback_id))
+    conn.execute(
+        'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+        (admin_id, 'UPDATE', 'feedback', feedback_id, now))
     conn.commit()
     conn.close()
     return redirect(url_for('feedback_list'))
@@ -526,8 +552,13 @@ def feedback_reply(feedback_id):
 @app.route('/feedback/delete/<int:feedback_id>', methods=['POST'])
 @admin_login_required
 def feedback_delete(feedback_id):
+    admin_id = session.get('admin_id')
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db_connection()
     conn.execute('DELETE FROM feedback WHERE id = ?', (feedback_id,))
+    conn.execute(
+        'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+        (admin_id, 'DELETE', 'feedback', feedback_id, now))
     conn.commit()
     conn.close()
     return redirect(url_for('feedback_list'))
@@ -725,8 +756,13 @@ def quiz_list():
 @app.route('/quiz/delete/<int:quiz_id>', methods=['POST'])
 @admin_login_required
 def quiz_delete(quiz_id):
+    admin_id = session.get('admin_id')
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db_connection()
     conn.execute('DELETE FROM quiz_question WHERE id = ?', (quiz_id,))
+    conn.execute(
+        'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+        (admin_id, 'DELETE', 'quiz_question', quiz_id, now))
     conn.commit()
     conn.close()
     return redirect(url_for('quiz_list'))
@@ -749,12 +785,17 @@ def quiz_edit(quiz_id):
     if correct not in ('A', 'B', 'C', 'D'):
         return redirect(url_for('quiz_list'))
 
+    admin_id = session.get('admin_id')
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db_connection()
     conn.execute('''
         UPDATE quiz_question
-        SET stage=?, level_tag=?, question=?, option_a=?, option_b=?, option_c=?, option_d=?, correct_answer=?
+        SET stage=?, level_tag=?, question=?, option_a=?, option_b=?, option_c=?, option_d=?, correct_answer=?, updated_by=?, updated_at=?
         WHERE id=?
-    ''', (stage, level_tag, question, option_a, option_b, option_c, option_d, correct, quiz_id))
+    ''', (stage, level_tag, question, option_a, option_b, option_c, option_d, correct, admin_id, now, quiz_id))
+    conn.execute(
+        'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+        (admin_id, 'UPDATE', 'quiz_question', quiz_id, now))
     conn.commit()
     conn.close()
     return redirect(url_for('quiz_list'))
@@ -777,11 +818,16 @@ def quiz_add():
     if correct not in ('A', 'B', 'C', 'D'):
         return redirect(url_for('quiz_list'))
 
+    admin_id = session.get('admin_id')
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db_connection()
-    conn.execute('''
-        INSERT INTO quiz_question (stage, level_tag, question, option_a, option_b, option_c, option_d, correct_answer)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (stage, level_tag, question, option_a, option_b, option_c, option_d, correct))
+    cur = conn.execute('''
+        INSERT INTO quiz_question (stage, level_tag, question, option_a, option_b, option_c, option_d, correct_answer, updated_by, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (stage, level_tag, question, option_a, option_b, option_c, option_d, correct, admin_id, now))
+    conn.execute(
+        'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
+        (admin_id, 'INSERT', 'quiz_question', cur.lastrowid, now))
     conn.commit()
     conn.close()
     return redirect(url_for('quiz_list'))
@@ -807,15 +853,24 @@ def vocab_add():
     
     # 💡 關鍵修正：因為您的模型規定 scene_id 不能是空的 (nullable=False)
     # 這裡我們先預設給 1 (代表預設場景)，未來您可以再把「選擇場景」的功能加進前端！
-    scene_id = 1 
+    scene_id = 1
+    admin_id = session.get('admin_id')
 
     new_vocab = Vocab(
-        scene_id=scene_id, 
-        word=word, 
-        kana=kana, 
-        meaning=meaning
+        scene_id=scene_id,
+        word=word,
+        kana=kana,
+        meaning=meaning,
+        source='admin',
+        updated_by=admin_id,
+        updated_at=datetime.utcnow()
     )
     db.session.add(new_vocab)
+    db.session.flush()
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='INSERT', target_table='vocab', target_id=new_vocab.id
+    ))
     db.session.commit()
     return redirect(url_for('vocab_list'))
 
@@ -823,21 +878,30 @@ def vocab_add():
 @app.route('/vocab/edit/<int:id>', methods=['POST'])
 @admin_login_required
 def vocab_edit(id):
+    admin_id = session.get('admin_id')
     vocab = Vocab.query.get_or_404(id)
     vocab.word = request.form.get('word')
     vocab.kana = request.form.get('kana')
     vocab.meaning = request.form.get('meaning')
-    
-    # 移除了原本會報錯的 vocab.level = ...
-    
+    vocab.updated_by = admin_id
+    vocab.updated_at = datetime.utcnow()
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='UPDATE', target_table='vocab', target_id=id
+    ))
     db.session.commit()
     return redirect(url_for('vocab_list'))
 # 4. 刪 (Delete) - 刪除單字
 @app.route('/vocab/delete/<int:id>', methods=['POST'])
 @admin_login_required
 def vocab_delete(id):
+    admin_id = session.get('admin_id')
     vocab = Vocab.query.get_or_404(id)
     db.session.delete(vocab)
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='DELETE', target_table='vocab', target_id=id
+    ))
     db.session.commit()
     return redirect(url_for('vocab_list'))
 

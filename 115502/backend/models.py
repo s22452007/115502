@@ -152,6 +152,7 @@ class UserPhoto(db.Model):
     image_path = db.Column(db.String(255), nullable=False)
     custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂名稱
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    scene = db.relationship('Scene', foreign_keys=[scene_id])
     photo_vocabs = db.relationship('UserPhotoVocab', backref='photo', lazy=True, cascade="all, delete-orphan")
 
 # T07: 照片辨識單字明細表
@@ -160,6 +161,7 @@ class UserPhotoVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     photo_id = db.Column(db.Integer, db.ForeignKey('user_photo.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    vocab = db.relationship('Vocab', backref='photo_vocabs', lazy=True)
 
 # T08: 使用者單字收藏表
 class UserVocab(db.Model):
@@ -170,6 +172,7 @@ class UserVocab(db.Model):
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id'), nullable=True)
     collected_at = db.Column(db.DateTime, nullable=True)
+    vocab = db.relationship('Vocab', backref='user_vocabs', lazy=True)
 
 # T09: 使用者自訂資料夾表
 class UserFolder(db.Model):

@@ -1,15 +1,15 @@
 from flask import Blueprint, request, jsonify
 import os
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 # 建立 Blueprint
 tutor_bp = Blueprint('tutor', __name__)
 
-# 1. 初始化金鑰 (放在這裡，app.py 就不用管金鑰了)
-load_dotenv(override=True)
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.5-flash')
+# 1. 初始化金鑰
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
+_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # 2. 建立一個專門負責聊天的函數
 def get_ai_reply(topic, user_message, chat_history, japanese_level):
@@ -35,9 +35,9 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level):
             prompt += f"\n這是我們之前的對話紀錄：\n{chat_history}\n\n使用者剛剛對你說了這句話：「{user_message}」\n請自然地回覆使用者，並記得拋出下一個問題。"
 
         # 呼叫 Gemini
-        print("🔍 準備呼叫 Gemini API...")  # 👈 加這行
-        response = model.generate_content(prompt)
-        print("✅ Gemini 回覆完成！")       # 👈 加這行
+        print("🔍 準備呼叫 Gemini API...")
+        response = _client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        print("✅ Gemini 回覆完成！")
         return response.text
 
     except Exception as e:

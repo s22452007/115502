@@ -54,7 +54,15 @@ def login():
     email = data.get('email')
     password = data.get('password')
 
+    print("=== [DEBUG] login ===")
+    print("收到 email:", repr(email))
+    print("收到 password 長度:", len(password) if password else 0)
+
     user = User.query.filter_by(email=email).first()
+
+    print("查到 user:", user)
+    print("user.id:", user.id if user else None)
+    print("user.password_hash 前20碼:", user.password_hash[:20] if user else None)
 
     if not user:
         return jsonify({"error": "尚未註冊過"}), 401
@@ -62,8 +70,12 @@ def login():
     if getattr(user, 'is_suspended', False):
         return jsonify({"error": "此帳號已被停用，請聯繫客服"}), 403
 
+    pw_match = check_password_hash(user.password_hash, password)
+    print("密碼比對結果:", pw_match)
+    print("=== [DEBUG end] ===")
+
     # 如果帳號密碼正確
-    if check_password_hash(user.password_hash, password):
+    if pw_match:
 
         # 防呆：如果舊玩家沒有 friend_id，就在登入時幫他補發一個
         if not user.friend_id:

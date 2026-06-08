@@ -21,9 +21,9 @@ def get_plans():
             'price_monthly': p.price_monthly,
             'price_yearly': p.price_yearly,
             'features': p.features_json or [],
-            'points_grant': p.points_grant,
-            'points_grant_monthly': getattr(p, 'points_grant_monthly', p.points_grant),
-            'points_grant_yearly': getattr(p, 'points_grant_yearly', p.points_grant),
+            'points_grant': p.points_grant_monthly,
+            'points_grant_monthly': p.points_grant_monthly,
+            'points_grant_yearly': p.points_grant_yearly,
         } for p in plans]
     }), 200
 

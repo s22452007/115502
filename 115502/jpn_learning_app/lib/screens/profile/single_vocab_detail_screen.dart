@@ -29,13 +29,33 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
   static const Color bgLightGreen = Color(0xFFF4F8F5); 
   static const Color starColor = Color(0xFFFFC107);
 
-  bool _isStarred = true; 
+  bool _isLoading = true;
+  bool _isStarred = true;
+  List<dynamic> _sentences = [];
   final FlutterTts _flutterTts = FlutterTts();
 
   @override
   void initState() {
     super.initState();
     _initTts();
+    _fetchDetail();
+  }
+
+  Future<void> _fetchDetail() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+    try {
+      final detail = await ApiClient.getVocabDetail(widget.vocabId, userId);
+      if (mounted) {
+        setState(() {
+          _isStarred = detail['is_favorited'] ?? true;
+          _sentences = detail['sentences'] ?? [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _initTts() async {
@@ -232,9 +252,24 @@ Future<void> _toggleStar() async {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildSentenceCard('初階', 'この${widget.word}は美味しいです。', primaryGreen),
-                    const SizedBox(height: 16),
-                    _buildSentenceCard('中階', 'この${widget.word}屋は行列ができるほど有名だ。', const Color(0xFF5B9983)),
+                    if (_isLoading)
+                      const Center(child: CircularProgressIndicator(color: primaryGreen))
+                    else if (_sentences.isEmpty)
+                      const Text('系統努力生成例句中...', style: TextStyle(color: Colors.grey))
+                    else
+                      ..._sentences.asMap().entries.map((entry) {
+                        const levelColors = [primaryGreen, Color(0xFF5B9983), Color(0xFF4A7FA5), Color(0xFF8B6B9E)];
+                        return Column(
+                          children: [
+                            if (entry.key > 0) const SizedBox(height: 16),
+                            _buildSentenceCard(
+                              entry.value['level_name'] ?? entry.value['level'] ?? '提示',
+                              entry.value['text'] ?? '',
+                              levelColors[entry.key % levelColors.length],
+                            ),
+                          ],
+                        );
+                      }),
                   ],
                 ),
               ),

@@ -1,6 +1,6 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
 from PIL import Image
 from dotenv import load_dotenv
 
@@ -20,11 +20,11 @@ def analyze_image_from_path(file_path):
         if not api_key or api_key == "在這裡貼上您的Key":
             return {"success": False, "error": "尚未設定 GEMINI_API_KEY_camara。請打開 C:\\Users\\Administrator\\115502\\115502\\backend\\.env 檔案並貼入金鑰。"}
             
-        genai.configure(api_key=api_key)
-        
+        client = genai.Client(api_key=api_key)
+
         # 2. 讀取圖片
         img = Image.open(file_path)
-        
+
         # 3. 定義 prompt：嚴格要求回傳符合前端格式的 JSON
         prompt = '''
         請分析這張圖片，找出最重要的 3 到 5 個物品，並以合乎語法的 JSON 格式回傳。
@@ -67,8 +67,7 @@ def analyze_image_from_path(file_path):
         '''
 
         # 4. 呼叫 Gemini 解析圖片
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content([img, prompt])
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=[img, prompt])
         result_text = response.text.strip()
 
         # 5. 因為要求回傳 JSON，但 Gemini 有時會加上 markdown (如 ```json ... ```)

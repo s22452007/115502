@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 tutor_bp = Blueprint('tutor', __name__)
 
 # 1. 初始化金鑰 (放在這裡，app.py 就不用管金鑰了)
-load_dotenv(override=True)
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 

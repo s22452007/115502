@@ -1,6 +1,7 @@
 # 1. Python 內建標準庫
 import re
 from datetime import date, datetime, timedelta
+from sqlalchemy import func
 
 # 2. 第三方套件 (Third-Party)
 from flask import Blueprint, request, jsonify
@@ -101,7 +102,25 @@ def login():
             member_record = GroupMember.query.filter_by(user_id=user.id).first()
             if member_record:
                 member_record.group_logins += 1 # 個人對小組的貢獻 +1
-                
+
+                member = GroupMember.query.filter_by(
+                    group_id=member_record.group_id, user_id=user.id
+                ).first()
+
+                if member:
+                    group = StudyGroup.query.get(member.group_id)
+                    if group:
+                        if group.goal_type == 'logins':
+                            total = db.session.query(
+                                func.sum(GroupMember.group_logins)
+                            ).filter_by(group_id=group.id).scalar() or 0
+                        elif group.goal_type == 'scans':
+                            total = db.session.query(
+                                func.sum(GroupMember.group_scans)
+                            ).filter_by(group_id=group.id).scalar() or 0
+                        group.current_progress = total
+                        db.session.commit()
+
                 # 順便找出他們小組的資料
                 # 3. 如果小組這週的任務剛好是「登入 (logins)」，才幫小組總進度 +1
                 group = StudyGroup.query.get(member_record.group_id)

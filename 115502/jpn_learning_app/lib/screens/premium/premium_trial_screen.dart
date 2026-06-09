@@ -62,7 +62,7 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _textDark, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color.fromARGB(255, 0, 0, 0), size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         const Text(

@@ -62,7 +62,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             children: [
               const SizedBox(height: 20),
               const Text(
-                'WELCOME TO J-LENS',
+                'WELCOME TO Snap to Learn',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 2.0),
               ),
               const SizedBox(height: 20),

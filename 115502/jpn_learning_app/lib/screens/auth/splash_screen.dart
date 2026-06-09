@@ -61,7 +61,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                "J-LENS",
+                "Snap to Learn",
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _brandColor, letterSpacing: 4.0),
               ),
             ],

@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         title: Image.asset(
           'assets/images/logo.png', 
           height: 35, 
-          errorBuilder: (c,e,s) => Text("J-LENS", style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900))
+          errorBuilder: (c,e,s) => Text("Snap to Learn", style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900))
         ),
         centerTitle: true,
         // 🌟 這裡原本的 actions 區塊（包含頭像的 GestureDetector）已經被完全移除囉！

@@ -85,6 +85,46 @@ with app.app_context():
         except Exception:
             pass  # 欄位已存在，略過
 
+    # ── 移除 user_subscription.status NOT NULL 欄位（若存在）──
+    import sqlite3 as _sqlite3
+    _db_path = os.path.join(BASE_DIR, 'instance', 'jlens.db')
+    try:
+        _conn = _sqlite3.connect(_db_path, timeout=15)
+        _conn.execute('PRAGMA journal_mode=WAL')
+        _cur = _conn.cursor()
+        _cur.execute("PRAGMA table_info(user_subscription);")
+        _us_cols = [row[1] for row in _cur.fetchall()]
+        if 'status' in _us_cols:
+            _cur.execute("CREATE TABLE IF NOT EXISTS user_subscription_bak AS SELECT * FROM user_subscription;")
+            _cur.execute("DROP INDEX IF EXISTS uq_user_active_subscription;")
+            _cur.execute("DROP TABLE user_subscription;")
+            _cur.execute("""
+                CREATE TABLE user_subscription (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    plan_id INTEGER NOT NULL,
+                    billing_cycle VARCHAR(10) NOT NULL,
+                    start_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    end_date DATETIME NOT NULL,
+                    auto_renew BOOLEAN DEFAULT 1,
+                    payment_method VARCHAR(50),
+                    payment_status VARCHAR(20) NOT NULL DEFAULT 'paid',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES user(id),
+                    FOREIGN KEY(plan_id) REFERENCES subscription_plan(id)
+                );
+            """)
+            _target = ['id','user_id','plan_id','billing_cycle','start_date','end_date',
+                       'auto_renew','payment_method','payment_status','created_at']
+            _copy = ', '.join(c for c in _target if c in _us_cols)
+            _cur.execute(f"INSERT INTO user_subscription ({_copy}) SELECT {_copy} FROM user_subscription_bak;")
+            _cur.execute("DROP TABLE user_subscription_bak;")
+            _cur.execute("CREATE INDEX IF NOT EXISTS idx_user_sub_user ON user_subscription(user_id);")
+            _conn.commit()
+        _conn.close()
+    except Exception as _e:
+        print(f"⚠️ user_subscription 欄位修正警告：{_e}")
+
     _FEATURES = [
         '每天10次拍照辨識',
         '每天10次AI對話',

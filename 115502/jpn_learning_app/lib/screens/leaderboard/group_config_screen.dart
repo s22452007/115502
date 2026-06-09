@@ -79,7 +79,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('建立學習小組', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

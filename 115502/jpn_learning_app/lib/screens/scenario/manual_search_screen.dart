@@ -54,13 +54,13 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
+          icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           '手動建立情境',
           style: TextStyle(
-            color: AppColors.primary,
+            color: Color.fromARGB(255, 0, 0, 0),
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),

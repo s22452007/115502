@@ -25,8 +25,8 @@ class SceneResultScreen extends StatefulWidget {
 }
 
 class _SceneResultScreenState extends State<SceneResultScreen> {
-  // 魔法變數：控制綠色捲簾的當前高度 (一開始預設 550)
   double _curtainHeight = 550.0;
+  bool _curtainInitialized = false;
   final Set<int> _collectedIds = {};
   final FlutterTts _flutterTts = FlutterTts();
 
@@ -36,13 +36,35 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     _initTts();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_curtainInitialized) {
+      _curtainHeight = MediaQuery.of(context).size.height * 0.68;
+      _curtainInitialized = true;
+    }
+  }
+
   Future<void> _initTts() async {
+    await _flutterTts.setEngine("com.google.android.tts");
     await _flutterTts.setLanguage("ja-JP");
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setPitch(1.0);
   }
 
   Future<void> _speak(String text) async {
-    await _flutterTts.setLanguage("ja-JP");
-    await _flutterTts.speak(text);
+    try {
+      await _flutterTts.setLanguage("ja-JP");
+      await _flutterTts.setVolume(1.0);
+      await _flutterTts.speak(text);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('語音錯誤: $e')),
+        );
+      }
+    }
   }
 
   @override

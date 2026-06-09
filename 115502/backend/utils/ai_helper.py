@@ -1,7 +1,7 @@
 import os
 import json
 from google import genai
-from PIL import Image
+from google.genai import types
 from dotenv import load_dotenv
 
 # 載入環境變數 (讀取 backend/.env 檔案中的 GEMINI_API_KEY)
@@ -22,8 +22,15 @@ def analyze_image_from_path(file_path):
             
         client = genai.Client(api_key=api_key)
 
-        # 2. 讀取圖片
-        img = Image.open(file_path)
+        # 2. 讀取圖片（用 bytes + mime_type 傳給新版 Gemini API）
+        ext = os.path.splitext(file_path)[1].lower()
+        mime_map = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                    '.png': 'image/png', '.webp': 'image/webp',
+                    '.gif': 'image/gif', '.heic': 'image/heic'}
+        mime_type = mime_map.get(ext, 'image/jpeg')
+        with open(file_path, 'rb') as f:
+            image_bytes = f.read()
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
 
         # 3. 定義 prompt：嚴格要求回傳符合前端格式的 JSON
         prompt = '''
@@ -67,7 +74,7 @@ def analyze_image_from_path(file_path):
         '''
 
         # 4. 呼叫 Gemini 解析圖片
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=[img, prompt])
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=[image_part, prompt])
         result_text = response.text.strip()
 
         # 5. 因為要求回傳 JSON，但 Gemini 有時會加上 markdown (如 ```json ... ```)

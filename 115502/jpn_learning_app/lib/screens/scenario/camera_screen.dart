@@ -452,14 +452,24 @@ class _CameraScreenState extends State<CameraScreen>
                   // 📷 2. 中間的拍照按鈕 (綠色大圓圈)
                   GestureDetector(
                     onTap: () async {
-                      // 3. 先真正的拍照，拿到檔案路徑後，再丟去檢查次數
-                      if (_controller == null || !_controller!.value.isInitialized) return;
+                      // 相機未初始化（模擬器）→ 改開相簿
+                      if (_controller == null || !_controller!.value.isInitialized) {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? pickedFile = await picker.pickImage(
+                          source: ImageSource.gallery,
+                        );
+                        if (pickedFile != null) {
+                          if (!context.mounted) return;
+                          await _checkAndProceedWithPhoto(pickedFile.path);
+                        }
+                        return;
+                      }
+
                       if (_controller!.value.isTakingPicture) return;
 
                       try {
                         final XFile photo = await _controller!.takePicture();
                         if (!mounted) return;
-                        // 4. 改為呼叫會檢查次數的函式
                         await _checkAndProceedWithPhoto(photo.path);
                       } on CameraException catch (e) {
                         debugPrint('拍照發生錯誤: $e');

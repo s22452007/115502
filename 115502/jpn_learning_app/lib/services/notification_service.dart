@@ -8,7 +8,7 @@ class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'jpn_learning_channel';
-  static const _channelName = 'JPN Learning 通知';
+  static const _channelName = 'Snap to Learn 通知';
 
   // 通知 ID
   static const int idDaily = 1;

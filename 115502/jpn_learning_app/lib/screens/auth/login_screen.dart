@@ -342,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          "JPN Learning ID",
+                          "Snap to Learn ID",
                           style: TextStyle(fontSize: 20, color: AppColors.primary, fontWeight: FontWeight.w900, letterSpacing: 1.2),
                         ),
                         const SizedBox(height: 48),

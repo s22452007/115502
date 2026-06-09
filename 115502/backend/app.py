@@ -36,6 +36,11 @@ os.makedirs(instance_path, exist_ok=True)
 # 設定 SQLite 資料庫，使用絕對路徑
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+from sqlalchemy.pool import NullPool
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'poolclass': NullPool,
+    'connect_args': {'timeout': 15},
+}
 
 # 初始化資料庫
 db.init_app(app)

@@ -35,8 +35,13 @@ path2 = os.path.join(BASE_DIR, 'jlens.db')
 DB_FILE_PATH = path1 if os.path.exists(path1) else path2
 
 
+from sqlalchemy.pool import NullPool
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_FILE_PATH
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'poolclass': NullPool,
+    'connect_args': {'timeout': 15},
+}
 db.init_app(app)
 # ==========================================
 # 🚀 自動路徑偵測
@@ -46,8 +51,10 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_FILE_PATH = os.path.join(BASE_DIR, 'instance', 'jlens.db')
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_FILE_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row 
+    conn = sqlite3.connect(DB_FILE_PATH, check_same_thread=False, timeout=15)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=15000')
+    conn.row_factory = sqlite3.Row
     return conn
 
 # ==========================================

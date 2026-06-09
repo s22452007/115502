@@ -39,11 +39,21 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 from sqlalchemy.pool import NullPool
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'poolclass': NullPool,
-    'connect_args': {'timeout': 15},
+    'connect_args': {'timeout': 30, 'check_same_thread': False},
 }
 
 # 初始化資料庫
 db.init_app(app)
+
+# 啟用 WAL 模式：允許多個讀取並發，大幅減少 "database is locked" 錯誤
+from sqlalchemy import event as _sa_event
+with app.app_context():
+    @_sa_event.listens_for(db.engine, 'connect')
+    def _set_sqlite_wal(dbapi_conn, _):
+        cur = dbapi_conn.cursor()
+        cur.execute('PRAGMA journal_mode=WAL')
+        cur.execute('PRAGMA busy_timeout=30000')
+        cur.close()
 
 # 註冊 API 路由 (綁定網址前綴)
 app.register_blueprint(quiz_bp, url_prefix='/api/quiz')

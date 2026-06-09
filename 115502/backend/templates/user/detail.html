@@ -91,7 +91,11 @@
         <!-- 使用者基本資料 -->
         <div class="user-header">
             {% if user.avatar %}
+            {% if user.avatar.startswith('http') or user.avatar.startswith('data:') %}
             <img src="{{ user.avatar }}" class="user-avatar-lg" style="object-fit:cover;">
+            {% else %}
+            <img src="data:image/jpeg;base64,{{ user.avatar }}" class="user-avatar-lg" style="object-fit:cover;">
+            {% endif %}
             {% else %}
             <div class="user-avatar-lg">{{ (user.username or user.email)[0]|upper }}</div>
             {% endif %}

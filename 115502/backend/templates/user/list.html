@@ -195,7 +195,11 @@
         <div class="user-card">
             <div class="card-top">
                 {% if u.avatar %}
+                {% if u.avatar.startswith('http') or u.avatar.startswith('data:') %}
                 <img src="{{ u.avatar }}" class="avatar" style="object-fit:cover;">
+                {% else %}
+                <img src="data:image/jpeg;base64,{{ u.avatar }}" class="avatar" style="object-fit:cover;">
+                {% endif %}
                 {% else %}
                 <div class="avatar">{{ (u.username or u.email)[0]|upper }}</div>
                 {% endif %}

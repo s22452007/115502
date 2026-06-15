@@ -30,7 +30,7 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level):
         """
 
         if user_message == "[幫我開場]":
-            prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！"
+            prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！一句話就好，讓使用者有機會回應。"
         else:
             prompt += f"\n這是我們之前的對話紀錄：\n{chat_history}\n\n使用者剛剛對你說了這句話：「{user_message}」\n請自然地回覆使用者，並記得拋出下一個問題。"
 

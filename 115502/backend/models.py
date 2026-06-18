@@ -58,6 +58,11 @@ class User(db.Model):
     group_free_used_this_week = db.Column(db.Integer, default=0)
     vocab_slot = db.Column(db.Integer, default=50)
     is_suspended = db.Column(db.Boolean, default=False)
+    # 每日任務
+    daily_task_date = db.Column(db.Date, nullable=True)
+    daily_task_photo = db.Column(db.Boolean, default=False)
+    daily_task_ai = db.Column(db.Boolean, default=False)
+    daily_reward_claimed = db.Column(db.Boolean, default=False)
 
     user_vocabs = db.relationship('UserVocab', backref='user', lazy=True)
     achievements = db.relationship('UserAchievement', backref='user', lazy=True)

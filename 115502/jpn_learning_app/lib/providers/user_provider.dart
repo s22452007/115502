@@ -56,6 +56,43 @@ class UserProvider extends ChangeNotifier {
   int get photoDailyLimit => _isPremium ? 10 : 2;
   int get aiDailyLimit => _isPremium ? 10 : 3;
 
+  // 每日任務狀態
+  bool _dailyPhotoDone = false;
+  bool _dailyAiDone = false;
+  bool _dailyRewardClaimed = false;
+  int _dailyPtsMin = 10;
+  int _dailyPtsMax = 30;
+  int _dailyBonusPhoto = 0;
+
+  bool get dailyPhotoDone => _dailyPhotoDone;
+  bool get dailyAiDone => _dailyAiDone;
+  bool get dailyRewardClaimed => _dailyRewardClaimed;
+  int get dailyPtsMin => _dailyPtsMin;
+  int get dailyPtsMax => _dailyPtsMax;
+  int get dailyBonusPhoto => _dailyBonusPhoto;
+
+  void setDailyTaskStatus({
+    required bool photoDone,
+    required bool aiDone,
+    required bool claimed,
+    required int ptsMin,
+    required int ptsMax,
+    required int bonusPhoto,
+  }) {
+    _dailyPhotoDone = photoDone;
+    _dailyAiDone = aiDone;
+    _dailyRewardClaimed = claimed;
+    _dailyPtsMin = ptsMin;
+    _dailyPtsMax = ptsMax;
+    _dailyBonusPhoto = bonusPhoto;
+    notifyListeners();
+  }
+
+  void setDailyRewardClaimed(bool value) {
+    _dailyRewardClaimed = value;
+    notifyListeners();
+  }
+
   void setUsageStatus({
     int photoCountToday = 0,
     int photoExtraCount = 0,
@@ -196,6 +233,9 @@ class UserProvider extends ChangeNotifier {
     _aiCountToday = 0;
     _aiExtraCount = 0;
     _vocabSlot = 50;
+    _dailyPhotoDone = false;
+    _dailyAiDone = false;
+    _dailyRewardClaimed = false;
     notifyListeners();
   }
 }

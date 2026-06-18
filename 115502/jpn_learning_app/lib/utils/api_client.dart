@@ -340,6 +340,32 @@ class ApiClient {
     }
   }
 
+  // 每日任務狀態
+  static Future<Map<String, dynamic>> getDailyStatus(int userId) async {
+    final url = Uri.parse('$baseUrl/daily/status?user_id=$userId');
+    try {
+      final response = await http.get(url);
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
+  // 領取每日獎勵
+  static Future<Map<String, dynamic>> claimDailyReward(int userId) async {
+    final url = Uri.parse('$baseUrl/daily/claim');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'error': '網路連線失敗'};
+    }
+  }
+
   // 這個徽章的升級彈窗我看過了！
   static Future<void> markBadgeSeen(
     int userId,

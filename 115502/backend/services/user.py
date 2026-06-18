@@ -485,6 +485,11 @@ def increment_scan():
     if member_record:
         member_record.group_scans += 1
 
+    # 每日任務：標記拍照完成
+    from services.daily_reward import _ensure_today
+    _ensure_today(user)
+    user.daily_task_photo = True
+
     db.session.commit()
     add_group_progress_and_check_reward(user_id=user_id, action_type="scans", amount=1)
 
@@ -525,6 +530,11 @@ def use_ai():
             "daily_limit": daily_limit,
             "extra_count": 0,
         }), 403
+
+    # 每日任務：標記 AI 對話完成
+    from services.daily_reward import _ensure_today
+    _ensure_today(user)
+    user.daily_task_ai = True
 
     db.session.commit()
 

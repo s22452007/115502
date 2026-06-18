@@ -78,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     await _fetchRecentScenes(userId);
     await _fetchAndCheckBadgeProgress(userId);
     await _fetchUsageStatus(userId);
+    await _fetchDailyStatus(userId);
   }
 
   Future<void> _fetchAndCheckBadgeProgress(int userId) async {
@@ -139,6 +140,27 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       );
     } catch (e) {
       debugPrint('使用量載入失敗: $e');
+    }
+  }
+
+  Future<void> _fetchDailyStatus(int userId) async {
+    final userProvider = context.read<UserProvider>();
+    try {
+      final res = await ApiClient.getDailyStatus(userId);
+      if (!mounted) return;
+      if (res.containsKey('photo_done')) {
+        final preview = res['reward_preview'] as Map<String, dynamic>? ?? {};
+        userProvider.setDailyTaskStatus(
+          photoDone: res['photo_done'] == true,
+          aiDone: res['ai_done'] == true,
+          claimed: res['claimed'] == true,
+          ptsMin: (preview['pts_min'] as num?)?.toInt() ?? 10,
+          ptsMax: (preview['pts_max'] as num?)?.toInt() ?? 30,
+          bonusPhoto: (preview['bonus_photo'] as num?)?.toInt() ?? 0,
+        );
+      }
+    } catch (e) {
+      debugPrint('每日任務狀態載入失敗: $e');
     }
   }
 

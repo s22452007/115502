@@ -608,6 +608,15 @@ try:
 except Exception as e:
     print(f"⚠️ user_subscription 重建警告：{e}")
 
+# ==========================================
+# 27. 每日任務欄位
+# ==========================================
+add_column("user", "daily_task_date DATE")
+add_column("user", "daily_task_photo BOOLEAN DEFAULT 0")
+add_column("user", "daily_task_ai BOOLEAN DEFAULT 0")
+add_column("user", "daily_reward_claimed BOOLEAN DEFAULT 0")
+print("✅ user 每日任務欄位確認完畢")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

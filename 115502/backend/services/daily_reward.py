@@ -91,6 +91,7 @@ def claim_reward():
         user_id=user.id,
         points=pts,
         price=0,
+        payment_method='daily_reward',
         transaction_type=TransactionType.REWARD,
         related_feature='daily_task_reward',
     ))

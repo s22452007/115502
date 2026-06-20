@@ -1,6 +1,26 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
+// 預設可愛動物頭像 (emoji → 背景色)
+const Map<String, Color> kAvatarPresets = {
+  '🐱': Color(0xFFFFAB91),
+  '🐶': Color(0xFFFFCC80),
+  '🐼': Color(0xFFCFD8DC),
+  '🐨': Color(0xFF80DEEA),
+  '🐸': Color(0xFFA5D6A7),
+  '🦊': Color(0xFFFFB74D),
+  '🐰': Color(0xFFF48FB1),
+  '🐻': Color(0xFFBCAAA4),
+  '🐯': Color(0xFFFFD54F),
+  '🐮': Color(0xFFDCE775),
+  '🦁': Color(0xFFFFE082),
+  '🐧': Color(0xFF80CBC4),
+  '🐙': Color(0xFFCE93D8),
+  '🦋': Color(0xFFB39DDB),
+  '🐢': Color(0xFF80CBC4),
+  '🦄': Color(0xFFF8BBD9),
+};
+
 class UserAvatar extends StatelessWidget {
   final String? avatarBase64;
   final String? friendId;
@@ -39,6 +59,28 @@ class UserAvatar extends StatelessWidget {
     final String defaultAvatarUrl =
         'https://ui-avatars.com/api/?name=${Uri.encodeComponent(originalName)}&background=$bgColor&color=fff';
 
+    // 優先：emoji 預設頭像
+    if (avatarBase64 != null && kAvatarPresets.containsKey(avatarBase64)) {
+      final bgColor = kAvatarPresets[avatarBase64]!;
+      Widget emojiCircle = Container(
+        width: radius * 2,
+        height: radius * 2,
+        decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+        child: Center(
+          child: Text(
+            avatarBase64!,
+            style: TextStyle(fontSize: radius * 0.95),
+          ),
+        ),
+      );
+      if (!isPremium) return emojiCircle;
+      final badgeSize = (radius * 0.52).clamp(10.0, 20.0);
+      return Stack(clipBehavior: Clip.none, children: [
+        emojiCircle,
+        _premiumBadge(badgeSize),
+      ]);
+    }
+
     ImageProvider imageProvider;
     if (avatarBase64 != null && avatarBase64!.isNotEmpty) {
       if (avatarBase64!.startsWith('http')) {
@@ -68,26 +110,20 @@ class UserAvatar extends StatelessWidget {
     final badgeSize = (radius * 0.52).clamp(10.0, 20.0);
     return Stack(
       clipBehavior: Clip.none,
-      children: [
-        avatar,
-        Positioned(
-          bottom: 0,
-          right: 0,
-          child: Container(
-            width: badgeSize,
-            height: badgeSize,
-            decoration: const BoxDecoration(
-              color: Color(0xFFC6B13B),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.workspace_premium,
-              color: Colors.white,
-              size: badgeSize * 0.65,
-            ),
-          ),
-        ),
-      ],
+      children: [avatar, _premiumBadge(badgeSize)],
     );
   }
+
+  Widget _premiumBadge(double size) => Positioned(
+        bottom: 0,
+        right: 0,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: const BoxDecoration(
+              color: Color(0xFFC6B13B), shape: BoxShape.circle),
+          child: Icon(Icons.workspace_premium,
+              color: Colors.white, size: size * 0.65),
+        ),
+      );
 }

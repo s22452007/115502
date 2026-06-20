@@ -1,5 +1,6 @@
-// 1. Flutter 官方套件
+﻿// 1. Flutter 官方套件
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 // 2. 第三方套件
 import 'package:provider/provider.dart';
@@ -18,7 +19,8 @@ import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
-import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart'; // 新增：新手引導頁面
+import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart';
+import 'package:jpn_learning_app/screens/auth/privacy_policy_screen.dart'; // 新增：新手引導頁面
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,6 +31,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
+  bool _agreedToTerms = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -110,6 +113,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!_isLogin && password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('兩次輸入的密碼不相同喔！')));
+      return;
+    }
+
+    if (!_isLogin && !_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先閱讀並同意服務條款與隱私政策')));
       return;
     }
 
@@ -387,6 +395,50 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
 
+                        if (!_isLogin) ...[
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Checkbox(
+                                  value: _agreedToTerms,
+                                  onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+                                  activeColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                                    children: [
+                                      const TextSpan(text: '我已閱讀並同意 '),
+                                      TextSpan(
+                                        text: '服務條款與隱私政策',
+                                        style: const TextStyle(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.bold,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                        recognizer: TapGestureRecognizer()
+                                          ..onTap = () => Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (_) => const PrivacyPolicyScreen())),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
                         if (_isLogin)
                           Align(
                             alignment: Alignment.centerRight,
@@ -397,14 +449,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         else
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
                         const SizedBox(height: 24),
 
                         SizedBox(
                           width: double.infinity,
                           height: 58,
                           child: ElevatedButton(
-                            onPressed: _submit,
+                            onPressed: (!_isLogin && !_agreedToTerms) ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               elevation: 0,
@@ -456,7 +508,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Text(_isLogin ? '還沒有帳號嗎？ ' : '已經有帳號了嗎？ ', style: const TextStyle(color: Colors.black45, fontWeight: FontWeight.w600)),
                         GestureDetector(
-                          onTap: () => setState(() => _isLogin = !_isLogin),
+                          onTap: () => setState(() { _isLogin = !_isLogin; _agreedToTerms = false; }),
                           child: Text(
                             _isLogin ? '立即註冊' : '登入帳號',
                             style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16),

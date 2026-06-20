@@ -284,8 +284,8 @@ class _RewardOverlayState extends State<_RewardOverlay>
             const SizedBox(height: 10),
             Text(
               _revealed ? '' : '今日獎勵就藏在其中一個',
-              style:
-                  TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
             ),
             const SizedBox(height: 32),
             Row(
@@ -393,8 +393,7 @@ class _RewardOverlayState extends State<_RewardOverlay>
       return Text(
         '❓',
         style: TextStyle(
-            fontSize: 36,
-            color: Colors.white.withValues(alpha: 0.6)),
+            fontSize: 36, color: Colors.white.withValues(alpha: 0.6)),
       );
     }
 

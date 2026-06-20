@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
+import 'package:jpn_learning_app/widgets/common/avatar_picker.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -103,6 +106,40 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
   }
 
+  Future<void> _openAvatarPicker() async {
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId;
+    if (userId == null) return;
+
+    final picked = await showAvatarPicker(
+      context,
+      currentAvatar: userProvider.avatar,
+    );
+    if (picked == null || !mounted) return;
+
+    String avatarValue;
+    if (picked == kAvatarGallery) {
+      final file = await ImagePicker().pickImage(
+          source: ImageSource.gallery, maxWidth: 300, maxHeight: 300, imageQuality: 50);
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      avatarValue = base64Encode(bytes);
+    } else {
+      avatarValue = picked;
+    }
+
+    final res = await ApiClient.uploadAvatar(userId, avatarValue);
+    if (!mounted) return;
+    if (res.containsKey('avatar') || res.containsKey('message')) {
+      userProvider.setAvatar(avatarValue);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('頭像已更新')));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(res['error'] ?? '更新失敗')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final firebaseUser = FirebaseAuth.instance.currentUser;
@@ -117,18 +154,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     final friendId = userProvider.friendId ?? '—';
     final avatar = userProvider.avatar;
 
-    final List<String> colors = [
-      'E57373', 'F06292', 'BA68C8', '9575CD', '7986CB',
-      '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581',
-      'FFB74D', 'FF8A65',
-    ];
-    int hash = 0;
-    for (int i = 0; i < displayName.length; i++) {
-      hash = (hash * 31 + displayName.codeUnitAt(i)) & 0x7FFFFFFF;
-    }
-    final avatarBg = colors[hash % colors.length];
-    final defaultAvatarUrl =
-        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&background=$avatarBg&color=fff';
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -155,14 +180,30 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               children: [
                 Center(
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundColor: const Color(0xFFC5E1A5),
-                    backgroundImage: (avatar != null && avatar.isNotEmpty)
-                        ? (avatar.startsWith('http')
-                            ? NetworkImage(avatar)
-                            : MemoryImage(base64Decode(avatar.split(",").last)) as ImageProvider)
-                        : NetworkImage(defaultAvatarUrl) as ImageProvider,
+                  child: GestureDetector(
+                    onTap: () => _openAvatarPicker(),
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        UserAvatar(
+                          avatarBase64: avatar,
+                          friendId: userProvider.friendId,
+                          originalName: displayName,
+                          radius: 48,
+                          isPremium: userProvider.isPremium,
+                        ),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: primaryGreen,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(Icons.edit, color: Colors.white, size: 14),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),

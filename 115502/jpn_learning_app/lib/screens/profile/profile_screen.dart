@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
@@ -13,6 +13,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
+import 'package:jpn_learning_app/widgets/common/avatar_picker.dart';
 
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
@@ -92,28 +93,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    final userId = context.read<UserProvider>().userId;
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId;
     if (userId == null) {
       _handleGuestClick('修改大頭貼');
       return;
     }
 
-    final picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 300, maxHeight: 300, imageQuality: 50);
+    final picked = await showAvatarPicker(
+      context,
+      currentAvatar: userProvider.avatar,
+    );
+    if (picked == null || !mounted) return;
 
-    if (pickedFile != null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('圖片上傳中...')));
-      final bytes = await pickedFile.readAsBytes();
-      final base64String = base64Encode(bytes);
-      final result = await ApiClient.uploadAvatar(userId, base64String);
-      if (!mounted) return;
-      if (result.containsKey('avatar')) {
-        context.read<UserProvider>().setAvatar(result['avatar']);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('大頭貼更新成功！')));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? '上傳失敗')));
-      }
+    final result = await ApiClient.uploadAvatar(userId, picked);
+    if (!mounted) return;
+    if (result.containsKey('avatar') || result.containsKey('message')) {
+      context.read<UserProvider>().setAvatar(picked);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('頭像已更新')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error'] ?? '更新失敗')),
+      );
     }
   }
 

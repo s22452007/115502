@@ -12,7 +12,7 @@ load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
 _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # 2. 建立一個專門負責聊天的函數
-def get_ai_reply(topic, user_message, chat_history, japanese_level):
+def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=None):
     try:
         prompt = f"""
         【系統設定】
@@ -21,13 +21,20 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level):
 
         【你的任務】
         1. 角色扮演：請根據「{topic}」這個主題，自動判斷並扮演最適合的角色。
-        
+
         # 👇 2. 這裡原本寫死的 N5~N4，換成活的變數！
         2. 語言程度：請嚴格使用符合 JLPT {japanese_level} 程度的單字與文法，與使用者進行自然對話。如果使用者的程度較初階（如 N5），請盡量使用簡單、簡短的句子。
-        
+
         3. 引導對話：每次回覆的最後，務必「反問一個問題」或「做出一個情境引導」。
         4. 雙語輸出：請在每一句日文的下方，換行並附上（簡單的繁體中文翻譯）。
         """
+
+        # 👇 依使用者選擇的腔調，加入對應的說話方式指令
+        if dialect_id:
+            from models import Dialect
+            dialect = Dialect.query.filter_by(id=dialect_id, is_active=True).first()
+            if dialect:
+                prompt += f"\n        5. 腔調要求：{dialect.prompt_instruction}"
 
         if user_message == "[幫我開場]":
             prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！一句話就好，讓使用者有機會回應。"

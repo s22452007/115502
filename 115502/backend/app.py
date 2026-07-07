@@ -12,6 +12,7 @@ from services.user import user_bp
 from services.group import group_bp
 from services.vocabulary import vocab_bp
 from services.tutor import tutor_bp
+from services.dialect import dialect_bp
 from services.subscription import subscription_bp, MONTHLY_POINTS_GRANT, YEARLY_POINTS_GRANT
 from services.store import store_bp
 from services.daily_reward import daily_reward_bp
@@ -64,6 +65,7 @@ app.register_blueprint(user_bp, url_prefix='/api/user')
 app.register_blueprint(group_bp, url_prefix='/api/group')
 app.register_blueprint(vocab_bp, url_prefix='/api/vocab')
 app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
+app.register_blueprint(dialect_bp, url_prefix='/api/dialect')
 app.register_blueprint(subscription_bp, url_prefix='/api/subscription')
 app.register_blueprint(store_bp, url_prefix='/api/store')
 app.register_blueprint(daily_reward_bp, url_prefix='/api/daily')
@@ -242,14 +244,15 @@ with app.app_context():
 def chat():
     # 1. 櫃檯接單（把所有 Flutter 傳來的變數收下來）
     user_message = request.form.get('message', '')
-    chat_history = request.form.get('history', '') 
-    topic = request.form.get('topic', '日常對話') 
+    chat_history = request.form.get('history', '')
+    topic = request.form.get('topic', '日常對話')
     user_level = request.form.get('level', 'N5') # 接收等級！如果 App 沒傳，預設當作 N5
+    dialect_id = request.form.get('dialect_id', type=int) # 接收腔調 ID（可為 None，代表標準語）
 
-    print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 訊息：{user_message}")
+    print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 腔調：{dialect_id} | 訊息：{user_message}")
 
-    # 2. 把食材交給內場廚師 (呼叫 tutor.py 的函數，記得把 user_level 也傳進去)
-    ai_response_text = get_ai_reply(topic, user_message, chat_history, user_level)
+    # 2. 把食材交給內場廚師 (呼叫 tutor.py 的函數，記得把 user_level / dialect_id 也傳進去)
+    ai_response_text = get_ai_reply(topic, user_message, chat_history, user_level, dialect_id)
 
     # 3. 櫃檯送餐（把熱騰騰的 AI 回覆送回給 Flutter）
     return ai_response_text

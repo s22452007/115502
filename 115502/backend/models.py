@@ -144,6 +144,17 @@ class QuizQuestion(db.Model):
     updated_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+# T_dialect: 腔調設定資料表
+class Dialect(db.Model):
+    __tablename__ = 'dialect'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), nullable=False)         # 關西腔
+    jp_name = db.Column(db.String(20), nullable=False)      # 関西弁
+    region = db.Column(db.String(50))                       # 大阪、京都、神戶
+    description = db.Column(db.String(100))                 # 最有名，ACG常出現
+    prompt_instruction = db.Column(db.Text, nullable=False) # 給Gemini的指令
+    is_active = db.Column(db.Boolean, default=True)
+
 # ==========================================
 # 🗂️ 3. 使用者學習紀錄
 # ==========================================

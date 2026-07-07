@@ -617,6 +617,65 @@ add_column("user", "daily_task_ai BOOLEAN DEFAULT 0")
 add_column("user", "daily_reward_claimed BOOLEAN DEFAULT 0")
 print("✅ user 每日任務欄位確認完畢")
 
+# ==========================================
+# 28. 建立 T_dialect (腔調設定資料表) + 初始資料
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS dialect (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(20) NOT NULL,
+        jp_name VARCHAR(20) NOT NULL,
+        region VARCHAR(50),
+        description VARCHAR(100),
+        prompt_instruction TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT 1
+    );
+    """)
+    print("✅ dialect 腔調設定資料表確認完畢")
+
+    # 12 種腔調初始資料（idempotent：以 name 為判斷，避免重複種入）
+    _DIALECTS = [
+        ('東京腔', '標準語', '東京、關東', '標準日語，最好懂',
+         '標準語で、自然に話してください。'),
+        ('關西腔', '関西弁', '大阪、京都、神戶', '最有名，ACG常出現',
+         '関西弁で話してください。「そうやで」「なんでやねん」「おもろい」「めっちゃ」などの表現を自然に使ってください。'),
+        ('京都腔', '京都弁', '京都', '比關西腔更優雅柔和',
+         '京都弁で話してください。「〜どす」「〜おす」「〜やす」などの柔らかい表現を自然に使ってください。'),
+        ('大阪腔', '大阪弁', '大阪', '關西腔中最直接豪爽',
+         '大阪弁で話してください。「〜やん」「〜やろ」「ほんまに」「あかん」「なんでやねん」などを自然に使ってください。'),
+        ('神戶腔', '神戸弁', '神戶', '關西腔變體，較洋氣',
+         '神戸弁で話してください。「〜やん」「〜やろ」を使いつつ、少し標準語に近い柔らかい表現にしてください。'),
+        ('博多腔', '博多弁', '福岡博多', '九州最有代表性',
+         '博多弁で話してください。「〜ばい」「〜たい」「〜けん」「よかよか」「なんしようと」などを自然に使ってください。'),
+        ('九州腔', '九州弁', '福岡、熊本', '語尾常用「ばい」「たい」',
+         '九州弁で話してください。「〜ばい」「〜たい」「〜やろか」「〜くさ」などを自然に使ってください。'),
+        ('東北腔', '東北弁', '仙台、青森', '發音較重，較難懂',
+         '東北弁で話してください。「〜だべ」「〜だっちゃ」「んだ」「〜ね」などを自然に使ってください。'),
+        ('名古屋腔', '名古屋弁', '名古屋', '語尾常用「だがや」「でかんわ」',
+         '名古屋弁で話してください。「〜だがや」「〜でかんわ」「えらい」「〜ゃあ」などを自然に使ってください。'),
+        ('廣島腔', '広島弁', '廣島', '語尾常用「じゃ」「のう」',
+         '広島弁で話してください。「〜じゃ」「〜のう」「〜けぇ」「ほうじゃ」などを自然に使ってください。'),
+        ('沖繩腔', '沖縄弁', '沖繩', '最特殊，幾乎像另一種語言',
+         '沖縄弁で話してください。「〜さぁ」「〜やっさ」「なんくるないさ」「うちなーぐち」の雰囲気で話してください。'),
+        ('北海道腔', '北海道弁', '北海道', '接近標準語但有些特色',
+         '北海道弁で話してください。「なまら」「したっけ」「〜だべ」「〜かい」などを自然に使ってください。'),
+    ]
+    _inserted = 0
+    for name, jp_name, region, description, prompt_instruction in _DIALECTS:
+        cursor.execute("SELECT id FROM dialect WHERE name = ?;", (name,))
+        if cursor.fetchone() is None:
+            cursor.execute(
+                """INSERT INTO dialect
+                   (name, jp_name, region, description, prompt_instruction, is_active)
+                   VALUES (?, ?, ?, ?, ?, 1);""",
+                (name, jp_name, region, description, prompt_instruction),
+            )
+            _inserted += 1
+    print(f"✅ dialect 初始資料確認完畢（本次新增 {_inserted} 筆，共 {len(_DIALECTS)} 種腔調）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ dialect 建立或初始化警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

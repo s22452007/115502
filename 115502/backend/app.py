@@ -13,6 +13,7 @@ from services.group import group_bp
 from services.vocabulary import vocab_bp
 from services.tutor import tutor_bp
 from services.dialect import dialect_bp
+from services.tts import tts_bp
 from services.subscription import subscription_bp, MONTHLY_POINTS_GRANT, YEARLY_POINTS_GRANT
 from services.store import store_bp
 from services.daily_reward import daily_reward_bp
@@ -66,6 +67,7 @@ app.register_blueprint(group_bp, url_prefix='/api/group')
 app.register_blueprint(vocab_bp, url_prefix='/api/vocab')
 app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
 app.register_blueprint(dialect_bp, url_prefix='/api/dialect')
+app.register_blueprint(tts_bp, url_prefix='/api/tts')
 app.register_blueprint(subscription_bp, url_prefix='/api/subscription')
 app.register_blueprint(store_bp, url_prefix='/api/store')
 app.register_blueprint(daily_reward_bp, url_prefix='/api/daily')

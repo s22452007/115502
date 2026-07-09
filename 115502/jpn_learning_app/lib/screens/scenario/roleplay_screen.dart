@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
@@ -32,10 +33,19 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   int _aiMax = 3;
   int _aiExtra = 0;
 
+  // TTS 語音播放
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _playingText; // 目前正在載入/播放的文字（用來顯示播放中狀態）
+
   @override
   void initState() {
     super.initState();
     _fetchUsageData(); // 初始化時抓取使用量
+
+    // 播放結束後清除播放中狀態
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playingText = null);
+    });
 
     final userLevel = context.read<UserProvider>().japaneseLevel;
     final displayLevel = userLevel.isNotEmpty ? userLevel : 'N5';
@@ -56,6 +66,64 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     // 模擬：一進來先給幾個快捷選項
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // ==========================================
+  // 🔊 TTS 語音播放（呼叫後端 /api/tts/synthesize）
+  // ==========================================
+  Future<void> _playTts(String text) async {
+    final t = text.trim();
+    if (t.isEmpty) return;
+
+    await _audioPlayer.stop();
+    setState(() => _playingText = t);
+
+    try {
+      final url = Uri.parse('${ApiClient.baseUrl}/tts/synthesize');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': t}),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final bytes = base64Decode(data['audio_base64'] as String);
+        await _audioPlayer.play(BytesSource(bytes));
+        // 播放結束後由 onPlayerComplete 監聽器清除 _playingText
+      } else {
+        setState(() => _playingText = null);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('語音合成失敗，請稍後再試'),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+    } catch (e) {
+      print('TTS 播放錯誤: $e');
+      if (mounted) setState(() => _playingText = null);
+    }
+  }
+
+  // 將 AI 回覆拆成句子（依換行與日文/全形標點切分）
+  List<String> _splitSentences(String text) {
+    final sentences = <String>[];
+    for (final line in text.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      for (final m in RegExp(r'[^。！？!?]+[。！？!?]*').allMatches(line)) {
+        final s = m.group(0)!.trim();
+        if (s.isNotEmpty) sentences.add(s);
+      }
+    }
+    return sentences;
   }
 
   // 抓取最新使用量
@@ -336,7 +404,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 title: const Text('播放語音 (TTS)'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: 呼叫 flutter_tts 播放
+                  _playTts(messageText);
                 },
               ),
               ListTile(
@@ -358,6 +426,67 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           ),
         );
       },
+    );
+  }
+
+  // AI 訊息泡泡：右上角 🔊 播放整段，內文拆句、單句點擊播放
+  Widget _buildAiBubble(String displayText) {
+    final sentences = _splitSentences(displayText);
+    final isWholePlaying = _playingText == displayText.trim();
+
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          // 右側多留空間給右上角的播放按鈕
+          padding: const EdgeInsets.fromLTRB(16, 12, 44, 12),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLighter,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Wrap(
+            children: sentences.map((s) {
+              final isPlaying = _playingText == s;
+              return GestureDetector(
+                onTap: () => _playTts(s),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 4, bottom: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isPlaying
+                        ? AppColors.primary.withValues(alpha: 0.18)
+                        : null,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    s,
+                    style: TextStyle(
+                      color: isPlaying ? AppColors.primary : AppColors.textDark,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        // 🔊 右上角：播放整段 AI 回覆
+        Positioned(
+          top: 8,
+          right: 10,
+          child: GestureDetector(
+            onTap: () => _playTts(displayText),
+            child: Icon(
+              isWholePlaying ? Icons.graphic_eq : Icons.volume_up,
+              size: 20,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -496,39 +625,42 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                   ],
                                 ),
                               ),
-                            // 功能 1：加上 GestureDetector 實現點擊選單
+                            // 功能 1：長按開啟操作選單；AI 訊息點擊單句可播放語音
                             GestureDetector(
-                              onTap: () {
+                              onLongPress: () {
                                 if (!isUserMessage) {
                                   _showBottomSheetOptions(context, messageText);
                                 }
                               },
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isUserMessage
-                                      ? AppColors.primary
-                                      : AppColors.primaryLighter,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  // 配合功能 2：如果未來有 furiganaText 欄位且開關打開，就顯示標音版文字
-                                  (_showFurigana &&
-                                          msg.containsKey('furiganaText'))
-                                      ? msg['furiganaText']
-                                      : messageText,
-                                  style: TextStyle(
-                                    color: isUserMessage
-                                        ? Colors.white
-                                        : AppColors.textDark,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
+                              child: Builder(builder: (_) {
+                                // 配合功能 2：如果未來有 furiganaText 欄位且開關打開，就顯示標音版文字
+                                final String displayText = (_showFurigana &&
+                                        msg.containsKey('furiganaText'))
+                                    ? msg['furiganaText']
+                                    : messageText;
+
+                                if (isUserMessage) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      displayText,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return _buildAiBubble(displayText);
+                              }),
                             ),
                           ],
                         ),

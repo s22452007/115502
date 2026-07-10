@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>需要使用麥克風進行日語口說練習與語音輸入</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>需要語音辨識功能，將您說的日語轉換成文字</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

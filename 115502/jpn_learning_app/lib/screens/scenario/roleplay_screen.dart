@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
@@ -37,32 +39,28 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _playingText; // 目前正在載入/播放的文字（用來顯示播放中狀態）
 
+  // 🎤 語音輸入（Speech-to-Text）
+  final SpeechToText _speech = SpeechToText();
+  bool _speechEnabled = false; // 裝置是否支援語音辨識
+  bool _isListening = false;   // 是否正在聆聽
+  bool _speechJapanese = true; // 辨識語言：true=日語、false=中文
+
   @override
   void initState() {
     super.initState();
     _fetchUsageData(); // 初始化時抓取使用量
+    _initSpeech();     // 初始化語音辨識
 
     // 播放結束後清除播放中狀態
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingText = null);
     });
 
-    final userLevel = context.read<UserProvider>().japaneseLevel;
-    final displayLevel = userLevel.isNotEmpty ? userLevel : 'N5';
-
-    // --- 測試用：顯示目前讀取到的等級 ---
     _messages.add({
-      'text': '*** 目前使用者的等級：$displayLevel ***\n\n歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
+      'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
       'isUserMessage': false,
-      'furiganaText': '*** 目前使用者的等級：$displayLevel ***\n\n歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', 
+      'furiganaText': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', // 未來後端可提供標音版本
     });
-
-    // --- 原本的開場訊息（未來不需要顯示等級時，解開這段並刪除上面那段即可） ---
-    // _messages.add({
-    //   'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
-    //   'isUserMessage': false,
-    //   'furiganaText': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', // 未來後端可提供標音版本
-    // });
 
     // 模擬：一進來先給幾個快捷選項
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
@@ -70,9 +68,73 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
   @override
   void dispose() {
+    _speech.stop();
     _audioPlayer.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  // ==========================================
+  // 🎤 語音輸入（講日文 → 自動轉成文字填入輸入框）
+  // ==========================================
+  Future<void> _initSpeech() async {
+    try {
+      _speechEnabled = await _speech.initialize(
+        onStatus: (status) {
+          // 辨識自動結束（講完停頓、逾時）時同步按鈕狀態
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+          }
+        },
+        onError: (error) {
+          print('語音辨識錯誤: ${error.errorMsg}');
+          if (mounted) setState(() => _isListening = false);
+        },
+      );
+    } catch (e) {
+      print('語音辨識初始化失敗: $e');
+      _speechEnabled = false;
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _toggleListening() async {
+    if (!_speechEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('此裝置不支援語音辨識，或未授權麥克風權限'),
+        backgroundColor: Colors.redAccent,
+      ));
+      return;
+    }
+
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+      return;
+    }
+
+    setState(() => _isListening = true);
+    // locale 格式：web(瀏覽器 Web Speech API) 用連字號 ja-JP / zh-TW，
+    // Android/iOS 原生端用底線 ja_JP / zh_TW，格式不對會退回系統預設語言。
+    final locale = _speechJapanese
+        ? (kIsWeb ? 'ja-JP' : 'ja_JP')
+        : (kIsWeb ? 'zh-TW' : 'zh_TW');
+    await _speech.listen(
+      listenOptions: SpeechListenOptions(
+        localeId: locale, // 依使用者選擇的語言辨識
+        partialResults: true, // 邊講邊顯示
+        listenMode: ListenMode.dictation,
+      ),
+      onResult: (result) {
+        // 將辨識結果即時填入輸入框
+        setState(() {
+          _controller.text = result.recognizedWords;
+          _controller.selection = TextSelection.fromPosition(
+            TextPosition(offset: _controller.text.length),
+          );
+        });
+      },
+    );
   }
 
   // ==========================================
@@ -136,7 +198,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       setState(() {
         _aiUsed = (res['ai_count_today'] as num?)?.toInt() ?? 0;
         _aiExtra = (res['ai_extra_count'] as num?)?.toInt() ?? 0;
-        _aiMax = res['subscription_status'] == 'active' ? 10 : 3;
+        // 後端回傳欄位是 is_premium（原本誤讀 subscription_status，導致上限永遠顯示 3）
+        _aiMax = res['is_premium'] == true ? 10 : 3;
       });
     }
   }
@@ -157,12 +220,19 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       final limit = (res['daily_limit'] as num?)?.toInt() ?? _aiMax;
       _showQuotaBottomSheet(used, limit, onBoughtRetry ?? () {});
       return false;
-    } else {
+    } else if (status == 200) {
       setState(() {
         _aiUsed = (res['daily_ai'] as num?)?.toInt() ?? 0;
         _aiExtra = (res['extra_count'] as num?)?.toInt() ?? 0;
       });
       return true;
+    } else {
+      // 網路錯誤或伺服器錯誤時不放行，避免額度檢查被繞過
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('連線失敗，無法確認使用次數，請稍後再試'),
+        backgroundColor: Colors.redAccent,
+      ));
+      return false;
     }
   }
 
@@ -429,10 +499,26 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     );
   }
 
-  // AI 訊息泡泡：右上角 🔊 播放整段，內文拆句、單句點擊播放
+  // 判斷是否為中文翻譯行（以全形/半形括號開頭）
+  bool _isTranslationLine(String line) =>
+      line.startsWith('（') || line.startsWith('(');
+
+  // AI 訊息泡泡：右上角 🔊 播放整段日文，內文按行排版、日文句子可點擊播放
   Widget _buildAiBubble(String displayText) {
-    final sentences = _splitSentences(displayText);
-    final isWholePlaying = _playingText == displayText.trim();
+    // 保險起見清掉 AI 偶爾輸出的 Markdown 符號
+    final cleaned = displayText.replaceAll('**', '').replaceAll('*', '');
+
+    // 依換行切成行，保留段落結構
+    final lines = cleaned
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+
+    // 整段播放時只念日文行（跳過中文翻譯行）
+    final japaneseOnly =
+        lines.where((l) => !_isTranslationLine(l)).join('\n');
+    final isWholePlaying = _playingText == japaneseOnly.trim();
 
     return Stack(
       children: [
@@ -444,41 +530,67 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             color: AppColors.primaryLighter,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Wrap(
-            children: sentences.map((s) {
-              final isPlaying = _playingText == s;
-              return GestureDetector(
-                onTap: () => _playTts(s),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 4, bottom: 4),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isPlaying
-                        ? AppColors.primary.withValues(alpha: 0.18)
-                        : null,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: lines.map((line) {
+              // 中文翻譯行：灰色小字、不可點擊
+              if (_isTranslationLine(line)) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
-                    s,
+                    line,
                     style: TextStyle(
-                      color: isPlaying ? AppColors.primary : AppColors.textDark,
-                      fontSize: 15,
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
                     ),
                   ),
+                );
+              }
+              // 日文行：拆句、單句點擊播放
+              final sentences = _splitSentences(line);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Wrap(
+                  children: sentences.map((s) {
+                    final isPlaying = _playingText == s;
+                    return GestureDetector(
+                      onTap: () => _playTts(s),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 4, bottom: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isPlaying
+                              ? AppColors.primary.withValues(alpha: 0.18)
+                              : null,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          s,
+                          style: TextStyle(
+                            color: isPlaying
+                                ? AppColors.primary
+                                : AppColors.textDark,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               );
             }).toList(),
           ),
         ),
-        // 🔊 右上角：播放整段 AI 回覆
+        // 🔊 右上角：播放整段 AI 回覆（只念日文，跳過翻譯）
         Positioned(
           top: 8,
           right: 10,
           child: GestureDetector(
-            onTap: () => _playTts(displayText),
+            onTap: () => _playTts(japaneseOnly),
             child: Icon(
               isWholePlaying ? Icons.graphic_eq : Icons.volume_up,
               size: 20,
@@ -743,15 +855,56 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.mic, color: AppColors.primary),
-                      onPressed: () {},
+                      icon: Icon(
+                        _isListening ? Icons.mic : Icons.mic_none,
+                        color: _isListening ? Colors.redAccent : AppColors.primary,
+                      ),
+                      tooltip: _isListening
+                          ? '停止語音輸入'
+                          : '語音輸入（${_speechJapanese ? '日語' : '中文'}）',
+                      onPressed: _toggleListening,
                     ),
+                    // 🌐 語音辨識語言切換（日 ⇄ 中）
+                    GestureDetector(
+                      onTap: () async {
+                        // 聆聽中切換語言：先停止再切換，避免辨識語言錯亂
+                        if (_isListening) {
+                          await _speech.stop();
+                        }
+                        setState(() {
+                          _speechJapanese = !_speechJapanese;
+                          _isListening = false;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLighter,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.primary),
+                        ),
+                        child: Text(
+                          _speechJapanese ? '日' : '中',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: TextField(
                         controller: _controller,
                         onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
-                          hintText: '輸入日文訊息...',
+                          hintText: _isListening
+                              ? '🎤 聆聽中，請說${_speechJapanese ? '日語' : '中文'}...'
+                              : '輸入日文訊息...',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),

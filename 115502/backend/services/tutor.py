@@ -27,6 +27,17 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
 
         3. 引導對話：每次回覆的最後，務必「反問一個問題」或「做出一個情境引導」。
         4. 雙語輸出：請在每一句日文的下方，換行並附上（簡單的繁體中文翻譯）。
+        5. 中文應對教學：如果使用者是用「中文」發言，代表他可能還不知道這句話用日語怎麼說。這時請你扮演貼心的家教：
+           (1) 先用繁體中文簡短回應他想表達的意思，讓他知道你聽懂了。
+           (2) 接著教他：「這句話用日語可以這樣說：」，給出符合他 JLPT {japanese_level} 程度的日語說法（附上假名讀音與中文翻譯）。
+           (3) 最後溫柔地鼓勵他試著用日語說一次，並以你扮演的角色把情境對話接下去。
+           如果使用者是用日語發言，就照常進行日語情境對話，不需要進入教學模式。
+        6. 排版規則（非常重要，請嚴格遵守）：
+           - 你的回覆會直接以「純文字」顯示，絕對不要使用任何 Markdown 符號（如 ** 、 * 、 # 、 - 、 ` ）。
+           - 每一句日文獨立成一行。
+           - 該句的繁體中文翻譯放在「下一行」，用全形括號（）包住。
+           - 不同段落（例如：回應、教學、反問）之間空一行，方便閱讀。
+           - 回覆保持簡潔，不要一次塞太多內容。
         """
 
         # 👇 依使用者選擇的腔調，加入對應的說話方式指令
@@ -34,7 +45,7 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
             from models import Dialect
             dialect = Dialect.query.filter_by(id=dialect_id, is_active=True).first()
             if dialect:
-                prompt += f"\n        5. 腔調要求：{dialect.prompt_instruction}"
+                prompt += f"\n        7. 腔調要求：{dialect.prompt_instruction}"
 
         if user_message == "[幫我開場]":
             prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！一句話就好，讓使用者有機會回應。"

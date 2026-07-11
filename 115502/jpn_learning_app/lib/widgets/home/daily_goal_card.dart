@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:confetti/confetti.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -7,7 +9,7 @@ class DailyGoalCard extends StatelessWidget {
   final VoidCallback onReturnFromCamera;
 
   const DailyGoalCard({Key? key, required this.onReturnFromCamera})
-      : super(key: key);
+    : super(key: key);
 
   static const _green = Color(0xFF6AA86B);
 
@@ -61,7 +63,7 @@ class DailyGoalCard extends StatelessWidget {
             color: _green.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -74,35 +76,42 @@ class DailyGoalCard extends StatelessWidget {
               const Text(
                 '今日學習目標',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (claimed) ...[
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Text('今日已領取',
-                      style: TextStyle(color: Colors.white, fontSize: 12)),
+                  child: const Text(
+                    '今日已領取',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
                 ),
               ],
             ],
           ),
           const SizedBox(height: 16),
           _TaskRow(
-              icon: Icons.camera_alt_outlined,
-              label: '使用拍照辨識',
-              done: photoDone),
+            icon: Icons.camera_alt_outlined,
+            label: '使用拍照辨識',
+            done: photoDone,
+          ),
           const SizedBox(height: 10),
           _TaskRow(
-              icon: Icons.smart_toy_outlined,
-              label: '進行 AI 對話',
-              done: aiDone),
+            icon: Icons.smart_toy_outlined,
+            label: '進行 AI 對話',
+            done: aiDone,
+          ),
           if (!claimed) ...[
             const SizedBox(height: 16),
             if (allDone)
@@ -114,7 +123,8 @@ class DailyGoalCard extends StatelessWidget {
                     backgroundColor: Colors.white,
                     foregroundColor: _green,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     elevation: 0,
                   ),
@@ -123,8 +133,10 @@ class DailyGoalCard extends StatelessWidget {
                     children: [
                       Icon(Icons.redeem, size: 18),
                       SizedBox(width: 6),
-                      Text('領取今日獎勵',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '領取今日獎勵',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),
@@ -134,7 +146,9 @@ class DailyGoalCard extends StatelessWidget {
                 '完成全部任務即可領取 $ptsMin～$ptsMax J-Pts'
                 '${bonusPhoto > 0 ? " + 拍照次數 +$bonusPhoto" : ""}',
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85), fontSize: 12),
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 12,
+                ),
               ),
           ],
         ],
@@ -148,8 +162,7 @@ class _TaskRow extends StatelessWidget {
   final String label;
   final bool done;
 
-  const _TaskRow(
-      {required this.icon, required this.label, required this.done});
+  const _TaskRow({required this.icon, required this.label, required this.done});
 
   @override
   Widget build(BuildContext context) {
@@ -159,9 +172,7 @@ class _TaskRow extends StatelessWidget {
           width: 30,
           height: 30,
           decoration: BoxDecoration(
-            color: done
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.2),
+            color: done ? Colors.white : Colors.white.withValues(alpha: 0.2),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -174,9 +185,7 @@ class _TaskRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: done
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.7),
+            color: done ? Colors.white : Colors.white.withValues(alpha: 0.7),
             fontSize: 14,
             fontWeight: done ? FontWeight.bold : FontWeight.normal,
           ),
@@ -210,6 +219,7 @@ class _RewardOverlayState extends State<_RewardOverlay>
 
   late AnimationController _revealController;
   late Animation<double> _revealScale;
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
@@ -218,16 +228,23 @@ class _RewardOverlayState extends State<_RewardOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 550),
     );
-    _revealScale = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.6), weight: 20),
-      TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.25), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 30),
-    ]).animate(CurvedAnimation(parent: _revealController, curve: Curves.easeOut));
+    _revealScale =
+        TweenSequence([
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.6), weight: 20),
+          TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.25), weight: 50),
+          TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 30),
+        ]).animate(
+          CurvedAnimation(parent: _revealController, curve: Curves.easeOut),
+        );
+    _confettiController = ConfettiController(
+      duration: const Duration(milliseconds: 800),
+    );
   }
 
   @override
   void dispose() {
     _revealController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -248,7 +265,11 @@ class _RewardOverlayState extends State<_RewardOverlay>
       widget.onClaimed(_pts, _bonusPhoto, jPts);
       setState(() => _loading = false);
       await _revealController.forward();
-      if (mounted) setState(() => _revealed = true);
+      if (!mounted) return;
+      setState(() => _revealed = true);
+      HapticFeedback.mediumImpact();
+      SystemSound.play(SystemSoundType.click);
+      _confettiController.play();
     } else {
       if (mounted) {
         setState(() {
@@ -256,9 +277,7 @@ class _RewardOverlayState extends State<_RewardOverlay>
           _loading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text(result['error']?.toString() ?? '領取失敗，請稍後再試')),
+          SnackBar(content: Text(result['error']?.toString() ?? '領取失敗，請稍後再試')),
         );
       }
     }
@@ -268,86 +287,120 @@ class _RewardOverlayState extends State<_RewardOverlay>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _revealed ? '恭喜！' : '選一個禮物盒！',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                shadows: [Shadow(color: Colors.black38, blurRadius: 8)],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _revealed ? '' : '今日獎勵就藏在其中一個',
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [0, 1, 2].map((i) => _buildBox(i)).toList(),
-            ),
-            const SizedBox(height: 36),
-            if (_revealed)
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 48, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 12)
-                    ],
-                  ),
-                  child: const Text(
-                    '收取！',
-                    style: TextStyle(
-                      color: Color(0xFF006D3E),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-            if (_bonusPhoto > 0 && _revealed) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.4), width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.camera_alt,
-                        color: Colors.white, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      '+$_bonusPhoto 拍照次數',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
+      body: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirection: 3.14159 / 2,
+            blastDirectionality: BlastDirectionality.explosive,
+            numberOfParticles: 30,
+            maxBlastForce: 20,
+            minBlastForce: 8,
+            gravity: 0.3,
+            shouldLoop: false,
+            colors: const [
+              Colors.amber,
+              Colors.white,
+              Color(0xFF6AA86B),
+              Colors.orangeAccent,
             ],
-          ],
-        ),
+          ),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _revealed ? '恭喜！' : '選一個禮物盒！',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    shadows: [Shadow(color: Colors.black38, blurRadius: 8)],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _revealed ? '' : '今日獎勵就藏在其中一個',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [0, 1, 2].map((i) => _buildBox(i)).toList(),
+                ),
+                const SizedBox(height: 36),
+                if (_revealed)
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 48,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        '返回',
+                        style: TextStyle(
+                          color: Color(0xFF006D3E),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_bonusPhoto > 0 && _revealed) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '+$_bonusPhoto 拍照次數',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -366,21 +419,21 @@ class _RewardOverlayState extends State<_RewardOverlay>
         width: boxSize,
         height: boxSize,
         decoration: BoxDecoration(
-          color: isOther
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.white,
+          color: isOther ? Colors.white.withValues(alpha: 0.2) : Colors.white,
           borderRadius: BorderRadius.circular(24),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: Colors.amber.withValues(alpha: 0.6),
-                      blurRadius: 24,
-                      spreadRadius: 2)
+                    color: Colors.amber.withValues(alpha: 0.6),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                  ),
                 ]
               : [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8)
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                  ),
                 ],
         ),
         child: Center(child: _buildBoxContent(isSelected, isOther)),
@@ -393,7 +446,9 @@ class _RewardOverlayState extends State<_RewardOverlay>
       return Text(
         '❓',
         style: TextStyle(
-            fontSize: 36, color: Colors.white.withValues(alpha: 0.6)),
+          fontSize: 36,
+          color: Colors.white.withValues(alpha: 0.6),
+        ),
       );
     }
 
@@ -402,7 +457,9 @@ class _RewardOverlayState extends State<_RewardOverlay>
         width: 28,
         height: 28,
         child: CircularProgressIndicator(
-            strokeWidth: 2.5, color: Color(0xFF006D3E)),
+          strokeWidth: 2.5,
+          color: Color(0xFF006D3E),
+        ),
       );
     }
 
@@ -423,8 +480,10 @@ class _RewardOverlayState extends State<_RewardOverlay>
                 color: Color(0xFF006D3E),
               ),
             ),
-            const Text('J-Pts',
-                style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const Text(
+              'J-Pts',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
           ],
         ),
       );

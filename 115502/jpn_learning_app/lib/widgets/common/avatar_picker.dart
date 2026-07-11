@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 // 回傳這個值代表使用者選擇從相簿上傳
@@ -11,6 +15,39 @@ Future<String?> showAvatarPicker(BuildContext context, {String? currentAvatar}) 
     isScrollControlled: true,
     builder: (_) => _AvatarPickerSheet(currentAvatar: currentAvatar),
   );
+}
+
+// 從相簿選一張照片，讓使用者拖曳/縮放裁切成圓形頭像後，回傳 base64 字串
+Future<String?> pickAndCropAvatarFromGallery() async {
+  final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
+  if (picked == null) return null;
+
+  final cropped = await ImageCropper().cropImage(
+    sourcePath: picked.path,
+    aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+    maxWidth: 300,
+    maxHeight: 300,
+    compressQuality: 50,
+    uiSettings: [
+      AndroidUiSettings(
+        toolbarTitle: '裁切頭像',
+        toolbarColor: const Color(0xFF5C8663),
+        toolbarWidgetColor: Colors.white,
+        activeControlsWidgetColor: const Color(0xFF5C8663),
+        cropStyle: CropStyle.circle,
+        lockAspectRatio: true,
+      ),
+      IOSUiSettings(
+        title: '裁切頭像',
+        cropStyle: CropStyle.circle,
+        aspectRatioLockEnabled: true,
+      ),
+    ],
+  );
+  if (cropped == null) return null;
+
+  final bytes = await File(cropped.path).readAsBytes();
+  return base64Encode(bytes);
 }
 
 class _AvatarPickerSheet extends StatefulWidget {

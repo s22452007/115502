@@ -1,6 +1,4 @@
-﻿import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -106,10 +104,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (picked == null || !mounted) return;
 
-    final result = await ApiClient.uploadAvatar(userId, picked);
+    String avatarValue;
+    if (picked == kAvatarGallery) {
+      final cropped = await pickAndCropAvatarFromGallery();
+      if (cropped == null || !mounted) return;
+      avatarValue = cropped;
+    } else {
+      avatarValue = picked;
+    }
+
+    final result = await ApiClient.uploadAvatar(userId, avatarValue);
     if (!mounted) return;
     if (result.containsKey('avatar') || result.containsKey('message')) {
-      context.read<UserProvider>().setAvatar(picked);
+      context.read<UserProvider>().setAvatar(avatarValue);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('頭像已更新')),
       );

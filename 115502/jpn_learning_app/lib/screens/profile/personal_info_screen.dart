@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
@@ -119,11 +117,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
     String avatarValue;
     if (picked == kAvatarGallery) {
-      final file = await ImagePicker().pickImage(
-          source: ImageSource.gallery, maxWidth: 300, maxHeight: 300, imageQuality: 50);
-      if (file == null || !mounted) return;
-      final bytes = await file.readAsBytes();
-      avatarValue = base64Encode(bytes);
+      final cropped = await pickAndCropAvatarFromGallery();
+      if (cropped == null || !mounted) return;
+      avatarValue = cropped;
     } else {
       avatarValue = picked;
     }

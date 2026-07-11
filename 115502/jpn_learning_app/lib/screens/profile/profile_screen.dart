@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/screens/premium/subscription_management_screen.dart';
 import 'package:provider/provider.dart';
 
 // 專案內的設定與 Provider
@@ -323,6 +324,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
+                  if (!isGuest)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: _sidePadding),
+                      child: _buildSubscriptionCard(userProvider),
+                    ),
+                  const SizedBox(height: 20),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: _sidePadding),
                     child: Column(
@@ -358,6 +365,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
           else if (i == 2) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
           else if (i == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()));
         },
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionCard(UserProvider userProvider) {
+    final isActive = userProvider.hasActiveSubscription;
+    final planName = userProvider.subscriptionPlanName;
+    final billingCycle = userProvider.billingCycle;
+    final endDate = userProvider.subscriptionEndDate;
+    final status = userProvider.subscriptionStatus;
+
+    String dateText = '';
+    if (endDate != null) {
+      try {
+        dateText = formatDate(DateTime.parse(endDate).toLocal());
+      } catch (_) {
+        dateText = endDate;
+      }
+    }
+
+    final String subtitle;
+    if (isActive) {
+      final cycleText = billingCycle == 'yearly' ? '年繳' : '月繳';
+      subtitle = status == 'cancelled'
+          ? '已取消續訂，效期至 $dateText'
+          : '$cycleText・$dateText 續約';
+    } else {
+      subtitle = '升級解鎖每日更多拍照辨識與 AI 對話次數';
+    }
+
+    return GestureDetector(
+      onTap: () {
+        if (isActive) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
+        } else {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 0)));
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isActive
+                ? [AppColors.gold, AppColors.secondary]
+                : [AppColors.primary, AppColors.primaryLight2],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), shape: BoxShape.circle),
+              child: Icon(isActive ? Icons.workspace_premium_rounded : Icons.stars_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isActive ? (planName ?? '會員方案') : '升級為會員',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white),
+          ],
+        ),
       ),
     );
   }

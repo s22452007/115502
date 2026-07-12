@@ -330,6 +330,7 @@ def add_points():
         points=points_to_add,
         price=price,
         payment_method=payment_method,
+        transaction_type=TransactionType.PURCHASE,
     )
     db.session.add(transaction)
     db.session.commit()

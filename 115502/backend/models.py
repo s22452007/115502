@@ -378,3 +378,31 @@ class SystemLog(db.Model):
     old_value = db.Column(db.JSON, nullable=True) # 變更前資料 (JSON)
     new_value = db.Column(db.JSON, nullable=True) # 變更後資料 (JSON)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # === 新增文章系統相關的資料表 ===
+
+class Article(db.Model):
+    __tablename__ = 'articles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    theme = db.Column(db.String(50), nullable=False) # 主題，例如: 'daily', 'travel', 'business', 'culture', 'news'
+    level = db.Column(db.String(10), nullable=False) # 難度等級，例如: 'N5', 'N4', 'N3' 等
+    title = db.Column(db.String(255), nullable=False) # 文章標題
+    content = db.Column(db.Text, nullable=False) # 文章內容 (日文)
+    translation = db.Column(db.Text, nullable=True) # 中文翻譯
+    grammar_points = db.Column(db.JSON, nullable=True) # 重點文法解析 (存成 JSON 格式)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ArticleProgress(db.Model):
+    __tablename__ = 'article_progress'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    score = db.Column(db.Integer, default=0) # 朗讀評分 (0-100)
+    ai_feedback = db.Column(db.Text, nullable=True) # AI 針對朗讀給的糾音建議
+    is_completed = db.Column(db.Boolean, default=False) # 是否完成閱讀/測驗
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 建立關聯 (選用，方便查詢)
+    article = db.relationship('Article', backref=db.backref('user_progress', lazy=True))

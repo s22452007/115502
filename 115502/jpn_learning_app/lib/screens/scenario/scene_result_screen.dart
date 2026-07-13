@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class SceneResultScreen extends StatefulWidget {
   final String imagePath;
@@ -74,8 +75,9 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     // 捲簾縮到最底時的高度 (只露出灰色把手跟一點點綠邊)
     final double minCurtainHeight = 80.0;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
+    return SubPageTemplate(
+      title: '',
+      hideAppBar: true,
       body: Stack(
         children: [
           // ==========================================

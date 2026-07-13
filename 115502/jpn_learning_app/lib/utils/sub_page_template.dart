@@ -9,6 +9,7 @@ class SubPageTemplate extends StatelessWidget {
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
   final List<Widget>? actions;
+  final bool hideAppBar;
 
   const SubPageTemplate({
     super.key,
@@ -17,6 +18,7 @@ class SubPageTemplate extends StatelessWidget {
     this.floatingActionButton,
     this.bottomNavigationBar,
     this.actions,
+    this.hideAppBar = false,
   });
 
   @override
@@ -25,26 +27,28 @@ class SubPageTemplate extends StatelessWidget {
       // 1. 整個頁面設定為白底
       backgroundColor: AppColors.white, 
       
-      appBar: AppBar(
-        // 2. Header (AppBar) 白底
-        backgroundColor: AppColors.white, 
-        elevation: 0,                     
-        centerTitle: true,                
-        
-        // 3. 統一圖示（包含返回箭頭）為主綠色
-        iconTheme: const IconThemeData(
-          color: AppColors.primary, 
-        ),
-        
-        // 4. 標題字體：沿用你的 heading 樣式，並將顏色換成主綠色
-        title: Text(
-          title,
-          style: AppTextStyles.heading.copyWith(
-            color: AppColors.primary,
-          ),
-        ),
-        actions: actions,
-      ),
+      appBar: hideAppBar
+          ? null
+          : AppBar(
+              // 2. Header (AppBar) 白底
+              backgroundColor: AppColors.white, 
+              elevation: 0,                     
+              centerTitle: true,                
+              
+              // 3. 統一圖示（包含返回箭頭）為主綠色
+              iconTheme: const IconThemeData(
+                color: AppColors.primary, 
+              ),
+              
+              // 4. 標題字體：沿用你的 heading 樣式，並將顏色換成主綠色
+              title: Text(
+                title,
+                style: AppTextStyles.heading.copyWith(
+                  color: AppColors.primary,
+                ),
+              ),
+              actions: actions,
+            ),
       
       // 傳入的畫面主體
       body: body,

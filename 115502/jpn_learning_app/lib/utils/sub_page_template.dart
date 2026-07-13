@@ -7,6 +7,7 @@ class SubPageTemplate extends StatelessWidget {
   final String title;
   final Widget body;
   final Widget? floatingActionButton;
+  final Widget? bottomNavigationBar;
   final List<Widget>? actions;
 
   const SubPageTemplate({
@@ -14,6 +15,7 @@ class SubPageTemplate extends StatelessWidget {
     required this.title,
     required this.body,
     this.floatingActionButton,
+    this.bottomNavigationBar,
     this.actions,
   });
 
@@ -47,6 +49,7 @@ class SubPageTemplate extends StatelessWidget {
       // 傳入的畫面主體
       body: body,
       floatingActionButton: floatingActionButton,
+      bottomNavigationBar: bottomNavigationBar,
     );
   }
 }

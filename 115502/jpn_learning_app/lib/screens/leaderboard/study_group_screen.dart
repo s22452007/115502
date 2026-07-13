@@ -12,6 +12,7 @@ import 'group_config_screen.dart';
 import 'package:jpn_learning_app/widgets/study_group/empty_group_banner.dart';
 import 'package:jpn_learning_app/widgets/study_group/invites_status_card.dart';
 import 'package:jpn_learning_app/widgets/study_group/rules_card.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class StudyGroupScreen extends StatefulWidget {
   final bool showAppBar;
@@ -125,21 +126,8 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
   Widget _buildWrapper({required Widget child}) {
     if (!widget.showAppBar) return child;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F2),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          '學習小組',
-          style: TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
+    return SubPageTemplate(
+      title: '學習小組',
       body: child,
     );
   }

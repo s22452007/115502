@@ -6,6 +6,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 
 import 'package:jpn_learning_app/widgets/study_group/group_invite_card.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class GroupInvitesScreen extends StatefulWidget {
   const GroupInvitesScreen({Key? key}) : super(key: key);
@@ -119,20 +120,8 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: true,
-        title: const Text(
-          '小組邀請',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-        ),
-      ),
+    return SubPageTemplate(
+      title: '小組邀請',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : _invites.isEmpty

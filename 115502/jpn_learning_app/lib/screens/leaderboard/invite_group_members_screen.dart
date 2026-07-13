@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 
 // 匯入自訂的 UI 積木
@@ -244,20 +245,8 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     final selectedCount = _friends.where((e) => e['invited'] == true).length;
     final isCreating = widget.groupId == null;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: true,
-        title: const Text(
-          '邀請好友加入小組',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-        ),
-      ),
+    return SubPageTemplate(
+      title: '邀請好友加入小組',
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),

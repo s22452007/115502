@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/widgets/friends/found_user_card.dart';
 import 'package:jpn_learning_app/widgets/friends/pending_request_card.dart';
 import 'package:jpn_learning_app/widgets/friends/my_id_card.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class AddFriendScreen extends StatefulWidget {
   const AddFriendScreen({Key? key}) : super(key: key);
@@ -109,22 +110,15 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
   Widget build(BuildContext context) {
     final myFriendId = context.watch<UserProvider>().friendId ?? '尚未產生';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), 
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.black87), onPressed: () => Navigator.pop(context)),
-        title: const Text('新增好友', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.people_outline, color: _darkGreen, size: 28),
-            onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FriendsListScreen())),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+    return SubPageTemplate(
+      title: '新增好友',
+      actions: [
+        IconButton(
+          icon: Icon(Icons.people_outline, color: _darkGreen, size: 28),
+          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FriendsListScreen())),
+        ),
+        const SizedBox(width: 8),
+      ],
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),

@@ -39,6 +39,13 @@ class SubPageTemplate extends StatelessWidget {
               iconTheme: const IconThemeData(
                 color: AppColors.primary, 
               ),
+
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios), // 指定你要的 iOS 風格箭頭
+                onPressed: () {
+                  Navigator.of(context).pop(); // 設定點擊後返回上一頁
+                },
+              ),
               
               // 4. 標題字體：沿用你的 heading 樣式，並將顏色換成主綠色
               title: Text(

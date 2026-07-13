@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/utils/constants.dart'; // 注意：這裡記得 import 包含 AppColors 與 AppTextStyles 的檔案
+// 注意：這裡記得 import 包含 AppColors 與 AppTextStyles 的檔案
+// import 'package:你的專案名稱/路徑/theme.dart'; 
 
 class SubPageTemplate extends StatelessWidget {
   final String title;
@@ -18,26 +21,24 @@ class SubPageTemplate extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       // 1. 整個頁面設定為白底
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white, 
       
-      // 2. Header (AppBar) 的統一設定
       appBar: AppBar(
-        backgroundColor: Colors.white, // Header 白底
-        elevation: 0,                  // 移除陰影讓畫面更乾淨平整
-        centerTitle: true,             // 標題置中
+        // 2. Header (AppBar) 白底
+        backgroundColor: AppColors.white, 
+        elevation: 0,                     
+        centerTitle: true,                
         
-        // 3. 統一所有的圖示（包含返回箭頭）為綠色
+        // 3. 統一圖示（包含返回箭頭）為主綠色
         iconTheme: const IconThemeData(
-          color: Colors.green, 
+          color: AppColors.primary, 
         ),
         
-        // 4. 統一標題字體為綠色
+        // 4. 標題字體：沿用你的 heading 樣式，並將顏色換成主綠色
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.green,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+          style: AppTextStyles.heading.copyWith(
+            color: AppColors.primary,
           ),
         ),
         actions: actions,

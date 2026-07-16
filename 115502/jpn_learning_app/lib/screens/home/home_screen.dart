@@ -14,7 +14,6 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
-// 🌟 引入剛剛建立的文章練習頁面
 import 'package:jpn_learning_app/screens/article/article_list_screen.dart'; 
 
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
@@ -287,7 +286,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
             const SizedBox(height: 35),
 
-            // 🌟 插入新的「文章練習」模組區塊
             _buildSectionHeader('文章練習'),
             _buildArticlePracticeCard(context),
 
@@ -325,17 +323,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  // 🌟 新增的方法：構建與首頁風格吻合的「文章練習」入口卡片
   Widget _buildArticlePracticeCard(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: GestureDetector(
         onTap: () {
-          // 點擊後跳轉到剛剛建立的空頁面
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ArticleListScreen()),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const ArticleListScreen()));
         },
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -343,42 +336,28 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
+              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
             ],
           ),
           child: Row(
             children: [
-              // 漸層/透明底色的 Icon，與你的風格一致
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 28),
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+                child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 28),
               ),
               const SizedBox(width: 16),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '閱讀文章',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '透過閱讀提升語感與單字量',
-                      style: TextStyle(fontSize: 13, color: _subTextColor, fontWeight: FontWeight.w600),
-                    ),
+                    Text('閱讀文章', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
+                    SizedBox(height: 4),
+                    Text('透過閱讀提升語感與單字量', style: TextStyle(fontSize: 13, color: Color(0xFF8E9AAB), fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, color: _subTextColor.withOpacity(0.5), size: 18),
+              Icon(Icons.arrow_forward_ios_rounded, color: const Color(0xFF8E9AAB).withOpacity(0.5), size: 18),
             ],
           ),
         ),
@@ -452,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           if (hasGalleryLink)
             GestureDetector(
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
-              child: Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
+              child: const Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
             ),
         ],
       ),

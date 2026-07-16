@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/utils/api_client.dart'; // 引入 API 工具
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 // 引入我們剛剛抽離出去的精美卡片積木
 import 'package:jpn_learning_app/widgets/friends/friend_list_card.dart';
 
@@ -223,29 +224,19 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color:  Color.fromARGB(255, 0, 0, 0)),
-          onPressed: () => Navigator.pop(context),
+    return SubPageTemplate(
+      title: '我的好友',
+      actions: [
+        IconButton(
+          icon: Icon(Icons.groups_outlined, color: _darkGreen, size: 28),
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),
         ),
-        title: const Text('我的好友', style: TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.groups_outlined, color: _darkGreen, size: 28),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyGroupScreen())),
-          ),
-          IconButton(
-            icon: Icon(Icons.person_add_outlined, color: _darkGreen, size: 28),
-            onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AddFriendScreen())),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+        IconButton(
+          icon: Icon(Icons.person_add_outlined, color: _darkGreen, size: 28),
+          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AddFriendScreen())),
+        ),
+        const SizedBox(width: 8),
+      ],
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: _darkGreen))
           : _allFriends.isEmpty

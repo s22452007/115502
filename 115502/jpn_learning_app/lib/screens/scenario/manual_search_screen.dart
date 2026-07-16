@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class ManualSearchScreen extends StatefulWidget {
   const ManualSearchScreen({Key? key}) : super(key: key);
@@ -47,26 +48,8 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          '手動建立情境',
-          style: TextStyle(
-            color: Color.fromARGB(255, 0, 0, 0),
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
+    return SubPageTemplate(
+      title: '手動建立情境',
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Padding(

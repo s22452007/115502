@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image/image.dart' as img;
@@ -154,19 +156,30 @@ void _collectMatches(RecognizedText recognizedText, bool Function(String) test, 
 /// 有偵測到的都會打上馬賽克後另存新檔。
 /// 都沒偵測到時，直接回傳原始路徑（不重新編碼，避免不必要的畫質耗損）。
 Future<PrivacyGuardResult> detectAndBlurSensitiveContent(String sourcePath) async {
+  final inputImage = InputImage.fromFilePath(sourcePath);
+
+  // 人臉與文字兩個偵測器各自獨立處理，其中一個失敗（例如原生套件尚未安裝）
+  // 不會連累另一個，避免整條偵測被單一錯誤中斷。
+  List<Face> faces = [];
   final faceDetector = FaceDetector(
     options: FaceDetectorOptions(performanceMode: FaceDetectorMode.fast),
   );
-  final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-
-  List<Face> faces;
-  RecognizedText recognizedText;
   try {
-    final inputImage = InputImage.fromFilePath(sourcePath);
     faces = await faceDetector.processImage(inputImage);
-    recognizedText = await textRecognizer.processImage(inputImage);
+  } catch (e) {
+    debugPrint('人臉偵測失敗（略過人臉模糊）：$e');
   } finally {
     await faceDetector.close();
+  }
+
+  RecognizedText? recognizedText;
+  // 中文辨識模型同時能讀中文與數字，一次涵蓋身分證/電話/地址與信用卡卡號
+  final textRecognizer = TextRecognizer(script: TextRecognitionScript.chinese);
+  try {
+    recognizedText = await textRecognizer.processImage(inputImage);
+  } catch (e) {
+    debugPrint('文字辨識失敗（略過文字類偵測）：$e');
+  } finally {
     await textRecognizer.close();
   }
 
@@ -174,10 +187,12 @@ Future<PrivacyGuardResult> detectAndBlurSensitiveContent(String sourcePath) asyn
   final idBoxes = <Rect>[];
   final phoneBoxes = <Rect>[];
   final addressBoxes = <Rect>[];
-  _collectMatches(recognizedText, _containsValidCardNumber, cardBoxes);
-  _collectMatches(recognizedText, _containsValidTwId, idBoxes);
-  _collectMatches(recognizedText, _containsPhoneNumber, phoneBoxes);
-  _collectMatches(recognizedText, _looksLikeAddress, addressBoxes);
+  if (recognizedText != null) {
+    _collectMatches(recognizedText, _containsValidCardNumber, cardBoxes);
+    _collectMatches(recognizedText, _containsValidTwId, idBoxes);
+    _collectMatches(recognizedText, _containsPhoneNumber, phoneBoxes);
+    _collectMatches(recognizedText, _looksLikeAddress, addressBoxes);
+  }
 
   if (faces.isEmpty &&
       cardBoxes.isEmpty &&

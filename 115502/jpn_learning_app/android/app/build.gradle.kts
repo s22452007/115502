@@ -49,4 +49,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // 中文文字辨識模型（隱私偵測用，讀取地址等中文內容；預設只內建拉丁文模型）
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
 }

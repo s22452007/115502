@@ -36,7 +36,12 @@ def analyze_image_from_path(file_path):
         prompt = '''
         請分析這張圖片，找出最重要的 3 到 5 個物品，並以合乎語法的 JSON 格式回傳。
         你需要將每個物品翻譯成日文，並提供假名、羅馬拼音、以及中文解釋。
-        
+
+        【內容安全守門】：
+        在辨識之前，請先判斷這張圖片是否包含裸露、性暗示、色情、血腥或暴力等不當內容。
+        若有，請「不要」辨識單字，直接改回傳以下 JSON（不可加上任何其他文字）：
+        {"blocked": true, "reason": "圖片包含不當內容"}
+
         【極度重要警告】：
         針對你萃取出的每一個單字，你都必須依照 N5~N4(初級), N3(中級), N2(中高級), N1(高級) 的難度，在 `sentences` 陣列的對應位置生成 4 句實用的日文例句。
         這 4 句日文例句「絕對必須明顯地包含該單字本身（或是該單字的動詞變化）」，不可只寫跟圖片有關但不包含該單字的描述句！
@@ -96,6 +101,14 @@ def analyze_image_from_path(file_path):
         except json.JSONDecodeError as decode_err:
             print("Gemini 回傳的格式不是正確的 JSON:", result_text)
             return {"success": False, "error": f"JSON 解析錯誤: {decode_err}"}
+
+        # 6.5 內容安全守門：Gemini 判定圖片含不當內容時，不辨識、標記為封鎖
+        if isinstance(result_data, dict) and result_data.get("blocked"):
+            return {
+                "success": False,
+                "blocked": True,
+                "error": result_data.get("reason", "圖片包含不當內容，無法辨識"),
+            }
 
         # 7. 回傳成功的 JSON 結果 (裡面已經有真實的 vocabs 和 sentences 了)
         return {"success": True, "result": result_data}

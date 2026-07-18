@@ -48,6 +48,18 @@ def analyze_scene():
             from utils.ai_helper import analyze_image_from_path
             ai_result_wrapper = analyze_image_from_path(file_path)
 
+            # 內容安全守門：Gemini 判定圖片含不當內容 → 刪掉已存的檔案，不留在伺服器
+            if ai_result_wrapper.get("blocked"):
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except OSError:
+                    pass
+                return jsonify({
+                    'error': ai_result_wrapper.get("error", "圖片包含不當內容，無法辨識"),
+                    'blocked': True,
+                }), 400
+
             if not ai_result_wrapper.get("success"):
                 return jsonify({'error': ai_result_wrapper.get("error", "AI 分析失敗")}), 500
             

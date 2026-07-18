@@ -6,6 +6,7 @@ import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
   const SystemSettingsScreen({super.key});
@@ -18,23 +19,8 @@ class SystemSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryGreen,
-        elevation: 0,
-        centerTitle: true,
-        toolbarHeight: 64,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          '系統設定',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
+    return SubPageTemplate(
+      title: '系統設定',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -392,23 +378,8 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryGreen,
-        elevation: 0,
-        centerTitle: true,
-        toolbarHeight: 64,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          '通知提醒',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
+    return SubPageTemplate(
+      title: '通知提醒',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -621,23 +592,8 @@ class FontSizeSettingsScreen extends StatelessWidget {
       label = '特大';
     }
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryGreen,
-        elevation: 0,
-        centerTitle: true,
-        toolbarHeight: 64,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          '字體大小',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
+    return SubPageTemplate(
+      title: '字體大小',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -815,23 +771,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryGreen,
-        elevation: 0,
-        centerTitle: true,
-        toolbarHeight: 64,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          '意見回饋',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
+    return SubPageTemplate(
+      title: '意見回饋',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(

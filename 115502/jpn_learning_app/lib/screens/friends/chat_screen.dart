@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class ChatScreen extends StatefulWidget {
   final String friendName;
@@ -56,9 +57,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _buildAppBar(),
+    return SubPageTemplate(
+      title: '@${widget.friendName}',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.more_horiz, color: Colors.black87),
+          onPressed: () {
+            // TODO: 開啟好友設定選單
+          },
+        ),
+      ],
       body: Column(
         children: [
           // 聊天訊息列表
@@ -85,40 +93,6 @@ class _ChatScreenState extends State<ChatScreen> {
           _buildMessageInput(),
         ],
       ),
-    );
-  }
-
-  // --- 頂部導覽列 ---
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0.5,
-      scrolledUnderElevation: 0,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_new,
-          color: Colors.black87,
-          size: 20,
-        ),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Text(
-        '@${widget.friendName}',
-        style: const TextStyle(
-          color: Colors.black87,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-        ),
-      ),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.more_horiz, color: Colors.black87),
-          onPressed: () {
-            // TODO: 開啟好友設定選單
-          },
-        ),
-      ],
     );
   }
 

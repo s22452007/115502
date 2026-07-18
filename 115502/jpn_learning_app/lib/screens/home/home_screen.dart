@@ -14,6 +14,7 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/screens/article/article_list_screen.dart'; 
 
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
@@ -95,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       if (result.containsKey('streak_days')) {
         userProvider.setStreakDays((result['streak_days'] as num).toInt());
       }
-      // 🌟 新增：同步時一併確保大頭貼與暱稱被鎖定，不因重新整理而消失
       if (result.containsKey('avatar') && result['avatar'] != null) {
         userProvider.setAvatar(result['avatar'].toString());
       }
@@ -205,7 +205,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           errorBuilder: (c,e,s) => Text("Snap to Learn", style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900))
         ),
         centerTitle: true,
-        // 🌟 這裡原本的 actions 區塊（包含頭像的 GestureDetector）已經被完全移除囉！
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -250,7 +249,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                 ),
                               ),
                               GestureDetector(
-                              // initialIndex: 1 代表打開時直接切換到「💰 儲值點數」分頁，因為玩家點擊錢包通常是想看儲值或消費
                               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1))),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -288,6 +286,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
             const SizedBox(height: 35),
 
+            _buildSectionHeader('文章練習'),
+            _buildArticlePracticeCard(context),
+
+            const SizedBox(height: 35),
+
             _buildSectionHeader('最近解鎖場景', hasGalleryLink: true),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -320,10 +323,50 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
+  Widget _buildArticlePracticeCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const ArticleListScreen()));
+        },
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+                child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 28),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('閱讀文章', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
+                    SizedBox(height: 4),
+                    Text('透過閱讀提升語感與單字量', style: TextStyle(fontSize: 13, color: Color(0xFF8E9AAB), fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, color: const Color(0xFF8E9AAB).withOpacity(0.5), size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
     final now = DateTime.now();
-    
-    // 🌟 核心修正 1：將「今天」的時間精準歸零 (00:00:00)
     final today = DateTime(now.year, now.month, now.day);
 
     return Container(
@@ -340,20 +383,9 @@ Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayN
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final date = weekDates[index];
-              
-              // 🌟 核心修正 2：將「日曆上的目標日期」也一併歸零
               final targetDate = DateTime(date.year, date.month, date.day);
-              
-              // 判斷是否為今天
               final isToday = targetDate.isAtSameMomentAs(today);
-              
-              // 🌟 核心修正 3：計算純日期的天數差
-              // 若 today 是星期六，targetDate 是星期日，這裡算出來就會精準是 -1
               final diffDays = today.difference(targetDate).inDays;
-              
-              // 🌟 修正 Bug 關鍵邏輯：
-              // 只有當 diffDays >= 0 (代表是今天或過去的日子) 且在連續登入天數 (streakDays) 內，才判定為已打卡。
-              // 因為明天的日子相減會是負數 (-1)，所以絕對不會再提早亮起勾勾！
               bool isCompleted = diffDays >= 0 && diffDays < streakDays;
 
               return Column(
@@ -389,7 +421,6 @@ Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayN
     );
   }
 
-
   Widget _buildSectionHeader(String title, {bool hasGalleryLink = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 15),
@@ -400,7 +431,7 @@ Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayN
           if (hasGalleryLink)
             GestureDetector(
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
-              child: Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
+              child: const Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
             ),
         ],
       ),

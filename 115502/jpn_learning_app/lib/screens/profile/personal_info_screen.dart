@@ -1,12 +1,11 @@
-import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/widgets/common/avatar_picker.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -119,11 +118,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
     String avatarValue;
     if (picked == kAvatarGallery) {
-      final file = await ImagePicker().pickImage(
-          source: ImageSource.gallery, maxWidth: 300, maxHeight: 300, imageQuality: 50);
-      if (file == null || !mounted) return;
-      final bytes = await file.readAsBytes();
-      avatarValue = base64Encode(bytes);
+      final cropped = await pickAndCropAvatarFromGallery();
+      if (cropped == null || !mounted) return;
+      avatarValue = cropped;
     } else {
       avatarValue = picked;
     }
@@ -155,23 +152,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     final avatar = userProvider.avatar;
 
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryGreen,
-        elevation: 0,
-        centerTitle: true,
-        toolbarHeight: 64,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          '個人資料',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
+    return SubPageTemplate(
+      title: '個人資料',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(

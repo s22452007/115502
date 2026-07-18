@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart'; // 改成你首頁實際路徑
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -121,11 +122,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('修改密碼'),
-        centerTitle: true,
-      ),
+    return SubPageTemplate(
+      title: '修改密碼',
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 // 匯入剛剛抽出去的單字卡元件
 import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
 
@@ -71,8 +71,9 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
   Widget build(BuildContext context) {
     final userId = context.read<UserProvider>().userId;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+    return SubPageTemplate(
+      title: '情境詳情',
+      hideAppBar: true,
       body: CustomScrollView(
         slivers: [
           _buildSliverAppBar(context),

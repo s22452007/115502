@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'invite_group_members_screen.dart'; 
 
 import 'package:jpn_learning_app/widgets/study_group/task_type_card.dart';
@@ -72,18 +73,8 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
     final int normalVal = config['normal'];
     final int hardVal = config['hard'];
     
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('建立學習小組', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
+    return SubPageTemplate(
+      title: '建立學習小組',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(

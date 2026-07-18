@@ -288,7 +288,9 @@ def plan_list():
     plans = [dict(p) for p in plans]
     for p in plans:
         count = conn.execute(
-            "SELECT COUNT(*) as cnt FROM user_subscription WHERE plan_id=? AND status='active'",
+            """SELECT COUNT(*) as cnt FROM user_subscription
+               WHERE plan_id=? AND end_date >= datetime('now')
+                 AND billing_cycle != 'trial' AND auto_renew != 0""",
             (p['id'],)
         ).fetchone()
         p['active_users'] = count['cnt'] if count else 0
@@ -453,11 +455,13 @@ def purchase_list():
     conn = get_db_connection()
     
     # 這裡直接去抓您資料庫裡原有的 point_transaction 表格
+    # 只抓真正的付費購買紀錄，排除獎勵領取、消費點數、訂閱贈點等非購買事件
     query = '''
         SELECT p.id, p.points, p.price, p.payment_method, p.created_at,
                u.username, u.email
         FROM point_transaction p
         LEFT JOIN user u ON p.user_id = u.id
+        WHERE p.transaction_type = 'purchase' OR p.transaction_type IS NULL
         ORDER BY p.created_at DESC
     '''
     

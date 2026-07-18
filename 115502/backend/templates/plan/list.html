@@ -34,7 +34,7 @@
         .pkg-section { padding: 32px 48px; }
         .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
 
-        .pkg-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); display: flex; flex-direction: column; transition: box-shadow 0.2s, transform 0.15s; }
+        .pkg-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); display: flex; flex-direction: column; transition: box-shadow 0.2s, transform 0.15s; }
         .pkg-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.11); transform: translateY(-2px); }
         .pkg-card.inactive { opacity: 0.55; }
 
@@ -43,9 +43,9 @@
         .pkg-cycle { font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 4px; }
         .pkg-cycle.monthly { background: #e8f5e9; color: var(--green); }
         .pkg-cycle.yearly  { background: #fff3cd; color: #856404; }
-        .pkg-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .pkg-status-dot.on  { background: #22c55e; }
-        .pkg-status-dot.off { background: #d1d5db; }
+        .pkg-status-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 12px; border-radius: 20px; flex-shrink: 0; }
+        .pkg-status-badge.on  { background: #e8f5e9; color: #2e7d32; }
+        .pkg-status-badge.off { background: #f0f0f0; color: #999; }
 
         .pkg-card-body { padding: 20px; flex: 1; }
         .pkg-price { font-size: 2.2rem; font-weight: 900; color: var(--green); line-height: 1; }
@@ -149,7 +149,7 @@
                             <span class="pkg-cycle yearly">年繳</span>
                             {% endif %}
                         </div>
-                        <div class="pkg-status-dot {% if p.is_active %}on{% else %}off{% endif %}"></div>
+                        <div class="pkg-status-badge {% if p.is_active %}on{% else %}off{% endif %}">{% if p.is_active %}上架中{% else %}已下架{% endif %}</div>
                     </div>
 
                     <div class="pkg-card-body">

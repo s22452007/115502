@@ -8,6 +8,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 
 // 2. 匯入跳轉的相簿詳細頁面
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class ResultGalleryV2Screen extends StatefulWidget {
   const ResultGalleryV2Screen({Key? key}) : super(key: key);
@@ -72,25 +73,8 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
   Widget build(BuildContext context) {
     final userId = context.read<UserProvider>().userId;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: const Text(
-          '我的單字探險',
-          style: TextStyle(
-            color:  AppColors.primary,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: const Color(0xFFF5F5F5),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      // 加入防呆：如果沒登入就擋下來
+    return SubPageTemplate(
+      title: '我的單字探險',
       body: userId == null
           ? const Center(
               child: Text(

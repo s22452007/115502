@@ -103,7 +103,7 @@
                         <tbody>
                             {% for p in purchases %}
                             <tr>
-                                <td><span class="text-muted small">#{{ p.id }}</span></td>
+                                <td><span class="text-muted small">#{{ loop.index }}</span></td>
                                 <td>
                                     <div class="fw-bold" style="color: #333; font-size: 0.95rem;">{{ p.username or '未設定名稱' }}</div>
                                     <div class="small text-muted">{{ p.email }}</div>

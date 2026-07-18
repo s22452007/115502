@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import '../../models/badge_model.dart';
 import '../../providers/user_provider.dart';
 
@@ -86,14 +87,8 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FA),
-      appBar: AppBar(
-        title: const Text('榮譽徽章', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: const Color(0xFF4A7C59),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+    return SubPageTemplate(
+      title: '榮譽徽章',
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: coreBadges.length,

@@ -284,6 +284,9 @@ class _CameraScreenState extends State<CameraScreen>
     final items = <String>[
       if (result.faceCount > 0) '人臉',
       if (result.cardCount > 0) '疑似信用卡卡號',
+      if (result.idCount > 0) '疑似身分證字號',
+      if (result.phoneCount > 0) '電話號碼',
+      if (result.addressCount > 0) '疑似地址',
     ].join('、');
 
     if (!mounted) return null;

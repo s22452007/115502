@@ -676,6 +676,12 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ dialect 建立或初始化警告：{e}")
 
+# ==========================================
+# 29. 升級 user_photo_vocab：新增情境例句欄位
+# ==========================================
+add_column("user_photo_vocab", "context_sentence TEXT")
+print("✅ user_photo_vocab context_sentence 情境例句欄位確認完畢")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

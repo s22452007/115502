@@ -177,6 +177,7 @@ class UserPhotoVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     photo_id = db.Column(db.Integer, db.ForeignKey('user_photo.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    context_sentence = db.Column(db.Text, nullable=True)  # 依使用者拍照當下情境生成的專屬例句
     vocab = db.relationship('Vocab', backref='photo_vocabs', lazy=True)
 
 # T08: 使用者單字收藏表

@@ -106,3 +106,72 @@ def analyze_image_from_path(file_path):
             "success": False,
             "error": f"AI分析錯誤: {str(e)}"
         }
+
+
+def generate_context_sentences(context_description, vocabs):
+    """
+    依「使用者拍照當下的情境描述」為每個辨識出的單字生成一句貼近情境的例句。
+    一次批次呼叫 Gemini 處理所有單字（節省 API 次數）。
+
+    參數:
+        context_description: 使用者輸入的情境，例如「我在遛狗，狗很開心」
+        vocabs: [{'word': ..., 'kana': ..., 'meaning': ...}, ...]
+
+    回傳:
+        {word: "日文例句\n（中文翻譯）"} 的 dict；失敗時回傳空 dict（不影響主流程）
+    """
+    try:
+        if not context_description or not vocabs:
+            return {}
+
+        api_key = os.environ.get("GEMINI_API_KEY_camara") or os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return {}
+
+        client = genai.Client(api_key=api_key)
+
+        word_list = "、".join(v.get('word', '') for v in vocabs if v.get('word'))
+        prompt = f'''
+        使用者剛拍了一張照片，並描述了當下的情境：「{context_description}」
+        這張照片辨識出了以下日文單字：{word_list}
+
+        請為「每一個」單字生成一句例句，要求：
+        1. 簡單好懂（N5~N4 程度）
+        2. 貼近使用者描述的情境
+        3. 例句必須自然地包含該單字本身（不要用括號或引號把單字框起來）
+        4. 附上繁體中文翻譯
+
+        請「嚴格」以下列 JSON 格式回傳，不可加上 json 或 markdown 標籤：
+        [
+          {{"word": "單字1", "japanese": "日文例句1", "chinese": "中文翻譯1"}},
+          {{"word": "單字2", "japanese": "日文例句2", "chinese": "中文翻譯2"}}
+        ]
+        '''
+
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        result_text = response.text.strip()
+
+        # 清理可能的 markdown 標籤
+        if result_text.startswith("```json"):
+            result_text = result_text.replace("```json", "", 1)
+        if result_text.startswith("```"):
+            result_text = result_text.replace("```", "", 1)
+        if result_text.endswith("```"):
+            result_text = result_text[:-3]
+        result_text = result_text.strip()
+
+        items = json.loads(result_text)
+
+        result = {}
+        for item in items:
+            word = item.get('word', '')
+            japanese = item.get('japanese', '')
+            chinese = item.get('chinese', '')
+            if word and japanese:
+                result[word] = f"{japanese}\n（{chinese}）" if chinese else japanese
+        return result
+
+    except Exception as e:
+        # 情境例句生成失敗不應影響拍照辨識主流程，安靜降級
+        print(f"情境例句生成失敗（降級為無情境例句）: {e}")
+        return {}

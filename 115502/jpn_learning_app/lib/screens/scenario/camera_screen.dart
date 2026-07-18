@@ -342,12 +342,64 @@ class _CameraScreenState extends State<CameraScreen>
 
     if (!mounted) return;
 
+    // 步驟 3：描述當下情境（可跳過）
+    final TextEditingController contextController = TextEditingController();
+    final String? contextDescription = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('描述當下情境（選填）'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'AI 會依你的情境，為每個單字生成專屬例句',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: contextController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  hintText: '例如：我在遛狗，狗很開心',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, null);
+              },
+              child: const Text('跳過', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, contextController.text.trim());
+              },
+              child: const Text('確定', style: TextStyle(color: AppColors.primary)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => AnalyzingScreen(
           imagePath: imagePath,
           customTitle: customName != null && customName.isNotEmpty ? customName : null,
+          contextDescription:
+              contextDescription != null && contextDescription.isNotEmpty
+                  ? contextDescription
+                  : null,
         ),
       ),
     );

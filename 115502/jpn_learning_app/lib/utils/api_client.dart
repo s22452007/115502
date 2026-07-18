@@ -567,12 +567,13 @@ class ApiClient {
     }
   }
 
-  static Future<Map<String, dynamic>> analyzeImage(String imagePath, int userId, {String? customTitle}) async {
+  static Future<Map<String, dynamic>> analyzeImage(String imagePath, int userId, {String? customTitle, String? contextDescription}) async {
     final url = Uri.parse('$baseUrl/scenario/analyze');
     try {
       var request = http.MultipartRequest('POST', url);
       request.fields['user_id'] = userId.toString();
       if (customTitle != null && customTitle.isNotEmpty) request.fields['custom_title'] = customTitle;
+      if (contextDescription != null && contextDescription.isNotEmpty) request.fields['context_description'] = contextDescription;
 
       if (kIsWeb) {
         final imageResponse = await http.get(Uri.parse(imagePath));

@@ -85,20 +85,26 @@ def analyze_scene():
             for index, vocab_info in enumerate(vocabs_data):
                 sentence = sentences_data[index] if index < len(sentences_data) else {}
                 
-                # A. 新增至系統詞庫 (Vocab)
-                v = Vocab(
-                    scene_id=1, # 這裡給一個預設場景ID避免報錯，或者你可以把 Vocab 的 scene_id 改為 nullable=True
+                # A. 寫入系統詞庫 (Vocab) 前先查重：
+                #    同一個單字（word + kana 相同）只保留一筆，重複辨識到就直接沿用現有 id
+                v = Vocab.query.filter_by(
                     word=vocab_info.get('word', ''),
                     kana=vocab_info.get('kana', ''),
-                    meaning=vocab_info.get('meaning', ''),
-                    sentence_basic=sentence.get('japanese', ''),
-                    sentence_inter=sentence.get('japanese_inter', ''),
-                    sentence_upper_inter=sentence.get('japanese_upper', ''),
-                    sentence_advanced=sentence.get('japanese_adv', ''),
-                    source='ai'
-                )
-                db.session.add(v)
-                db.session.flush() # 取得 v.id
+                ).first()
+                if not v:
+                    v = Vocab(
+                        scene_id=1, # 這裡給一個預設場景ID避免報錯，或者你可以把 Vocab 的 scene_id 改為 nullable=True
+                        word=vocab_info.get('word', ''),
+                        kana=vocab_info.get('kana', ''),
+                        meaning=vocab_info.get('meaning', ''),
+                        sentence_basic=sentence.get('japanese', ''),
+                        sentence_inter=sentence.get('japanese_inter', ''),
+                        sentence_upper_inter=sentence.get('japanese_upper', ''),
+                        sentence_advanced=sentence.get('japanese_adv', ''),
+                        source='ai'
+                    )
+                    db.session.add(v)
+                    db.session.flush() # 取得 v.id
                 
                 # B. 建立照片明細檔 (UserPhotoVocab) -> 記錄這張照片裡有這個字
                 #    若有情境例句就一併存入 context_sentence

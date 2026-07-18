@@ -209,9 +209,13 @@ Future<PrivacyGuardResult> detectAndBlurSensitiveContent(String sourcePath) asyn
     );
   }
 
+  debugPrint('[隱私偵測] 人臉=${faces.length} 卡號=${cardBoxes.length} '
+      '身分證=${idBoxes.length} 電話=${phoneBoxes.length} 地址=${addressBoxes.length}');
+
   final bytes = await File(sourcePath).readAsBytes();
   img.Image? decoded = img.decodeImage(bytes);
   if (decoded == null) {
+    debugPrint('[隱私偵測] 圖片解碼失敗，無法打馬賽克，回傳原圖');
     return PrivacyGuardResult(
       imagePath: sourcePath,
       faceCount: faces.length,
@@ -223,12 +227,14 @@ Future<PrivacyGuardResult> detectAndBlurSensitiveContent(String sourcePath) asyn
   }
   // ML Kit 回傳的座標是「視覺上正的」座標系，圖片像素本身也要先轉正才能對上
   decoded = img.bakeOrientation(decoded);
+  debugPrint('[隱私偵測] 圖片尺寸=${decoded.width}x${decoded.height}');
 
   for (final face in faces) {
     // 臉的邊緣（瀏海、耳朵）容易被偵測框漏掉，多留一點空間
     _blurRegion(decoded, face.boundingBox, padRatioX: 0.15, padRatioY: 0.2);
   }
   for (final box in [...cardBoxes, ...idBoxes, ...phoneBoxes, ...addressBoxes]) {
+    debugPrint('[隱私偵測] 模糊區域 L=${box.left} T=${box.top} W=${box.width} H=${box.height}');
     _blurRegion(decoded, box, padRatioX: 0.1, padRatioY: 0.15);
   }
 

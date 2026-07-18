@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python upgrade_db.py)"
+      "Bash(python upgrade_db.py)",
+      "Bash(flutter analyze *)"
     ]
   }
 }

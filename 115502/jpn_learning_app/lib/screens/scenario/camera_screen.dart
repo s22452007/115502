@@ -254,7 +254,7 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  /// 偵測照片中的人臉並打上馬賽克；若偵測到臉，跳出提示讓使用者選擇重新拍攝或繼續。
+  /// 偵測照片中的人臉與疑似信用卡卡號並打上馬賽克；若有偵測到，跳出提示讓使用者選擇重新拍攝或繼續。
   /// 回傳 null 代表使用者選擇放棄這張照片（不繼續往下走）。
   Future<String?> _applyFacePrivacyGuard(String imagePath) async {
     showDialog(
@@ -265,11 +265,11 @@ class _CameraScreenState extends State<CameraScreen>
       ),
     );
 
-    FacePrivacyResult result;
+    PrivacyGuardResult result;
     try {
-      result = await detectAndBlurFaces(imagePath);
+      result = await detectAndBlurSensitiveContent(imagePath);
     } catch (e) {
-      debugPrint('人臉偵測失敗：$e');
+      debugPrint('隱私內容偵測失敗：$e');
       if (mounted) Navigator.pop(context); // 關閉 loading
       return imagePath;
     }
@@ -277,17 +277,22 @@ class _CameraScreenState extends State<CameraScreen>
     if (!mounted) return null;
     Navigator.pop(context); // 關閉 loading
 
-    if (result.faceCount == 0) {
+    if (!result.hasSensitiveContent) {
       return imagePath;
     }
+
+    final items = <String>[
+      if (result.faceCount > 0) '人臉',
+      if (result.cardCount > 0) '疑似信用卡卡號',
+    ].join('、');
 
     if (!mounted) return null;
     final proceed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('偵測到照片中有人臉'),
-        content: const Text('為保護隱私，系統已自動將人臉區域模糊處理。你可以選擇重新拍攝，或繼續使用這張已模糊的照片。'),
+        title: Text('偵測到照片中有$items'),
+        content: const Text('為保護隱私，系統已自動將該區域模糊處理。你可以選擇重新拍攝，或繼續使用這張已模糊的照片。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),

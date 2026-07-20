@@ -476,6 +476,62 @@ class _VocabCardState extends State<VocabCard> {
           ),
           const SizedBox(height: 16),
 
+          // 情境例句區塊（拍照當下的情境專屬例句，放在最上面）
+          if (widget.vocab['context_sentence'] != null &&
+              (widget.vocab['context_sentence'] as String).trim().isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withOpacity(0.4)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                    // 只念第一行（日文），跳過中文翻譯行
+                    onPressed: () => _speak(
+                        (widget.vocab['context_sentence'] as String).split('\n').first),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.auto_awesome,
+                                size: 14, color: Colors.amber.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              '情境例句',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.amber.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.vocab['context_sentence'],
+                          style: const TextStyle(fontSize: 15, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // 鷹架式例句區塊
           Container(
             width: double.infinity,
@@ -504,7 +560,7 @@ class _VocabCardState extends State<VocabCard> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  s['level_name'] ?? s['level'] ?? '提示', 
+                                  s['level_name'] ?? s['level'] ?? '提示',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.green,
@@ -512,9 +568,23 @@ class _VocabCardState extends State<VocabCard> {
                                   ),
                                 ),
                                 Text(
-                                  s['text'] ?? '暫無例句', 
+                                  s['text'] ?? '暫無例句',
                                   style: const TextStyle(fontSize: 15, height: 1.4),
                                 ),
+                                // 分級例句的中文翻譯（若後端有提供）
+                                if (s['translation'] != null &&
+                                    (s['translation'] as String).trim().isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      s['translation'],
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        height: 1.4,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),

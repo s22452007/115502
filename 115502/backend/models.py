@@ -123,6 +123,11 @@ class Vocab(db.Model):
     sentence_inter = db.Column(db.String(255), nullable=True) # N3
     sentence_upper_inter = db.Column(db.String(255), nullable=True) # N2
     sentence_advanced = db.Column(db.String(255), nullable=True) # N1
+    # 分級例句的中文翻譯
+    sentence_basic_zh = db.Column(db.String(255), nullable=True)
+    sentence_inter_zh = db.Column(db.String(255), nullable=True)
+    sentence_upper_inter_zh = db.Column(db.String(255), nullable=True)
+    sentence_advanced_zh = db.Column(db.String(255), nullable=True)
     # 語音路徑
     # 來源與編輯紀錄
     source = db.Column(db.String(10), nullable=False, default='ai') # 'ai'（Gemini生成）| 'admin'（管理者手動新增）
@@ -177,6 +182,7 @@ class UserPhotoVocab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     photo_id = db.Column(db.Integer, db.ForeignKey('user_photo.id'), nullable=False)
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
+    context_sentence = db.Column(db.Text, nullable=True)  # 依使用者拍照當下情境生成的專屬例句
     vocab = db.relationship('Vocab', backref='photo_vocabs', lazy=True)
 
 # T08: 使用者單字收藏表

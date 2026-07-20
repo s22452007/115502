@@ -8,6 +8,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/utils/face_privacy.dart';
 import 'package:jpn_learning_app/main.dart'; // import cameras
 
 class CameraScreen extends StatefulWidget {
@@ -253,7 +254,68 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  Future<void> _showNamingDialogAndProceed(String imagePath) async {
+  /// 偵測照片中的人臉與疑似信用卡卡號並打上馬賽克；若有偵測到，跳出提示讓使用者選擇重新拍攝或繼續。
+  /// 回傳 null 代表使用者選擇放棄這張照片（不繼續往下走）。
+  Future<String?> _applyFacePrivacyGuard(String imagePath) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    PrivacyGuardResult result;
+    try {
+      result = await detectAndBlurSensitiveContent(imagePath);
+    } catch (e) {
+      debugPrint('隱私內容偵測失敗：$e');
+      if (mounted) Navigator.pop(context); // 關閉 loading
+      return imagePath;
+    }
+
+    if (!mounted) return null;
+    Navigator.pop(context); // 關閉 loading
+
+    if (!result.hasSensitiveContent) {
+      return imagePath;
+    }
+
+    final items = <String>[
+      if (result.faceCount > 0) '人臉',
+      if (result.cardCount > 0) '疑似信用卡卡號',
+      if (result.idCount > 0) '疑似身分證字號',
+      if (result.phoneCount > 0) '電話號碼',
+      if (result.addressCount > 0) '疑似地址',
+    ].join('、');
+
+    if (!mounted) return null;
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('偵測到照片中有$items'),
+        content: const Text('為保護隱私，系統已自動將該區域模糊處理。你可以選擇重新拍攝，或繼續使用這張已模糊的照片。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('重新拍攝', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('繼續使用', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+
+    return proceed == true ? result.imagePath : null;
+  }
+
+  Future<void> _showNamingDialogAndProceed(String rawImagePath) async {
+    final imagePath = await _applyFacePrivacyGuard(rawImagePath);
+    if (imagePath == null || !mounted) return;
+
     final TextEditingController nameController = TextEditingController();
     final String? customName = await showDialog<String>(
       context: context,
@@ -288,12 +350,64 @@ class _CameraScreenState extends State<CameraScreen>
 
     if (!mounted) return;
 
+    // 步驟 3：描述當下情境（可跳過）
+    final TextEditingController contextController = TextEditingController();
+    final String? contextDescription = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('描述當下情境（選填）'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'AI 會依你的情境，為每個單字生成專屬例句',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: contextController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  hintText: '例如：我在遛狗，狗很開心',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, null);
+              },
+              child: const Text('跳過', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, contextController.text.trim());
+              },
+              child: const Text('確定', style: TextStyle(color: AppColors.primary)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => AnalyzingScreen(
           imagePath: imagePath,
           customTitle: customName != null && customName.isNotEmpty ? customName : null,
+          contextDescription:
+              contextDescription != null && contextDescription.isNotEmpty
+                  ? contextDescription
+                  : null,
         ),
       ),
     );

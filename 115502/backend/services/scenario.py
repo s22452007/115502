@@ -21,7 +21,8 @@ def analyze_scene():
     # 確保有傳 user_id (相機辨識綁定使用者)
     user_id = request.form.get('user_id')
     custom_title_input = request.form.get('custom_title')
-    
+    context_description = (request.form.get('context_description') or '').strip()  # 使用者描述的當下情境（選填）
+
     if not user_id:
         return jsonify({'error': '缺少 user_id'}), 400
 
@@ -46,6 +47,18 @@ def analyze_scene():
             # 2. 呼叫 AI 工具函式
             from utils.ai_helper import analyze_image_from_path
             ai_result_wrapper = analyze_image_from_path(file_path)
+
+            # 內容安全守門：Gemini 判定圖片含不當內容 → 刪掉已存的檔案，不留在伺服器
+            if ai_result_wrapper.get("blocked"):
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except OSError:
+                    pass
+                return jsonify({
+                    'error': ai_result_wrapper.get("error", "圖片包含不當內容，無法辨識"),
+                    'blocked': True,
+                }), 400
 
             if not ai_result_wrapper.get("success"):
                 return jsonify({'error': ai_result_wrapper.get("error", "AI 分析失敗")}), 500
@@ -73,31 +86,54 @@ def analyze_scene():
             # 4. 處理單字並建立明細檔與圖鑑
             vocabs_data = ai_data.get('vocabs', [])
             sentences_data = ai_data.get('sentences', [])
-            
+
+            # 4a. 若使用者有描述情境，為每個單字生成貼近情境的專屬例句
+            #     （失敗時回傳空 dict，不影響主流程）
+            context_sentences = {}
+            if context_description:
+                from utils.ai_helper import generate_context_sentences
+                context_sentences = generate_context_sentences(context_description, vocabs_data)
+
             for index, vocab_info in enumerate(vocabs_data):
                 sentence = sentences_data[index] if index < len(sentences_data) else {}
                 
-                # A. 新增至系統詞庫 (Vocab)
-                v = Vocab(
-                    scene_id=1, # 這裡給一個預設場景ID避免報錯，或者你可以把 Vocab 的 scene_id 改為 nullable=True
+                # A. 寫入系統詞庫 (Vocab) 前先查重：
+                #    同一個單字（word + kana 相同）只保留一筆，重複辨識到就直接沿用現有 id
+                v = Vocab.query.filter_by(
                     word=vocab_info.get('word', ''),
                     kana=vocab_info.get('kana', ''),
-                    meaning=vocab_info.get('meaning', ''),
-                    sentence_basic=sentence.get('japanese', ''),
-                    sentence_inter=sentence.get('japanese_inter', ''),
-                    sentence_upper_inter=sentence.get('japanese_upper', ''),
-                    sentence_advanced=sentence.get('japanese_adv', ''),
-                    source='ai'
-                )
-                db.session.add(v)
-                db.session.flush() # 取得 v.id
+                ).first()
+                if not v:
+                    v = Vocab(
+                        scene_id=1, # 這裡給一個預設場景ID避免報錯，或者你可以把 Vocab 的 scene_id 改為 nullable=True
+                        word=vocab_info.get('word', ''),
+                        kana=vocab_info.get('kana', ''),
+                        meaning=vocab_info.get('meaning', ''),
+                        sentence_basic=sentence.get('japanese', ''),
+                        sentence_inter=sentence.get('japanese_inter', ''),
+                        sentence_upper_inter=sentence.get('japanese_upper', ''),
+                        sentence_advanced=sentence.get('japanese_adv', ''),
+                        # 分級例句的中文翻譯（辨識時同一次 Gemini 呼叫順便生成）
+                        sentence_basic_zh=sentence.get('chinese', ''),
+                        sentence_inter_zh=sentence.get('chinese_inter', ''),
+                        sentence_upper_inter_zh=sentence.get('chinese_upper', ''),
+                        sentence_advanced_zh=sentence.get('chinese_adv', ''),
+                        source='ai'
+                    )
+                    db.session.add(v)
+                    db.session.flush() # 取得 v.id
                 
                 # B. 建立照片明細檔 (UserPhotoVocab) -> 記錄這張照片裡有這個字
+                #    若有情境例句就一併存入 context_sentence
+                ctx_sentence = context_sentences.get(vocab_info.get('word', ''))
                 pv = UserPhotoVocab(
                     photo_id=new_photo.id,
-                    vocab_id=v.id
+                    vocab_id=v.id,
+                    context_sentence=ctx_sentence,
                 )
                 db.session.add(pv)
+                # 讓前端結果頁能直接顯示情境例句（不用再打一次 API）
+                vocab_info['context_sentence'] = ctx_sentence
                 
                 # C. 檢查並更新全域單字圖鑑 (UserVocab)
                 # 看看這個字以前有沒有解鎖過
@@ -249,9 +285,10 @@ def get_vocabs_by_photo():
                 "word": v.word,
                 "kana": v.kana,
                 "meaning": v.meaning,
+                "context_sentence": pv.context_sentence,  # 拍照當下的情境例句（可為 null）
                 "is_unlocked": True # 有拍到就算解鎖
             })
-            
+
     return jsonify({"vocabs": results}), 200
 
 @scenario_bp.route('/rename_photo', methods=['POST'])

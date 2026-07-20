@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python upgrade_db.py)"
-    ]
-  }
-}

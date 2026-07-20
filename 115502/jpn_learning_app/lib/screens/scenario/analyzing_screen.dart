@@ -11,8 +11,14 @@ import 'package:jpn_learning_app/services/notification_service.dart';
 class AnalyzingScreen extends StatefulWidget {
   final String imagePath; // 接收圖片路徑
   final String? customTitle; // 新增自訂標題
+  final String? contextDescription; // 使用者描述的當下情境（選填）
 
-  const AnalyzingScreen({Key? key, required this.imagePath, this.customTitle}) : super(key: key);
+  const AnalyzingScreen({
+    Key? key,
+    required this.imagePath,
+    this.customTitle,
+    this.contextDescription,
+  }) : super(key: key);
   @override
   State<AnalyzingScreen> createState() => _AnalyzingScreenState();
 }
@@ -36,9 +42,10 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
         throw Exception('User ID is null');
       }
       final result = await ApiClient.analyzeImage(
-        widget.imagePath, 
+        widget.imagePath,
         userId,
         customTitle: widget.customTitle,
+        contextDescription: widget.contextDescription,
       );
 
       if (mounted && result.containsKey('result') && result['result'] != null) {

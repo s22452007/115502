@@ -45,6 +45,8 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
       backgroundColor: AppColors.primary,
       automaticallyImplyLeading: false, // 不給返回鍵，引導使用者走底部按鈕
       flexibleSpace: FlexibleSpaceBar(
+        // 左右各留 20 的邊距，避免標題貼邊或被裁切
+        titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16, end: 20),
         title: const Text(
           '辨識結果',
           style: TextStyle(
@@ -129,7 +131,9 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   side: const BorderSide(color: AppColors.primary, width: 1.5),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  // 固定高度 + 內容置中，讓兩顆按鈕文字對齊
+                  fixedSize: const Size.fromHeight(52),
+                  alignment: Alignment.center,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -151,7 +155,9 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  // 固定高度 + 內容置中，讓兩顆按鈕文字對齊
+                  fixedSize: const Size.fromHeight(52),
+                  alignment: Alignment.center,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

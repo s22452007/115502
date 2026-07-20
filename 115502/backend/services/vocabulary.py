@@ -273,22 +273,26 @@ def get_vocab_detail(vocab_id):
     user_lvl = user.japanese_level or 'N5' # 如果玩家沒設定，預設為 N5
     
     sentences = []
-    
+
     # 1. 所有人：顯示初級 (N5, N4)
     if v.sentence_basic:
-        sentences.append({"level_name": "初階應用", "text": v.sentence_basic})
-        
+        sentences.append({"level_name": "初階應用", "text": v.sentence_basic,
+                          "translation": getattr(v, 'sentence_basic_zh', None)})
+
     # 2. 中級以上 (N3, N2, N1)：顯示中級 (N3)
     if user_lvl in ['N3', 'N2', 'N1'] and v.sentence_inter:
-        sentences.append({"level_name": "中階變化", "text": v.sentence_inter})
-        
+        sentences.append({"level_name": "中階變化", "text": v.sentence_inter,
+                          "translation": getattr(v, 'sentence_inter_zh', None)})
+
     # 3. 中高級以上 (N2, N1)：顯示中高級 (N2)
     if user_lvl in ['N2', 'N1'] and v.sentence_upper_inter:
-        sentences.append({"level_name": "商務/進階", "text": v.sentence_upper_inter})
-        
+        sentences.append({"level_name": "商務/進階", "text": v.sentence_upper_inter,
+                          "translation": getattr(v, 'sentence_upper_inter_zh', None)})
+
     # 4. 高級 (N1)：顯示高級 (N1)
     if user_lvl == 'N1' and v.sentence_advanced:
-        sentences.append({"level_name": "高級語感", "text": v.sentence_advanced})
+        sentences.append({"level_name": "高級語感", "text": v.sentence_advanced,
+                          "translation": getattr(v, 'sentence_advanced_zh', None)})
         
     # 防呆：如果都沒資料
     if not sentences:

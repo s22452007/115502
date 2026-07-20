@@ -113,6 +113,11 @@ def analyze_scene():
                         sentence_inter=sentence.get('japanese_inter', ''),
                         sentence_upper_inter=sentence.get('japanese_upper', ''),
                         sentence_advanced=sentence.get('japanese_adv', ''),
+                        # 分級例句的中文翻譯（辨識時同一次 Gemini 呼叫順便生成）
+                        sentence_basic_zh=sentence.get('chinese', ''),
+                        sentence_inter_zh=sentence.get('chinese_inter', ''),
+                        sentence_upper_inter_zh=sentence.get('chinese_upper', ''),
+                        sentence_advanced_zh=sentence.get('chinese_adv', ''),
                         source='ai'
                     )
                     db.session.add(v)

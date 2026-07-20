@@ -560,7 +560,7 @@ class _VocabCardState extends State<VocabCard> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  s['level_name'] ?? s['level'] ?? '提示', 
+                                  s['level_name'] ?? s['level'] ?? '提示',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.green,
@@ -568,9 +568,23 @@ class _VocabCardState extends State<VocabCard> {
                                   ),
                                 ),
                                 Text(
-                                  s['text'] ?? '暫無例句', 
+                                  s['text'] ?? '暫無例句',
                                   style: const TextStyle(fontSize: 15, height: 1.4),
                                 ),
+                                // 分級例句的中文翻譯（若後端有提供）
+                                if (s['translation'] != null &&
+                                    (s['translation'] as String).trim().isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      s['translation'],
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        height: 1.4,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),

@@ -64,15 +64,21 @@ def analyze_image_from_path(file_path):
               "japanese": "包含第1個單字的初級(N5-N4)日文例句",
               "chinese": "初級例句的中文翻譯",
               "japanese_inter": "包含第1個單字的中級(N3)日文例句",
+              "chinese_inter": "中級例句的中文翻譯",
               "japanese_upper": "包含第1個單字的中高級(N2)日文例句",
-              "japanese_adv": "包含第1個單字的高級(N1)日文例句"
+              "chinese_upper": "中高級例句的中文翻譯",
+              "japanese_adv": "包含第1個單字的高級(N1)日文例句",
+              "chinese_adv": "高級例句的中文翻譯"
             },
             {
               "japanese": "包含第2個單字的初級(N5-N4)日文例句",
               "chinese": "初級例句的中文翻譯",
               "japanese_inter": "包含第2個單字的中級(N3)日文例句",
+              "chinese_inter": "中級例句的中文翻譯",
               "japanese_upper": "包含第2個單字的中高級(N2)日文例句",
-              "japanese_adv": "包含第2個單字的高級(N1)日文例句"
+              "chinese_upper": "中高級例句的中文翻譯",
+              "japanese_adv": "包含第2個單字的高級(N1)日文例句",
+              "chinese_adv": "高級例句的中文翻譯"
             }
           ]
         }

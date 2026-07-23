@@ -181,9 +181,13 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                                         fit: BoxFit.cover,
                                         errorBuilder:
                                             (context, error, stackTrace) =>
-                                                const Icon(
-                                                  Icons.broken_image,
-                                                  color: Colors.grey,
+                                                Container(
+                                                  color: const Color(0xFFF0F0F0),
+                                                  alignment: Alignment.center,
+                                                  child: const Icon(
+                                                    Icons.image_not_supported_outlined,
+                                                    color: Colors.grey,
+                                                  ),
                                                 ),
                                       ),
                                     )

@@ -149,7 +149,15 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
                 fit: BoxFit.cover, 
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: AppColors.primaryLighter,
-                  child: const Icon(Icons.broken_image, size: 80, color: Colors.white),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image_not_supported_outlined, size: 64, color: Colors.white),
+                      SizedBox(height: 8),
+                      Text('照片已遺失',
+                          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ),
               )
             : Container(

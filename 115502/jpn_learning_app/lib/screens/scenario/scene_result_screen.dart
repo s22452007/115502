@@ -35,10 +35,25 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
         .toList();
   }
 
+  bool get _isNetworkImage =>
+      kIsWeb ||
+      widget.imagePath.startsWith('http') ||
+      widget.imagePath.startsWith('blob:');
+
+  ImageProvider get _imageProvider =>
+      _isNetworkImage ? NetworkImage(widget.imagePath) : FileImage(File(widget.imagePath));
+
+  void _openFullPhoto() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (context, _, _) => _FullPhotoViewer(imageProvider: _imageProvider),
+      ),
+    );
+  }
+
   Widget _buildPhotoHeader() {
-    final isNetwork = kIsWeb ||
-        widget.imagePath.startsWith('http') ||
-        widget.imagePath.startsWith('blob:');
     return SliverAppBar(
       expandedHeight: 300.0,
       pinned: true,
@@ -55,17 +70,46 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
             shadows: [Shadow(color: Colors.black45, blurRadius: 8)],
           ),
         ),
-        background: isNetwork
-            ? Image.network(
-                widget.imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: AppColors.primaryLighter,
-                  child: const Icon(Icons.broken_image,
-                      size: 80, color: Colors.white),
+        background: GestureDetector(
+          onTap: _openFullPhoto,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _isNetworkImage
+                  ? Image.network(
+                      widget.imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.primaryLighter,
+                        child: const Icon(Icons.broken_image,
+                            size: 80, color: Colors.white),
+                      ),
+                    )
+                  : Image.file(File(widget.imagePath), fit: BoxFit.cover),
+              // 右上角小提示：可點擊放大看完整照片
+              Positioned(
+                top: 48,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                      SizedBox(width: 4),
+                      Text('點擊看完整照片',
+                          style: TextStyle(color: Colors.white, fontSize: 11)),
+                    ],
+                  ),
                 ),
-              )
-            : Image.file(File(widget.imagePath), fit: BoxFit.cover),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -181,6 +225,50 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomBar(),
+    );
+  }
+}
+
+/// 全螢幕照片檢視：黑底、雙指縮放、可拖曳，顯示完整未裁切的照片。
+class _FullPhotoViewer extends StatelessWidget {
+  final ImageProvider imageProvider;
+
+  const _FullPhotoViewer({required this.imageProvider});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // 點背景任一處即可關閉
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: InteractiveViewer(
+              minScale: 1.0,
+              maxScale: 4.0,
+              child: Center(
+                child: Image(image: imageProvider, fit: BoxFit.contain),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 44,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 24),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

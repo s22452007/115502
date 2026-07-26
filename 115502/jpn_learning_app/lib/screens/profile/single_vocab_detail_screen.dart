@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class SingleVocabDetailScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class SingleVocabDetailScreen extends StatefulWidget {
 
 class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
   static const Color primaryGreen = Color(0xFF6AA86B);
-  static const Color textColor = Color(0xFF333333);
+  static const Color textColor = Colors.black;
   static const Color subTextColor = Color(0xFF888888);
   static const Color bgLightGreen = Color(0xFFF4F8F5); 
   static const Color starColor = Color(0xFFFFC107);
@@ -281,7 +282,7 @@ Future<void> _toggleStar() async {
   }
 
   // 例句現在變成了獨立且帶有播放按鈕的精緻小卡！
-  Widget _buildSentenceCard(String level, String sentence, Color themeColor) {
+  Widget _buildSentenceCard(String level, String sentence, String? translation, Color themeColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

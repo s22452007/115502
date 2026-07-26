@@ -266,6 +266,7 @@ Future<void> _toggleStar() async {
                             _buildSentenceCard(
                               entry.value['level_name'] ?? entry.value['level'] ?? '提示',
                               entry.value['text'] ?? '',
+                              entry.value['translation'],
                               levelColors[entry.key % levelColors.length],
                             ),
                           ],
@@ -313,17 +314,35 @@ Future<void> _toggleStar() async {
             ),
           ),
           const SizedBox(width: 12),
-          // 中間：例句
+          // 中間：例句與翻譯
           Expanded(
-            child: Text(
-              sentence,
-              style: const TextStyle(fontSize: 16, color: textColor, height: 1.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FuriganaText(
+                  text: sentence,
+                  fontSize: 16,
+                  textColor: textColor,
+                ),
+                if (translation != null && translation.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      translation,
+                      style: TextStyle(
+                        fontSize: 16,
+                        height: 1.4,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
           // 右側：實體播放按鈕
           GestureDetector(
-            onTap: () => _speakWord(sentence),
+            onTap: () => _speakWord(FuriganaText.cleanFuriganaForTts(sentence)),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

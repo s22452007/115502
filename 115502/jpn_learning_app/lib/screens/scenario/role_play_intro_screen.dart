@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
-// import 'package:jpn_learning_app/utils/constants.dart'; // 如果沒用到可以先註解掉
+import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
@@ -48,14 +48,14 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             'kana': 'ラーメン',
             'word': '拉麵',
             'meaning': '拉麵',
-            'ex_jp': 'ラーメンを一つください。',
+            'ex_jp': 'ラーメンを[一|ひと]つください。',
             'ex_en': 'One ramen, please.',
           },
           {
             'kana': 'おかいけい',
             'word': 'お会計',
             'meaning': '結帳',
-            'ex_jp': 'お会計をお願いします。',
+            'ex_jp': '[お会計|おかいけい]をお[願|ねが]いします。',
             'ex_en': 'Can I have the bill please?',
           },
         ],
@@ -69,7 +69,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             'kana': 'コントローラー',
             'word': '手把',
             'meaning': '遊戲手把',
-            'ex_jp': 'コントローラーが壊れました。',
+            'ex_jp': 'コントローラーが[壊|こわ]れました。',
             'ex_en': 'The controller is broken.',
           },
           {
@@ -90,14 +90,14 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
           'kana': 'おすすめ',
           'word': 'お勧め',
           'meaning': '推薦',
-          'ex_jp': 'おすすめは何ですか？',
+          'ex_jp': 'おすすめは[何|なん]ですか？',
           'ex_en': 'What do you recommend?',
         },
         {
           'kana': 'おかんじょう',
           'word': 'お勘定',
           'meaning': '結帳',
-          'ex_jp': 'お勘定をお願いします。',
+          'ex_jp': '[お勘定|おかんじょう]をお[願|ねが]いします。',
           'ex_en': 'Can I have the bill please?',
         },
       ],
@@ -307,34 +307,51 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Colors.black,
               ),
             ),
             const Text(
               'Excuse me,',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  vocab['ex_jp']!,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FuriganaText(
+                        text: vocab['ex_jp']!,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        textColor: Colors.black,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        vocab['ex_en']!,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
                   icon: Icon(Icons.volume_up, color: _darkGreen, size: 20),
-                  onPressed: () => _speak(vocab['ex_jp']!),
+                  onPressed: () => _speak(FuriganaText.cleanFuriganaForTts(vocab['ex_jp']!)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
-            ),
-            Text(
-              vocab['ex_en']!,
-              style: const TextStyle(fontSize: 14, color: Colors.black54),
             ),
           ],
         ),

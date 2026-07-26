@@ -138,7 +138,7 @@ def generate_context_sentences(context_description, vocabs):
         vocabs: [{'word': ..., 'kana': ..., 'meaning': ...}, ...]
 
     回傳:
-        {word: "日文例句\n（中文翻譯）"} 的 dict；失敗時回傳空 dict（不影響主流程）
+        {word: "日文例句\n中文翻譯"} 的 dict；失敗時回傳空 dict（不影響主流程）
     """
     try:
         if not context_description or not vocabs:
@@ -189,7 +189,7 @@ def generate_context_sentences(context_description, vocabs):
             japanese = item.get('japanese', '')
             chinese = item.get('chinese', '')
             if word and japanese:
-                result[word] = f"{japanese}\n（{chinese}）" if chinese else japanese
+                result[word] = f"{japanese}\n{chinese}" if chinese else japanese
         return result
 
     except Exception as e:

@@ -84,15 +84,7 @@ def build_prompt(batch):
 '''
 
 
-def clean_json(text):
-    text = text.strip()
-    if text.startswith("```json"):
-        text = text.replace("```json", "", 1)
-    if text.startswith("```"):
-        text = text.replace("```", "", 1)
-    if text.endswith("```"):
-        text = text[:-3]
-    return text.strip()
+from utils.ai_helper import parse_gemini_json, JSON_CONFIG  # noqa: E402
 
 
 def main():
@@ -120,8 +112,9 @@ def main():
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=build_prompt(batch),
+                    config=JSON_CONFIG,
                 )
-                results = json.loads(clean_json(response.text))
+                results = parse_gemini_json(response.text)
             except Exception as e:
                 print(f"❌ 第 {batch_no} 批失敗：{str(e)[:200]}")
                 print(f"   已完成的 {done} 個單字都已存檔。修復問題後重新執行本腳本即可從缺的地方繼續。")

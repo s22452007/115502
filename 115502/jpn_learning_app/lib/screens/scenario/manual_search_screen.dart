@@ -3,6 +3,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/screens/scenario/role_play_intro_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
   const ManualSearchScreen({Key? key}) : super(key: key);
@@ -41,7 +42,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RoleplayScreen(topicTitle: selectedTopic),
+        builder: (_) => RolePlayIntroScreen(topicTitle: selectedTopic),
       ),
     );
   }

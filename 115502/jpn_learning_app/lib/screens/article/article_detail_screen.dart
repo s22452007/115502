@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // 🌟 引入 kIsWeb 來判斷是否為網頁版
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:jpn_learning_app/models/article_model.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
-import 'article_result_screen.dart'; // 使用相對路徑避免紅線
+import 'article_result_screen.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final Article article;
@@ -17,7 +17,7 @@ class ArticleDetailScreen extends StatefulWidget {
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   bool _showTranslation = false;
-  bool _showFurigana = true; // 🌟 新增：控制是否顯示漢字假名的狀態
+  bool _showFurigana = true; // 控制假名顯示開關
   
   bool _isRecording = false;
   bool _isAnalyzing = false;
@@ -31,7 +31,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
   Future<void> _toggleRecording() async {
     if (_isRecording) {
-      // 🛑 停止錄音
       final path = await _audioRecorder.stop();
       setState(() {
         _isRecording = false;
@@ -43,7 +42,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         
         if (!mounted) return;
         setState(() => _isAnalyzing = false);
-        debugPrint("👉 AI 回傳結果: $result");
 
         if (result['status'] == 'success') {
           Navigator.push(
@@ -55,20 +53,16 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         }
       }
     } else {
-      // 🎤 開始錄音 (在這裡觸發權限詢問)
       if (await _audioRecorder.hasPermission()) {
         String? filePath;
-        
-        // 🌟 網頁版沒有手機資料夾，我們必須跳過路徑獲取，否則會直接當機崩潰！
         if (!kIsWeb) {
           final dir = await getApplicationDocumentsDirectory();
           filePath = '${dir.path}/reading_test.m4a'; 
         }
         
-        // 啟動錄音
         await _audioRecorder.start(
           const RecordConfig(), 
-          path: filePath ?? '', // 網頁版留空，系統會自動分配虛擬空間
+          path: filePath ?? '',
         );
         
         setState(() => _isRecording = true);
@@ -105,9 +99,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             Text(widget.article.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
             const SizedBox(height: 24),
             
-            // ==========================================
-            // 🌟 改善後的文章內容卡片（右上角附帶假名開關）
-            // ==========================================
             Container(
               width: double.infinity, 
               padding: const EdgeInsets.all(24),
@@ -125,7 +116,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 右上角假名開關列
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -156,10 +146,10 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   const Divider(height: 20),
                   const SizedBox(height: 4),
                   
-                  // 文章內容文字（未來若有假名解析需求，可根據 _showFurigana 帶入對應格式）
-                  Text(
-                    widget.article.content, 
-                    style: const TextStyle(fontSize: 18, height: 1.8, color: Colors.black87, fontWeight: FontWeight.w600),
+                  FuriganaText(
+                    text: widget.article.content,
+                    showFurigana: _showFurigana,
+                    style: const TextStyle(fontSize: 18, height: 2.2, color: Colors.black87, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -267,6 +257,81 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class FuriganaText extends StatelessWidget {
+  final String text;
+  final bool showFurigana;
+  final TextStyle style;
+
+  const FuriganaText({
+    Key? key,
+    required this.text,
+    required this.showFurigana,
+    required this.style,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (!showFurigana) {
+      final cleanText = text.replaceAll(RegExp(r'<ruby>(.*?)<rt>.*?</rt></ruby>'), r'$1');
+      return Text(cleanText, style: style);
+    }
+
+    List<InlineSpan> spans = [];
+    final RegExp regExp = RegExp(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>');
+    int lastMatchEnd = 0;
+
+    for (final Match match in regExp.allMatches(text)) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastMatchEnd, match.start),
+          style: style,
+        ));
+      }
+
+      final String kanji = match.group(1) ?? '';
+      final String furigana = match.group(2) ?? '';
+
+      spans.add(WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 1.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                furigana,
+                style: style.copyWith(
+                  fontSize: (style.fontSize ?? 16) * 0.52,
+                  color: const Color(0xFF718096),
+                  height: 1.0,
+                ),
+              ),
+              Text(
+                kanji,
+                style: style.copyWith(height: 1.1),
+              ),
+            ],
+          ),
+        ),
+      ));
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastMatchEnd),
+        style: style,
+      ));
+    }
+
+    return RichText(
+      text: TextSpan(children: spans, style: style),
     );
   }
 }

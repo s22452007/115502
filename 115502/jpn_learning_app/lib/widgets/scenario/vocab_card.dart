@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class VocabCard extends StatefulWidget {
@@ -493,9 +494,9 @@ class _VocabCardState extends State<VocabCard> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
-                    // 只念第一行（日文），跳過中文翻譯行
+                    // 只念第一行（日文），跳過中文翻譯行且過濾標音符號
                     onPressed: () => _speak(
-                        (widget.vocab['context_sentence'] as String).split('\n').first),
+                        FuriganaText.cleanFuriganaForTts((widget.vocab['context_sentence'] as String).split('\n').first)),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -520,10 +521,39 @@ class _VocabCardState extends State<VocabCard> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          widget.vocab['context_sentence'],
-                          style: const TextStyle(fontSize: 15, height: 1.4),
-                        ),
+                        Builder(builder: (_) {
+                          final lines = (widget.vocab['context_sentence'] as String).split('\n');
+                          final jpText = lines.isNotEmpty ? lines.first : '';
+                          String? zhText = lines.length > 1 ? lines.sublist(1).join('\n').trim() : null;
+                          if (zhText != null) {
+                            if ((zhText.startsWith('（') && zhText.endsWith('）')) ||
+                                (zhText.startsWith('(') && zhText.endsWith(')'))) {
+                              zhText = zhText.substring(1, zhText.length - 1).trim();
+                            }
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FuriganaText(
+                                text: jpText,
+                                fontSize: 15,
+                                textColor: Colors.black,
+                              ),
+                              if (zhText != null && zhText.trim().isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    zhText,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      height: 1.4,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -550,7 +580,7 @@ class _VocabCardState extends State<VocabCard> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
-                            onPressed: () => _speak(s['text'] ?? ''),
+                            onPressed: () => _speak(FuriganaText.cleanFuriganaForTts(s['text'] ?? '')),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -567,9 +597,10 @@ class _VocabCardState extends State<VocabCard> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                Text(
-                                  s['text'] ?? '暫無例句',
-                                  style: const TextStyle(fontSize: 15, height: 1.4),
+                                FuriganaText(
+                                  text: s['text'] ?? '暫無例句',
+                                  fontSize: 15,
+                                  textColor: Colors.black,
                                 ),
                                 // 分級例句的中文翻譯（若後端有提供）
                                 if (s['translation'] != null &&
@@ -578,10 +609,10 @@ class _VocabCardState extends State<VocabCard> {
                                     padding: const EdgeInsets.only(top: 2),
                                     child: Text(
                                       s['translation'],
-                                      style: const TextStyle(
-                                        fontSize: 13,
+                                      style: TextStyle(
+                                        fontSize: 15,
                                         height: 1.4,
-                                        color: Colors.grey,
+                                        color: Colors.grey.shade700,
                                       ),
                                     ),
                                   ),

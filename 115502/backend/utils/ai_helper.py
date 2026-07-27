@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
@@ -9,6 +10,39 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(env_path, override=True)
+
+# 要求 Gemini 以 JSON 模式輸出（結構性保證，大幅降低格式錯誤）
+JSON_CONFIG = types.GenerateContentConfig(response_mime_type='application/json')
+
+
+def parse_gemini_json(raw_text):
+    """
+    解析 Gemini 回傳的 JSON，容忍常見的格式瑕疵：
+      - 包在 ```json ... ``` markdown 區塊裡
+      - 物件/陣列結尾多一個逗號（trailing comma），例如 {"a":1,} 或 [1,2,]
+    解析失敗會拋出 json.JSONDecodeError，由呼叫端處理。
+    """
+    text = (raw_text or '').strip()
+
+    # 1. 去除 markdown 標籤
+    if text.startswith("```json"):
+        text = text.replace("```json", "", 1)
+    elif text.startswith("```"):
+        text = text.replace("```", "", 1)
+    if text.endswith("```"):
+        text = text[:-3]
+    text = text.strip()
+
+    # 2. 先照原樣試一次
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # 3. 移除物件/陣列收尾前多餘的逗號後再試
+    #    （只處理結構符號前的逗號，不會動到字串內容裡的逗號）
+    cleaned = re.sub(r',(\s*[}\]])', r'\1', text)
+    return json.loads(cleaned)
 
 def analyze_image_from_path(file_path):
     """
@@ -46,6 +80,7 @@ def analyze_image_from_path(file_path):
         針對你萃取出的每一個單字，你都必須依照 N5~N4(初級), N3(中級), N2(中高級), N1(高級) 的難度，在 `sentences` 陣列的對應位置生成 4 句實用的日文例句。
         這 4 句日文例句「絕對必須明顯地包含該單字本身（或是該單字的動詞變化）」，不可只寫跟圖片有關但不包含該單字的描述句！
         請以自然的方式將單字融入句子中，「絕對不要」使用括號、引號等任何符號將單字框起來（例如：請直接寫 りんごを食べます，不要寫 「りんご」を食べます）。
+        此外，針對所有生成的日文例句，只要句中有使用到「漢字」，都必須一律使用 `[漢字|平假名]` 的格式標記該漢字在本句中的讀音（例如：`[私|わたし]は[毎日|まいにち][林檎|りんご]を[食|た]べます。`）。純平假名或外來語片假名則照常填寫，請勿遺漏句中任何一個漢字的讀音標記。
 
         請「嚴格」遵守以下 JSON 格式回傳，不可加上 `json` 或 markdown 標籤：
         {
@@ -84,29 +119,30 @@ def analyze_image_from_path(file_path):
         }
         '''
 
-        # 4. 呼叫 Gemini 解析圖片
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=[image_part, prompt])
-        result_text = response.text.strip()
+        # 4. 呼叫 Gemini 解析圖片（指定 JSON 輸出模式）
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[image_part, prompt],
+            config=JSON_CONFIG,
+        )
+        result_text = response.text
 
-        # 5. 因為要求回傳 JSON，但 Gemini 有時會加上 markdown (如 ```json ... ```)
-        #    這裡做個簡單的清理
-        if result_text.startswith("```json"):
-            result_text = result_text.replace("```json", "", 1)
-            if result_text.endswith("```"):
-                result_text = result_text[:-3]
-        elif result_text.startswith("```"):
-            result_text = result_text.replace("```", "", 1)
-            if result_text.endswith("```"):
-                result_text = result_text[:-3]
-
-        result_text = result_text.strip()
-
-        # 6. 將文字解析為 Python Dict
+        # 5~6. 解析 JSON（自動處理 markdown 標籤與多餘逗號）
+        #      若第一次失敗，重試一次再解析（Gemini 偶爾會產生壞掉的格式）
         try:
-            result_data = json.loads(result_text)
-        except json.JSONDecodeError as decode_err:
-            print("Gemini 回傳的格式不是正確的 JSON:", result_text)
-            return {"success": False, "error": f"JSON 解析錯誤: {decode_err}"}
+            result_data = parse_gemini_json(result_text)
+        except json.JSONDecodeError:
+            print("⚠️ Gemini 回傳格式有誤，正在重試一次...")
+            try:
+                retry = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[image_part, prompt],
+                    config=JSON_CONFIG,
+                )
+                result_data = parse_gemini_json(retry.text)
+            except json.JSONDecodeError as decode_err:
+                print("Gemini 回傳的格式不是正確的 JSON:", result_text)
+                return {"success": False, "error": f"JSON 解析錯誤: {decode_err}"}
 
         # 6.5 內容安全守門：Gemini 判定圖片含不當內容時，不辨識、標記為封鎖
         if isinstance(result_data, dict) and result_data.get("blocked"):
@@ -137,7 +173,7 @@ def generate_context_sentences(context_description, vocabs):
         vocabs: [{'word': ..., 'kana': ..., 'meaning': ...}, ...]
 
     回傳:
-        {word: "日文例句\n（中文翻譯）"} 的 dict；失敗時回傳空 dict（不影響主流程）
+        {word: "日文例句\n中文翻譯"} 的 dict；失敗時回傳空 dict（不影響主流程）
     """
     try:
         if not context_description or not vocabs:
@@ -158,7 +194,8 @@ def generate_context_sentences(context_description, vocabs):
         1. 簡單好懂（N5~N4 程度）
         2. 貼近使用者描述的情境
         3. 例句必須自然地包含該單字本身（不要用括號或引號把單字框起來）
-        4. 附上繁體中文翻譯
+        4. 句中有使用到「漢字」的部分，請一律使用 `[漢字|平假名]` 的格式標記讀音（例如：`[犬|いぬ]がとても[喜|よろこ]んでいます。`）
+        5. 附上繁體中文翻譯
 
         請「嚴格」以下列 JSON 格式回傳，不可加上 json 或 markdown 標籤：
         [
@@ -167,19 +204,13 @@ def generate_context_sentences(context_description, vocabs):
         ]
         '''
 
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-        result_text = response.text.strip()
-
-        # 清理可能的 markdown 標籤
-        if result_text.startswith("```json"):
-            result_text = result_text.replace("```json", "", 1)
-        if result_text.startswith("```"):
-            result_text = result_text.replace("```", "", 1)
-        if result_text.endswith("```"):
-            result_text = result_text[:-3]
-        result_text = result_text.strip()
-
-        items = json.loads(result_text)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=JSON_CONFIG,
+        )
+        # 解析 JSON（自動處理 markdown 標籤與多餘逗號）
+        items = parse_gemini_json(response.text)
 
         result = {}
         for item in items:
@@ -187,7 +218,7 @@ def generate_context_sentences(context_description, vocabs):
             japanese = item.get('japanese', '')
             chinese = item.get('chinese', '')
             if word and japanese:
-                result[word] = f"{japanese}\n（{chinese}）" if chinese else japanese
+                result[word] = f"{japanese}\n{chinese}" if chinese else japanese
         return result
 
     except Exception as e:

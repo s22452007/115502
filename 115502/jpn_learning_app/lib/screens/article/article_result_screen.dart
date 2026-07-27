@@ -8,11 +8,13 @@ class ArticleResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 解析評估數據
-    final int score = (resultData['score'] is String) ? int.parse(resultData['score']) : (resultData['score'] as int? ?? 0);
-    final String completionRate = resultData['completion_rate'] ?? "0%";
-    final String overallFeedback = resultData['overall_feedback'] ?? "分析完成，請持續保持練習。";
-    final List<dynamic> mistakes = resultData['mistakes'] ?? [];
+    // 🛡️ 終極安全解析 (Safe Parse)：無論後端傳字串、整數還是小數，都不會崩潰！
+    final int score = double.tryParse(resultData['score']?.toString() ?? '0')?.toInt() ?? 0;
+    final String completionRate = resultData['completion_rate']?.toString() ?? "0%";
+    final String overallFeedback = resultData['overall_feedback']?.toString() ?? "分析完成，請持續保持練習。";
+    
+    // 確保 mistakes 絕對是一個 List
+    final List<dynamic> mistakes = (resultData['mistakes'] is List) ? resultData['mistakes'] : [];
 
     // 🌟 嚴格同步主頁 (HomeScreen) 的色彩與文字系統
     const Color textColor = Color(0xFF2C3E50); 
@@ -237,6 +239,7 @@ class ArticleResultScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
+                // 🚀 修復：返回上一頁應該用 context 即可
                 onPressed: () => Navigator.pop(context),
                 child: const Text(
                   '完成練習',

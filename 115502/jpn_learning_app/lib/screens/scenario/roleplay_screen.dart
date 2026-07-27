@@ -12,8 +12,15 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 class RoleplayScreen extends StatefulWidget {
   final String topicTitle;
+  // 1. 新增這一行：宣告要接收角色名字的變數
+  final String characterName; 
 
-  const RoleplayScreen({Key? key, required this.topicTitle}) : super(key: key);
+  const RoleplayScreen({
+    Key? key,
+    required this.topicTitle,
+    // 2. 新增這一行：規定進來這個頁面必須提供 characterName
+    required this.characterName, 
+  }) : super(key: key);
   @override
   State<RoleplayScreen> createState() => _RoleplayScreenState();
 }

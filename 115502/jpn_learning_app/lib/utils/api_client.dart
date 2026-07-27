@@ -782,7 +782,7 @@ class ApiClient {
 
       debugPrint('🟢 [進度 5] 正在將檔案與標準文字上傳至 Flask 後端...');
       // 加上 30 秒超時，避免網路不穩時無限期卡死轉圈圈
-      var streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      var streamedResponse = await request.send().timeout(const Duration(seconds: 60));
       var response = await http.Response.fromStream(streamedResponse);
 
       debugPrint('🟢 [進度 6] 後端處理完畢！狀態碼: ${response.statusCode}');

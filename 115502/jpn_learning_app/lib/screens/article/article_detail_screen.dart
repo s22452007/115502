@@ -17,6 +17,7 @@ class ArticleDetailScreen extends StatefulWidget {
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   bool _showTranslation = false;
+  bool _showFurigana = true; // 🌟 新增：控制是否顯示漢字假名的狀態
   
   bool _isRecording = false;
   bool _isAnalyzing = false;
@@ -55,7 +56,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       }
     } else {
       // 🎤 開始錄音 (在這裡觸發權限詢問)
-      // 🌟 使用 record 套件專屬的 hasPermission()，完美支援網頁版！
       if (await _audioRecorder.hasPermission()) {
         String? filePath;
         
@@ -104,11 +104,67 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             const SizedBox(height: 16),
             Text(widget.article.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
             const SizedBox(height: 24),
+            
+            // ==========================================
+            // 🌟 改善後的文章內容卡片（右上角附帶假名開關）
+            // ==========================================
             Container(
-              width: double.infinity, padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-              child: Text(widget.article.content, style: const TextStyle(fontSize: 18, height: 1.8, color: Colors.black87, fontWeight: FontWeight.w600)),
+              width: double.infinity, 
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white, 
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 右上角假名開關列
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '日文內文',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF8E9AAB), fontWeight: FontWeight.bold),
+                      ),
+                      Row(
+                        children: [
+                          const Text(
+                            '顯示假名',
+                            style: TextStyle(fontSize: 13, color: Color(0xFF8E9AAB), fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(width: 4),
+                          Switch(
+                            value: _showFurigana,
+                            activeColor: AppColors.primary,
+                            onChanged: (val) {
+                              setState(() {
+                                _showFurigana = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  const SizedBox(height: 4),
+                  
+                  // 文章內容文字（未來若有假名解析需求，可根據 _showFurigana 帶入對應格式）
+                  Text(
+                    widget.article.content, 
+                    style: const TextStyle(fontSize: 18, height: 1.8, color: Colors.black87, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
+            
             const SizedBox(height: 20),
             Center(
               child: TextButton.icon(

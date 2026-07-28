@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
-// import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
@@ -20,11 +19,16 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
   final Color _darkGreen = const Color(0xFF4A7A4D);
   final FlutterTts _flutterTts = FlutterTts();
 
-  // 1. 新增：可選擇的角色清單假資料
-  final List<Map<String, String>> _characters = [
+  // 1 預設 + 2 可選角色清單
+  final List<Map<String, dynamic>> _characters = [
     {
       'name': '預設老師',
       'role': '親切耐心，標準日語',
+      'origin': '東京',
+      'age': '28',
+      'gender': '女',
+      'personality': '溫柔、有耐心、發音標準',
+      'special_traits': '專業的日語教師，會糾正文法錯誤',
     },
     {
       'name': '瀨戶 景',
@@ -35,10 +39,18 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
       'personality': '1. 隨性慵懶 2. 對喜歡的事物充滿熱情 3. 說話帶點幽默感',
       'special_traits': '獨立樂團貝斯手、App開發者、重度貓奴',
     },
-    
+    {
+      'name': '跡部 景吾',
+      'role': '充滿自信的少爺',
+      'origin': '東京',
+      'age': '15',
+      'gender': '男',
+      'personality': '極度自信、高傲但有實力、具有領袖氣質',
+      'special_traits': '財閥少爺、喜歡華麗的事物',
+    },
   ];
 
-  // 2. 新增：紀錄目前選中的角色 (預設選第一個)
+  // 預設選中的角色
   String _selectedCharacterName = '預設老師';
 
   @override
@@ -56,6 +68,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     await _flutterTts.speak(text);
   }
 
+  // 模擬的情境假資料
   Map<String, dynamic> _getTopicData() {
     String topic = widget.topicTitle;
 
@@ -101,7 +114,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. 最底層：動態照片
+          // 1. 背景圖片
           Positioned(
             top: 0,
             left: 0,
@@ -113,7 +126,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             ),
           ),
 
-          // 2. 左上角：返回按鈕
+          // 2. 返回按鈕
           Positioned(
             top: 50,
             left: 16,
@@ -123,11 +136,11 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             ),
           ),
 
-          // 3. 前景層
+          // 3. 底部白色互動區塊
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.68, // 微調高度，容納角色選單
+              height: MediaQuery.of(context).size.height * 0.68,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Color(0xFFBFE1C3),
@@ -139,7 +152,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  // 把手
+                  // 把手裝飾
                   Container(
                     width: 48,
                     height: 5,
@@ -150,7 +163,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 顯示從上一頁傳來的主題名稱
+                  // 情境標題
                   Text(
                     widget.topicTitle,
                     style: TextStyle(
@@ -161,7 +174,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // 中間的白色單字卡
+                  // 單字卡 PageView
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
@@ -173,7 +186,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. 新增：選擇對話對象區塊
+                  // 角色選擇區塊標題
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Align(
@@ -189,20 +202,50 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
+
+                  // 角色選擇與新增清單 (ListView)
                   SizedBox(
                     height: 60,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      scrollDirection: Axis.horizontal, // 橫向滑動
-                      itemCount: _characters.length,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _characters.length + 1, // +1 是為了放新增按鈕
                       itemBuilder: (context, index) {
+                        
+                        // 如果是最後一個項目，顯示「新增角色」按鈕
+                        if (index == _characters.length) {
+                          return GestureDetector(
+                            onTap: () => _showAddCharacterDialog(context),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.grey.shade400, width: 1.5),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.add, color: _darkGreen, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '自訂角色',
+                                    style: TextStyle(color: _darkGreen, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        // 正常的角色卡片
                         final char = _characters[index];
                         final isSelected = _selectedCharacterName == char['name'];
 
                         return GestureDetector(
                           onTap: () {
                             setState(() {
-                              _selectedCharacterName = char['name']!;
+                              _selectedCharacterName = char['name'];
                             });
                           },
                           child: AnimatedContainer(
@@ -221,7 +264,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  char['name']!,
+                                  char['name'],
                                   style: TextStyle(
                                     color: isSelected ? Colors.white : _darkGreen,
                                     fontWeight: FontWeight.bold,
@@ -230,7 +273,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  char['role']!,
+                                  char['role'],
                                   style: TextStyle(
                                     color: isSelected ? Colors.white70 : Colors.black54,
                                     fontSize: 10,
@@ -244,7 +287,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                     ),
                   ),
 
-                  // 底部按鈕
+                  // 底部開始對話按鈕
                   Padding(
                     padding: const EdgeInsets.only(left: 24, right: 24, bottom: 40, top: 20),
                     child: SizedBox(
@@ -252,13 +295,13 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                       height: 54,
                       child: ElevatedButton(
                         onPressed: () {
-                          // 4. 修改：將選中的角色一併傳給聊天室
+                          // 跳轉至聊天室，並將角色名稱傳過去
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => RoleplayScreen(
                                 topicTitle: widget.topicTitle,
-                                characterName: _selectedCharacterName, // 將角色名字傳過去
+                                characterName: _selectedCharacterName,
                               ),
                             ),
                           );
@@ -290,6 +333,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     );
   }
 
+  // 單字卡 UI 模組
   Widget _buildVocabCard(Map<String, String> vocab) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -364,6 +408,129 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // 新增角色的彈出視窗
+  void _showAddCharacterDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final originCtrl = TextEditingController();
+    final ageCtrl = TextEditingController();
+    final genderCtrl = TextEditingController();
+    final personalityCtrl = TextEditingController();
+    final traitsCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('新增對話角色', style: TextStyle(color: _darkGreen, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl, 
+                  decoration: InputDecoration(
+                    labelText: '姓名 (必填)', 
+                    hintText: '例如: 瀨戶 景',
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
+                  ),
+                  cursorColor: _darkGreen,
+                ),
+                TextField(
+                  controller: originCtrl, 
+                  decoration: InputDecoration(
+                    labelText: '出身地', 
+                    hintText: '例如: 九州',
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
+                  ),
+                  cursorColor: _darkGreen,
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: ageCtrl, 
+                        decoration: InputDecoration(
+                          labelText: '年紀', 
+                          hintText: '23',
+                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
+                        ), 
+                        keyboardType: TextInputType.number,
+                        cursorColor: _darkGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: genderCtrl, 
+                        decoration: InputDecoration(
+                          labelText: '性別', 
+                          hintText: '男/女',
+                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
+                        ),
+                        cursorColor: _darkGreen,
+                      ),
+                    ),
+                  ],
+                ),
+                TextField(
+                  controller: personalityCtrl, 
+                  decoration: InputDecoration(
+                    labelText: '個性', 
+                    hintText: '例如: 隨性慵懶、幽默',
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
+                  ),
+                  cursorColor: _darkGreen,
+                ),
+                TextField(
+                  controller: traitsCtrl, 
+                  decoration: InputDecoration(
+                    labelText: '特殊設定', 
+                    hintText: '例如: 樂團貝斯手...',
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
+                  ),
+                  maxLines: 2,
+                  cursorColor: _darkGreen,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return; 
+
+                setState(() {
+                  _characters.add({
+                    'name': nameCtrl.text.trim(),
+                    'role': '自訂角色', 
+                    'origin': originCtrl.text.trim(),
+                    'age': ageCtrl.text.trim(),
+                    'gender': genderCtrl.text.trim(),
+                    'personality': personalityCtrl.text.trim(),
+                    'special_traits': traitsCtrl.text.trim(),
+                  });
+                  _selectedCharacterName = nameCtrl.text.trim();
+                });
+
+                Navigator.pop(context); 
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _darkGreen,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('新增並選擇', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

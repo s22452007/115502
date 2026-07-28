@@ -40,59 +40,72 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     super.dispose();
   }
 
-  // ====================================================
-  // 🌟 1. 單字字典彈出視窗
+// ====================================================
+  // 🌟 1. 單字字典彈出視窗 (扁平化，無 Emoji)
   // ====================================================
   void _showDictionaryDialog(Map<String, dynamic> vocab) {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Icon(Icons.menu_book_rounded, color: AppColors.primary),
-              const SizedBox(width: 8),
-              const Text('單字字典', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(vocab['reading'] ?? '', style: const TextStyle(fontSize: 16, color: Color(0xFF8E9AAB))),
-              Text(vocab['word'] ?? '', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
-              const Divider(height: 24),
-              const Text('中文解釋：', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              const SizedBox(height: 4),
-              Text(vocab['meaning'] ?? '', style: const TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('關閉', style: TextStyle(color: Colors.grey)),
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // 稍微減少圓角，更俐落
+          elevation: 0, // 扁平化關鍵：取消陰影
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('單字字典', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.grey),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(vocab['reading'] ?? '', style: const TextStyle(fontSize: 16, color: Color(0xFF8E9AAB))),
+                const SizedBox(height: 4),
+                Text(vocab['word'] ?? '', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Divider(height: 1, color: Color(0xFFE2E8F0)), // 更細緻的灰線
+                ),
+                const Text('中文解釋', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Text(vocab['meaning'] ?? '', style: const TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity, // 按鈕全寬，更現代
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      elevation: 0, // 扁平化按鈕
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), // 方正圓角
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showFolderSelectionDialog(vocab);
+                    },
+                    child: const Text('加入收藏', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
-              label: const Text('加入收藏', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              onPressed: () {
-                Navigator.pop(context); // 關閉字典
-                _showFolderSelectionDialog(vocab); // 打開選擇資料夾彈窗
-              },
-            ),
-          ],
+          ),
         );
       },
     );
   }
 
   // ====================================================
-  // 🌟 2. 選擇資料夾彈出視窗 (呼叫你原本寫好的 fetchUserFavorites)
+  // 🌟 2. 選擇資料夾彈出視窗 (扁平化，無 Emoji)
   // ====================================================
   void _showFolderSelectionDialog(Map<String, dynamic> vocab) {
     showDialog(
@@ -102,56 +115,113 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           future: ApiClient.fetchUserFavorites(currentUserId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const AlertDialog(content: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())));
+              return const Dialog(
+                elevation: 0,
+                child: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
+              );
             }
 
             if (snapshot.hasError || !snapshot.hasData || snapshot.data!['favorites'] == null) {
-              return AlertDialog(
-                title: const Text('錯誤'),
-                content: const Text('無法載入您的收藏夾資料。'),
-                actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('關閉'))],
+              return Dialog(
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('錯誤', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      const SizedBox(height: 16),
+                      const Text('無法載入您的收藏夾資料。', style: TextStyle(color: Colors.black87)),
+                      const SizedBox(height: 24),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('關閉', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      )
+                    ],
+                  ),
+                )
               );
             }
 
             final folders = snapshot.data!['favorites'] as List<dynamic>;
 
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('選擇要加入的收藏夾', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: folders.length + 1, // 多 1 個用來放「新增」按鈕
-                  itemBuilder: (context, index) {
-                    // 最下方的新增資料夾按鈕
-                    if (index == folders.length) {
-                      return ListTile(
-                        leading: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                        title: const Text('新建收藏夾', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                        onTap: () {
-                          Navigator.pop(context); 
-                          _showCreateFolderDialog(vocab);
-                        },
-                      );
-                    }
-                    
-                    // 現有的資料夾列表 (包含預設)
-                    final folder = folders[index];
-                    final bool isDefault = folder['is_default'] ?? false;
-                    return ListTile(
-                      leading: Icon(isDefault ? Icons.star_rounded : Icons.folder_rounded, color: Colors.amber, size: 28),
-                      title: Text(folder['name'] ?? '未命名', style: const TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: Text('${folder['count'] ?? 0} 字', style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _executeCollection(vocab, folder['id']);
-                      },
-                    );
-                  },
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('選擇加入的收藏夾', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.maxFinite,
+                      // 限制最大高度，避免資料夾太多超出螢幕
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: folders.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == folders.length) {
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8)
+                                  ),
+                                  child: const Icon(Icons.add, color: AppColors.primary, size: 20),
+                                ),
+                                title: const Text('新建收藏夾', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                onTap: () {
+                                  Navigator.pop(context); 
+                                  _showCreateFolderDialog(vocab);
+                                },
+                              );
+                            }
+                            
+                            final folder = folders[index];
+                            final bool isDefault = folder['is_default'] ?? false;
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8)
+                                ),
+                                child: Icon(isDefault ? Icons.star_border : Icons.folder_outlined, color: const Color(0xFF64748B), size: 20),
+                              ),
+                              title: Text(folder['name'] ?? '未命名', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                              trailing: Text('${folder['count'] ?? 0} 字', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _executeCollection(vocab, folder['id']);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消', style: TextStyle(color: Colors.grey)))],
             );
           },
         );
@@ -160,45 +230,82 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   }
 
   // ====================================================
-  // 🌟 3. 新增自訂資料夾視窗
+  // 🌟 3. 新增自訂資料夾視窗 (扁平化)
   // ====================================================
   void _showCreateFolderDialog(Map<String, dynamic> vocab) {
     final TextEditingController _folderController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('新建收藏夾', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: TextField(
-            controller: _folderController,
-            decoration: InputDecoration(
-              hintText: '輸入資料夾名稱',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppColors.primary, width: 2), borderRadius: BorderRadius.circular(12)),
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('新建收藏夾', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _folderController,
+                  decoration: InputDecoration(
+                    hintText: '輸入資料夾名稱',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC), // 扁平化的灰色底
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                        ),
+                        onPressed: () => Navigator.pop(context), 
+                        child: const Text('取消', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold))
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary, 
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                        ),
+                        onPressed: () async {
+                          final name = _folderController.text.trim();
+                          if (name.isNotEmpty) {
+                            try {
+                              final folderId = await ApiClient.createFolder(currentUserId, name); 
+                              if (!mounted) return;
+                              Navigator.pop(context);
+                              _executeCollection(vocab, folderId); 
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('建立失敗: $e'),
+                                behavior: SnackBarBehavior.floating,
+                              ));
+                            }
+                          }
+                        },
+                        child: const Text('建立', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                )
+              ],
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消', style: TextStyle(color: Colors.grey))),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              onPressed: () async {
-                final name = _folderController.text.trim();
-                if (name.isNotEmpty) {
-                  try {
-                    // 呼叫你原本寫好的建立資料夾 API
-                    final folderId = await ApiClient.createFolder(currentUserId, name); 
-                    if (!mounted) return;
-                    Navigator.pop(context);
-                    _executeCollection(vocab, folderId); // 建立成功後，直接把單字塞進去！
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('建立失敗: $e')));
-                  }
-                }
-              },
-              child: const Text('建立並收藏', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+          )
         );
       },
     );

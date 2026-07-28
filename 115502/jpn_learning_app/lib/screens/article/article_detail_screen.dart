@@ -261,6 +261,9 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   }
 }
 
+// ==========================================
+// 🌟 終極完美版：對齊基準線 + 防重疊 + 徹底防亂碼
+// ==========================================
 class FuriganaText extends StatelessWidget {
   final String text;
   final bool showFurigana;
@@ -275,13 +278,16 @@ class FuriganaText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🛑 修復 1：徹底解決關閉假名時的亂碼問題
+    // 先拔除 <rt> 到 </rt> 之間的所有假名，再拔除剩下的 <ruby> 標籤
     if (!showFurigana) {
-      final cleanText = text.replaceAll(RegExp(r'<ruby>(.*?)<rt>.*?</rt></ruby>'), r'$1');
+      String cleanText = text.replaceAll(RegExp(r'<rt>.*?</rt>', dotAll: true), '');
+      cleanText = cleanText.replaceAll(RegExp(r'<[^>]*>'), ''); 
       return Text(cleanText, style: style);
     }
 
     List<InlineSpan> spans = [];
-    final RegExp regExp = RegExp(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>');
+    final RegExp regExp = RegExp(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>', dotAll: true);
     int lastMatchEnd = 0;
 
     for (final Match match in regExp.allMatches(text)) {
@@ -295,28 +301,34 @@ class FuriganaText extends StatelessWidget {
       final String kanji = match.group(1) ?? '';
       final String furigana = match.group(2) ?? '';
 
+      // 🛑 修復 2：漢字完美對齊、假名懸浮且絕對不交錯
       spans.add(WidgetSpan(
-        alignment: PlaceholderAlignment.middle,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 1.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                furigana,
-                style: style.copyWith(
-                  fontSize: (style.fontSize ?? 16) * 0.52,
-                  color: const Color(0xFF718096),
-                  height: 1.0,
-                ),
+        alignment: PlaceholderAlignment.baseline, // 指定基準線對齊
+        baseline: TextBaseline.alphabetic,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          // 🌟 神奇魔法：讓 Column「從下往上排」。這樣系統就會抓到最下面「漢字」的基準線，去跟旁邊的純文字完美對齊！
+          verticalDirection: VerticalDirection.up, 
+          children: [
+            // 第一個元件（排在最底下）：黑色的漢字主體
+            Text(
+              kanji,
+              style: style.copyWith(
+                height: 1.0, // 取消過大的行高，讓底部紮實貼齊
               ),
-              Text(
-                kanji,
-                style: style.copyWith(height: 1.1),
+            ),
+            // 中間安插 2 像素的安全空隙，保證漢字與假名「絕對不會交錯重疊」
+            const SizedBox(height: 2),
+            // 第二個元件（被往上疊加）：灰色的懸浮假名
+            Text(
+              furigana,
+              style: style.copyWith(
+                fontSize: (style.fontSize ?? 18) * 0.52, // 縮小為原文的 52%
+                color: const Color(0xFF718096),
+                height: 1.0, 
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ));
 

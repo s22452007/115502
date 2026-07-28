@@ -412,3 +412,6 @@ class ArticleProgress(db.Model):
 
     # 建立關聯 (選用，方便查詢)
     article = db.relationship('Article', backref=db.backref('user_progress', lazy=True))
+
+
+ 

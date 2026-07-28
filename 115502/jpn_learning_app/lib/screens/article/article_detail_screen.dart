@@ -311,8 +311,8 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-  // ====================================================
-  // 🌟 4. 執行收藏動作並顯示提示
+// ====================================================
+  // 🌟 4. 執行收藏動作並顯示提示 (扁平化，無 Emoji)
   // ====================================================
   Future<void> _executeCollection(Map<String, dynamic> vocab, int? folderId) async {
     final result = await ApiClient.collectArticleVocab(
@@ -320,26 +320,43 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       vocab['word'], 
       vocab['reading'], 
       vocab['meaning'],
-      folderId: folderId // 🌟 將選擇的資料夾 ID 傳給後端
+      folderId: folderId 
     );
 
     if (!mounted) return;
     
     bool isSuccess = result['status'] == 'success';
-    String msg = result['error'] ?? result['message'] ?? '處理中...';
+    
+    // 💡 動態拔除後端傳來的 emoji (例如 ✅)，並清除前後多餘空白
+    String msg = (result['error'] ?? result['message'] ?? '處理中...')
+        .toString()
+        .replaceAll('✅', '')
+        .trim();
+    
+    // 先隱藏當前可能還在顯示的提示，讓新的提示能立刻彈出
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        elevation: 0, // 扁平化關鍵：取消陰影
+        behavior: SnackBarBehavior.floating,
+        // 採用現代的扁平色系：柔和的翠綠色 (成功) 與 柔和的紅色 (失敗)
+        backgroundColor: isSuccess ? const Color(0xFF10B981) : const Color(0xFFEF4444), 
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), // 俐落的微圓角
+        margin: const EdgeInsets.only(bottom: 40, left: 24, right: 24), // 讓它浮動在畫面下方適當位置
         content: Row(
           children: [
-            Icon(isSuccess ? Icons.check_circle : Icons.error, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(msg)),
+            // 使用線條風格的 Icon，看起來更精緻
+            Icon(isSuccess ? Icons.check_circle_outline : Icons.error_outline, color: Colors.white, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                msg,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+            ),
           ],
         ),
-        backgroundColor: isSuccess ? Colors.green : Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       )
     );
   }

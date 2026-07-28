@@ -39,15 +39,6 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
       'personality': '1. 隨性慵懶 2. 對喜歡的事物充滿熱情 3. 說話帶點幽默感',
       'special_traits': '獨立樂團貝斯手、App開發者、重度貓奴',
     },
-    {
-      'name': '跡部 景吾',
-      'role': '充滿自信的少爺',
-      'origin': '東京',
-      'age': '15',
-      'gender': '男',
-      'personality': '極度自信、高傲但有實力、具有領袖氣質',
-      'special_traits': '財閥少爺、喜歡華麗的事物',
-    },
   ];
 
   // 預設選中的角色

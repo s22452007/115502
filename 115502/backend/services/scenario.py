@@ -9,6 +9,44 @@ scenario_bp = Blueprint('scenario', __name__)
 UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'static', 'photos')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# ==========================================
+# 主題收集冊：固定主題清單
+#   name           : 與 AI 回傳的 scene_category 對應（必須一致）
+#   icon           : Flutter Material icon 名稱
+#   target         : 該主題「集滿」的目標單字數（完成度分母）
+# 注意：AI 回傳的 scene_category 會用 name 去 get-or-create 對應的 Scene，
+#       不在清單內或空值一律歸到「其他」。
+# ==========================================
+THEME_DEFS = [
+    {'name': '餐廳美食', 'icon': 'restaurant',    'target': 20},
+    {'name': '便利商店', 'icon': 'storefront',    'target': 20},
+    {'name': '車站交通', 'icon': 'train',         'target': 20},
+    {'name': '街道風景', 'icon': 'signpost',      'target': 20},
+    {'name': '居家生活', 'icon': 'home',          'target': 25},
+    {'name': '學校辦公', 'icon': 'school',        'target': 20},
+    {'name': '購物商場', 'icon': 'shopping_bag',  'target': 20},
+    {'name': '自然戶外', 'icon': 'park',          'target': 20},
+    {'name': '其他',     'icon': 'category',      'target': 15},
+]
+THEME_BY_NAME = {t['name']: t for t in THEME_DEFS}
+
+
+def get_or_create_theme_scene(category):
+    """依 AI 判定的主題名稱取得（或建立）對應的 Scene，回傳該 Scene。
+
+    找不到對應主題（None / 空字串 / 不在清單）一律歸到「其他」。
+    """
+    from utils.db import db
+    from models import Scene
+
+    theme = THEME_BY_NAME.get((category or '').strip()) or THEME_BY_NAME['其他']
+    scene = Scene.query.filter_by(name=theme['name']).first()
+    if not scene:
+        scene = Scene(name=theme['name'], icon_name=theme['icon'])
+        db.session.add(scene)
+        db.session.flush()  # 先拿到 scene.id 供後續照片/單字綁定
+    return scene
+
 @scenario_bp.route('/analyze', methods=['POST'])
 def analyze_scene():
     """
@@ -66,16 +104,22 @@ def analyze_scene():
             ai_data = ai_result_wrapper.get("result", {})
             labels = ai_data.get('labels', [])
             main_label = labels[0] if labels else "未知物件"
-            
+
+            # 2.5 依 AI 判定的主題取得（或建立）對應的 Scene
+            #     照片與這次辨識出的新單字都會歸到這個主題，供「主題收集冊」聚合。
+            theme_scene = get_or_create_theme_scene(ai_data.get('scene_category'))
+            theme_scene_id = theme_scene.id
+            ai_data['scene_category'] = theme_scene.name  # 正規化後回傳給前端
+
             # --- 以下為寫入資料庫邏輯 (新版主表明細表架構) ---
-            
+
             # 3. 建立相簿主檔 (UserPhoto)
             photo_title = main_label.split(" (")[0][:20] # 取簡單英文名稱或日文為主
             final_title = custom_title_input if custom_title_input else f"AI辨識: {photo_title}"
-            
+
             new_photo = UserPhoto(
                 user_id=user_id,
-                scene_id=None, # 若沒有特定場景就留空
+                scene_id=theme_scene_id, # 歸到 AI 判定的主題場景
                 image_path=relative_image_path,
                 custom_title=final_title,
                 created_at=datetime.utcnow()
@@ -105,7 +149,7 @@ def analyze_scene():
                 ).first()
                 if not v:
                     v = Vocab(
-                        scene_id=1, # 這裡給一個預設場景ID避免報錯，或者你可以把 Vocab 的 scene_id 改為 nullable=True
+                        scene_id=theme_scene_id, # 新單字歸到這次辨識判定的主題場景
                         word=vocab_info.get('word', ''),
                         kana=vocab_info.get('kana', ''),
                         meaning=vocab_info.get('meaning', ''),
@@ -256,6 +300,112 @@ def get_unlocked_scenes(user_id):
         })
         
     return jsonify({"scenes": results}), 200
+
+@scenario_bp.route('/themes/<int:user_id>', methods=['GET'])
+def get_themes(user_id):
+    """主題收集冊：一律列出所有官方主題（即使還沒拍照）＋ 使用者有照片的其他場景。
+
+    每個主題回傳：封面（最近一張照片，未拍過為 null）、探索照數、已解鎖字數、
+    目標字數（＝該主題單字牆總數）、完成度、最近拍攝時間。
+    完成度 = 該主題已解鎖 distinct 單字數 / 該主題單字總數（與單字牆一致）。
+    """
+    from models import Scene, Vocab, UserVocab
+
+    # 1. 使用者拍過的照片，依 scene 聚合封面 / 照片數 / 最近時間
+    photos = (UserPhoto.query
+              .filter_by(user_id=user_id)
+              .order_by(UserPhoto.created_at.desc())
+              .all())
+    photo_agg = {}  # scene_id -> {cover, count, last_at}
+    for p in photos:
+        sid = p.scene_id or 0
+        a = photo_agg.get(sid)
+        if a is None:
+            a = photo_agg[sid] = {'cover': p.image_path, 'count': 0, 'last_at': p.created_at}
+        a['count'] += 1
+        if p.created_at and (a['last_at'] is None or p.created_at > a['last_at']):
+            a['last_at'] = p.created_at
+
+    # 2. 要顯示的場景集合：所有官方主題（排除「其他」）＋ 使用者有照片的場景
+    official_names = [t['name'] for t in THEME_DEFS if t['name'] != '其他']
+    scene_by_id = {s.id: s for s in Scene.query.filter(Scene.name.in_(official_names)).all()}
+    photo_scene_ids = [sid for sid in photo_agg if sid]
+    if photo_scene_ids:
+        for s in Scene.query.filter(Scene.id.in_(photo_scene_ids)).all():
+            scene_by_id.setdefault(s.id, s)
+
+    # 3. 逐場景統計單字牆數據
+    results = []
+    for sid, scene in scene_by_id.items():
+        total = Vocab.query.filter_by(scene_id=sid).count()
+        unlocked = (UserVocab.query
+                    .join(Vocab, UserVocab.vocab_id == Vocab.id)
+                    .filter(UserVocab.user_id == user_id, Vocab.scene_id == sid)
+                    .count())
+        agg = photo_agg.get(sid, {})
+        results.append({
+            'scene_id': sid,
+            'name': scene.name,
+            'icon_name': scene.icon_name or 'category',
+            'cover_image': agg.get('cover'),
+            'photo_count': agg.get('count', 0),
+            'unlocked_count': unlocked,
+            'target_count': total,
+            'progress': min(1.0, round(unlocked / total, 3)) if total else 0.0,
+            'last_at': agg['last_at'].strftime('%Y.%m.%d') if agg.get('last_at') else '',
+        })
+
+    # 4. 排序：已開始探索（有照片或有解鎖）的排前面，其餘官方主題依名稱
+    results.sort(key=lambda x: (
+        x['photo_count'] == 0 and x['unlocked_count'] == 0,  # 未開始的排後面
+        -x['unlocked_count'],
+        x['name'],
+    ))
+    return jsonify({'themes': results}), 200
+
+
+@scenario_bp.route('/theme_vocabs/<int:user_id>/<int:scene_id>', methods=['GET'])
+def get_theme_vocabs(user_id, scene_id):
+    """主題單字牆：回傳某主題底下所有單字，並標記使用者是否已解鎖。
+
+    未解鎖的字「不回傳字面」（保留剪影神秘感），只給 hint_len 當長度提示，
+    引導使用者去拍照把它們一個個點亮。
+    """
+    from models import Vocab, UserVocab
+
+    vocabs = Vocab.query.filter_by(scene_id=scene_id).order_by(Vocab.id).all()
+    unlocked_ids = {
+        uv.vocab_id for uv in UserVocab.query.filter_by(user_id=user_id).all()
+    }
+
+    results = []
+    unlocked_count = 0
+    for v in vocabs:
+        if v.id in unlocked_ids:
+            unlocked_count += 1
+            results.append({
+                'vocab_id': v.id,
+                'word': v.word,
+                'kana': v.kana,
+                'meaning': v.meaning,
+                'is_unlocked': True,
+            })
+        else:
+            # 剪影：不洩漏字面，只給長度提示
+            results.append({
+                'vocab_id': v.id,
+                'is_unlocked': False,
+                'hint_len': len(v.kana or ''),
+            })
+
+    # 已解鎖排前面，剪影排後面
+    results.sort(key=lambda x: not x['is_unlocked'])
+    return jsonify({
+        'vocabs': results,
+        'total': len(vocabs),
+        'unlocked': unlocked_count,
+    }), 200
+
 
 @scenario_bp.route('/photo_vocabs', methods=['GET'])
 def get_vocabs_by_photo():

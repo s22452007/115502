@@ -306,3 +306,75 @@ def get_vocab_detail(vocab_id):
         "sentences": sentences,
         "is_favorited": is_favorited
     }), 200
+
+
+# ==========================================
+# 🌟 最終修復版：解決 scene_id NOT NULL 問題
+# ==========================================
+@vocab_bp.route('/collect_from_article', methods=['POST'])
+def collect_from_article():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    word = data.get('word')
+    kana = data.get('kana')
+    meaning = data.get('meaning')
+    folder_id = data.get('folder_id')
+
+    if not user_id or not word:
+        return jsonify({"error": "缺少必要資料"}), 400
+
+    # 1. 檢查 Vocab 總字庫有沒有這個單字
+    vocab = Vocab.query.filter_by(word=word).first()
+    if not vocab:
+        # 🛠️ 解決 NOT NULL constraint failed: vocab.scene_id
+        # 我們必須隨便找一個場景給它，不然資料庫會報錯。這裡抓資料庫裡的第一個場景。
+        from models import Scene # 引入 Scene 模型
+        default_scene = Scene.query.first()
+        fallback_scene_id = default_scene.id if default_scene else 1 
+
+        vocab = Vocab(
+            word=word, 
+            kana=kana, 
+            meaning=meaning,
+            scene_id=fallback_scene_id # 🌟 關鍵修復：給予預設場景 ID
+        )
+        db.session.add(vocab)
+        db.session.commit()
+
+    # 2. 檢查使用者是否已經收藏過這個單字
+    existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab.id).first()
+    if existing and existing.collected_at is not None:
+        return jsonify({"error": "這個單字已經在收藏夾囉！"}), 400
+
+    # 3. 檢查收藏容量上限
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+        
+    vocab_slot = getattr(user, 'vocab_slot', 50) or 50
+    collected_count = UserVocab.query.filter(
+        UserVocab.user_id == user_id,
+        UserVocab.collected_at.isnot(None)
+    ).count()
+    
+    if collected_count >= vocab_slot:
+        cost_hint = 35 if user.is_premium else 50
+        return jsonify({
+            "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +50 個位置"
+        }), 400
+
+    # 4. 執行收藏 
+    if existing:
+        existing.collected_at = datetime.utcnow()
+        existing.folder_id = folder_id 
+    else:
+        new_uv = UserVocab(
+            user_id=user_id, 
+            vocab_id=vocab.id, 
+            folder_id=folder_id, 
+            collected_at=datetime.utcnow()
+        )
+        db.session.add(new_uv)
+        
+    db.session.commit()
+    return jsonify({"status": "success", "message": "✅ 成功加入收藏夾！"}), 200

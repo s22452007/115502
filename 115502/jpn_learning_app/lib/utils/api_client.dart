@@ -795,4 +795,28 @@ class ApiClient {
       return {'status': 'error', 'message': e.toString()};
     }
   }
+// ==========================================
+  // 🟢 文章頁面：單字收藏專用 API (支援指定資料夾)
+  // ==========================================
+  static Future<Map<String, dynamic>> collectArticleVocab(int userId, String word, String kana, String meaning, {int? folderId}) async {
+    final url = Uri.parse('$baseUrl/vocab/collect_from_article');
+    try {
+      var response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'word': word,
+          'kana': kana, 
+          'meaning': meaning,
+          'folder_id': folderId, // 🌟 新增這裡
+        }),
+      );
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 單字收藏失敗: $e');
+      return {'error': e.toString()};
+    }
+  }
 }
+

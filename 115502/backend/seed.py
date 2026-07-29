@@ -179,11 +179,15 @@ def seed_data():
         from datetime import timedelta
         current_time = datetime.utcnow()
 
+        # 示範照片：指向一張「真實存在且有被 git 追蹤」的圖檔，
+        # 避免用假檔名（test_ramen.jpg…）導致重 seed 後前端顯示「照片已遺失」。
+        DEMO_IMG = 'a1289030-a9b4-4771-8a4b-2414eac8a276.jpg'
+
         # --- 事件 1: 拍了拉麵照片 (新宿) ---
         photo1 = UserPhoto(
             user_id=vip_user.id,
             scene_id=scene1.id,
-            image_path='test_ramen.jpg',
+            image_path=DEMO_IMG,
             custom_title='我在新宿吃的第一碗一蘭拉麵🍜',
             created_at=current_time - timedelta(days=2) # 假裝是兩天前拍的
         )
@@ -204,7 +208,7 @@ def seed_data():
         photo2 = UserPhoto(
             user_id=vip_user.id,
             scene_id=scene2.id,
-            image_path='test_ticket.jpg',
+            image_path=DEMO_IMG,
             custom_title='準備搭新幹線回程囉🚉',
             created_at=current_time - timedelta(days=1) # 假裝是一天前拍的
         )
@@ -223,8 +227,7 @@ def seed_data():
         photo3 = UserPhoto(
             user_id=vip_user.id,
             scene_id=scene1.id,
-            # 這裡為了測試，你可以先共用同一張照片，或換成 test_ramen2.jpg 如果你有這張圖
-            image_path='test_ramen.jpg', 
+            image_path=DEMO_IMG,
             custom_title='逛完淺草寺肚子餓了來吃拉麵🏮',
             created_at=current_time # 假裝是今天拍的
         )

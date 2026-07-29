@@ -38,6 +38,13 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
            - 該句的繁體中文翻譯放在「下一行」，用全形括號（）包住。
            - 不同段落（例如：回應、教學、反問）之間空一行，方便閱讀。
            - 回覆保持簡潔，不要一次塞太多內容。
+        7. 漢字標音規則（非常重要）：
+           - 日文句子裡「每一個漢字詞」都要加上假名標音，格式固定為 [漢字|假名]。
+           - 例如：私 要寫成 [私|わたし]、散歩 要寫成 [散歩|さんぽ]。
+           - 一個詞彙的漢字連在一起時整組標音，例如 [公園|こうえん]，不要拆成 [公|こう][園|えん]。
+           - 送假名不要包進去，例如「好きです」要寫成 [好|す]きです。
+           - 假名（平假名、片假名）本身不需要標音。
+           - 中文翻譯的部分「絕對不要」加任何標音。
         """
 
         # 👇 依使用者選擇的腔調，加入對應的說話方式指令
@@ -45,7 +52,7 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
             from models import Dialect
             dialect = Dialect.query.filter_by(id=dialect_id, is_active=True).first()
             if dialect:
-                prompt += f"\n        7. 腔調要求：{dialect.prompt_instruction}"
+                prompt += f"\n        8. 腔調要求：{dialect.prompt_instruction}"
 
         if user_message == "[幫我開場]":
             prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！一句話就好，讓使用者有機會回應。"

@@ -240,6 +240,15 @@ with app.app_context():
             existing.show_in_quick_select = s['show_in_quick_select']
     _db.session.commit()
 
+    # ── 主題收集冊：預種各主題官方常見字（idempotent，已存在跳過）──
+    try:
+        from seed_themes import seed_theme_vocabs
+        _added = seed_theme_vocabs()
+        if _added:
+            print(f"[Theme] 主題官方單字種入：新增 {_added} 筆")
+    except Exception as _e:
+        print(f"⚠️ 主題官方單字種入警告：{_e}")
+
 # ==========================================
 # 🛎️ 專屬櫃檯：負責接收 Flutter 傳來的聊天包裹
 # ==========================================
@@ -259,6 +268,9 @@ def chat():
 
     # 3. 櫃檯送餐（把熱騰騰的 AI 回覆送回給 Flutter）
     return ai_response_text
+
+
+
 
 # ==========================================
 

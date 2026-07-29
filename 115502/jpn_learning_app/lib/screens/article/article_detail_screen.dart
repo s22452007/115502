@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // 🌟 引入 kIsWeb 來判斷是否為網頁版
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:jpn_learning_app/models/article_model.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
-import 'article_result_screen.dart'; // 使用相對路徑避免紅線
+import 'article_result_screen.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final Article article;
@@ -17,10 +17,22 @@ class ArticleDetailScreen extends StatefulWidget {
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   bool _showTranslation = false;
+  bool _showFurigana = true; 
   
   bool _isRecording = false;
   bool _isAnalyzing = false;
   final AudioRecorder _audioRecorder = AudioRecorder();
+
+  // 📝 假設使用者 ID 為 8 (請依據實際登入狀態替換)
+  final int currentUserId = 8; 
+
+  List<dynamic> get _vocabularies {
+    final data = widget.article.grammarPoints;
+    if (data != null && data.containsKey('vocabularies')) {
+      return data['vocabularies'] as List<dynamic>;
+    }
+    return [];
+  }
 
   @override
   void dispose() {
@@ -28,9 +40,330 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     super.dispose();
   }
 
+// ====================================================
+  // 🌟 1. 單字字典彈出視窗 (扁平化，無 Emoji)
+  // ====================================================
+  void _showDictionaryDialog(Map<String, dynamic> vocab) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // 稍微減少圓角，更俐落
+          elevation: 0, // 扁平化關鍵：取消陰影
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('單字字典', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.grey),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(vocab['reading'] ?? '', style: const TextStyle(fontSize: 16, color: Color(0xFF8E9AAB))),
+                const SizedBox(height: 4),
+                Text(vocab['word'] ?? '', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Divider(height: 1, color: Color(0xFFE2E8F0)), // 更細緻的灰線
+                ),
+                const Text('中文解釋', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Text(vocab['meaning'] ?? '', style: const TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity, // 按鈕全寬，更現代
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      elevation: 0, // 扁平化按鈕
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), // 方正圓角
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showFolderSelectionDialog(vocab);
+                    },
+                    child: const Text('加入收藏', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ====================================================
+  // 🌟 2. 選擇資料夾彈出視窗 (扁平化，無 Emoji)
+  // ====================================================
+  void _showFolderSelectionDialog(Map<String, dynamic> vocab) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: ApiClient.fetchUserFavorites(currentUserId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Dialog(
+                elevation: 0,
+                child: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
+              );
+            }
+
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!['favorites'] == null) {
+              return Dialog(
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('錯誤', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      const SizedBox(height: 16),
+                      const Text('無法載入您的收藏夾資料。', style: TextStyle(color: Colors.black87)),
+                      const SizedBox(height: 24),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('關閉', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      )
+                    ],
+                  ),
+                )
+              );
+            }
+
+            final folders = snapshot.data!['favorites'] as List<dynamic>;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('選擇加入的收藏夾', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.maxFinite,
+                      // 限制最大高度，避免資料夾太多超出螢幕
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: folders.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == folders.length) {
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8)
+                                  ),
+                                  child: const Icon(Icons.add, color: AppColors.primary, size: 20),
+                                ),
+                                title: const Text('新建收藏夾', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                onTap: () {
+                                  Navigator.pop(context); 
+                                  _showCreateFolderDialog(vocab);
+                                },
+                              );
+                            }
+                            
+                            final folder = folders[index];
+                            final bool isDefault = folder['is_default'] ?? false;
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8)
+                                ),
+                                child: Icon(isDefault ? Icons.star_border : Icons.folder_outlined, color: const Color(0xFF64748B), size: 20),
+                              ),
+                              title: Text(folder['name'] ?? '未命名', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                              trailing: Text('${folder['count'] ?? 0} 字', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _executeCollection(vocab, folder['id']);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ====================================================
+  // 🌟 3. 新增自訂資料夾視窗 (扁平化)
+  // ====================================================
+  void _showCreateFolderDialog(Map<String, dynamic> vocab) {
+    final TextEditingController _folderController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('新建收藏夾', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _folderController,
+                  decoration: InputDecoration(
+                    hintText: '輸入資料夾名稱',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC), // 扁平化的灰色底
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                        ),
+                        onPressed: () => Navigator.pop(context), 
+                        child: const Text('取消', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold))
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary, 
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                        ),
+                        onPressed: () async {
+                          final name = _folderController.text.trim();
+                          if (name.isNotEmpty) {
+                            try {
+                              final folderId = await ApiClient.createFolder(currentUserId, name); 
+                              if (!mounted) return;
+                              Navigator.pop(context);
+                              _executeCollection(vocab, folderId); 
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('建立失敗: $e'),
+                                behavior: SnackBarBehavior.floating,
+                              ));
+                            }
+                          }
+                        },
+                        child: const Text('建立', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          )
+        );
+      },
+    );
+  }
+
+// ====================================================
+  // 🌟 4. 執行收藏動作並顯示提示 (扁平化，無 Emoji)
+  // ====================================================
+  Future<void> _executeCollection(Map<String, dynamic> vocab, int? folderId) async {
+    final result = await ApiClient.collectArticleVocab(
+      currentUserId, 
+      vocab['word'], 
+      vocab['reading'], 
+      vocab['meaning'],
+      folderId: folderId 
+    );
+
+    if (!mounted) return;
+    
+    bool isSuccess = result['status'] == 'success';
+    
+    // 💡 動態拔除後端傳來的 emoji (例如 ✅)，並清除前後多餘空白
+    String msg = (result['error'] ?? result['message'] ?? '處理中...')
+        .toString()
+        .replaceAll('✅', '')
+        .trim();
+    
+    // 先隱藏當前可能還在顯示的提示，讓新的提示能立刻彈出
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        elevation: 0, // 扁平化關鍵：取消陰影
+        behavior: SnackBarBehavior.floating,
+        // 採用現代的扁平色系：柔和的翠綠色 (成功) 與 柔和的紅色 (失敗)
+        backgroundColor: isSuccess ? const Color(0xFF10B981) : const Color(0xFFEF4444), 
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), // 俐落的微圓角
+        margin: const EdgeInsets.only(bottom: 40, left: 24, right: 24), // 讓它浮動在畫面下方適當位置
+        content: Row(
+          children: [
+            // 使用線條風格的 Icon，看起來更精緻
+            Icon(isSuccess ? Icons.check_circle_outline : Icons.error_outline, color: Colors.white, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                msg,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      )
+    );
+  }
+
+  // ===== 以下為錄音與畫面排版 (維持原樣) =====
   Future<void> _toggleRecording() async {
     if (_isRecording) {
-      // 🛑 停止錄音
       final path = await _audioRecorder.stop();
       setState(() {
         _isRecording = false;
@@ -39,38 +372,23 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
       if (path != null) {
         final result = await ApiClient.evaluateArticleAudio(path, widget.article.content);
-        
         if (!mounted) return;
         setState(() => _isAnalyzing = false);
-        debugPrint("👉 AI 回傳結果: $result");
 
         if (result['status'] == 'success') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ArticleResultScreen(resultData: result)),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (context) => ArticleResultScreen(resultData: result)));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('解析失敗：${result['message'] ?? '未知錯誤'}')));
         }
       }
     } else {
-      // 🎤 開始錄音 (在這裡觸發權限詢問)
-      // 🌟 使用 record 套件專屬的 hasPermission()，完美支援網頁版！
       if (await _audioRecorder.hasPermission()) {
         String? filePath;
-        
-        // 🌟 網頁版沒有手機資料夾，我們必須跳過路徑獲取，否則會直接當機崩潰！
         if (!kIsWeb) {
           final dir = await getApplicationDocumentsDirectory();
           filePath = '${dir.path}/reading_test.m4a'; 
         }
-        
-        // 啟動錄音
-        await _audioRecorder.start(
-          const RecordConfig(), 
-          path: filePath ?? '', // 網頁版留空，系統會自動分配虛擬空間
-        );
-        
+        await _audioRecorder.start(const RecordConfig(), path: filePath ?? '');
         setState(() => _isRecording = true);
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🔴 開始錄音，請對麥克風朗讀！')));
       } else {
@@ -104,11 +422,46 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             const SizedBox(height: 16),
             Text(widget.article.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
             const SizedBox(height: 24),
+            
             Container(
-              width: double.infinity, padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-              child: Text(widget.article.content, style: const TextStyle(fontSize: 18, height: 1.8, color: Colors.black87, fontWeight: FontWeight.w600)),
+              width: double.infinity, 
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white, 
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('日文內文', style: TextStyle(fontSize: 14, color: Color(0xFF8E9AAB), fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          const Text('顯示假名', style: TextStyle(fontSize: 13, color: Color(0xFF8E9AAB), fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 4),
+                          Switch(value: _showFurigana, activeColor: AppColors.primary, onChanged: (val) => setState(() => _showFurigana = val)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  const SizedBox(height: 4),
+                  
+                  // 🌟 假名解析器維持完美對齊版本
+                  FuriganaText(
+                    text: widget.article.content,
+                    showFurigana: _showFurigana,
+                    vocabularies: _vocabularies,
+                    onVocabTap: _showDictionaryDialog,
+                    style: const TextStyle(fontSize: 18, height: 2.2, color: Colors.black87, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
+            
             const SizedBox(height: 20),
             Center(
               child: TextButton.icon(
@@ -183,7 +536,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           children: [
             SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)),
             SizedBox(width: 10),
-            Text('AI 語音解析中...', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('AI 語音解析中...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
       );
@@ -204,13 +557,112 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           children: [
             Icon(_isRecording ? Icons.stop_rounded : Icons.mic_rounded, color: Colors.white, size: 28),
             const SizedBox(width: 10),
-            Text(
-              _isRecording ? '結束錄音' : '按下開始朗讀',
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
-            ),
+            Text(_isRecording ? '結束錄音' : '按下開始朗讀', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
           ],
         ),
       ),
     );
+  }
+}
+
+// ==========================================
+// 🌟 互動字典版：精準基準線對齊、可點擊的假名解析器
+// ==========================================
+class FuriganaText extends StatelessWidget {
+  final String text;
+  final bool showFurigana;
+  final TextStyle style;
+  final List<dynamic> vocabularies;
+  final Function(Map<String, dynamic>) onVocabTap;
+
+  const FuriganaText({
+    Key? key,
+    required this.text,
+    required this.showFurigana,
+    required this.style,
+    required this.vocabularies,
+    required this.onVocabTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (!showFurigana) {
+      String cleanText = text.replaceAll(RegExp(r'<rt>.*?</rt>', dotAll: true), '');
+      cleanText = cleanText.replaceAll(RegExp(r'<[^>]*>'), ''); 
+      return Text(cleanText, style: style);
+    }
+
+    List<InlineSpan> spans = [];
+    final RegExp regExp = RegExp(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>', dotAll: true);
+    int lastMatchEnd = 0;
+
+    for (final Match match in regExp.allMatches(text)) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(text: text.substring(lastMatchEnd, match.start), style: style));
+      }
+
+      final String kanji = match.group(1) ?? '';
+      final String furigana = match.group(2) ?? '';
+
+      Map<String, dynamic>? matchingVocab;
+      try {
+        matchingVocab = vocabularies.firstWhere((v) => v['word'] == kanji);
+      } catch (e) {
+        matchingVocab = null;
+      }
+
+      Widget columnContent = Column(
+        mainAxisSize: MainAxisSize.min,
+        verticalDirection: VerticalDirection.up, 
+        children: [
+          Text(
+            kanji,
+            style: style.copyWith(
+              height: 1.0, 
+              color: matchingVocab != null ? AppColors.primary : style.color,
+              decoration: matchingVocab != null ? TextDecoration.underline : TextDecoration.none,
+              decorationStyle: TextDecorationStyle.dotted,
+            ),
+          ),
+          const SizedBox(height: 2), 
+          Text(
+            furigana,
+            style: style.copyWith(
+              fontSize: (style.fontSize ?? 18) * 0.52,
+              color: const Color(0xFF718096),
+              height: 1.0, 
+            ),
+          ),
+        ],
+      );
+
+      Widget finalWidget = columnContent;
+      if (matchingVocab != null) {
+        finalWidget = Tooltip(
+          message: '點擊查看字典',
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click, 
+            child: GestureDetector(
+              onTap: () => onVocabTap(matchingVocab!),
+              child: columnContent,
+            ),
+          ),
+        );
+      }
+
+      spans.add(WidgetSpan(
+        alignment: PlaceholderAlignment.baseline,
+        baseline: TextBaseline.alphabetic,
+        child: finalWidget,
+      ));
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastMatchEnd), style: style));
+    }
+
+    return RichText(text: TextSpan(children: spans, style: style));
   }
 }

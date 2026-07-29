@@ -503,6 +503,24 @@ class ApiClient {
     throw Exception('無法載入');
   }
 
+  /// 主題收集冊：取得使用者拍過的照片依主題聚合後的清單
+  /// 每個主題含：封面、探索照數、已解鎖單字數、完成度
+  static Future<List<dynamic>> getThemes(int userId) async {
+    final url = Uri.parse('$baseUrl/scenario/themes/$userId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) return json.decode(response.body)['themes'];
+    throw Exception('無法載入主題');
+  }
+
+  /// 主題單字牆：取得某主題底下所有單字與解鎖狀態
+  /// 回傳 {vocabs, total, unlocked}；未解鎖的字只含 hint_len（剪影）
+  static Future<Map<String, dynamic>> getThemeVocabs(int userId, int sceneId) async {
+    final url = Uri.parse('$baseUrl/scenario/theme_vocabs/$userId/$sceneId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) return json.decode(response.body);
+    throw Exception('無法載入主題單字');
+  }
+
   static Future<List<dynamic>> getSceneVocabs(int sceneId, int userId) async {
     final url = Uri.parse('$baseUrl/vocab/scene/$sceneId?user_id=$userId');
     final response = await http.get(url);
@@ -782,7 +800,7 @@ class ApiClient {
 
       debugPrint('🟢 [進度 5] 正在將檔案與標準文字上傳至 Flask 後端...');
       // 加上 30 秒超時，避免網路不穩時無限期卡死轉圈圈
-      var streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      var streamedResponse = await request.send().timeout(const Duration(seconds: 60));
       var response = await http.Response.fromStream(streamedResponse);
 
       debugPrint('🟢 [進度 6] 後端處理完畢！狀態碼: ${response.statusCode}');
@@ -795,4 +813,28 @@ class ApiClient {
       return {'status': 'error', 'message': e.toString()};
     }
   }
+// ==========================================
+  // 🟢 文章頁面：單字收藏專用 API (支援指定資料夾)
+  // ==========================================
+  static Future<Map<String, dynamic>> collectArticleVocab(int userId, String word, String kana, String meaning, {int? folderId}) async {
+    final url = Uri.parse('$baseUrl/vocab/collect_from_article');
+    try {
+      var response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'word': word,
+          'kana': kana, 
+          'meaning': meaning,
+          'folder_id': folderId, // 🌟 新增這裡
+        }),
+      );
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 單字收藏失敗: $e');
+      return {'error': e.toString()};
+    }
+  }
 }
+

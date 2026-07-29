@@ -13,6 +13,7 @@ import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/theme_collection_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/screens/article/article_list_screen.dart'; 
 
@@ -430,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
           if (hasGalleryLink)
             GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ThemeCollectionScreen())),
               child: const Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
             ),
         ],

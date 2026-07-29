@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
@@ -66,7 +67,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     _messages.add({
       'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
       'isUserMessage': false,
-      'furiganaText': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨', // 未來後端可提供標音版本
     });
 
     // 模擬：一進來先給幾個快捷選項
@@ -148,7 +148,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   // 🔊 TTS 語音播放（呼叫後端 /api/tts/synthesize）
   // ==========================================
   Future<void> _playTts(String text) async {
-    final t = text.trim();
+    // 送去合成前先移除 [漢字|假名] 標音，否則 TTS 會把括號和假名一起念出來
+    final t = FuriganaText.cleanFuriganaForTts(text).trim();
     if (t.isEmpty) return;
 
     await _audioPlayer.stop();
@@ -525,7 +526,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     // 整段播放時只念日文行（跳過中文翻譯行）
     final japaneseOnly =
         lines.where((l) => !_isTranslationLine(l)).join('\n');
-    final isWholePlaying = _playingText == japaneseOnly.trim();
+    // _playingText 存的是去掉標音後的純文字，比對時要一致
+    final isWholePlaying =
+        _playingText == FuriganaText.cleanFuriganaForTts(japaneseOnly).trim();
 
     return Stack(
       children: [
@@ -541,12 +544,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: lines.map((line) {
-              // 中文翻譯行：灰色小字、不可點擊
+              // 中文翻譯行：灰色小字、不可點擊（翻譯不會有標音，保險起見仍清一次）
               if (_isTranslationLine(line)) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
-                    line,
+                    FuriganaText.cleanFuriganaForTts(line),
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 13,
@@ -559,8 +562,13 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.end,
                   children: sentences.map((s) {
-                    final isPlaying = _playingText == s;
+                    // 比對播放狀態時統一用去掉標音的純文字
+                    final plain = FuriganaText.cleanFuriganaForTts(s);
+                    final isPlaying = _playingText == plain;
+                    final color =
+                        isPlaying ? AppColors.primary : AppColors.textDark;
                     return GestureDetector(
                       onTap: () => _playTts(s),
                       child: Container(
@@ -575,15 +583,17 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                               : null,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(
-                          s,
-                          style: TextStyle(
-                            color: isPlaying
-                                ? AppColors.primary
-                                : AppColors.textDark,
-                            fontSize: 15,
-                          ),
-                        ),
+                        // 開關打開 → 漢字上方顯示假名；關閉 → 顯示乾淨的純文字
+                        child: _showFurigana
+                            ? FuriganaText(
+                                text: s,
+                                fontSize: 15,
+                                textColor: color,
+                              )
+                            : Text(
+                                plain,
+                                style: TextStyle(color: color, fontSize: 15),
+                              ),
                       ),
                     );
                   }).toList(),
@@ -633,7 +643,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           Row(
             children: [
               const Text(
-                'ふりがな',
+                '漢字讀音',
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
               Switch(
@@ -752,11 +762,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                 }
                               },
                               child: Builder(builder: (_) {
-                                // 配合功能 2：如果未來有 furiganaText 欄位且開關打開，就顯示標音版文字
-                                final String displayText = (_showFurigana &&
-                                        msg.containsKey('furiganaText'))
-                                    ? msg['furiganaText']
-                                    : messageText;
+                                // 標音由 _buildAiBubble 依「漢字讀音」開關即時切換渲染
+                                final String displayText = messageText;
 
                                 if (isUserMessage) {
                                   return Container(

@@ -64,10 +64,10 @@ class FuriganaText extends StatelessWidget {
 
       if (match.group(1) != null) {
         // 格式 1: [漢字|假名]
-        tokens.add(_FuriganaToken(match.group(1)!, match.group(2)!));
+        _addAnnotatedToken(tokens, match.group(1)!, match.group(2)!);
       } else if (match.group(3) != null) {
         // 格式 2: 漢字[假名]
-        tokens.add(_FuriganaToken(match.group(3)!, match.group(4)!));
+        _addAnnotatedToken(tokens, match.group(3)!, match.group(4)!);
       }
 
       currentIndex = match.end;
@@ -79,6 +79,20 @@ class FuriganaText extends StatelessWidget {
     }
 
     return tokens;
+  }
+
+  /// 加入一個標音詞：若標音與本體完全相同（例如 AI 誤把假名標成 [こんにちは|こんにちは]），
+  /// 視為冗餘標音，改以一般文字呈現，避免同樣的字上下重複顯示。
+  static void _addAnnotatedToken(
+    List<_FuriganaToken> tokens,
+    String base,
+    String furigana,
+  ) {
+    if (base == furigana) {
+      _addNormalTextTokens(tokens, base);
+    } else {
+      tokens.add(_FuriganaToken(base, furigana));
+    }
   }
 
   /// 將沒有標音的一般文字進行細分：

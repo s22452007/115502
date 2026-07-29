@@ -122,6 +122,18 @@ def analyze_scene():
                     )
                     db.session.add(v)
                     db.session.flush() # 取得 v.id
+                else:
+                    # 如果現有單字缺少翻譯或標音，用新辨識生成的例句自動幫它補齊升級
+                    if not v.sentence_basic_zh and sentence.get('chinese'):
+                        v.sentence_basic_zh = sentence.get('chinese', '')
+                        v.sentence_inter_zh = sentence.get('chinese_inter', '')
+                        v.sentence_upper_inter_zh = sentence.get('chinese_upper', '')
+                        v.sentence_advanced_zh = sentence.get('chinese_adv', '')
+                    if '[' not in (v.sentence_basic or '') and '[' in sentence.get('japanese', ''):
+                        v.sentence_basic = sentence.get('japanese', '')
+                        v.sentence_inter = sentence.get('japanese_inter', '')
+                        v.sentence_upper_inter = sentence.get('japanese_upper', '')
+                        v.sentence_advanced = sentence.get('japanese_adv', '')
                 
                 # B. 建立照片明細檔 (UserPhotoVocab) -> 記錄這張照片裡有這個字
                 #    若有情境例句就一併存入 context_sentence

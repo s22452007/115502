@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
-import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/screens/scenario/role_play_intro_screen.dart';
-// 👉 引入我們剛剛寫好的新增角色彈出視窗
-import 'package:jpn_learning_app/widgets/add_character_dialog.dart';
+import 'package:jpn_learning_app/screens/scenario/role_play_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
   const ManualSearchScreen({Key? key}) : super(key: key);
@@ -18,7 +16,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _scenes = [];
 
-  // 👉 新增：角色清單資料
+  // 角色清單資料
   final List<Map<String, dynamic>> _characters = [
     {
       'name': '預設老師',
@@ -41,7 +39,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     
   ];
 
-  // 👉 新增：預設選中的角色
+  // 預設選中的角色
   String _selectedCharacterName = '預設老師';
 
   @override
@@ -72,10 +70,109 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       MaterialPageRoute(
         builder: (_) => RolePlayIntroScreen(
           topicTitle: selectedTopic,
-          // 👉 修改：把選好的角色名字一起傳給下一頁！
           characterName: _selectedCharacterName, 
         ),
       ),
+    );
+  }
+
+  // 👉 新增：直接寫在檔案裡的「新增角色彈窗」函數
+  Future<void> _showAddCharacterDialog(BuildContext context) async {
+    final nameCtrl = TextEditingController();
+    final originCtrl = TextEditingController();
+    final ageCtrl = TextEditingController();
+    final genderCtrl = TextEditingController();
+    final personalityCtrl = TextEditingController();
+    final traitsCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('新增對話角色', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: '姓名 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                  cursorColor: AppColors.primary,
+                ),
+                TextField(
+                  controller: originCtrl,
+                  decoration: const InputDecoration(labelText: '出身地', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                  cursorColor: AppColors.primary,
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: ageCtrl,
+                        decoration: const InputDecoration(labelText: '年紀', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                        keyboardType: TextInputType.number,
+                        cursorColor: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: genderCtrl,
+                        decoration: const InputDecoration(labelText: '性別', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                        cursorColor: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                TextField(
+                  controller: personalityCtrl,
+                  decoration: const InputDecoration(labelText: '個性', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                  cursorColor: AppColors.primary,
+                ),
+                TextField(
+                  controller: traitsCtrl,
+                  decoration: const InputDecoration(labelText: '特殊設定', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                  maxLines: 2,
+                  cursorColor: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+
+                // 儲存資料並更新畫面
+                setState(() {
+                  _characters.add({
+                    'name': nameCtrl.text.trim(),
+                    'role': '自訂角色',
+                    'origin': originCtrl.text.trim(),
+                    'age': ageCtrl.text.trim(),
+                    'gender': genderCtrl.text.trim(),
+                    'personality': personalityCtrl.text.trim(),
+                    'special_traits': traitsCtrl.text.trim(),
+                  });
+                  _selectedCharacterName = nameCtrl.text.trim();
+                });
+
+                Navigator.pop(context); // 關閉彈窗
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('新增並選擇', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -90,7 +187,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 👉 修改：把上半部包進 Expanded 與 SingleChildScrollView，防止螢幕太小塞不下
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
@@ -207,7 +303,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                       
                       const SizedBox(height: 32),
 
-                      // 👉 新增：選擇對象區塊
                       const Text(
                         '選擇對話對象',
                         style: TextStyle(
@@ -218,30 +313,18 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      // 橫向滑動的角色清單
                       SizedBox(
                         height: 60,
-                        // 往左移一點點 padding 讓畫面看起來更對齊
                         child: ListView.builder(
                           padding: const EdgeInsets.only(right: 16), 
                           scrollDirection: Axis.horizontal,
                           itemCount: _characters.length + 1,
                           itemBuilder: (context, index) {
+                            
+                            // 渲染新增按鈕
                             if (index == _characters.length) {
                               return GestureDetector(
-                                onTap: () async {
-                                  final newCharacter = await showDialog<Map<String, dynamic>>(
-                                    context: context,
-                                    builder: (context) => const AddCharacterDialog(themeColor: AppColors.primary),
-                                  );
-                                  
-                                  if (newCharacter != null) {
-                                    setState(() {
-                                      _characters.add(newCharacter);
-                                      _selectedCharacterName = newCharacter['name'];
-                                    });
-                                  }
-                                },
+                                onTap: () => _showAddCharacterDialog(context), // 呼叫本檔案內的函數
                                 child: Container(
                                   margin: const EdgeInsets.only(right: 8),
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -261,6 +344,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                               );
                             }
 
+                            // 渲染一般角色卡片
                             final char = _characters[index];
                             final isSelected = _selectedCharacterName == char['name'];
 
@@ -289,13 +373,12 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(height: 20), // 預留一點底部空間
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
 
-              // 底部的「開始生成」按鈕保持在最下方
               SizedBox(
                 width: double.infinity,
                 height: 54,

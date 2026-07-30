@@ -13,15 +13,14 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 class RoleplayScreen extends StatefulWidget {
   final String topicTitle;
-  // 1. 新增這一行：宣告要接收角色名字的變數
   final String characterName; 
 
   const RoleplayScreen({
     Key? key,
     required this.topicTitle,
-    // 2. 新增這一行：規定進來這個頁面必須提供 characterName
     required this.characterName, 
   }) : super(key: key);
+
   @override
   State<RoleplayScreen> createState() => _RoleplayScreenState();
 }
@@ -31,45 +30,37 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   final List<Map<String, dynamic>> _messages = [];
 
   bool _isTyping = false;
-
-  // 功能 2：假名標音開關狀態
   bool _showFurigana = false;
-
-  // 功能 4：快捷回覆籌碼資料
   List<String> _quickReplies = [];
 
-  // 使用量顯示狀態
   int _aiUsed = 0;
   int _aiMax = 3;
   int _aiExtra = 0;
 
-  // TTS 語音播放
   final AudioPlayer _audioPlayer = AudioPlayer();
-  String? _playingText; // 目前正在載入/播放的文字（用來顯示播放中狀態）
+  String? _playingText; 
 
-  // 🎤 語音輸入（Speech-to-Text）
   final SpeechToText _speech = SpeechToText();
-  bool _speechEnabled = false; // 裝置是否支援語音辨識
-  bool _isListening = false;   // 是否正在聆聽
-  bool _speechJapanese = true; // 辨識語言：true=日語、false=中文
+  bool _speechEnabled = false; 
+  bool _isListening = false;   
+  bool _speechJapanese = true; 
 
   @override
   void initState() {
     super.initState();
-    _fetchUsageData(); // 初始化時抓取使用量
-    _initSpeech();     // 初始化語音辨識
+    _fetchUsageData(); 
+    _initSpeech();     
 
-    // 播放結束後清除播放中狀態
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingText = null);
     });
 
+    // 👉 1. 修改：一進來的歡迎訊息，把角色名字印出來讓使用者知道
     _messages.add({
-      'text': '歡迎來到「${widget.topicTitle}」！先開個頭吧！✨不知道如何開頭的話可以輸入：幫我開場',
+      'text': '歡迎來到「${widget.topicTitle}」！\n我是今天的對話對象「${widget.characterName}」✨\n不知道如何開頭的話可以點擊下方：幫我開場',
       'isUserMessage': false,
     });
 
-    // 模擬：一進來先給幾個快捷選項
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
   }
 
@@ -81,14 +72,10 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     super.dispose();
   }
 
-  // ==========================================
-  // 🎤 語音輸入（講日文 → 自動轉成文字填入輸入框）
-  // ==========================================
   Future<void> _initSpeech() async {
     try {
       _speechEnabled = await _speech.initialize(
         onStatus: (status) {
-          // 辨識自動結束（講完停頓、逾時）時同步按鈕狀態
           if (status == 'done' || status == 'notListening') {
             if (mounted) setState(() => _isListening = false);
           }
@@ -121,19 +108,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     }
 
     setState(() => _isListening = true);
-    // locale 格式：web(瀏覽器 Web Speech API) 用連字號 ja-JP / zh-TW，
-    // Android/iOS 原生端用底線 ja_JP / zh_TW，格式不對會退回系統預設語言。
     final locale = _speechJapanese
         ? (kIsWeb ? 'ja-JP' : 'ja_JP')
         : (kIsWeb ? 'zh-TW' : 'zh_TW');
     await _speech.listen(
       listenOptions: SpeechListenOptions(
-        localeId: locale, // 依使用者選擇的語言辨識
-        partialResults: true, // 邊講邊顯示
+        localeId: locale, 
+        partialResults: true, 
         listenMode: ListenMode.dictation,
       ),
       onResult: (result) {
-        // 將辨識結果即時填入輸入框
         setState(() {
           _controller.text = result.recognizedWords;
           _controller.selection = TextSelection.fromPosition(
@@ -144,11 +128,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     );
   }
 
-  // ==========================================
-  // 🔊 TTS 語音播放（呼叫後端 /api/tts/synthesize）
-  // ==========================================
   Future<void> _playTts(String text) async {
-    // 送去合成前先移除 [漢字|假名] 標音，否則 TTS 會把括號和假名一起念出來
     final t = FuriganaText.cleanFuriganaForTts(text).trim();
     if (t.isEmpty) return;
 
@@ -169,7 +149,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final bytes = base64Decode(data['audio_base64'] as String);
         await _audioPlayer.play(BytesSource(bytes));
-        // 播放結束後由 onPlayerComplete 監聽器清除 _playingText
       } else {
         setState(() => _playingText = null);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -183,7 +162,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     }
   }
 
-  // 將 AI 回覆拆成句子（依換行與日文/全形標點切分）
   List<String> _splitSentences(String text) {
     final sentences = <String>[];
     for (final line in text.split('\n')) {
@@ -196,7 +174,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     return sentences;
   }
 
-  // 抓取最新使用量
   Future<void> _fetchUsageData() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
@@ -206,13 +183,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       setState(() {
         _aiUsed = (res['ai_count_today'] as num?)?.toInt() ?? 0;
         _aiExtra = (res['ai_extra_count'] as num?)?.toInt() ?? 0;
-        // 後端回傳欄位是 is_premium（原本誤讀 subscription_status，導致上限永遠顯示 3）
         _aiMax = res['is_premium'] == true ? 10 : 3;
       });
     }
   }
 
-  // 核心：每次傳訊息前先檢查額度，onBoughtRetry 為購買成功後自動重試的動作
   Future<bool> _checkAILimit({void Function()? onBoughtRetry}) async {
     final provider = context.read<UserProvider>();
     final userId = provider.userId;
@@ -235,7 +210,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       });
       return true;
     } else {
-      // 網路錯誤或伺服器錯誤時不放行，避免額度檢查被繞過
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('連線失敗，無法確認使用次數，請稍後再試'),
         backgroundColor: Colors.redAccent,
@@ -244,7 +218,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     }
   }
 
-  // 次數用盡的 BottomSheet
   void _showQuotaBottomSheet(int used, int limit, void Function() onBoughtRetry) {
     final provider = context.read<UserProvider>();
     final jPts = provider.jPts;
@@ -322,7 +295,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     );
   }
 
-  // 花費 60 點加購 AI 次數，成功後自動執行 onRetry
   Future<void> _buyExtraAndRetry(void Function() onRetry) async {
     final provider = context.read<UserProvider>();
     final userId = provider.userId;
@@ -346,11 +318,10 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     }
     await _fetchUsageData();
     if (!mounted) return;
-    onRetry(); // 自動重試原本的動作
+    onRetry(); 
   }
 
   Future<void> _triggerAIOpening() async {
-    // 發送前檢查次數
     final canProceed = await _checkAILimit(onBoughtRetry: () { _triggerAIOpening(); });
     if (!canProceed) return;
 
@@ -368,6 +339,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'message': '[幫我開場]',
           'topic': widget.topicTitle,
           'level': levelToPass,
+          // 👉 2. 修改：把角色名字傳給後端
+          'character': widget.characterName, 
           'history': '',
         },
       );
@@ -377,7 +350,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           _messages.add({'text': response.body, 'isUserMessage': false});
         });
 
-        await _fetchUsageData(); // 開場成功後重新載入使用量
+        await _fetchUsageData(); 
       }
     } catch (e) {
       print('開場請求發生錯誤: $e');
@@ -393,14 +366,13 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // 發送前檢查次數
     final canProceed = await _checkAILimit(onBoughtRetry: () { _sendMessage(); });
     if (!canProceed) return;
 
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
       _isTyping = true;
-      _quickReplies.clear(); // 發送訊息後清空快捷鍵
+      _quickReplies.clear(); 
     });
 
     _controller.clear();
@@ -416,30 +388,23 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'message': text,
           'topic': widget.topicTitle,
           'level': levelToPass,
+          // 👉 3. 修改：把角色名字傳給後端
+          'character': widget.characterName,
           'history': '',
         },
       );
 
       if (response.statusCode == 200 && mounted) {
-        /*
-          這裡未來需要配合後端改為解析 JSON
-          目前先寫死模擬資料，讓你看 UI 效果
-          Map<String, dynamic> data = json.decode(response.body);
-        */
-
         setState(() {
           _messages.add({
-            'text': response.body, // 正常 API 回覆
+            'text': response.body, 
             'isUserMessage': false,
-            // 模擬功能 3：語法糾正 (未來從 data['correction'] 取得)
             'correction': text.contains('錯') ? '剛剛的句子動詞變化有點小問題喔！建議改成...' : null,
           });
-
-          // 模擬功能 4：更新快捷選項 (未來從 data['quick_replies'] 取得)
           _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
         });
 
-        await _fetchUsageData(); // 訊息成功後重新載入使用量
+        await _fetchUsageData(); 
       }
     } catch (e) {
       print('發送請求時發生錯誤: $e');
@@ -451,7 +416,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     }
   }
 
-  // 功能 1：顯示單句點擊操作的 Bottom Sheet
   void _showBottomSheetOptions(BuildContext context, String messageText) {
     showModalBottomSheet(
       context: context,
@@ -474,7 +438,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 title: const Text('翻譯成中文'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: 呼叫翻譯功能或顯示翻譯 UI
                 },
               ),
               ListTile(
@@ -493,7 +456,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 title: const Text('收藏此句'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: 呼叫後端 API 存入單字本或收藏庫
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(const SnackBar(content: Text('已加入收藏！')));
@@ -507,26 +469,19 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     );
   }
 
-  // 判斷是否為中文翻譯行（以全形/半形括號開頭）
   bool _isTranslationLine(String line) =>
       line.startsWith('（') || line.startsWith('(');
 
-  // AI 訊息泡泡：右上角 🔊 播放整段日文，內文按行排版、日文句子可點擊播放
   Widget _buildAiBubble(String displayText) {
-    // 保險起見清掉 AI 偶爾輸出的 Markdown 符號
     final cleaned = displayText.replaceAll('**', '').replaceAll('*', '');
-
-    // 依換行切成行，保留段落結構
     final lines = cleaned
         .split('\n')
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
         .toList();
 
-    // 整段播放時只念日文行（跳過中文翻譯行）
     final japaneseOnly =
         lines.where((l) => !_isTranslationLine(l)).join('\n');
-    // _playingText 存的是去掉標音後的純文字，比對時要一致
     final isWholePlaying =
         _playingText == FuriganaText.cleanFuriganaForTts(japaneseOnly).trim();
 
@@ -534,7 +489,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       children: [
         Container(
           margin: const EdgeInsets.only(bottom: 12),
-          // 右側多留空間給右上角的播放按鈕
           padding: const EdgeInsets.fromLTRB(16, 12, 44, 12),
           decoration: BoxDecoration(
             color: AppColors.primaryLighter,
@@ -544,7 +498,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: lines.map((line) {
-              // 中文翻譯行：灰色小字、不可點擊（翻譯不會有標音，保險起見仍清一次）
               if (_isTranslationLine(line)) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -557,14 +510,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   ),
                 );
               }
-              // 日文行：拆句、單句點擊播放
               final sentences = _splitSentences(line);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Wrap(
                   crossAxisAlignment: WrapCrossAlignment.end,
                   children: sentences.map((s) {
-                    // 比對播放狀態時統一用去掉標音的純文字
                     final plain = FuriganaText.cleanFuriganaForTts(s);
                     final isPlaying = _playingText == plain;
                     final color =
@@ -583,7 +534,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                               : null,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        // 開關打開 → 漢字上方顯示假名；關閉 → 顯示乾淨的純文字
                         child: _showFurigana
                             ? FuriganaText(
                                 text: s,
@@ -602,7 +552,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             }).toList(),
           ),
         ),
-        // 🔊 右上角：播放整段 AI 回覆（只念日文，跳過翻譯）
         Positioned(
           top: 8,
           right: 10,
@@ -638,7 +587,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        // 功能 2：假名標音切換按鈕
         actions: [
           Row(
             children: [
@@ -661,7 +609,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       ),
       body: Column(
         children: [
-          // 頂部：次數顯示條
           Builder(builder: (_) {
             final dailyRemaining = (_aiMax - _aiUsed).clamp(0, _aiMax);
             final effectiveRemaining = dailyRemaining + _aiExtra;
@@ -691,7 +638,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 final msg = _messages[i];
                 bool isUserMessage = msg['isUserMessage'] ?? false;
                 String messageText = msg['text'] ?? '';
-                String? correction = msg['correction']; // 檢查是否有語法糾正
+                String? correction = msg['correction']; 
 
                 return Align(
                   alignment: isUserMessage
@@ -714,14 +661,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                         const SizedBox(width: 8),
                       ],
 
-                      // 外層包一個 Flexible 避免超出邊界
                       Flexible(
                         child: Column(
                           crossAxisAlignment: isUserMessage
                               ? CrossAxisAlignment.end
                               : CrossAxisAlignment.start,
                           children: [
-                            // 功能 3：如果有語法糾正，顯示提示卡片
                             if (correction != null && !isUserMessage)
                               Container(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -754,7 +699,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                   ],
                                 ),
                               ),
-                            // 功能 1：長按開啟操作選單；AI 訊息點擊單句可播放語音
                             GestureDetector(
                               onLongPress: () {
                                 if (!isUserMessage) {
@@ -762,7 +706,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                 }
                               },
                               child: Builder(builder: (_) {
-                                // 標音由 _buildAiBubble 依「漢字讀音」開關即時切換渲染
                                 final String displayText = messageText;
 
                                 if (isUserMessage) {
@@ -823,11 +766,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 ],
               ),
             ),
-          // 底部區域包裝在一起
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 功能 4：快捷回覆籌碼
               if (_quickReplies.isNotEmpty)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -844,7 +785,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                             label: Text(reply, style: const TextStyle(color: AppColors.primary)),
                             onPressed: () {
                               _controller.text = reply;
-                              //如果是 "幫我開場" 呼叫 trigger
                               if (reply == '幫我開場') {
                                 _triggerAIOpening();
                                 _quickReplies.clear();
@@ -878,10 +818,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                           : '語音輸入（${_speechJapanese ? '日語' : '中文'}）',
                       onPressed: _toggleListening,
                     ),
-                    // 🌐 語音辨識語言切換（日 ⇄ 中）
                     GestureDetector(
                       onTap: () async {
-                        // 聆聽中切換語言：先停止再切換，避免辨識語言錯亂
                         if (_isListening) {
                           await _speech.stop();
                         }

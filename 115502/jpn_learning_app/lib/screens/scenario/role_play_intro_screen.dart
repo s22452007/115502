@@ -4,10 +4,12 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
   final String topicTitle;
+  final String characterName;
 
   const RolePlayIntroScreen({
     Key? key,
     required this.topicTitle,
+    required this.characterName,
   }) : super(key: key);
 
   @override

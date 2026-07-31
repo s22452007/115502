@@ -22,7 +22,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       'name': '預設老師',
       'role': '親切耐心，標準日語',
       'origin': '東京',
-      'age': '28',
+      'age': '30',
       'gender': '女',
       'personality': '溫柔、有耐心、發音標準',
       'special_traits': '專業的日語教師，會糾正文法錯誤',

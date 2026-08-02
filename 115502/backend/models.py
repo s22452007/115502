@@ -398,6 +398,7 @@ class Article(db.Model):
     translation = db.Column(db.Text, nullable=True) # 中文翻譯
     grammar_points = db.Column(db.JSON, nullable=True) # 重點文法解析 (存成 JSON 格式)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
 
 class ArticleProgress(db.Model):
     __tablename__ = 'article_progress'
@@ -413,5 +414,23 @@ class ArticleProgress(db.Model):
     # 建立關聯 (選用，方便查詢)
     article = db.relationship('Article', backref=db.backref('user_progress', lazy=True))
 
+# ==========================================
+# 🌟 新增：文章解鎖紀錄資料表 (已修正外鍵名稱)
+# ==========================================
+class UnlockedArticle(db.Model):
+    __tablename__ = 'unlocked_articles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    # 🌟 這裡把 'users.id' 改成了 'user.id' (單數)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "article_id": self.article_id,
+            "unlocked_at": self.unlocked_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
  

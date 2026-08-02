@@ -7,17 +7,18 @@ import random
 import time
 import google.generativeai as genai
 from flask import Blueprint, request, jsonify
-from models import db, Article, User, ArticleProgress
+from models import db, User, Article, UnlockedArticle
+from datetime import datetime
 
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
 
 # ==========================================
-# 1. 取得文章列表 (Dashboard)
+# 1. 取得文章列表 (動態判斷是否已解鎖)
 # ==========================================
 @article_bp.route('/dashboard', methods=['GET'])
 def get_article_dashboard():
-    """獲取文章練習主頁的5個主題文章"""
+    """獲取文章練習列表，並檢查每篇文章的解鎖狀態"""
     user_id = request.args.get('user_id', type=int)
     user_level = request.args.get('level', type=str)
     
@@ -29,31 +30,42 @@ def get_article_dashboard():
     if not user_level:
         user_level = 'N3'
         
-    themes = ['日常生活', '日本文化', '旅遊觀光', '職場應用', '流行動漫']
-    dashboard_data = []
-    
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
     try:
-        for theme in themes:
-            articles = Article.query.filter_by(level=user_level, theme=theme).all()
-            if articles:
-                chosen = random.choice(articles)
-                dashboard_data.append({
-                    "id": chosen.id,
-                    "theme": chosen.theme,
-                    "title": chosen.title,
-                    "level": chosen.level,
-                    "content": chosen.content,
-                    "translation": chosen.translation,
-                    "grammar_points": chosen.grammar_points
-                })
-            else:
-                dashboard_data.append({
-                    "id": 0, "theme": theme, "title": f"暫無 {user_level} 程度的文章",
-                    "level": user_level, "content": "このテーマの記事はまだありません。",
-                    "translation": "這個主題目前還沒有文章喔！", "grammar_points": []
-                })
-                
-        return jsonify({"status": "success", "data": dashboard_data}), 200
+        # 1. 抓出該難度等級的所有文章
+        articles = Article.query.filter_by(level=user_level).all()
+
+        # 2. 抓出這個玩家「已經解鎖」的所有文章 ID 清單
+        unlocked_records = UnlockedArticle.query.filter_by(user_id=user_id).all()
+        unlocked_article_ids = [record.article_id for record in unlocked_records]
+
+        result = []
+        # 💡 這裡設定前 3 篇文章為免費試閱 (ID 1, 2, 3)
+        free_article_ids = [1, 2, 3] 
+
+        for a in articles:
+            # 動態判斷：如果是免費文章，或是玩家已經解鎖過，is_unlocked 就是 True
+            is_unlocked = (a.id in free_article_ids) or (a.id in unlocked_article_ids)
+
+            result.append({
+                "id": a.id,
+                "theme": a.theme,
+                "level": a.level,
+                "title": a.title,
+                "content": a.content,
+                "translation": a.translation,
+                "grammar_points": a.grammar_points,
+                "is_unlocked": is_unlocked
+            })
+
+        # 🌟 關鍵修復：還原為前端預期的格式 {"status": "success", "data": [...]}
+        return jsonify({
+            "status": "success", 
+            "data": result
+        }), 200
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -167,7 +179,6 @@ def evaluate_audio():
 def seed_articles():
     """自動清除舊文章，並強制注入帶有假名標註的日文文章"""
     try:
-        # 🌟 強制清空舊文章，確保資料庫內容更新為帶有 Ruby 標籤的新版本
         Article.query.delete()
         db.session.commit()
 
@@ -199,3 +210,36 @@ def seed_articles():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"建立失敗: {str(e)}"}), 500
+
+
+# ==========================================
+# 4. 解鎖文章 API (配合原有系統，單純寫入紀錄)
+# ==========================================
+@article_bp.route('/unlock', methods=['POST'])
+def unlock_article():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    article_id = data.get('article_id')
+
+    if not user_id or not article_id:
+        return jsonify({"error": "缺少必要參數"}), 400
+
+    # 1. 檢查是否已經解鎖過
+    existing_unlock = UnlockedArticle.query.filter_by(user_id=user_id, article_id=article_id).first()
+    if existing_unlock:
+        return jsonify({"status": "already_unlocked", "message": "此文章已解鎖"}), 200
+
+    try:
+        # 2. 單純寫入解鎖紀錄 (點數檢查與扣除交由 Flutter 前端處理)
+        new_unlock = UnlockedArticle(user_id=user_id, article_id=article_id)
+        db.session.add(new_unlock)
+        db.session.commit()
+
+        return jsonify({
+            "status": "success", 
+            "message": "解鎖成功"
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"解鎖失敗: {str(e)}"}), 500

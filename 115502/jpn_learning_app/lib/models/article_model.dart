@@ -8,6 +8,7 @@ class Article {
   final String content;
   final String translation;
   final Map<String, dynamic>? grammarPoints;
+  final bool isUnlocked;
 
   Article({
     required this.id,
@@ -17,6 +18,9 @@ class Article {
     required this.content,
     required this.translation,
     this.grammarPoints,
+    // 🌟 新增 2：加入建構子 (預設為 true，避免其他原本沒有上鎖機制的頁面報錯)
+    this.isUnlocked = true, 
+  
   });
 
   factory Article.fromJson(Map<String, dynamic> json) {
@@ -28,6 +32,8 @@ class Article {
       content: json['content'] ?? '',
       translation: json['translation'] ?? '',
       grammarPoints: json['grammar_points'],
+// 🌟 新增 3：從後端 JSON 解析解鎖狀態 (若後端沒傳，預設為 true 自由閱讀)
+      isUnlocked: json['is_unlocked'] ?? true, 
     );
   }
 }

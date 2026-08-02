@@ -836,5 +836,28 @@ class ApiClient {
       return {'error': e.toString()};
     }
   }
+  // ==========================================
+  // 文章解鎖 API
+  // ==========================================
+  static Future<Map<String, dynamic>> unlockArticle(int userId, int articleId, int cost) async {
+    final url = Uri.parse('$baseUrl/articles/unlock');
+    try {
+      var response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'article_id': articleId,
+          'cost': cost,
+        }),
+      );
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      data['_status'] = response.statusCode;
+      return data;
+    } catch (e) {
+      debugPrint('文章解鎖連線失敗: $e');
+      return {'status': 'error', '_status': 500};
+    }
+  }
 }
 

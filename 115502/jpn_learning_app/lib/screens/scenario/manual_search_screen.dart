@@ -18,7 +18,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 
   // 角色清單資料
   final List<Map<String, dynamic>> _characters = [
-    {
+    { 
       'name': '預設老師',
       'role': '親切耐心，標準日語',
       'origin': '東京',

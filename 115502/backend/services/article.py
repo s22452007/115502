@@ -42,8 +42,14 @@ def get_article_dashboard():
         unlocked_article_ids = [record.article_id for record in unlocked_records]
 
         result = []
-        # 💡 這裡設定前 3 篇文章為免費試閱 (ID 1, 2, 3)
-        free_article_ids = [1, 2, 3] 
+       # 這些 ID 對應各級別的 5 篇一般文章，使用者不需付費即可閱讀
+        free_article_ids = [
+            101, 102, 103, 104, 105,  # N5
+            201, 202, 203, 204, 205,  # N4
+            301, 302, 303, 304, 305,  # N3
+            401, 402, 403, 404, 405,  # N2
+            501, 502, 503, 504, 505   # N1
+]
 
         for a in articles:
             # 動態判斷：如果是免費文章，或是玩家已經解鎖過，is_unlocked 就是 True
@@ -130,11 +136,16 @@ def evaluate_audio():
         你是一位極度專業的日語發音家教。
         【標準答案】：{article_text}
         【學生真實唸出】：{transcript}
-        請嚴格執行比對規則，並以純 JSON 格式回傳：
+        
+        【重要指令】：
+        1. 請嚴格執行比對規則。
+        2. 所有的評語、糾正與解釋，請務必全部使用「繁體中文」撰寫，絕對不可以使用日文給予評語。
+        
+        請以純 JSON 格式回傳（請不要加上 ```json 等 Markdown 標記，只要 JSON 本身）：
         {{
             "score": 100,
             "mistakes": [],
-            "overall_feedback": "評語寫這裡"
+            "overall_feedback": "請在這裡使用繁體中文撰寫評語"
         }}
         """
         

@@ -60,6 +60,7 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
             builder: (_) => SceneResultScreen(
               imagePath: widget.imagePath,
               analysisData: result['result'],
+              milestone: (result['milestone'] as Map?)?.cast<String, dynamic>(),
             ),
           ),
         );

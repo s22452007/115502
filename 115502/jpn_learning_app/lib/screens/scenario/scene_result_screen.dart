@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
@@ -12,11 +14,14 @@ import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
 class SceneResultScreen extends StatefulWidget {
   final String imagePath;
   final Map<String, dynamic>? analysisData;
+  // 主題里程碑：這次拍照若跨過「過半/集滿」門檻，後端會帶回此資料；null 代表沒跨過
+  final Map<String, dynamic>? milestone;
 
   const SceneResultScreen({
     Key? key,
     required this.imagePath,
     this.analysisData,
+    this.milestone,
   }) : super(key: key);
 
   @override
@@ -24,6 +29,35 @@ class SceneResultScreen extends StatefulWidget {
 }
 
 class _SceneResultScreenState extends State<SceneResultScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // 進頁後若有里程碑，等第一幀畫完再彈出一次性慶祝動畫
+    if (widget.milestone != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showMilestoneCelebration(widget.milestone!);
+      });
+    }
+  }
+
+  void _showMilestoneCelebration(Map<String, dynamic> milestone) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '里程碑',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 420),
+      pageBuilder: (_, __, ___) => _MilestoneCelebration(milestone: milestone),
+      transitionBuilder: (_, anim, __, child) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutBack);
+        return FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(scale: Tween(begin: 0.7, end: 1.0).animate(curved), child: child),
+        );
+      },
+    );
+  }
+
   List<Map<String, dynamic>> get _vocabs {
     final raw = widget.analysisData?['vocabs'];
     if (raw is! List) return [];
@@ -271,4 +305,161 @@ class _FullPhotoViewer extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 主題里程碑的一次性慶祝：卡片 + 灑落的彩帶，數秒後自動關閉（也可點擊關閉）。
+class _MilestoneCelebration extends StatefulWidget {
+  final Map<String, dynamic> milestone;
+  const _MilestoneCelebration({required this.milestone});
+
+  @override
+  State<_MilestoneCelebration> createState() => _MilestoneCelebrationState();
+}
+
+class _MilestoneCelebrationState extends State<_MilestoneCelebration>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  Timer? _autoClose;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    )..forward();
+    // 約 2.8 秒後自動關閉（若使用者沒先點掉）
+    _autoClose = Timer(const Duration(milliseconds: 2800), () {
+      if (mounted) Navigator.of(context).maybePop();
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoClose?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _isComplete => widget.milestone['type'] == 'complete';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.milestone['theme_name']?.toString() ?? '主題';
+    final unlocked = widget.milestone['unlocked'] ?? 0;
+    final total = widget.milestone['total'] ?? 0;
+    final accent = _isComplete ? AppColors.gold : AppColors.primary;
+    final emoji = _isComplete ? '🏆' : '✨';
+    final title = _isComplete ? '集滿整本收集冊！' : '收集過半！';
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).maybePop(),
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 彩帶
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (_, __) => CustomPaint(
+                painter: _ConfettiPainter(_controller.value, accent),
+              ),
+            ),
+          ),
+          // 卡片
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.35),
+                  blurRadius: 30,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 56)),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  theme,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '已收集 $unlocked / $total 個單字',
+                  style: const TextStyle(fontSize: 13, color: AppColors.textGrey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 簡單的彩帶效果：一批彩色小方塊由上往下灑落並旋轉淡出。
+class _ConfettiPainter extends CustomPainter {
+  final double progress; // 0.0 ~ 1.0
+  final Color accent;
+  _ConfettiPainter(this.progress, this.accent);
+
+  static final List<Color> _palette = [
+    AppColors.primary,
+    AppColors.secondary,
+    AppColors.gold,
+    const Color(0xFFE57373),
+    const Color(0xFF64B5F6),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const count = 28;
+    for (int i = 0; i < count; i++) {
+      final rnd = math.Random(i); // 固定種子 -> 每次形狀一致、不亂跳
+      final startX = rnd.nextDouble() * size.width;
+      final drift = (rnd.nextDouble() - 0.5) * 80;
+      final delay = rnd.nextDouble() * 0.3;
+      final t = ((progress - delay) / (1 - delay)).clamp(0.0, 1.0);
+      if (t <= 0) continue;
+
+      final x = startX + drift * t;
+      final y = -20 + (size.height + 40) * t;
+      final opacity = (1.0 - t).clamp(0.0, 1.0);
+      final angle = t * (4 + rnd.nextDouble() * 4);
+
+      final paint = Paint()
+        ..color = _palette[i % _palette.length].withValues(alpha: opacity);
+
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(angle);
+      final w = 6.0 + rnd.nextDouble() * 5;
+      canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: w, height: w * 0.6), paint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.progress != progress;
 }

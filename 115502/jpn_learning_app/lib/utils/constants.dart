@@ -15,6 +15,7 @@ class AppColors {
   static const Color background = Color(0xFFF5F5F0);   // 頁面背景
   static const Color cardBackground = Color(0xFFFFFFFF); // 卡片背景
   static const Color lightBg = Color(0xFFF8F9FA);      // 淡白背景
+ 
 
   // 卡片色
   static const Color cardGreen = Color(0xFFE8F5E9);    // 綠色卡片

@@ -6,6 +6,7 @@ import re
 import random
 import time
 import google.generativeai as genai
+
 from flask import Blueprint, request, jsonify
 from models import db, User, Article, UnlockedArticle
 from datetime import datetime

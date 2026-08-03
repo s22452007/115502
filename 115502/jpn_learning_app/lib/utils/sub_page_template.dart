@@ -51,7 +51,7 @@ class SubPageTemplate extends StatelessWidget {
               title: Text(
                 title,
                 style: AppTextStyles.heading.copyWith(
-                  color: AppColors.primary,
+                  color: AppColors.textGrey,
                 ),
               ),
               actions: actions,

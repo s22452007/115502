@@ -26,10 +26,18 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
     });
   }
 
-  void _loadArticles() {
-    final userId = context.read<UserProvider>().userId ?? 0;
+void _loadArticles() {
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId ?? 0;
+    
+    // 🌟 動態獲取使用者的真實等級，如果沒有設定，預設給 N3
+    String userLevel = userProvider.japaneseLevel;
+    if (userLevel.isEmpty) {
+      userLevel = 'N3'; 
+    }
+
     setState(() {
-      _articlesFuture = ArticleService.getDashboardArticles(userId, 'N3');
+      _articlesFuture = ArticleService.getDashboardArticles(userId, userLevel);
     });
   }
 
@@ -280,6 +288,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
     final userId = userProvider.userId ?? 0;
     
     // 🌟 採用你原系統的點數判斷（例如 380 點）
+
     final currentPoints = userProvider.jPts ?? 0; // ✅ 改用正確的 jPts
     if (currentPoints < cost) {
       _showInsufficientPointsDialog(context);

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import os
-from google import genai
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # 建立 Blueprint
@@ -9,7 +9,7 @@ tutor_bp = Blueprint('tutor', __name__)
 # 1. 初始化金鑰
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
-_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # 2. 建立一個專門負責聊天的函數
 def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=None):
@@ -61,7 +61,7 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
 
         # 呼叫 Gemini
         print("🔍 準備呼叫 Gemini API...")
-        response = _client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        response = model.generate_content(model='gemini-2.5-flash', contents=prompt)
         print("✅ Gemini 回覆完成！")
         return response.text
 

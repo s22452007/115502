@@ -30,6 +30,11 @@ THEME_DEFS = [
 ]
 THEME_BY_NAME = {t['name']: t for t in THEME_DEFS}
 
+# ⚠️ 測試用開關：設 True 時，每次拍照都強制觸發里程碑慶祝動畫（方便預覽效果）。
+#    看完動畫後，請把這行改回 False，恢復正常的「真的跨過門檻才觸發」。
+#    想預覽「過半」樣式，把下方 forced 的 'complete' 改成 'half' 即可。
+MILESTONE_DEBUG_FORCE = False
+
 
 def get_or_create_theme_scene(category):
     """依 AI 判定的主題名稱取得（或建立）對應的 Scene，回傳該 Scene。
@@ -46,6 +51,41 @@ def get_or_create_theme_scene(category):
         db.session.add(scene)
         db.session.flush()  # 先拿到 scene.id 供後續照片/單字綁定
     return scene
+
+
+def _theme_progress(user_id, scene_id):
+    """回傳 (unlocked, total)：使用者在該主題已解鎖的 distinct 單字數 / 主題單字總數。"""
+    from models import Vocab, UserVocab
+    total = Vocab.query.filter_by(scene_id=scene_id).count()
+    unlocked = (UserVocab.query
+                .join(Vocab, UserVocab.vocab_id == Vocab.id)
+                .filter(UserVocab.user_id == user_id, Vocab.scene_id == scene_id)
+                .count())
+    return unlocked, total
+
+
+def _detect_milestone(theme_name, before_unlocked, before_total, after_unlocked, after_total):
+    """判斷這次拍照是否讓主題跨過里程碑門檻，回傳 milestone dict 或 None。
+
+    - complete：這次剛好把整個主題集滿（之前沒滿、現在滿了）
+    - half    ：這次跨過 50%（之前 <50%、現在 >=50%）
+    集滿優先於過半。前後各用「當下的 total」算比例，避免新增單字造成分母位移誤判。
+    """
+    if after_total <= 0:
+        return None
+
+    was_complete = before_total > 0 and before_unlocked >= before_total
+    if after_unlocked >= after_total and not was_complete:
+        return {'type': 'complete', 'theme_name': theme_name,
+                'unlocked': after_unlocked, 'total': after_total}
+
+    before_ratio = (before_unlocked / before_total) if before_total else 0.0
+    after_ratio = after_unlocked / after_total
+    if before_ratio < 0.5 <= after_ratio:
+        return {'type': 'half', 'theme_name': theme_name,
+                'unlocked': after_unlocked, 'total': after_total}
+
+    return None
 
 @scenario_bp.route('/analyze', methods=['POST'])
 def analyze_scene():
@@ -110,6 +150,9 @@ def analyze_scene():
             theme_scene = get_or_create_theme_scene(ai_data.get('scene_category'))
             theme_scene_id = theme_scene.id
             ai_data['scene_category'] = theme_scene.name  # 正規化後回傳給前端
+
+            # 里程碑：記錄「拍照前」此主題的收集進度，拍完後再比一次看有沒有跨過門檻
+            ms_before_unlocked, ms_before_total = _theme_progress(user_id, theme_scene_id)
 
             # --- 以下為寫入資料庫邏輯 (新版主表明細表架構) ---
 
@@ -210,10 +253,29 @@ def analyze_scene():
             db.session.commit()
             # --- 寫入結束 ---
 
+            # 里程碑：拍完後重新計算，判斷是否跨過「過半 / 集滿」門檻（None 代表這次沒跨過）
+            ms_after_unlocked, ms_after_total = _theme_progress(user_id, theme_scene_id)
+            milestone = _detect_milestone(
+                theme_scene.name,
+                ms_before_unlocked, ms_before_total,
+                ms_after_unlocked, ms_after_total,
+            )
+
+            # ⚠️ 測試用：強制觸發（正式上線前務必把 MILESTONE_DEBUG_FORCE 改回 False）
+            if MILESTONE_DEBUG_FORCE and milestone is None:
+                milestone = {
+                    'type': 'complete',  # 想看「過半」樣式改成 'half'
+                    'theme_name': theme_scene.name,
+                    'unlocked': ms_after_unlocked,
+                    'total': ms_after_total,
+                    'debug': True,
+                }
+
             return jsonify({
                 'message': '圖片分析成功並已存入圖鑑',
                 'file_path': relative_image_path,
-                'result': ai_data
+                'result': ai_data,
+                'milestone': milestone,  # dict 或 null，供前端結果頁播慶祝動畫
             }), 200
 
         except Exception as e:

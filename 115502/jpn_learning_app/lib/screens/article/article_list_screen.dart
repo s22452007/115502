@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/models/article_model.dart';
 import 'package:jpn_learning_app/services/article_service.dart';
 import 'package:jpn_learning_app/screens/article/article_detail_screen.dart'; 
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class ArticleListScreen extends StatefulWidget {
   const ArticleListScreen({Key? key}) : super(key: key);
@@ -51,19 +52,8 @@ void _loadArticles() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text(
-          '文章練習',
-          style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF2C3E50)),
-        ),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: AppColors.primary),
-      ),
+    return SubPageTemplate(
+      title: '文章練習',
       body: _buildBody(),
     );
   }

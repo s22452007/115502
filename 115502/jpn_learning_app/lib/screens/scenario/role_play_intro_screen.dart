@@ -219,7 +219,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.add, color: _darkGreen, size: 18),
+                                  Icon(Icons.add, color: _darkGreen, size: 16),
                                   const SizedBox(width: 4),
                                   Text(
                                     '自訂角色',

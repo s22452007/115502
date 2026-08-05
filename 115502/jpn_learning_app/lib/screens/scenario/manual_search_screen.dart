@@ -102,7 +102,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                 ),
                 TextField(
                   controller: originCtrl,
-                  decoration: const InputDecoration(labelText: '出身地', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                  decoration: const InputDecoration(labelText: '出身地 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
                   cursorColor: AppColors.primary,
                 ),
                 Row(
@@ -110,7 +110,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                     Expanded(
                       child: TextField(
                         controller: ageCtrl,
-                        decoration: const InputDecoration(labelText: '年紀', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                        decoration: const InputDecoration(labelText: '年紀 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
                         keyboardType: TextInputType.number,
                         cursorColor: AppColors.primary,
                       ),
@@ -119,7 +119,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                     Expanded(
                       child: TextField(
                         controller: genderCtrl,
-                        decoration: const InputDecoration(labelText: '性別', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                        decoration: const InputDecoration(labelText: '性別 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
                         cursorColor: AppColors.primary,
                       ),
                     ),
@@ -127,12 +127,12 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                 ),
                 TextField(
                   controller: personalityCtrl,
-                  decoration: const InputDecoration(labelText: '個性', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                  decoration: const InputDecoration(labelText: '個性 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
                   cursorColor: AppColors.primary,
                 ),
                 TextField(
                   controller: traitsCtrl,
-                  decoration: const InputDecoration(labelText: '特殊設定', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
+                  decoration: const InputDecoration(labelText: '特殊設定 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
                   maxLines: 2,
                   cursorColor: AppColors.primary,
                 ),

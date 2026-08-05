@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 // 專案內的設定與 Provider
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/helpers.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
 // UI 元件與其他畫面
@@ -22,6 +23,7 @@ import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart'
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'badge_library_screen.dart';
+import 'upgrade_test_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -55,16 +57,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  String _getLevelTitle(String level) {
-    switch (level.toUpperCase().trim()) {
-      case 'N5': return '新手上路';
-      case 'N4': return '生活達人';
-      case 'N3': return '交流無礙';
-      case 'N2': return '商務菁英';
-      case 'N1': return '日語大師';
-      default: return '尚未認證';
-    }
-  }
+  // 稱號統一由 AppHelpers 提供，全 App 共用同一份對照表
+  String _getLevelTitle(String level) => AppHelpers.getLevelTitle(level);
 
   Future<void> _fetchData() async {
     final userProvider = context.read<UserProvider>();
@@ -339,7 +333,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _buildListItem(icon: Icons.people_alt_rounded, title: '好友綁定', iconColor: AppColors.primary, trailingText: friendId, onTap: () => isGuest ? _handleGuestClick('好友綁定') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
                         _buildListItem(icon: Icons.military_tech_rounded, title: '成就徽章', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('成就徽章') : Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()))),
                         const SizedBox(height: 8),
-                        _buildFlatInfoTile(label: '稱號認證', value: levelTitle),
+                        _buildFlatInfoTile(
+                          label: '稱號認證',
+                          value: levelTitle,
+                          isMaxLevel: rawLevel == 'N1',
+                          onUpgrade: isGuest
+                              ? () => _handleGuestClick('升級測驗')
+                              : () => _showUpgradeIntro(rawLevel),
+                        ),
                         const SizedBox(height: 8),
                         _buildListItem(
                           icon: isGuest ? Icons.login_rounded : Icons.logout_rounded,
@@ -469,16 +470,105 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildFlatInfoTile({required String label, required String value}) {
+  Widget _buildFlatInfoTile({
+    required String label,
+    required String value,
+    VoidCallback? onUpgrade,
+    bool isMaxLevel = false,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          Text(label, style: TextStyle(color: _subTextColor, fontSize: 16, fontWeight: FontWeight.w800)),
-          Text(value, style: TextStyle(color: _textColor, fontSize: 16, fontWeight: FontWeight.w900)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: TextStyle(color: _subTextColor, fontSize: 16, fontWeight: FontWeight.w800)),
+              Text(value, style: TextStyle(color: _textColor, fontSize: 16, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          // 覺得自己變強了？可以挑戰更高一級的測驗
+          if (onUpgrade != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: isMaxLevel
+                  ? OutlinedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.workspace_premium_rounded, size: 20),
+                      label: const Text('已是最高稱號',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: onUpgrade,
+                      icon: const Icon(Icons.trending_up_rounded, size: 20),
+                      label: const Text('挑戰升級測驗',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // 挑戰升級前先說明規則，避免使用者誤觸
+  void _showUpgradeIntro(String currentLevel) {
+    const ladder = ['N5', 'N4', 'N3', 'N2', 'N1'];
+    final idx = ladder.indexOf(currentLevel);
+    final target = (idx >= 0 && idx + 1 < ladder.length) ? ladder[idx + 1] : null;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('挑戰升級測驗',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              target == null
+                  ? '將依你目前的程度出題。'
+                  : '你目前的稱號是「${AppHelpers.getLevelTitle(currentLevel)}」，'
+                      '這次會挑戰「${AppHelpers.getLevelTitle(target)}」的題目。',
+              style: const TextStyle(fontSize: 15, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            const Text('• 答對率達 70% 就升一級\n• 沒通過也不會降級，隨時可以再挑戰',
+                style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.6)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('稍後再說', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const UpgradeTestScreen()));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: const Text('開始測驗', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );

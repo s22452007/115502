@@ -1,5 +1,25 @@
 /// 共用 Helper 工具
 class AppHelpers {
+  /// 等級稱號（純文字，不含 Emoji）。
+  /// 對使用者一律顯示稱號，不顯示 N5/N1 這類代碼，避免有人覺得等級低而卻步。
+  /// 這是全 App 稱號的唯一來源，需要調整名稱時只改這裡。
+  static String getLevelTitle(String? level) {
+    switch ((level ?? '').toUpperCase().trim()) {
+      case 'N5':
+        return '新手上路';
+      case 'N4':
+        return '生活達人';
+      case 'N3':
+        return '交流無礙';
+      case 'N2':
+        return '商務菁英';
+      case 'N1':
+        return '日語大師';
+      default:
+        return '尚未認證';
+    }
+  }
+
   /// 將日語等級代碼轉換成顯示文字（含 Emoji）
   /// - N1: 日語大師 🎓
   /// - N2: 商務菁英 💼

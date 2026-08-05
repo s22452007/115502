@@ -574,6 +574,34 @@ class ApiClient {
     }
   }
 
+  // 升級測驗：取得比目前程度高一級的題目
+  static Future<Map<String, dynamic>> fetchUpgradeQuestions(int userId) async {
+    final url = Uri.parse('$baseUrl/quiz/upgrade_questions?user_id=$userId');
+    try {
+      final response = await http.get(url);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
+    } catch (e) {
+      return {'error': '連線失敗', '_status': 0};
+    }
+  }
+
+  // 升級測驗：送出作答結果（通過就升一級）
+  static Future<Map<String, dynamic>> submitUpgradeQuiz(int userId, List<bool> results) async {
+    final url = Uri.parse('$baseUrl/quiz/upgrade_submit');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'results': results}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
+    } catch (e) {
+      return {'error': '連線失敗', '_status': 0};
+    }
+  }
+
   static Future<Map<String, dynamic>> submitQuizScore(int userId, int score) async {
     final url = Uri.parse('$baseUrl/quiz/submit');
     try {

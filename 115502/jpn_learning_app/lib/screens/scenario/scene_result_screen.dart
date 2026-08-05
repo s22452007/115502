@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 // 與「我的單字探險」共用同一張單字卡（含 ⭐ 收藏、分級例句、情境例句）
 import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
+import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 /// 拍照辨識結果頁：
 /// 介面與「我的單字探險」詳細頁一致（照片大圖 + 單字卡列表），
@@ -250,15 +251,18 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+    // 沿用共用子頁模板（與「單字探險」詳情頁一致）；
+    // 照片大圖本身就是頁首，所以隱藏模板的 AppBar。
+    return SubPageTemplate(
+      title: '辨識結果',
+      hideAppBar: true,
+      bottomNavigationBar: _buildBottomBar(),
       body: CustomScrollView(
         slivers: [
           _buildPhotoHeader(),
           _buildVocabList(),
         ],
       ),
-      bottomNavigationBar: _buildBottomBar(),
     );
   }
 }

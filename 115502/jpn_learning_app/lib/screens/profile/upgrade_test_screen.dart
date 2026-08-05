@@ -5,6 +5,8 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
+import 'package:jpn_learning_app/utils/badge_utils.dart';
+import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 
 /// 升級測驗：挑戰「比目前程度高一級」的題目。
 /// 答對率達門檻就升級，否則維持原等級（不會降級）。
@@ -179,9 +181,23 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);       // 關閉對話框
-              Navigator.pop(context);   // 回到個人頁
+            onPressed: () async {
+              Navigator.pop(ctx); // 關閉成績對話框
+
+              // 升級成功 → 接著噴出「程度認證」徽章升級慶祝彈窗
+              if (passed && mounted) {
+                final badgeLevel = BadgeUtils.japaneseLevelToNumber(level);
+                await LevelUpDialog.show(
+                  context,
+                  badgeId: 'level_01',
+                  level: badgeLevel,
+                  descriptionOverride:
+                      '你通過了挑戰，實力獲得認證！新的稱號是「${AppHelpers.getLevelTitle(level)}」。',
+                  buttonTextOverride: '太棒了',
+                );
+              }
+
+              if (mounted) Navigator.pop(context); // 回到個人頁
             },
             child: const Text(
               '完成',

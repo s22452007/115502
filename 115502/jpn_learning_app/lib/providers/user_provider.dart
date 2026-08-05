@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/utils/badge_utils.dart';
 
 class UserProvider extends ChangeNotifier {
   int? _userId;
@@ -166,7 +167,14 @@ class UserProvider extends ChangeNotifier {
   void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
   void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
   void setUserId(int? id) { _userId = id; notifyListeners(); }
-  void setJapaneseLevel(String level) { _japaneseLevel = level; notifyListeners(); }
+  void setJapaneseLevel(String level) {
+    _japaneseLevel = level;
+    // 「程度認證」徽章的進度是由日語等級推導出來的，這裡一併同步，
+    // 否則升級後徽章頁在重新抓取個人資料前仍會顯示舊等級。
+    final n = BadgeUtils.japaneseLevelToNumber(level);
+    if (n > 0) _badgeProgress['level_01'] = n;
+    notifyListeners();
+  }
   void setEmail(String? email) { _email = email; notifyListeners(); }
   void setUsername(String? username) { _username = username; notifyListeners(); }
   void setAvatar(String? avatar) { _avatar = avatar; notifyListeners(); }

@@ -6,10 +6,25 @@ import 'package:jpn_learning_app/utils/badge_utils.dart';
 class LevelUpDialog extends StatelessWidget {
   final String badgeId;
   final int level;
+  // 可選：覆寫預設文案（例如升級測驗與新手分級測驗的說法不同）
+  final String? descriptionOverride;
+  final String? buttonTextOverride;
 
-  const LevelUpDialog({Key? key, required this.badgeId, required this.level}) : super(key: key);
+  const LevelUpDialog({
+    Key? key,
+    required this.badgeId,
+    required this.level,
+    this.descriptionOverride,
+    this.buttonTextOverride,
+  }) : super(key: key);
 
-  static Future<void> show(BuildContext context, {required String badgeId, required int level}) async {
+  static Future<void> show(
+    BuildContext context, {
+    required String badgeId,
+    required int level,
+    String? descriptionOverride,
+    String? buttonTextOverride,
+  }) async {
     await showGeneralDialog(
       context: context,
       barrierDismissible: true, // 允許點擊外部關閉
@@ -24,7 +39,12 @@ class LevelUpDialog extends StatelessWidget {
           scale: curvedValue,
           child: Opacity(
             opacity: anim1.value,
-            child: LevelUpDialog(badgeId: badgeId, level: level),
+            child: LevelUpDialog(
+              badgeId: badgeId,
+              level: level,
+              descriptionOverride: descriptionOverride,
+              buttonTextOverride: buttonTextOverride,
+            ),
           ),
         );
       },
@@ -74,6 +94,10 @@ class LevelUpDialog extends StatelessWidget {
       descText = '燃燒吧學習之魂！請繼續保持這份毅力！';
       topIcon = Icons.local_fire_department_rounded;
     }
+
+    // 呼叫端有指定文案時優先採用
+    descText = descriptionOverride ?? descText;
+    buttonText = buttonTextOverride ?? buttonText;
 
     return Dialog(
       backgroundColor: Colors.transparent,

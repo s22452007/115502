@@ -1,0 +1,17 @@
+# 不要打包進映像的東西（讓映像更小、避免把機密/資料烤進去）
+
+# Python 快取
+__pycache__/
+*.pyc
+
+# 機密（金鑰改由 docker-compose 的 env_file 注入，不烤進映像）
+.env
+
+# 資料庫與上傳照片（改用 volume 掛載到容器外，才能持久化、不被覆蓋）
+instance/
+static/photos/
+
+# 虛擬環境 / 其他
+venv/
+.venv/
+*.log

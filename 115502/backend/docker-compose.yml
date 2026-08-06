@@ -1,0 +1,32 @@
+# 一鍵啟動後端：docker compose up -d --build
+# 兩個服務共用同一個映像；DB 與照片用 volume 掛到容器外，確保重建容器資料不遺失。
+
+services:
+  # 主 API（手機 App 連這個）
+  api:
+    build: .
+    image: jlens-backend            # 建好的映像命名，讓 admin 直接重用、不用再 build 一次
+    command: python app.py
+    ports:
+      - "5050:5050"
+    env_file:
+      - .env                        # 把 GEMINI 金鑰等環境變數注入容器
+    volumes:
+      - ./instance:/app/instance          # SQLite 資料庫持久化
+      - ./static/photos:/app/static/photos # 使用者上傳照片持久化
+    restart: unless-stopped
+
+  # 後台管理（管理員網頁後台）
+  admin:
+    image: jlens-backend            # 重用 api 建好的映像
+    command: python admin_app.py
+    depends_on:
+      - api                         # 等 api 先把映像 build 出來
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env
+    volumes:
+      - ./instance:/app/instance          # 與 api 共用同一個資料庫檔
+      - ./static/photos:/app/static/photos
+    restart: unless-stopped

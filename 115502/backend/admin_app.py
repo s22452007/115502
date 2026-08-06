@@ -919,7 +919,8 @@ def vocab_delete(id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    # host='0.0.0.0'：容器內要綁全介面，外面才連得到（本機直接跑也不影響）
+    app.run(host='0.0.0.0', debug=True, port=5001)
 
 
 

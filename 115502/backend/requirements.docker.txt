@@ -1,0 +1,23 @@
+# Docker 打包用的精簡相依清單
+# 只保留後端「實際 import 到」的套件；原 requirements.txt 裡的
+# mediapipe / opencv / matplotlib / numpy / sounddevice 程式沒用到，故移除。
+
+# --- Web 框架 ---
+Flask==3.1.2
+flask-cors==6.0.2
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.48
+Werkzeug==3.1.5
+
+# --- 設定 / 工具 ---
+python-dotenv==1.2.2
+
+# --- AI（兩個 SDK 都有用到）---
+google-genai            # utils/ai_helper.py: from google import genai（新版 SDK）
+google-generativeai     # services/tutor.py, services/article.py: import google.generativeai
+
+# --- 語音 ---
+gTTS
+
+# --- MySQL 驅動（目前用 SQLite 不需要，之後要換 MySQL 時已備好）---
+PyMySQL==1.1.2

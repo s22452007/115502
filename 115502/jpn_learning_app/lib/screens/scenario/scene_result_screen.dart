@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 // 與「我的單字探險」共用同一張單字卡（含 ⭐ 收藏、分級例句、情境例句）
 import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/screens/scenario/make_sentence_screen.dart';
 
 /// 拍照辨識結果頁：
 /// 介面與「我的單字探險」詳細頁一致（照片大圖 + 單字卡列表），

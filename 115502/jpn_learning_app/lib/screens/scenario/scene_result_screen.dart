@@ -198,43 +198,76 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
         top: false,
         child: Row(
           children: [
-            // 再拍一張：回到拍照畫面（相機頁還在堆疊下方，pop 即可）
+            // 再拍一張：回到拍照畫面
             Expanded(
-              child: OutlinedButton.icon(
+              child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.camera_alt, size: 20),
-                label: const Text(
-                  '再拍一張',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   side: const BorderSide(color: AppColors.primary, width: 1.5),
-                  // 固定高度 + 內容置中，讓兩顆按鈕文字對齊
+                  fixedSize: const Size.fromHeight(52),
+                  padding: EdgeInsets.zero,
+                  alignment: Alignment.center,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.camera_alt, size: 18),
+                    Text('再拍一張', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // 練習造句：進入造句頁面
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MakeSentenceScreen(
+                        imagePath: widget.imagePath,
+                        vocabs: _vocabs,
+                        contextDescription: widget.analysisData?['scene_category'],
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: EdgeInsets.zero,
                   fixedSize: const Size.fromHeight(52),
                   alignment: Alignment.center,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.edit, size: 18),
+                    Text('練習造句', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             // 完成：直接回主頁
             Expanded(
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: () =>
                     Navigator.popUntil(context, (route) => route.isFirst),
-                icon: const Icon(Icons.check, size: 20),
-                label: const Text(
-                  '完成',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  // 固定高度 + 內容置中，讓兩顆按鈕文字對齊
+                  padding: EdgeInsets.zero,
                   fixedSize: const Size.fromHeight(52),
                   alignment: Alignment.center,
                   shape: RoundedRectangleBorder(

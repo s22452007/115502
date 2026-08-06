@@ -30,3 +30,16 @@ services:
       - ./instance:/app/instance          # 與 api 共用同一個資料庫檔
       - ./static/photos:/app/static/photos
     restart: unless-stopped
+
+  # Cloudflare 通道（對外公開網址）
+  #   ★ 預設不啟動 ★ —— 只有加上 --profile tunnel 才會跑，避免本機開發時把後端露出去。
+  #   啟動：   docker compose --profile tunnel up -d
+  #   看網址： docker compose logs cloudflared   （找 trycloudflare.com 那行）
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://api:5050   # 直接連 compose 內的 api 服務
+    depends_on:
+      - api
+    profiles:
+      - tunnel                              # 歸到 tunnel profile，預設不啟動
+    restart: unless-stopped

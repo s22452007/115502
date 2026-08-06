@@ -234,3 +234,56 @@ def generate_context_sentences(context_description, vocabs):
         # 情境例句生成失敗不應影響拍照辨識主流程，安靜降級
         print(f"情境例句生成失敗（降級為無情境例句）: {e}")
         return {}
+
+
+def evaluate_user_sentence(sentence, vocabs, context_description):
+    """
+    評估使用者用辨識出單字造的句子。
+    """
+    try:
+        if not sentence or not vocabs:
+            return {"success": False, "error": "缺少句子或單字資料"}
+
+        api_key = os.environ.get("GEMINI_API_KEY_camara") or os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return {"success": False, "error": "尚未設定 API Key"}
+
+        client = genai.Client(api_key=api_key)
+
+        word_list = "、".join(v.get('word', '') or v.get('kana', '') for v in vocabs)
+        
+        prompt = f'''
+        使用者在情境「{context_description or '無特定情境'}」下，
+        學到了以下日文單字：{word_list}。
+        使用者嘗試用這些單字造了一個日文句子：
+        「{sentence}」
+
+        請你扮演專業的日文老師，幫忙評估這個句子。
+        要求：
+        1. 檢查這個句子是否至少使用了一個上面列出的日文單字（或是它的動詞/形容詞變化形）。
+           如果完全沒有用到，請在 `is_valid` 填寫 false，並在 `feedback` 給予鼓勵和提醒，請他們嘗試用上面的單字造句。
+        2. 如果有使用，請檢查日文文法是否正確、語意是否自然。
+           - 若有錯誤或不自然的地方，請在 `is_valid` 填寫 false，並在 `feedback` 溫柔地指出並解釋錯誤，然後在 `corrected_sentence` 提供修正後的句子。
+           - 若完全正確，請在 `is_valid` 填寫 true，並在 `feedback` 給予大大的稱讚，並在 `corrected_sentence` 提供原本的句子。
+        3. 必須在 `translation` 提供該句子（或修正後句子）的繁體中文翻譯。
+        4. 句中有使用到「漢字」的部分，在 `corrected_sentence` 請一律使用 `[漢字|平假名]` 的格式標記讀音。
+
+        請「嚴格」以下列 JSON 格式回傳，不可加上 json 或 markdown 標籤：
+        {{
+          "is_valid": true或false,
+          "feedback": "給使用者的評語與解釋",
+          "corrected_sentence": "修正後或原本正確的日文句子(需含漢字注音標記)",
+          "translation": "繁體中文翻譯"
+        }}
+        '''
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=JSON_CONFIG,
+        )
+        result = parse_gemini_json(response.text)
+        return {"success": True, "result": result}
+    except Exception as e:
+        print(f"評估句子失敗: {e}")
+        return {"success": False, "error": f"評估失敗: {str(e)}"}

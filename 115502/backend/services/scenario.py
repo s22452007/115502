@@ -558,3 +558,25 @@ def get_all_scenes():
         }
         for s in scenes
     ]), 200
+
+
+@scenario_bp.route('/evaluate_sentence', methods=['POST'])
+def evaluate_sentence():
+    """
+    評估使用者用辨識出單字造的句子。
+    """
+    data = request.json
+    sentence = data.get('sentence')
+    vocabs = data.get('vocabs')
+    context_description = data.get('context_description')
+
+    if not sentence or not vocabs:
+        return jsonify({'error': '缺少句子或單字資料'}), 400
+
+    from utils.ai_helper import evaluate_user_sentence
+    ai_result = evaluate_user_sentence(sentence, vocabs, context_description)
+
+    if not ai_result.get("success"):
+        return jsonify({'error': ai_result.get("error", "評估失敗")}), 500
+
+    return jsonify(ai_result.get("result")), 200

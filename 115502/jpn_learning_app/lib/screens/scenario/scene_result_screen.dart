@@ -186,10 +186,10 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     );
   }
 
-  // 底部固定按鈕列：[📷 再拍一張] [✓ 完成]
+  // 底部固定按鈕列：[📷 再拍一張] [造句] [✓ 完成]
   Widget _buildBottomBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],

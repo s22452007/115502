@@ -274,6 +274,13 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check, size: 18),
+                    Text('完成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
               ),
             ),
           ],

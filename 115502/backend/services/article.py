@@ -7,6 +7,7 @@ import random
 import time
 import google.generativeai as genai
 
+from utils import gemini_client
 from flask import Blueprint, request, jsonify
 from models import db, User, Article, UnlockedArticle
 from datetime import datetime
@@ -93,34 +94,24 @@ def evaluate_audio():
     audio_file.save(temp_path)
     audio_upload = None
 
-    try:
+    # 實際的分析流程。抽成函式後交由 gemini_client 執行，
+    # 主金鑰額度用完時會自動改用備用金鑰重跑一次。
+    def _analyze():
+        nonlocal audio_upload
+
         print("DEBUG: [階段 0] 正在將錄音檔上傳至 Google 伺服器...")
         audio_upload = genai.upload_file(temp_path)
-        
+
         while getattr(audio_upload.state, 'name', '') == 'PROCESSING' or audio_upload.state == 1:
             print("...", end="", flush=True)
             time.sleep(1)
             audio_upload = genai.get_file(audio_upload.name)
         print(f"\nDEBUG: 音檔處理完成！狀態: {getattr(audio_upload.state, 'name', audio_upload.state)}")
 
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        best_model = None
-        
-        flash_models = [m for m in available_models if 'flash' in m.lower() and 'robotics' not in m.lower()]
-        pro_models = [m for m in available_models if 'pro' in m.lower() and 'robotics' not in m.lower() and '1.0' not in m]
-        
-        if flash_models:
-            best_model = flash_models[0]
-        elif pro_models:
-            best_model = pro_models[0]
-        else:
-            safe_models = [m for m in available_models if 'robotics' not in m.lower()]
-            if safe_models:
-                best_model = safe_models[0]
-            else:
-                raise ValueError(f"找不到可用的語音模型！")
-                
-        model = genai.GenerativeModel(best_model)
+        # 直接使用共用的預設模型（latest 別名，會自動指向最新版本）。
+        # 不再從 list_models() 動態挑選：列表會列出新金鑰其實無權使用的舊型號
+        # （例如 gemini-2.5-flash 對新使用者會回 404）。
+        model = genai.GenerativeModel(gemini_client.DEFAULT_MODEL)
 
         print(f"DEBUG: [階段 1] 正在聆聽真實錄音，進行轉錄...")
         stt_prompt = "請仔細聆聽這段日文錄音，『一字不漏』地寫下你聽到的日文。如果發音含糊、唸錯或有口音，請直接寫出你實際聽到的『錯誤發音』，絕對不要自動修正為正確的日文。請只輸出日文文字。"
@@ -130,7 +121,7 @@ def evaluate_audio():
         transcript = stt_response.text.strip()
 
         if not transcript or len(transcript) < 2:
-            return jsonify({"status": "error", "message": "無法辨識到有效的語音，請確認麥克風收音或大聲再試一次！"}), 200
+            return None  # 交由外層回覆「聽不清楚」的訊息
 
         print("DEBUG: [階段 2] 正在根據真實錄音進行嚴格比對...")
         feedback_prompt = f"""
@@ -161,18 +152,37 @@ def evaluate_audio():
         feedback_data = json.loads(match.group(0))
         final_score = feedback_data.get("score", 0)
 
-        return jsonify({
+        return {
             "status": "success",
             "transcript": transcript,
             "score": final_score,
             "completion_rate": f"{final_score}%",
             "mistakes": feedback_data.get("mistakes", []),
             "overall_feedback": feedback_data.get("overall_feedback", "做得好！繼續保持練習。")
-        }), 200
+        }
+
+    try:
+        result = gemini_client.run_with_legacy_keys('article', _analyze)
+        if result is None:
+            return jsonify({
+                "status": "error",
+                "message": "無法辨識到有效的語音，請確認麥克風收音或大聲再試一次！"
+            }), 200
+        return jsonify(result), 200
+
+    except gemini_client.GeminiQuotaExhausted as e:
+        # 額度用完：給使用者看得懂的說明
+        return jsonify({"status": "error", "message": str(e)}), 200
+
+    except gemini_client.GeminiNotConfigured as e:
+        print(f"⚠️ {e}")
+        return jsonify({"status": "error", "message": "語音評分服務尚未設定完成，請聯繫開發人員。"}), 200
 
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"status": "error", "message": f"解析失敗原因: {str(e)}"}), 200
+        if gemini_client.is_overloaded_error(e):
+            return jsonify({"status": "error", "message": "AI 服務目前使用人數較多，請稍等幾秒再試一次。"}), 200
+        return jsonify({"status": "error", "message": "語音評分失敗了，請確認網路連線後再錄一次。"}), 200
 
     finally:
         if os.path.exists(temp_path):

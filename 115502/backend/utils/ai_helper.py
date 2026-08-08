@@ -4,6 +4,7 @@ import re
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+from utils import gemini_client
 
 # 載入環境變數 (讀取 backend/.env 檔案中的 GEMINI_API_KEY)
 # 特別加上 override=True，強制覆蓋終端機中可能殘留的舊變數（避免一直讀到舊金鑰）
@@ -49,13 +50,7 @@ def analyze_image_from_path(file_path):
     使用 Google Gemini API 進行圖像分析與文字辨識。
     """
     try:
-        # 1. 取得專屬照片辨識的 API Key 並設定
-        api_key = os.environ.get("GEMINI_API_KEY_camara")
-        if not api_key or api_key == "在這裡貼上您的Key":
-            return {"success": False, "error": "尚未設定 GEMINI_API_KEY_camara。請打開 C:\\Users\\Administrator\\115502\\115502\\backend\\.env 檔案並貼入金鑰。"}
-            
-        client = genai.Client(api_key=api_key)
-
+        # 1. 金鑰由 gemini_client 統一管理（拍照辨識專用金鑰 + 備用金鑰自動切換）
         # 2. 讀取圖片（用 bytes + mime_type 傳給新版 Gemini API）
         ext = os.path.splitext(file_path)[1].lower()
         mime_map = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -128,11 +123,8 @@ def analyze_image_from_path(file_path):
         '''
 
         # 4. 呼叫 Gemini 解析圖片（指定 JSON 輸出模式）
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[image_part, prompt],
-            config=JSON_CONFIG,
-        )
+        response = gemini_client.generate_content(
+            'camera', [image_part, prompt], config=JSON_CONFIG)
         result_text = response.text
 
         # 5~6. 解析 JSON（自動處理 markdown 標籤與多餘逗號）
@@ -142,15 +134,12 @@ def analyze_image_from_path(file_path):
         except json.JSONDecodeError:
             print("⚠️ Gemini 回傳格式有誤，正在重試一次...")
             try:
-                retry = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[image_part, prompt],
-                    config=JSON_CONFIG,
-                )
+                retry = gemini_client.generate_content(
+                    'camera', [image_part, prompt], config=JSON_CONFIG)
                 result_data = parse_gemini_json(retry.text)
             except json.JSONDecodeError as decode_err:
                 print("Gemini 回傳的格式不是正確的 JSON:", result_text)
-                return {"success": False, "error": f"JSON 解析錯誤: {decode_err}"}
+                return {"success": False, "error": "AI 回傳的內容格式有誤，請再試一次或換個角度重拍。"}
 
         # 6.5 內容安全守門：Gemini 判定圖片含不當內容時，不辨識、標記為封鎖
         if isinstance(result_data, dict) and result_data.get("blocked"):
@@ -163,12 +152,19 @@ def analyze_image_from_path(file_path):
         # 7. 回傳成功的 JSON 結果 (裡面已經有真實的 vocabs 和 sentences 了)
         return {"success": True, "result": result_data}
         
+    except gemini_client.GeminiQuotaExhausted as e:
+        # 額度用完：回傳使用者看得懂的訊息，而不是英文錯誤碼
+        return {"success": False, "error": str(e), "quota_exhausted": True}
+
+    except gemini_client.GeminiNotConfigured as e:
+        print(f"⚠️ {e}")
+        return {"success": False, "error": "AI 服務尚未設定完成，請聯繫開發人員。"}
+
     except Exception as e:
         print(f"Gemini API 分析錯誤: {e}")
-        return {
-            "success": False,
-            "error": f"AI分析錯誤: {str(e)}"
-        }
+        if gemini_client.is_overloaded_error(e):
+            return {"success": False, "error": "AI 服務目前使用人數較多，請稍等幾秒再試一次。"}
+        return {"success": False, "error": "照片分析失敗了，請確認網路連線後再試一次。"}
 
 
 def generate_context_sentences(context_description, vocabs):
@@ -186,12 +182,6 @@ def generate_context_sentences(context_description, vocabs):
     try:
         if not context_description or not vocabs:
             return {}
-
-        api_key = os.environ.get("GEMINI_API_KEY_camara") or os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return {}
-
-        client = genai.Client(api_key=api_key)
 
         word_list = "、".join(v.get('word', '') for v in vocabs if v.get('word'))
         prompt = f'''
@@ -213,11 +203,7 @@ def generate_context_sentences(context_description, vocabs):
         ]
         '''
 
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=JSON_CONFIG,
-        )
+        response = gemini_client.generate_content('context', prompt, config=JSON_CONFIG)
         # 解析 JSON（自動處理 markdown 標籤與多餘逗號）
         items = parse_gemini_json(response.text)
 

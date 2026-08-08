@@ -172,6 +172,7 @@ class UserPhoto(db.Model):
     scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'), nullable=True) # AI 辨識出的場景
     image_path = db.Column(db.String(255), nullable=False)
     custom_title = db.Column(db.String(100), nullable=True) # 使用者自訂名稱
+    context_description = db.Column(db.Text, nullable=True) # 拍照當下使用者描述的情境（原文）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     scene = db.relationship('Scene', foreign_keys=[scene_id])
     photo_vocabs = db.relationship('UserPhotoVocab', backref='photo', lazy=True, cascade="all, delete-orphan")

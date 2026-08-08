@@ -165,6 +165,7 @@ def analyze_scene():
                 scene_id=theme_scene_id, # 歸到 AI 判定的主題場景
                 image_path=relative_image_path,
                 custom_title=final_title,
+                context_description=context_description or None, # 保留情境原文供日後回顧
                 created_at=datetime.utcnow()
             )
             db.session.add(new_photo)
@@ -369,6 +370,7 @@ def get_unlocked_scenes(user_id):
             "scene_name": p.custom_title or (p.scene.name if p.scene else "單字探險"),
             "icon_name": p.scene.icon_name if p.scene else "image",
             "image_path": p.image_path,
+            "context_description": p.context_description, # 當初輸入的情境原文（可為 null）
             "unlocked_at": p.created_at.strftime('%Y.%m.%d'),
             "vocab_count": vocab_count
         })

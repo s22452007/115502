@@ -168,6 +168,54 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
     );
   }
 
+  /// 顯示拍照當下輸入的情境原文（沒填就不佔版面）
+  Widget _buildContextNote() {
+    final note = widget.scene['context_description']?.toString().trim() ?? '';
+    if (note.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amber.withOpacity(0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.edit_note_rounded, size: 20, color: Colors.amber.shade800),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '當時的情境',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  note,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: Color(0xFF444444),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVocabularyList(List<dynamic> vocabs) {
     return SliverToBoxAdapter(
       child: Container(
@@ -176,6 +224,8 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 當初拍照時輸入的情境原文，幫助日後回想當時的場景
+            _buildContextNote(),
             Text(
               '在這個場景中識別出 ${vocabs.length} 個單字',
               style: TextStyle(

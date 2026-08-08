@@ -682,6 +682,10 @@ except sqlite3.OperationalError as e:
 add_column("user_photo_vocab", "context_sentence TEXT")
 print("✅ user_photo_vocab context_sentence 情境例句欄位確認完畢")
 
+# 保留使用者當初輸入的情境原文（回顧照片時能想起當時的情境）
+add_column("user_photo", "context_description TEXT")
+print("✅ user_photo context_description 情境原文欄位確認完畢")
+
 # ==========================================
 # 30. 升級 vocab：分級例句的中文翻譯欄位
 # ==========================================

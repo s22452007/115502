@@ -198,35 +198,21 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
 
                   // 角色選擇與新增清單 (ListView)
                   SizedBox(
-                    height: 60,
+                    height: 70,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       scrollDirection: Axis.horizontal,
                       itemCount: _characters.length + 1, // +1 是為了放新增按鈕
                       itemBuilder: (context, index) {
-                        
                         // 如果是最後一個項目，顯示「新增角色」按鈕
                         if (index == _characters.length) {
                           return GestureDetector(
                             onTap: () => _showAddCharacterDialog(context),
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.grey.shade400, width: 1.5),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.add, color: _darkGreen, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '自訂角色',
-                                    style: TextStyle(color: _darkGreen, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
+                            child: _buildCharacterButton(
+                              isSelected: false,
+                              label: '自訂角色',
+                              subtitle: '',
+                              icon: Icons.add,
                             ),
                           );
                         }
@@ -241,39 +227,10 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                               _selectedCharacterName = char['name'];
                             });
                           },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isSelected ? _darkGreen : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: _darkGreen, width: 1.5),
-                              boxShadow: isSelected
-                                  ? [BoxShadow(color: _darkGreen.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
-                                  : [],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  char['name'],
-                                  style: TextStyle(
-                                    color: isSelected ? Colors.white : _darkGreen,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  char['role'],
-                                  style: TextStyle(
-                                    color: isSelected ? Colors.white70 : Colors.black54,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: _buildCharacterButton(
+                            isSelected: isSelected,
+                            label: char['name'],
+                            subtitle: char['role'],
                           ),
                         );
                       },
@@ -322,6 +279,71 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCharacterButton({
+    required bool isSelected,
+    required String label,
+    required String subtitle,
+    IconData? icon,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 132,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isSelected ? _darkGreen : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _darkGreen, width: 1.5),
+        boxShadow: isSelected
+            ? [BoxShadow(color: _darkGreen.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
+            : [],
+      ),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, color: isSelected ? Colors.white : _darkGreen, size: 16),
+              const SizedBox(width: 4),
+            ],
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : _darkGreen,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white70 : Colors.black54,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

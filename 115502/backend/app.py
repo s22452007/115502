@@ -92,6 +92,14 @@ with app.app_context():
         except Exception:
             pass  # 欄位已存在，略過
 
+    # 如果資料庫缺少 user_photo.context_description 欄位，嘗試新增（容錯，避免舊 DB crash）
+    try:
+        with _db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE user_photo ADD COLUMN context_description TEXT"))
+            conn.commit()
+    except Exception:
+        pass
+
     # ── 移除 user_subscription.status NOT NULL 欄位（若存在）──
     import sqlite3 as _sqlite3
     _db_path = os.path.join(BASE_DIR, 'instance', 'jlens.db')

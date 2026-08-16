@@ -12,6 +12,8 @@ services:
     env_file:
       - .env                        # 把 GEMINI 金鑰等環境變數注入容器
     volumes:
+      # 開發便利：把後端原始碼 bind-mount 進容器，修改立刻生效（開發時啟用）
+      - ./:/app
       - ./instance:/app/instance          # SQLite 資料庫持久化
       - ./static/photos:/app/static/photos # 使用者上傳照片持久化
     restart: unless-stopped

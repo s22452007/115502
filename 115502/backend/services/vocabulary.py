@@ -3,6 +3,7 @@ from datetime import datetime
 
 from utils.db import db
 from models import User, UserVocab, UserFolder, Vocab
+from sqlalchemy import func
 
 vocab_bp = Blueprint('vocab', __name__)
 
@@ -378,3 +379,56 @@ def collect_from_article():
         
     db.session.commit()
     return jsonify({"status": "success", "message": "✅ 成功加入收藏夾！"}), 200
+
+
+# 單字探險：隨機取得未解鎖／已解鎖單字混合的清單
+@vocab_bp.route('/explore', methods=['POST'])
+def explore_vocabs():
+    """
+    前端會傳入 JSON: { user_id: 1, count: 10, scene_id: optional }
+    回傳隨機的單字清單，並標示是否已解鎖。
+    """
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    count = int(data.get('count', 10))
+    scene_id = data.get('scene_id')
+
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    # 取得使用者已解鎖的 vocab id
+    user_vocab_records = UserVocab.query.filter_by(user_id=user_id).all()
+    unlocked_ids = {uv.vocab_id for uv in user_vocab_records}
+
+    # 建立 base query
+    q = Vocab.query
+    if scene_id:
+        q = q.filter_by(scene_id=scene_id)
+
+    # 先試圖取未解鎖的單字（優先讓使用者有新字可以探險）
+    unexplored = q.filter(~Vocab.id.in_(list(unlocked_ids))).order_by(func.random()).limit(count).all()
+
+    results = []
+    for v in unexplored:
+        results.append({
+            "vocab_id": v.id,
+            "word": v.word,
+            "kana": v.kana,
+            "meaning": v.meaning,
+            "is_unlocked": False,
+        })
+
+    # 若不足，再補已解鎖的隨機單字
+    if len(results) < count:
+        need = count - len(results)
+        locked = q.filter(Vocab.id.in_(list(unlocked_ids))).order_by(func.random()).limit(need).all()
+        for v in locked:
+            results.append({
+                "vocab_id": v.id,
+                "word": v.word,
+                "kana": v.kana,
+                "meaning": v.meaning,
+                "is_unlocked": True,
+            })
+
+    return jsonify({"vocabs": results}), 200

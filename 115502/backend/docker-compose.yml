@@ -37,9 +37,22 @@ services:
   #   看網址： docker compose logs cloudflared   （找 trycloudflare.com 那行）
   cloudflared:
     image: cloudflare/cloudflared:latest
-    command: tunnel --url http://api:5050   # 直接連 compose 內的 api 服務
+    # 啟動方式（選其一）：
+    # 1) 使用本機憑證檔（推薦長期運行）：在 Cloudflare 建立 tunnel 並把憑證放到 ./cloudflared 資料夾
+    #    然後用 --profile tunnel 啟動：
+    #      docker compose --profile tunnel up -d cloudflared
+    #    此模式下 container 會自動用憑證連線到 Cloudflare
+    # 2) 或使用短期/自動 token（CI/一次性）：在 .env 設定 TUNNEL_TOKEN，container 以 token 啟動
+
+    # 建議命令：以 token 啟動時會參考 .env（裡面放 TUNNEL_TOKEN）
+    command: tunnel run --token ${TUNNEL_TOKEN} --url http://api:5050
     depends_on:
       - api
+    env_file:
+      - .env
+    # 若你使用憑證檔案方式，將 ./cloudflared 掛到容器內的預設位置：
+    volumes:
+      - ./cloudflared:/home/nonroot/.cloudflared:ro
     profiles:
       - tunnel                              # 歸到 tunnel profile，預設不啟動
     restart: unless-stopped

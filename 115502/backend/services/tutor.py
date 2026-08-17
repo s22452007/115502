@@ -53,7 +53,12 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
         if user_message == "[幫我開場]":
             prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！一句話就好，讓使用者有機會回應。"
         else:
-            prompt += f"\n這是我們之前的對話紀錄：\n{chat_history}\n\n使用者剛剛對你說了這句話：「{user_message}」\n請自然地回覆使用者，並記得拋出下一個問題。"
+            # 第一句話時沒有歷史紀錄，就不要放空的「對話紀錄」段落誤導 AI
+            if chat_history and chat_history.strip():
+                prompt += (f"\n這是我們之前的對話紀錄（請延續這個脈絡，記得前面提過的人事物）：\n"
+                           f"{chat_history}\n")
+            prompt += (f"\n使用者剛剛對你說了這句話：「{user_message}」\n"
+                       f"請自然地回覆使用者，並記得拋出下一個問題。")
 
         # 呼叫 Gemini
         print("🔍 準備呼叫 Gemini API...")

@@ -56,9 +56,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     });
 
     // 👉 1. 修改：一進來的歡迎訊息，把角色名字印出來讓使用者知道
+    //    標記 isGreeting，組對話紀錄時要排除（它是介面說明，不是對話內容）
     _messages.add({
       'text': '歡迎來到「${widget.topicTitle}」！\n我是今天的對話對象「${widget.characterName}」✨\n不知道如何開頭的話可以點擊下方：幫我開場',
       'isUserMessage': false,
+      'isGreeting': true,
     });
 
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
@@ -321,6 +323,34 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     onRetry(); 
   }
 
+  // ==========================================
+  // 💬 組出要送給 AI 的對話紀錄（讓 AI 記得前面聊過什麼）
+  // ==========================================
+  // 只取最近幾則，原因：
+  //   1. 對話連貫性只需要最近的上下文
+  //   2. 歷史越長，每次請求消耗的 token 越多，額度會燒得更快
+  static const int _historyTurns = 8; // 最多帶入的訊息則數
+
+  String _buildChatHistory() {
+    // 排除開場的介面說明訊息
+    final real = _messages.where((m) => m['isGreeting'] != true).toList();
+    if (real.isEmpty) return '';
+
+    // 只取最近 N 則
+    final recent = real.length > _historyTurns
+        ? real.sublist(real.length - _historyTurns)
+        : real;
+
+    final aiName = widget.characterName.isNotEmpty ? widget.characterName : '老師';
+
+    return recent.map((m) {
+      final isUser = m['isUserMessage'] == true;
+      // 去掉 [漢字|假名] 標音再送出：對理解語意沒有幫助，卻會多花不少 token
+      final text = FuriganaText.cleanFuriganaForTts(m['text']?.toString() ?? '').trim();
+      return '${isUser ? "使用者" : aiName}：$text';
+    }).join('\n');
+  }
+
   Future<void> _triggerAIOpening() async {
     final canProceed = await _checkAILimit(onBoughtRetry: () { _triggerAIOpening(); });
     if (!canProceed) return;
@@ -340,8 +370,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'topic': widget.topicTitle,
           'level': levelToPass,
           // 👉 2. 修改：把角色名字傳給後端
-          'character': widget.characterName, 
-          'history': '',
+          'character': widget.characterName,
+          'history': _buildChatHistory(), // 中途再按開場時，讓 AI 知道前面聊過什麼
         },
       );
 
@@ -369,10 +399,14 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     final canProceed = await _checkAILimit(onBoughtRetry: () { _sendMessage(); });
     if (!canProceed) return;
 
+    // 先取得歷史紀錄，再把這次的新訊息加進畫面
+    //（新訊息會用 message 參數單獨送出，不能重複出現在 history 裡）
+    final history = _buildChatHistory();
+
     setState(() {
       _messages.add({'text': text, 'isUserMessage': true});
       _isTyping = true;
-      _quickReplies.clear(); 
+      _quickReplies.clear();
     });
 
     _controller.clear();
@@ -390,7 +424,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'level': levelToPass,
           // 👉 3. 修改：把角色名字傳給後端
           'character': widget.characterName,
-          'history': '',
+          'history': history, // 帶入最近的對話，讓 AI 記得前文
         },
       );
 

@@ -371,6 +371,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'level': levelToPass,
           // 👉 2. 修改：把角色名字傳給後端
           'character': widget.characterName,
+          // 帶上 user_id：AI 若回覆失敗，後端會把剛扣掉的次數退還
+          'user_id': (context.read<UserProvider>().userId ?? '').toString(),
           'history': _buildChatHistory(), // 中途再按開場時，讓 AI 知道前面聊過什麼
         },
       );
@@ -424,6 +426,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'level': levelToPass,
           // 👉 3. 修改：把角色名字傳給後端
           'character': widget.characterName,
+          // 帶上 user_id：AI 若回覆失敗，後端會把剛扣掉的次數退還
+          'user_id': (context.read<UserProvider>().userId ?? '').toString(),
           'history': history, // 帶入最近的對話，讓 AI 記得前文
         },
       );

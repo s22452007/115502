@@ -268,11 +268,21 @@ def chat():
     topic = request.form.get('topic', '日常對話')
     user_level = request.form.get('level', 'N5') # 接收等級！如果 App 沒傳，預設當作 N5
     dialect_id = request.form.get('dialect_id', type=int) # 接收腔調 ID（可為 None，代表標準語）
+    user_id = request.form.get('user_id', type=int) # AI 失敗時要退還次數用
 
     print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 腔調：{dialect_id} | 訊息：{user_message}")
 
     # 2. 把食材交給內場廚師 (呼叫 tutor.py 的函數，記得把 user_level / dialect_id 也傳進去)
-    ai_response_text = get_ai_reply(topic, user_message, chat_history, user_level, dialect_id)
+    ai_response_text, ok = get_ai_reply(topic, user_message, chat_history, user_level, dialect_id)
+
+    # 2b. AI 沒有成功產生回覆時，把先前扣掉的對話次數還給使用者
+    #     （次數是在送出訊息前就先扣的，失敗了不該算在使用者頭上）
+    if not ok and user_id:
+        try:
+            from services.user import refund_ai_usage
+            refund_ai_usage(user_id)
+        except Exception as e:
+            print(f"⚠️ 退還 AI 次數時發生錯誤：{e}")
 
     # 3. 櫃檯送餐（把熱騰騰的 AI 回覆送回給 Flutter）
     return ai_response_text

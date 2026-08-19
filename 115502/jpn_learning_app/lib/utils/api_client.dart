@@ -887,5 +887,45 @@ class ApiClient {
       return {'status': 'error', '_status': 500};
     }
   }
+  // ==========================================
+  // 🌟 閱讀測驗成績結算 API (新增)
+  // ==========================================
+  static Future<Map<String, dynamic>> submitArticleScore(int userId, int articleId, int score) async {
+    final url = Uri.parse('$baseUrl/articles/submit_score');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'article_id': articleId,
+          'score': score,
+        }),
+      );
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 成績結算連線失敗: $e');
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+  // ==========================================
+  // 🌟 獲取使用者歷史成績紀錄 API (新增)
+  // ==========================================
+  static Future<List<dynamic>> getUserScoreHistory(int userId) async {
+    final url = Uri.parse('$baseUrl/articles/history/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data['status'] == 'success') {
+          return data['data'] ?? [];
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ 歷史紀錄取得失敗: $e');
+      return [];
+    }
+  }
 }
 

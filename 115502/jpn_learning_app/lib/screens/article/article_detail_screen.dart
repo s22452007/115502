@@ -23,7 +23,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   bool _isAnalyzing = false;
   final AudioRecorder _audioRecorder = AudioRecorder();
 
-  // 📝 假設使用者 ID 為 8 (請依據實際登入狀態替換)
+  // 📝 假設使用者 ID 為 8 (之後若串接 UserProvider 可在此修改)
   final int currentUserId = 8; 
 
   List<dynamic> get _vocabularies {
@@ -40,16 +40,16 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     super.dispose();
   }
 
-// ====================================================
-  // 🌟 1. 單字字典彈出視窗 (扁平化，無 Emoji)
+  // ====================================================
+  // 🌟 1. 單字字典彈出視窗
   // ====================================================
   void _showDictionaryDialog(Map<String, dynamic> vocab) {
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // 稍微減少圓角，更俐落
-          elevation: 0, // 扁平化關鍵：取消陰影
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -74,20 +74,20 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                 Text(vocab['word'] ?? '', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Divider(height: 1, color: Color(0xFFE2E8F0)), // 更細緻的灰線
+                  child: Divider(height: 1, color: Color(0xFFE2E8F0)),
                 ),
                 const Text('中文解釋', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 Text(vocab['meaning'] ?? '', style: const TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 24),
                 SizedBox(
-                  width: double.infinity, // 按鈕全寬，更現代
+                  width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      elevation: 0, // 扁平化按鈕
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), // 方正圓角
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: () {
                       Navigator.pop(context);
@@ -105,7 +105,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   }
 
   // ====================================================
-  // 🌟 2. 選擇資料夾彈出視窗 (扁平化，無 Emoji)
+  // 🌟 2. 選擇資料夾彈出視窗
   // ====================================================
   void _showFolderSelectionDialog(Map<String, dynamic> vocab) {
     showDialog(
@@ -170,7 +170,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.maxFinite,
-                      // 限制最大高度，避免資料夾太多超出螢幕
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
                         child: ListView.builder(
@@ -230,7 +229,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   }
 
   // ====================================================
-  // 🌟 3. 新增自訂資料夾視窗 (扁平化)
+  // 🌟 3. 新增自訂資料夾視窗
   // ====================================================
   void _showCreateFolderDialog(Map<String, dynamic> vocab) {
     final TextEditingController _folderController = TextEditingController();
@@ -254,7 +253,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     hintText: '輸入資料夾名稱',
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
                     filled: true,
-                    fillColor: const Color(0xFFF8FAFC), // 扁平化的灰色底
+                    fillColor: const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)
@@ -311,8 +310,8 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-// ====================================================
-  // 🌟 4. 執行收藏動作並顯示提示 (扁平化，無 Emoji)
+  // ====================================================
+  // 🌟 4. 執行收藏動作並顯示提示
   // ====================================================
   Future<void> _executeCollection(Map<String, dynamic> vocab, int? folderId) async {
     final result = await ApiClient.collectArticleVocab(
@@ -327,26 +326,22 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     
     bool isSuccess = result['status'] == 'success';
     
-    // 💡 動態拔除後端傳來的 emoji (例如 ✅)，並清除前後多餘空白
     String msg = (result['error'] ?? result['message'] ?? '處理中...')
         .toString()
         .replaceAll('✅', '')
         .trim();
     
-    // 先隱藏當前可能還在顯示的提示，讓新的提示能立刻彈出
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        elevation: 0, // 扁平化關鍵：取消陰影
+        elevation: 0, 
         behavior: SnackBarBehavior.floating,
-        // 採用現代的扁平色系：柔和的翠綠色 (成功) 與 柔和的紅色 (失敗)
         backgroundColor: isSuccess ? const Color(0xFF10B981) : const Color(0xFFEF4444), 
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), // 俐落的微圓角
-        margin: const EdgeInsets.only(bottom: 40, left: 24, right: 24), // 讓它浮動在畫面下方適當位置
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), 
+        margin: const EdgeInsets.only(bottom: 40, left: 24, right: 24), 
         content: Row(
           children: [
-            // 使用線條風格的 Icon，看起來更精緻
             Icon(isSuccess ? Icons.check_circle_outline : Icons.error_outline, color: Colors.white, size: 22),
             const SizedBox(width: 12),
             Expanded(
@@ -361,25 +356,37 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-  // ===== 以下為錄音與畫面排版 (維持原樣) =====
+  // ====================================================
+  // 🌟 5. 錄音、評分與成績結算邏輯
+  // ====================================================
   Future<void> _toggleRecording() async {
     if (_isRecording) {
       final path = await _audioRecorder.stop();
+      debugPrint('🎤 錄音結束，取得路徑：$path'); // 追蹤是否有成功拿到檔案
+
       setState(() {
         _isRecording = false;
         _isAnalyzing = true;
       });
 
-      if (path != null) {
+      if (path != null && path.isNotEmpty) {
+        // 1. 呼叫語音評分 API
         final result = await ApiClient.evaluateArticleAudio(path, widget.article.content);
         if (!mounted) return;
-        setState(() => _isAnalyzing = false);
 
         if (result['status'] == 'success') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => ArticleResultScreen(resultData: result)));
+          // 🛡️ 防呆：確保分數是整數
+          final int score = double.tryParse(result['score']?.toString() ?? '0')?.toInt() ?? 0;
+          
+          // 2. 🌟 呼叫成績結算與點數發放 API
+          await _submitScoreAndShowResult(score, result);
         } else {
+          setState(() => _isAnalyzing = false);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('解析失敗：${result['message'] ?? '未知錯誤'}')));
         }
+      } else {
+        setState(() => _isAnalyzing = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('⚠️ 無法取得錄音檔案，請確認麥克風權限或重試')));
       }
     } else {
       if (await _audioRecorder.hasPermission()) {
@@ -388,13 +395,121 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           final dir = await getApplicationDocumentsDirectory();
           filePath = '${dir.path}/reading_test.m4a'; 
         }
-        await _audioRecorder.start(const RecordConfig(), path: filePath ?? '');
+        
+        // 🌟 修復核心：Web 平台不能傳遞空字串當路徑，必須明確傳 null
+        await _audioRecorder.start(
+          const RecordConfig(), 
+          path: kIsWeb ? '' : (filePath ?? ''),
+        );
+        
         setState(() => _isRecording = true);
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🔴 開始錄音，請對麥克風朗讀！')));
       } else {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('必須允許麥克風權限才能錄音喔！')));
       }
     }
+  }
+
+  // 🌟 處理成績結算與導航
+  Future<void> _submitScoreAndShowResult(int score, Map<String, dynamic> evaluateResult) async {
+    final submitResult = await ApiClient.submitArticleScore(currentUserId, widget.article.id, score);
+    
+    if (!mounted) return;
+    setState(() => _isAnalyzing = false);
+
+    // 跳轉到結果報告頁面
+    await Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (context) => ArticleResultScreen(resultData: evaluateResult))
+    );
+
+    // 從結果報告頁面返回後，顯示點數與成就動畫
+    if (submitResult['status'] == 'success' && submitResult['is_new_record'] == true) {
+      final pointsEarned = submitResult['points_earned'] ?? 0;
+      final highestScore = submitResult['highest_score'] ?? score;
+      _showRewardDialog(pointsEarned, highestScore);
+    } else if (submitResult['status'] == 'success') {
+      final pointsEarned = submitResult['points_earned'] ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('練習完成！獲得 $pointsEarned J-pts 獎勵。'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        )
+      );
+    }
+  }
+
+  // 🌟 破紀錄與獲得點數的動畫對話框
+  void _showRewardDialog(int points, int score) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 80),
+                const SizedBox(height: 16),
+                const Text(
+                  '恭喜刷新最高分紀錄！', 
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '本次得分：$score 分',
+                  style: const TextStyle(fontSize: 16, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5)
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        '獲得 $points 點 J-pts',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('繼續努力', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    );
   }
 
   @override
@@ -450,7 +565,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   const Divider(height: 20),
                   const SizedBox(height: 4),
                   
-                  // 🌟 假名解析器維持完美對齊版本
+                  // 🌟 假名解析器
                   FuriganaText(
                     text: widget.article.content,
                     showFurigana: _showFurigana,

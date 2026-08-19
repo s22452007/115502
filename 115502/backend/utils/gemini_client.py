@@ -24,7 +24,7 @@ Gemini 金鑰管理與呼叫封裝。
 """
 import os
 from dotenv import load_dotenv
-from google import genai
+import google.generativeai as genai
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)

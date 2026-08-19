@@ -11,6 +11,7 @@ from utils import gemini_client
 from flask import Blueprint, request, jsonify
 from models import db, User, Article, UnlockedArticle
 from datetime import datetime
+from models import db, User, Article, ArticleProgress, ScoreRecord
 
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
@@ -265,3 +266,88 @@ def unlock_article():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"解鎖失敗: {str(e)}"}), 500
+
+
+    # ==========================================
+# 🌟 新增：成績結算與點數獎勵 API
+# ==========================================
+@article_bp.route('/submit_score', methods=['POST'])
+def submit_score():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    article_id = data.get('article_id')
+    score = data.get('score', 0)
+
+    if not user_id or not article_id:
+        return jsonify({"error": "缺少必要參數"}), 400
+
+    try:
+        # 1. 🏅 區間點數獎勵邏輯 (90分以上50點, 80分以上30點, 及格10點, 參加5點)
+        points_earned = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
+
+        # 2. 📈 檢查最高分並更新 ArticleProgress
+        progress = ArticleProgress.query.filter_by(user_id=user_id, article_id=article_id).first()
+        is_new_record = False
+        highest_score = score
+
+        if not progress:
+            # 第一次測驗
+            progress = ArticleProgress(user_id=user_id, article_id=article_id, score=score, is_completed=True)
+            db.session.add(progress)
+            is_new_record = True
+        else:
+            highest_score = progress.score
+            if score > progress.score:
+                progress.score = score  # 刷新最高分
+                is_new_record = True
+                highest_score = score
+
+        # 3. 💾 寫入本次成績「歷史紀錄」
+        new_record = ScoreRecord(user_id=user_id, article_id=article_id, score=score, points_earned=points_earned)
+        db.session.add(new_record)
+
+        # 4. 💰 更新使用者的總點數 (j_pts)
+        user = User.query.get(user_id)
+        if user:
+            user.j_pts = (user.j_pts or 0) + points_earned
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "score": score,
+            "points_earned": points_earned,
+            "total_points": user.j_pts if user else 0,
+            "is_new_record": is_new_record,
+            "highest_score": highest_score,
+            "message": "成績結算成功！"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+# ==========================================
+# 🌟 新增：查詢個人歷史成績 API
+# ==========================================
+@article_bp.route('/history/<int:user_id>', methods=['GET'])
+def get_user_history(user_id):
+    try:
+        # 按照時間由新到舊排序
+        records = ScoreRecord.query.filter_by(user_id=user_id).order_by(ScoreRecord.created_at.desc()).all()
+        
+        result = []
+        for r in records:
+            article = Article.query.get(r.article_id)
+            result.append({
+                "record_id": r.id,
+                "article_title": article.title if article else "已刪除的文章",
+                "score": r.score,
+                "points_earned": r.points_earned,
+                "date": r.created_at.strftime('%Y-%m-%d %H:%M')
+            })
+
+        return jsonify({"status": "success", "data": result}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

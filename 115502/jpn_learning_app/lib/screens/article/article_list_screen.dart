@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/screens/article/article_history_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart'; 
@@ -8,6 +9,7 @@ import 'package:jpn_learning_app/services/article_service.dart';
 import 'package:jpn_learning_app/screens/article/article_detail_screen.dart'; 
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+
 
 class ArticleListScreen extends StatefulWidget {
   const ArticleListScreen({Key? key}) : super(key: key);
@@ -93,9 +95,37 @@ void _loadArticles() {
 
         return ListView.builder(
           padding: const EdgeInsets.all(20),
-          itemCount: articles.length,
+          // 列表數量加 1，用來放頂部的歷史紀錄按鈕
+          itemCount: articles.length + 1,
           itemBuilder: (context, index) {
-            return _buildArticleCard(articles[index]);
+            // 第 0 項顯示「歷史成績紀錄」按鈕
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                    ),
+                  ),
+                  icon: const Icon(Icons.history_rounded),
+                  label: const Text('查看我的歷史成績紀錄', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ArticleHistoryScreen()),
+                    );
+                  },
+                ),
+              );
+            }
+            // 剩下的項目照常顯示文章卡片 (index 要減 1)
+            return _buildArticleCard(articles[index - 1]);
           },
         );
       },

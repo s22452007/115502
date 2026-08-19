@@ -547,6 +547,33 @@ def use_ai():
     }), 200
 
 
+def refund_ai_usage(user_id):
+    """
+    退還一次 AI 對話次數（AI 回覆失敗時呼叫）。
+
+    退還方式要對應當初的扣除方式：
+      - 若 ai_count_today 已超過每日上限，代表當初是扣「加購次數」→ 把加購次數還回去
+      - 否則就是扣每日免費次數 → 直接把今日計數減 1
+    """
+    user = User.query.get(user_id)
+    if not user:
+        return False
+
+    ai_today = getattr(user, 'ai_count_today', 0) or 0
+    if ai_today <= 0:
+        return False  # 沒有可退還的次數
+
+    daily_limit = 10 if user.is_premium else 3
+    if ai_today > daily_limit:
+        # 當初用掉的是加購次數，還回去
+        user.ai_extra_count = (getattr(user, 'ai_extra_count', 0) or 0) + 1
+
+    user.ai_count_today = ai_today - 1
+    db.session.commit()
+    print(f"↩️ 已退還使用者 {user_id} 一次 AI 對話次數（AI 回覆失敗）")
+    return True
+
+
 # 查詢今日使用量
 @user_bp.route('/usage_status/<int:user_id>', methods=['GET'])
 def get_usage_status(user_id):

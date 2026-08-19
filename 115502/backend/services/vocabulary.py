@@ -3,6 +3,7 @@ from datetime import datetime
 
 from utils.db import db
 from models import User, UserVocab, UserFolder, Vocab
+from sqlalchemy import func
 
 vocab_bp = Blueprint('vocab', __name__)
 
@@ -378,3 +379,78 @@ def collect_from_article():
         
     db.session.commit()
     return jsonify({"status": "success", "message": "✅ 成功加入收藏夾！"}), 200
+
+
+# 單字探險：隨機取得未解鎖／已解鎖單字混合的清單
+@vocab_bp.route('/explore', methods=['POST'])
+def explore_vocabs():
+    """
+    前端會傳入 JSON: { user_id: 1, count: 10, scene_id: optional }
+    回傳隨機的單字清單，並標示是否已解鎖。
+    """
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    count = int(data.get('count', 10))
+    scene_id = data.get('scene_id')
+
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    # 取得使用者資料與已解鎖的 vocab id
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+    user_vocab_records = UserVocab.query.filter_by(user_id=user_id).all()
+    unlocked_ids = {uv.vocab_id for uv in user_vocab_records}
+
+    # 建立 base query
+    q = Vocab.query
+    if scene_id:
+        q = q.filter_by(scene_id=scene_id)
+
+    # 先試圖取未解鎖的單字（優先讓使用者有新字可以探險）
+    unexplored = q.filter(~Vocab.id.in_(list(unlocked_ids))).order_by(func.random()).limit(count).all()
+
+    results = []
+    for v in unexplored:
+        results.append({
+            "vocab_id": v.id,
+            "word": v.word,
+            "kana": v.kana,
+            "meaning": v.meaning,
+            "is_unlocked": False,
+            "unlock_hint": "可透過拍照辨識解鎖，不會花點數。",
+            "action": {"type": "scan", "label": "拍照解鎖"}
+        })
+
+    # 若不足，再補已解鎖的隨機單字
+    if len(results) < count:
+        need = count - len(results)
+        locked = q.filter(Vocab.id.in_(list(unlocked_ids))).order_by(func.random()).limit(need).all()
+        for v in locked:
+            results.append({
+                "vocab_id": v.id,
+                "word": v.word,
+                "kana": v.kana,
+                "meaning": v.meaning,
+                "is_unlocked": True,
+                "unlock_hint": "已解鎖，可加入收藏或觀看例句。",
+                "action": {"type": "view", "label": "查看單字"}
+            })
+
+    # 引導提示：對於尚未進行過任何掃描的使用者，顯示一次性引導
+    show_guide = False
+    guide = None
+    try:
+        show_guide = (getattr(user, 'total_scans', 0) == 0)
+    except Exception:
+        show_guide = False
+
+    if show_guide:
+        guide = {
+            "title": "單字探險小提示",
+            "body": "遇到陌生單字可按『拍照解鎖』，系統會自動把該單字加入你的圖鑑，不會花點數。要收藏到資料夾或擴充容量才需要花點數。",
+            "dismiss_label": "知道了"
+        }
+
+    return jsonify({"vocabs": results, "guide": guide}), 200

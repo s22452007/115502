@@ -21,6 +21,9 @@ from services.article import article_bp
 
 # 👨‍🍳 引入內場廚師 (AI 聊天函數)
 from services.tutor import get_ai_reply
+# 先在上方 import
+from services.sentence import sentence_bp
+
 
 # 自動抓取 app.py 所在的絕對路徑
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -73,6 +76,7 @@ app.register_blueprint(subscription_bp, url_prefix='/api/subscription')
 app.register_blueprint(store_bp, url_prefix='/api/store')
 app.register_blueprint(daily_reward_bp, url_prefix='/api/daily')
 app.register_blueprint(article_bp, url_prefix='/api/articles')
+app.register_blueprint(sentence_bp, url_prefix='/api/sentence')
 # 啟動時自動建立資料表與執行遷移
 with app.app_context():
     db.create_all()  # 建立所有新表

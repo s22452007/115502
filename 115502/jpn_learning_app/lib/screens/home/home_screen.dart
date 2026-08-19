@@ -25,6 +25,7 @@ import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
 import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
 import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
+import 'package:jpn_learning_app/screens/sentence/sentence_practice_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -287,6 +288,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
             const SizedBox(height: 35),
 
+            // 🌟 新增造句挑戰區塊
+            _buildSectionHeader('AI 挑戰'),
+            _buildSentencePracticeCard(context),
+
+            const SizedBox(height: 35),
+
             _buildSectionHeader('文章練習'),
             _buildArticlePracticeCard(context),
 
@@ -324,12 +331,71 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
+  // 🌟 造句挑戰專屬卡片 Widget
+  Widget _buildSentencePracticeCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SentencePracticeScreen()),
+              ).then((_) => _syncHomeData()); // 返回時刷新首頁點數
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 32),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('AI 造句挑戰', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                        SizedBox(height: 4),
+                        Text('活化單字本，賺取 J-pts！', style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildArticlePracticeCard(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: GestureDetector(
         onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const ArticleListScreen()));
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const ArticleListScreen())).then((_) => _syncHomeData());
         },
         child: Container(
           padding: const EdgeInsets.all(20),

@@ -434,4 +434,18 @@ class UnlockedArticle(db.Model):
             "article_id": self.article_id,
             "unlocked_at": self.unlocked_at.strftime('%Y-%m-%d %H:%M:%S')
         }
+
+# ==========================================
+# 🌟 新增：文章測驗歷史紀錄表 (每次測驗都會存一筆)
+# ==========================================
+class ScoreRecord(db.Model):
+    __tablename__ = 'score_record'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    points_earned = db.Column(db.Integer, default=0) # 這次測驗賺到的點數
+    created_at = db.Column(db.DateTime, default=datetime.utcnow) # 測驗時間
+
+
  

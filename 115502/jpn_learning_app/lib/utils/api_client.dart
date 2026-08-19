@@ -927,5 +927,76 @@ class ApiClient {
       return [];
     }
   }
+  // ==========================================
+  // 🌟 造句練習 API (新增)
+  // ==========================================
+  static Future<Map<String, dynamic>> getSentenceTask(int userId) async {
+    final url = Uri.parse('$baseUrl/sentence/get_task?user_id=$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes));
+      }
+      return {'error': '請求失敗'};
+    } catch (e) {
+      debugPrint('❌ 獲取造句題目失敗: $e');
+      return {'error': '連線失敗'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> evaluateSentence({
+    required int userId,
+    required String grammarPoint,
+    required List<String> selectedVocabs,
+    required String userSentence,
+    bool payWithPoints = false,
+  }) async {
+    final url = Uri.parse('$baseUrl/sentence/evaluate');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'grammar_point': grammarPoint,
+          'selected_vocabs': selectedVocabs,
+          'user_sentence': userSentence,
+          'pay_with_points': payWithPoints,
+        }),
+      );
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 造句批改連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
+    }
+  }
+  static Future<List<dynamic>> getSentenceHistory(int userId) async {
+    final url = Uri.parse('$baseUrl/sentence/history/$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data['data'] ?? [];
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<bool> claimSentencePoints(int recordId, int userId) async {
+    final url = Uri.parse('$baseUrl/sentence/claim');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'record_id': recordId, 'user_id': userId}),
+      );
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data['status'] == 'success';
+    } catch (e) {
+      return false;
+    }
+  }
 }
 

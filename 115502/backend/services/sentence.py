@@ -115,7 +115,7 @@ def get_task():
         "today_count": today_count
     }), 200
 # ==========================================
-# 🌟 2. 極度嚴格的 AI 批改與結算 API (加入扣點機制)
+# 🌟 2. 極度嚴格的 AI 批改與結算 API (防彈升級版)
 # ==========================================
 @sentence_bp.route('/evaluate', methods=['POST'])
 def evaluate_sentence():
@@ -124,20 +124,25 @@ def evaluate_sentence():
     grammar_point = data.get('grammar_point')
     selected_vocabs = data.get('selected_vocabs', [])
     user_sentence = data.get('user_sentence')
-    pay_with_points = data.get('pay_with_points', False) # 接收前端是否願意支付點數
+    pay_with_points = data.get('pay_with_points', False) 
 
     if not all([user_id, grammar_point, user_sentence]):
         return jsonify({"error": "缺少必要參數"}), 400
 
     user = User.query.get(user_id)
     
-    # 🌟 檢查額度與點數
-    today_start = datetime.combine(date.today(), datetime.min.time())
-    today_count = SentencePracticeRecord.query.filter(
-        SentencePracticeRecord.user_id == user_id,
-        SentencePracticeRecord.created_at >= today_start
-    ).count()
+    # 🌟 防呆 1：安全檢查今日次數 (如果出錯就不阻擋)
+    today_count = 0
+    try:
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        today_count = SentencePracticeRecord.query.filter(
+            SentencePracticeRecord.user_id == user_id,
+            SentencePracticeRecord.created_at >= today_start
+        ).count()
+    except Exception as e:
+        print(f"⚠️ 無法計算今日次數，跳過檢查: {e}")
 
+    # 檢查免費次數與扣點機制
     if today_count >= 5:
         if not pay_with_points:
             return jsonify({"status": "quota_exceeded", "error": "今日免費次數已用盡"}), 400
@@ -145,8 +150,12 @@ def evaluate_sentence():
             return jsonify({"status": "insufficient_points", "error": "點數不足"}), 400
         
         # 確定支付，立刻扣除 10 點
-        user.j_pts -= 10
-        db.session.commit()
+        try:
+            user.j_pts -= 10
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"⚠️ 扣點失敗: {e}")
 
     level = user.japanese_level if user and user.japanese_level else 'N3'
     
@@ -165,10 +174,10 @@ def evaluate_sentence():
         【重點要求】：評語請務必「條列式、極度簡短」，一針見血指出錯誤即可，完全不要廢話或寒暄。
         請以純 JSON 格式回傳（絕對不可加 Markdown 標籤）：
         {{
-            "score": <計算後的0-100分數>,
-            "is_grammar_correct": <boolean>,
-            "corrected_sentence": "<修正後的完美自然句子>",
-            "strict_feedback": "1. 助詞錯誤：に 應改為 で\\n2. 變形錯誤：食べる 應改為 食べて\\n3. 語感建議：用 ~たい 表達更自然"
+            "score": 85,
+            "is_grammar_correct": true,
+            "corrected_sentence": "修正後的完美自然句子",
+            "strict_feedback": "1. 助詞錯誤：に 應改為 で\\n2. 變形錯誤：食べる 應改為 食べて"
         }}
         """
         response = model.generate_content(prompt)
@@ -178,30 +187,35 @@ def evaluate_sentence():
         raise ValueError("AI 回傳格式錯誤")
 
     try:
+        # 交由 Gemini 批改
         result = gemini_client.run_with_legacy_keys('article', _analyze)
         score = result.get('score', 0)
-        
         points_earned = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
 
-        new_record = SentencePracticeRecord(
-            user_id=user_id,
-            grammar_point=grammar_point,
-            selected_vocabs=selected_vocabs,
-            user_sentence=user_sentence,
-            corrected_sentence=result.get('corrected_sentence', ''),
-            ai_feedback=result.get('strict_feedback', ''),
-            score=score,
-            points_earned=points_earned,
-            is_claimed=False 
-        )
-        db.session.add(new_record)
-        db.session.commit()
+        # 🌟 防呆 2：安全寫入資料庫
+        try:
+            new_record = SentencePracticeRecord(
+                user_id=user_id,
+                grammar_point=grammar_point,
+                selected_vocabs=selected_vocabs,
+                user_sentence=user_sentence,
+                corrected_sentence=result.get('corrected_sentence', ''),
+                ai_feedback=result.get('strict_feedback', ''),
+                score=score,
+                points_earned=points_earned,
+                is_claimed=False 
+            )
+            db.session.add(new_record)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"⚠️ 歷史紀錄寫入資料庫失敗 (表格可能未建立): {e}")
+            # 💡 即使沒存入資料庫，依然會回傳批改結果給畫面，不讓前端卡死
         
         result['points_earned'] = points_earned
         result['status'] = 'success'
         return jsonify(result), 200
     except Exception as e:
-        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 

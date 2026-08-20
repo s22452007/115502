@@ -161,7 +161,7 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
+                    padding: const EdgeInsets.fromLTRB(24, 80, 24, 30),
                     child: _buildPillItem(
                       context,
                       isGuest ? Icons.login : Icons.logout,

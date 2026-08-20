@@ -226,6 +226,16 @@ class _ThemeCard extends StatelessWidget {
     final double progress = (theme['progress'] ?? 0.0).toDouble();
     final coverUrl = _photoUrl(theme['cover_image']);
 
+    // 里程碑獎勵：後端回 {half: {state, points, ...}, complete: {...}}
+    final Map<String, dynamic> rewards =
+        Map<String, dynamic>.from(theme['rewards'] ?? {});
+    final claimable = ['half', 'complete']
+        .where((t) => rewards[t]?['state'] == 'claimable')
+        .toList();
+    final int claimablePts = claimable.fold<int>(
+        0, (sum, t) => sum + ((rewards[t]?['points'] ?? 0) as int));
+    final bool isCompleteClaimed = rewards['complete']?['state'] == 'claimed';
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -289,18 +299,54 @@ class _ThemeCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 右上角主題圖示徽記
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(12),
+                  // 上排：左邊獎勵狀態、右邊主題圖示
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (claimable.isNotEmpty)
+                        _ClaimPill(
+                          points: claimablePts,
+                          onClaim: () => _claimRewards(
+                            context,
+                            sceneId: theme['scene_id'] ?? 0,
+                            themeName: name,
+                            tiers: claimable,
+                            onDone: onReturn,
+                          ),
+                        )
+                      else if (isCompleteClaimed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.verified,
+                                  size: 15, color: AppColors.primary),
+                              SizedBox(width: 4),
+                              Text('已完成',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.primary)),
+                            ],
+                          ),
+                        ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(_iconFor(theme['icon_name']),
+                            size: 20, color: AppColors.primary),
                       ),
-                      child: Icon(_iconFor(theme['icon_name']),
-                          size: 20, color: AppColors.primary),
-                    ),
+                    ],
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,12 +397,202 @@ class _ThemeCard extends StatelessWidget {
     );
   }
 
+  /// 一次把這個主題所有可領的里程碑領完（過半沒領、直接集滿的情況也不會漏）
+  Future<void> _claimRewards(
+    BuildContext context, {
+    required int sceneId,
+    required String themeName,
+    required List<String> tiers,
+    required VoidCallback onDone,
+  }) async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    int totalPts = 0;
+    int totalPhoto = 0;
+    String? badgeName;
+    String? errorMsg;
+
+    for (final tier in tiers) {
+      try {
+        final res = await ApiClient.claimThemeReward(
+          userId: userId,
+          sceneId: sceneId,
+          tier: tier,
+        );
+        totalPts += (res['pts_earned'] ?? 0) as int;
+        totalPhoto += (res['bonus_photo'] ?? 0) as int;
+        badgeName ??= res['badge_name'] as String?;
+      } catch (e) {
+        errorMsg = e.toString().replaceFirst('Exception: ', '');
+      }
+    }
+
+    onDone(); // 不管成功與否都重新拉一次，讓畫面回到伺服器的真實狀態
+
+    if (totalPts == 0 && totalPhoto == 0 && badgeName == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(errorMsg ?? '領取失敗，請稍後再試')),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => _RewardDialog(
+        themeName: themeName,
+        points: totalPts,
+        extraPhoto: totalPhoto,
+        badgeName: badgeName,
+      ),
+    );
+  }
+
   Widget _fallbackCover(String name) => Container(
         color: AppColors.primaryLighter,
         alignment: Alignment.center,
         child: Icon(_iconFor(theme['icon_name']),
             size: 64, color: Colors.white.withOpacity(0.8)),
       );
+}
+
+/// 卡片左上角的「可領取」徽記，點下去直接領（不會連帶開啟主題詳情）
+class _ClaimPill extends StatelessWidget {
+  final int points;
+  final VoidCallback onClaim;
+
+  const _ClaimPill({required this.points, required this.onClaim});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onClaim,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: AppColors.secondary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.card_giftcard, size: 15, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              '領取 +$points',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 領取成功後的結算彈窗
+class _RewardDialog extends StatelessWidget {
+  final String themeName;
+  final int points;
+  final int extraPhoto;
+  final String? badgeName;
+
+  const _RewardDialog({
+    required this.themeName,
+    required this.points,
+    required this.extraPhoto,
+    this.badgeName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 28, 28, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              badgeName != null ? '「$themeName」集滿了！' : '「$themeName」收集過半！',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (points > 0) _RewardRow(icon: Icons.stars, text: '$points J 點'),
+            if (extraPhoto > 0)
+              _RewardRow(
+                  icon: Icons.photo_camera_outlined, text: '額外拍照次數 $extraPhoto 次'),
+            if (badgeName != null)
+              _RewardRow(icon: Icons.workspace_premium, text: '徽章「$badgeName」'),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  '收下',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RewardRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _RewardRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.secondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// 主題細節：上方單字牆（已解鎖 vs 剪影）+ 下方探索照列表

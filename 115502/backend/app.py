@@ -254,10 +254,13 @@ with app.app_context():
 
     # ── 主題收集冊：預種各主題官方常見字（idempotent，已存在跳過）──
     try:
-        from seed_themes import seed_theme_vocabs
+        from seed_themes import seed_theme_vocabs, seed_theme_badges
         _added, _promoted = seed_theme_vocabs()
         if _added or _promoted:
             print(f"[Theme] 主題官方單字種入：新增 {_added} 筆、收編既有 {_promoted} 筆")
+        _badges = seed_theme_badges()
+        if _badges:
+            print(f"[Theme] 主題集滿徽章種入：新增 {_badges} 枚")
     except Exception as _e:
         print(f"⚠️ 主題官方單字種入警告：{_e}")
 

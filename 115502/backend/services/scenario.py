@@ -346,6 +346,16 @@ def analyze_scene():
                     'debug': True,
                 }
 
+            # 帶上這個里程碑可以領到什麼，讓慶祝動畫直接告訴使用者「有獎勵待領」
+            if milestone:
+                cfg = THEME_REWARDS.get(milestone['type'], {})
+                milestone['scene_id'] = theme_scene_id
+                milestone['reward'] = {
+                    'points': cfg.get('points', 0),
+                    'extra_photo': cfg.get('extra_photo', 0),
+                    'badge': cfg.get('badge', False),
+                }
+
             return jsonify({
                 'message': '圖片分析成功並已存入圖鑑',
                 'file_path': relative_image_path,

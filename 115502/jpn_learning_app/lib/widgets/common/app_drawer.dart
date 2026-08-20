@@ -160,31 +160,32 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
+                    child: _buildPillItem(
+                      context,
+                      isGuest ? Icons.login : Icons.logout,
+                      isGuest ? '註冊 / 登入' : '登出帳號',
+                      iconColor: isGuest ? Colors.blue : Colors.redAccent,
+                      textColor: isGuest ? Colors.blue : Colors.redAccent, // 保持登出按鈕的跳色
+                      bgColor: isGuest
+                          ? Colors.blue.withOpacity(0.1)
+                          : Colors.redAccent.withOpacity(0.1),
+                      onTap: () {
+                        if (!isGuest) userProvider.logout();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          (r) => false,
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
-            child: _buildPillItem(
-              context,
-              isGuest ? Icons.login : Icons.logout,
-              isGuest ? '註冊 / 登入' : '登出帳號',
-              iconColor: isGuest ? Colors.blue : Colors.redAccent,
-              textColor: isGuest ? Colors.blue : Colors.redAccent, // 保持登出按鈕的跳色
-              bgColor: isGuest
-                  ? Colors.blue.withOpacity(0.1)
-                  : Colors.redAccent.withOpacity(0.1),
-              onTap: () {
-                if (!isGuest) userProvider.logout();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (r) => false,
-                );
-              },
-            ),
-          ),
+          
         ],
       ),
     );

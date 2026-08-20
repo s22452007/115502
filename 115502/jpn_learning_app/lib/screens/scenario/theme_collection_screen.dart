@@ -222,6 +222,7 @@ class _ThemeCard extends StatelessWidget {
     final int photoCount = theme['photo_count'] ?? 0;
     final int unlocked = theme['unlocked_count'] ?? 0;
     final int target = theme['target_count'] ?? 20;
+    final int bonus = theme['bonus_count'] ?? 0;
     final double progress = (theme['progress'] ?? 0.0).toDouble();
     final coverUrl = _photoUrl(theme['cover_image']);
 
@@ -314,20 +315,24 @@ class _ThemeCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // 完成度進度條
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 6,
-                          backgroundColor: Colors.white.withOpacity(0.35),
-                          valueColor:
-                              const AlwaysStoppedAnimation(AppColors.secondary),
+                      // 完成度進度條（沒有官方收集目標的主題不畫，避免出現 0/0）
+                      if (target > 0)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 6,
+                            backgroundColor: Colors.white.withOpacity(0.35),
+                            valueColor:
+                                const AlwaysStoppedAnimation(AppColors.secondary),
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 6),
                       Text(
-                        '已解鎖 $unlocked / $target 個單字 · $photoCount 張探索照',
+                        target > 0
+                            ? '已解鎖 $unlocked / $target 個單字 · $photoCount 張探索照'
+                                '${bonus > 0 ? ' · 額外 $bonus 字' : ''}'
+                            : '收了 $bonus 個單字 · $photoCount 張探索照',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: Colors.white.withOpacity(0.95),
@@ -524,21 +529,26 @@ class _VocabWall extends StatelessWidget {
         }
         final data = snapshot.data ?? {};
         final vocabs = (data['vocabs'] as List?) ?? [];
+        final bonus = (data['bonus'] as List?) ?? [];
         final total = data['total'] ?? vocabs.length;
         final unlocked = data['unlocked'] ?? 0;
 
+        // 這個主題沒有官方收集目標（例如「其他」）：不畫進度，只列自己拍到的字
         if (total == 0) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Center(
-              child: Text('拍照探索這個主題，開始點亮單字牆吧！',
-                  style: TextStyle(color: AppColors.textGrey, fontSize: 14)),
-            ),
-          );
+          if (bonus.isEmpty) {
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Text('拍照探索這個主題，開始點亮單字牆吧！',
+                    style: TextStyle(color: AppColors.textGrey, fontSize: 14)),
+              ),
+            );
+          }
+          return _BonusSection(bonus: bonus, isOnly: true);
         }
 
         final double progress = total > 0 ? unlocked / total : 0.0;
@@ -573,7 +583,7 @@ class _VocabWall extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              '灰色的「？」是還沒發現的字，拍到就會免費點亮',
+              '灰色的是還沒發現的字：下面寫著中文意思，拍到就會免費點亮',
               style: TextStyle(fontSize: 12.5, color: AppColors.textSubtle),
             ),
             const SizedBox(height: 16),
@@ -584,9 +594,16 @@ class _VocabWall extends StatelessWidget {
                 final isUnlocked = v['is_unlocked'] == true;
                 return isUnlocked
                     ? _UnlockedChip(vocab: v)
-                    : _LockedChip(hintLen: (v['hint_len'] ?? 2));
+                    : _LockedChip(
+                        hintLen: (v['hint_len'] ?? 2),
+                        hint: (v['hint'] ?? '').toString(),
+                      );
               }).toList(),
             ),
+            if (bonus.isNotEmpty) ...[
+              const SizedBox(height: 28),
+              _BonusSection(bonus: bonus),
+            ],
           ],
         );
       },
@@ -628,47 +645,106 @@ class _UnlockedChip extends StatelessWidget {
   }
 }
 
-/// 未解鎖單字：剪影佔位，用「？」與長度提示製造收集動力。
-/// 刻意不用鎖頭圖示 —— 鎖頭會讓人以為要付費才能解鎖，實際上拍到就免費開。
+/// 未解鎖單字：藏日文、露中文意思。
+/// 刻意不用鎖頭圖示 —— 鎖頭會讓人以為要付費，實際上拍到就免費開。
+/// 給中文意思是為了讓目標可行動：你知道要去拍「菜單」，但還不知道它的日文怎麼說。
 class _LockedChip extends StatelessWidget {
   final int hintLen;
-  const _LockedChip({required this.hintLen});
+  final String hint;
+
+  const _LockedChip({required this.hintLen, required this.hint});
 
   @override
   Widget build(BuildContext context) {
-    // 依假名長度給個約略寬度，暗示這個字的份量
+    // 問號數量＝假名長度，順便暗示這個字有幾個音
     final int len = hintLen.clamp(1, 6);
-    final width = len * 14.0 + 24;
     return GestureDetector(
-      onTap: () => _showLockedHint(context),
+      onTap: () => _showLockedHint(context, hint),
       child: Container(
-        width: width,
-        height: 52,
-        alignment: Alignment.center,
+        constraints: const BoxConstraints(minWidth: 72),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFF7F7F7),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFE0E0E0)),
         ),
-        // 用問號的數量暗示這個字有幾個音，讓人想去把它拍出來
-        child: Text(
-          '？' * len,
-          maxLines: 1,
-          overflow: TextOverflow.clip,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            letterSpacing: -1,
-            color: Colors.grey.shade400,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '？' * len,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -2,
+                color: Colors.grey.shade400,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              hint.isEmpty ? '未發現' : hint,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, color: AppColors.textSubtle),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// 點未解鎖的字時，直接說明「怎麼開、要不要錢」
-void _showLockedHint(BuildContext context) {
+/// 額外收穫：官方清單以外、使用者自己拍到的字（不計入完成度）
+class _BonusSection extends StatelessWidget {
+  final List<dynamic> bonus;
+
+  /// 這個主題沒有官方收集目標時（例如「其他」），額外收穫就是整面牆
+  final bool isOnly;
+
+  const _BonusSection({required this.bonus, this.isOnly = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(isOnly ? '你拍到的字' : '額外收穫',
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textDark)),
+            const SizedBox(width: 8),
+            Text('${bonus.length}',
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.secondary)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          isOnly
+              ? '這個主題沒有固定的收集目標，拍到什麼就收什麼'
+              : '官方清單以外、你自己拍到的字，不影響上面的完成度',
+          style: const TextStyle(fontSize: 12, color: AppColors.textSubtle),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: bonus.map<Widget>((v) => _UnlockedChip(vocab: v)).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+/// 點未解鎖的字時，說明「拍什麼會開、要不要錢」
+void _showLockedHint(BuildContext context, String hint) {
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.white,
@@ -689,10 +765,46 @@ void _showLockedHint(BuildContext context) {
               color: AppColors.textDark,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
+          if (hint.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Text('提示　',
+                      style: TextStyle(fontSize: 13, color: AppColors.textGrey)),
+                  Expanded(
+                    child: Text(
+                      hint,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '去拍一張有「$hint」的照片，這個字的日文就會自動點亮。',
+              style: const TextStyle(
+                  fontSize: 15, height: 1.7, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 6),
+          ] else
+            const Text(
+              '拍到含有這個字的照片，它就會自動點亮。',
+              style: TextStyle(fontSize: 15, height: 1.7, color: AppColors.textDark),
+            ),
           const Text(
-            '拍到含有這個字的照片，它就會自動點亮 —— 不需要花點數，也不用先買什麼。',
-            style: TextStyle(fontSize: 15, height: 1.7, color: AppColors.textDark),
+            '不需要花點數，也不用先買什麼。',
+            style: TextStyle(fontSize: 14, height: 1.7, color: AppColors.textGrey),
           ),
           const SizedBox(height: 24),
           SizedBox(

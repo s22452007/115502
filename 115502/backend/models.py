@@ -458,7 +458,7 @@ class SentencePracticeRecord(db.Model):
     selected_vocabs = db.Column(db.JSON, nullable=True) # 記錄使用者勾選了哪些收藏單字
     user_sentence = db.Column(db.Text, nullable=False)
     corrected_sentence = db.Column(db.Text, nullable=True)
-    ai_feedback = db.Column(db.Text, nullable=True)
+    ai_feedback = db.Column(db.Text, nullable=True) 
     score = db.Column(db.Integer, default=0)
     points_earned = db.Column(db.Integer, default=0)
     is_claimed = db.Column(db.Boolean, default=False) 

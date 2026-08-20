@@ -184,8 +184,36 @@ def seed_theme_vocabs():
     return added, promoted
 
 
+def seed_theme_badges():
+    """為每個主題種一枚「集滿」徽章（例如「餐廳美食達人」）。
+
+    使用者在收集冊按下領取、且該主題已集滿時，才會拿到對應的 UserAchievement。
+    idempotent：以徽章名稱查重，已存在就跳過。回傳新增筆數。
+    """
+    from utils.db import db
+    from models import Achievement
+    from services.scenario import THEME_DEFS, theme_badge_name
+
+    added = 0
+    for theme in THEME_DEFS:
+        if theme['name'] == '其他':  # 「其他」沒有固定收集目標，不發徽章
+            continue
+        name = theme_badge_name(theme['name'])
+        if Achievement.query.filter_by(name=name).first():
+            continue
+        db.session.add(Achievement(
+            name=name,
+            description=f"集滿「{theme['name']}」主題收集冊的所有官方單字",
+        ))
+        added += 1
+
+    db.session.commit()
+    return added
+
+
 if __name__ == '__main__':
     from app import app
     with app.app_context():
         n, p = seed_theme_vocabs()
-        print(f'[OK] 主題官方單字種入完成，新增 {n} 筆，收編既有 {p} 筆。')
+        b = seed_theme_badges()
+        print(f'[OK] 主題官方單字種入完成，新增 {n} 筆，收編既有 {p} 筆，主題徽章新增 {b} 枚。')

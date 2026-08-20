@@ -13,7 +13,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # 主題收集冊：固定主題清單
 #   name           : 與 AI 回傳的 scene_category 對應（必須一致）
 #   icon           : Flutter Material icon 名稱
-#   target         : 該主題「集滿」的目標單字數（完成度分母）
+#   target         : 參考用的目標字數。實際分母以 seed_themes.py 種進去的官方字數為準
+#                    （見 _theme_progress），這欄只是提醒每個主題該補到幾個字。
 # 注意：AI 回傳的 scene_category 會用 name 去 get-or-create 對應的 Scene，
 #       不在清單內或空值一律歸到「其他」。
 # ==========================================
@@ -53,13 +54,21 @@ def get_or_create_theme_scene(category):
     return scene
 
 
+# 官方字＝seed_themes.py 種進去的收集目標（source='admin'）。
+# 完成度一律只看官方字，使用者拍照產生的 AI 新字（source='ai'）不進分母，
+# 否則別人拍到新字就會讓你的完成度倒退、集滿的冊子被打破。
+OFFICIAL_SOURCE = 'admin'
+
+
 def _theme_progress(user_id, scene_id):
-    """回傳 (unlocked, total)：使用者在該主題已解鎖的 distinct 單字數 / 主題單字總數。"""
+    """回傳 (unlocked, total)：使用者在該主題已解鎖的官方字數 / 官方字總數。"""
     from models import Vocab, UserVocab
-    total = Vocab.query.filter_by(scene_id=scene_id).count()
+    total = Vocab.query.filter_by(scene_id=scene_id, source=OFFICIAL_SOURCE).count()
     unlocked = (UserVocab.query
                 .join(Vocab, UserVocab.vocab_id == Vocab.id)
-                .filter(UserVocab.user_id == user_id, Vocab.scene_id == scene_id)
+                .filter(UserVocab.user_id == user_id,
+                        Vocab.scene_id == scene_id,
+                        Vocab.source == OFFICIAL_SOURCE)
                 .count())
     return unlocked, total
 
@@ -410,14 +419,16 @@ def get_themes(user_id):
         for s in Scene.query.filter(Scene.id.in_(photo_scene_ids)).all():
             scene_by_id.setdefault(s.id, s)
 
-    # 3. 逐場景統計單字牆數據
+    # 3. 逐場景統計單字牆數據（完成度只算官方字；AI 額外字另外計為 bonus）
     results = []
     for sid, scene in scene_by_id.items():
-        total = Vocab.query.filter_by(scene_id=sid).count()
-        unlocked = (UserVocab.query
-                    .join(Vocab, UserVocab.vocab_id == Vocab.id)
-                    .filter(UserVocab.user_id == user_id, Vocab.scene_id == sid)
-                    .count())
+        unlocked, total = _theme_progress(user_id, sid)
+        bonus = (UserVocab.query
+                 .join(Vocab, UserVocab.vocab_id == Vocab.id)
+                 .filter(UserVocab.user_id == user_id,
+                         Vocab.scene_id == sid,
+                         Vocab.source != OFFICIAL_SOURCE)
+                 .count())
         agg = photo_agg.get(sid, {})
         results.append({
             'scene_id': sid,
@@ -427,6 +438,7 @@ def get_themes(user_id):
             'photo_count': agg.get('count', 0),
             'unlocked_count': unlocked,
             'target_count': total,
+            'bonus_count': bonus,  # 官方清單以外、自己拍到的額外單字
             'progress': min(1.0, round(unlocked / total, 3)) if total else 0.0,
             'last_at': agg['last_at'].strftime('%Y.%m.%d') if agg.get('last_at') else '',
         })
@@ -442,14 +454,18 @@ def get_themes(user_id):
 
 @scenario_bp.route('/theme_vocabs/<int:user_id>/<int:scene_id>', methods=['GET'])
 def get_theme_vocabs(user_id, scene_id):
-    """主題單字牆：回傳某主題底下所有單字，並標記使用者是否已解鎖。
+    """主題單字牆：回傳某主題的官方收集目標，並標記使用者是否已解鎖。
 
-    未解鎖的字「不回傳字面」（保留剪影神秘感），只給 hint_len 當長度提示，
-    引導使用者去拍照把它們一個個點亮。
+    - 牆上只放官方字（source='admin'），數量固定，所以「集滿」才有意義。
+    - 未解鎖的字不回傳字面（保留剪影神秘感），但給 hint（中文意思）當可行動的線索，
+      使用者才知道該去拍什麼；hint_len 用來畫剪影寬度。
+    - 使用者自己拍到、官方清單以外的字放進 bonus，不計入完成度。
     """
     from models import Vocab, UserVocab
 
-    vocabs = Vocab.query.filter_by(scene_id=scene_id).order_by(Vocab.id).all()
+    vocabs = (Vocab.query
+              .filter_by(scene_id=scene_id, source=OFFICIAL_SOURCE)
+              .order_by(Vocab.id).all())
     unlocked_ids = {
         uv.vocab_id for uv in UserVocab.query.filter_by(user_id=user_id).all()
     }
@@ -467,19 +483,37 @@ def get_theme_vocabs(user_id, scene_id):
                 'is_unlocked': True,
             })
         else:
-            # 剪影：不洩漏字面，只給長度提示
+            # 剪影：不洩漏日文字面，只給中文意思與長度提示
             results.append({
                 'vocab_id': v.id,
                 'is_unlocked': False,
+                'hint': v.meaning,
                 'hint_len': len(v.kana or ''),
             })
 
     # 已解鎖排前面，剪影排後面
     results.sort(key=lambda x: not x['is_unlocked'])
+
+    # 額外收穫：這個主題裡使用者拍到、但不在官方清單上的字
+    bonus_rows = (Vocab.query
+                  .join(UserVocab, UserVocab.vocab_id == Vocab.id)
+                  .filter(UserVocab.user_id == user_id,
+                          Vocab.scene_id == scene_id,
+                          Vocab.source != OFFICIAL_SOURCE)
+                  .order_by(Vocab.id).all())
+    bonus = [{
+        'vocab_id': v.id,
+        'word': v.word,
+        'kana': v.kana,
+        'meaning': v.meaning,
+        'is_unlocked': True,
+    } for v in bonus_rows]
+
     return jsonify({
         'vocabs': results,
         'total': len(vocabs),
         'unlocked': unlocked_count,
+        'bonus': bonus,
     }), 200
 
 

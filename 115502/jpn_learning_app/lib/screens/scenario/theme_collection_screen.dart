@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/theme_collection_intro_screen.dart';
 
 /// 主題名稱 -> icon（對應後端 THEME_DEFS 的 icon_name）
 const Map<String, IconData> _themeIcons = {
@@ -40,9 +43,46 @@ class ThemeCollectionScreen extends StatefulWidget {
 }
 
 class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
+  /// 記住使用者看過引導了沒（改文案時把版本號往上加就會重新出現一次）
+  static const String _introSeenKey = 'theme_collection_intro_seen_v1';
+
   Key _futureKey = UniqueKey();
 
   void _reload() => setState(() => _futureKey = UniqueKey());
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowIntro());
+  }
+
+  /// 第一次進收集冊時自動帶出引導，之後不再打擾
+  Future<void> _maybeShowIntro() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_introSeenKey) ?? false) return;
+    await prefs.setBool(_introSeenKey, true);
+    if (!mounted) return;
+    await _openIntro(isFirstTime: true);
+  }
+
+  Future<void> _openIntro({bool isFirstTime = false}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ThemeCollectionIntroScreen(isFirstTime: isFirstTime),
+      ),
+    );
+    if (mounted) _reload(); // 從引導直接去拍照的話，回來要看到新的冊子
+  }
+
+  void _goCamera() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CameraScreen()),
+    ).then((_) {
+      if (mounted) _reload();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +90,13 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
 
     return SubPageTemplate(
       title: '主題收集冊',
+      actions: [
+        IconButton(
+          tooltip: '這是什麼？',
+          icon: const Icon(Icons.help_outline),
+          onPressed: () => _openIntro(),
+        ),
+      ],
       body: userId == null
           ? const Center(
               child: Text('請先登入才能查看收集冊喔！',
@@ -76,11 +123,7 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
 
                 final themes = snapshot.data ?? [];
                 if (themes.isEmpty) {
-                  return const Center(
-                    child: Text('還沒有開始任何主題探索\n拍張照片開啟你的第一本收集冊吧！',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.6)),
-                  );
+                  return _buildEmptyState();
                 }
 
                 return ListView.builder(
@@ -91,6 +134,77 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
                 );
               },
             ),
+    );
+  }
+
+  /// 一本冊子都還沒有時：說清楚這頁在幹嘛、標明免費，並給一個明確的下一步
+  Widget _buildEmptyState() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '你的收集冊還是空的',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '拍一張生活中的照片，系統會辨識出裡面的日文單字，\n並自動幫你開出第一本主題收集冊。',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, height: 1.7, color: AppColors.textGrey),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '拍照解鎖單字不用花點數',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                ),
+                onPressed: _goCamera,
+                child: const Text(
+                  '去拍第一張',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => _openIntro(),
+              child: const Text(
+                '主題收集冊是什麼？',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textGrey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -457,6 +571,11 @@ class _VocabWall extends StatelessWidget {
                 valueColor: const AlwaysStoppedAnimation(AppColors.primary),
               ),
             ),
+            const SizedBox(height: 8),
+            const Text(
+              '灰色的「？」是還沒發現的字，拍到就會免費點亮',
+              style: TextStyle(fontSize: 12.5, color: AppColors.textSubtle),
+            ),
             const SizedBox(height: 16),
             Wrap(
               spacing: 10,
@@ -509,7 +628,8 @@ class _UnlockedChip extends StatelessWidget {
   }
 }
 
-/// 未解鎖單字：剪影佔位，用「？」與長度提示製造收集動力
+/// 未解鎖單字：剪影佔位，用「？」與長度提示製造收集動力。
+/// 刻意不用鎖頭圖示 —— 鎖頭會讓人以為要付費才能解鎖，實際上拍到就免費開。
 class _LockedChip extends StatelessWidget {
   final int hintLen;
   const _LockedChip({required this.hintLen});
@@ -517,19 +637,96 @@ class _LockedChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 依假名長度給個約略寬度，暗示這個字的份量
-    final width = (hintLen.clamp(1, 6)) * 14.0 + 24;
-    return Container(
-      width: width,
-      height: 52,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F0),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+    final int len = hintLen.clamp(1, 6);
+    final width = len * 14.0 + 24;
+    return GestureDetector(
+      onTap: () => _showLockedHint(context),
+      child: Container(
+        width: width,
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F7F7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE0E0E0)),
+        ),
+        // 用問號的數量暗示這個字有幾個音，讓人想去把它拍出來
+        child: Text(
+          '？' * len,
+          maxLines: 1,
+          overflow: TextOverflow.clip,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: -1,
+            color: Colors.grey.shade400,
+          ),
+        ),
       ),
-      child: Icon(Icons.lock_outline, size: 18, color: Colors.grey.shade400),
     );
   }
+}
+
+/// 點未解鎖的字時，直接說明「怎麼開、要不要錢」
+void _showLockedHint(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) => Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '這個字還沒被你發現',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '拍到含有這個字的照片，它就會自動點亮 —— 不需要花點數，也不用先買什麼。',
+            style: TextStyle(fontSize: 15, height: 1.7, color: AppColors.textDark),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CameraScreen()),
+                );
+              },
+              child: const Text(
+                '去拍照',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// 點已解鎖單字時彈出的解釋 + 發音表單

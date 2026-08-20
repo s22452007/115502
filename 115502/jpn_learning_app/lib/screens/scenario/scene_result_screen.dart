@@ -8,6 +8,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/screens/scenario/make_sentence_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/theme_collection_screen.dart';
 
 /// 拍照辨識結果頁：
 /// 介面與「我的單字探險」詳細頁一致（照片大圖 + 單字卡列表），
@@ -373,10 +374,13 @@ class _MilestoneCelebrationState extends State<_MilestoneCelebration>
       vsync: this,
       duration: const Duration(milliseconds: 2600),
     )..forward();
-    // 約 2.8 秒後自動關閉（若使用者沒先點掉）
-    _autoClose = Timer(const Duration(milliseconds: 2800), () {
-      if (mounted) Navigator.of(context).maybePop();
-    });
+    // 有獎勵可領時不自動關閉，等使用者自己決定要不要去領；
+    // 沒獎勵才維持原本約 2.8 秒後自動收掉的行為。
+    if (!_hasReward) {
+      _autoClose = Timer(const Duration(milliseconds: 2800), () {
+        if (mounted) Navigator.of(context).maybePop();
+      });
+    }
   }
 
   @override
@@ -387,6 +391,33 @@ class _MilestoneCelebrationState extends State<_MilestoneCelebration>
   }
 
   bool get _isComplete => widget.milestone['type'] == 'complete';
+
+  /// 後端帶回來的獎勵內容（舊版沒有這個欄位時就是 null）
+  Map<String, dynamic>? get _reward {
+    final r = widget.milestone['reward'];
+    return r is Map ? Map<String, dynamic>.from(r) : null;
+  }
+
+  bool get _hasReward {
+    final r = _reward;
+    if (r == null) return false;
+    return ((r['points'] ?? 0) as int) > 0 ||
+        ((r['extra_photo'] ?? 0) as int) > 0 ||
+        r['badge'] == true;
+  }
+
+  /// 把獎勵內容濃縮成一行，例如「+100 J 點・拍照 +3 次・專屬徽章」
+  String get _rewardLine {
+    final r = _reward;
+    if (r == null) return '';
+    final parts = <String>[];
+    final pts = (r['points'] ?? 0) as int;
+    final photo = (r['extra_photo'] ?? 0) as int;
+    if (pts > 0) parts.add('+$pts J 點');
+    if (photo > 0) parts.add('拍照 +$photo 次');
+    if (r['badge'] == true) parts.add('專屬徽章');
+    return parts.join('・');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -454,6 +485,75 @@ class _MilestoneCelebrationState extends State<_MilestoneCelebration>
                   '已收集 $unlocked / $total 個單字',
                   style: const TextStyle(fontSize: 13, color: AppColors.textGrey),
                 ),
+                // 有獎勵可領：說清楚領得到什麼，並給一個直接去領的出口
+                if (_hasReward) ...[
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          '獎勵待領取',
+                          style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          _rewardLine,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w900,
+                            color: accent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accent,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(23),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).maybePop(); // 先收掉慶祝動畫
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ThemeCollectionScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        '去收集冊領取',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    child: const Text(
+                      '晚點再領',
+                      style: TextStyle(fontSize: 13, color: AppColors.textGrey),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

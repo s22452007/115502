@@ -512,6 +512,17 @@ class ApiClient {
     throw Exception('無法載入主題');
   }
 
+  /// 徽章：回傳 {theme: [...8 枚主題徽章含 unlocked], general: [...已解鎖的成就徽章]}
+  static Future<Map<String, dynamic>> getAchievements(int userId) async {
+    final url = Uri.parse('$baseUrl/user/achievements/$userId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(
+          json.decode(utf8.decode(response.bodyBytes)));
+    }
+    throw Exception('無法載入徽章');
+  }
+
   /// 領取主題收集冊的里程碑獎勵（tier: 'half' 過半 / 'complete' 集滿）
   /// 成功回傳 {pts_earned, bonus_photo, badge_name, j_pts, ...}；
   /// 未達標或重複領取會由後端擋下並丟出錯誤訊息

@@ -337,11 +337,11 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('📝 完美句子建議：', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        const Text('完美句子建議：', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
                         const SizedBox(height: 8),
                         Text(correctedSentence, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 16),
-                        const Text('💡 嚴格老師的點評：', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange)),
+                        const Text('嚴格老師的點評：', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange)),
                         const SizedBox(height: 8),
                         Text(feedback, style: const TextStyle(height: 1.5)),
                       ],

@@ -8,6 +8,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 
 // 2. 匯入跳轉的相簿詳細頁面
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/theme_collection_screen.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
 class ResultGalleryV2Screen extends StatefulWidget {
@@ -82,7 +83,74 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             )
-          : FutureBuilder<List<dynamic>>(
+          : Column(
+              children: [
+                // 主題收集冊的入口（原本掛在首頁「查看全部」，改放這裡）
+                _buildThemeCollectionEntry(context),
+                Expanded(child: _buildSceneList(userId)),
+              ],
+            ),
+    );
+  }
+
+  /// 收集冊入口：講清楚它跟下面的照片清單有什麼不同
+  Widget _buildThemeCollectionEntry(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ThemeCollectionScreen()),
+          ).then((_) {
+            if (mounted) {
+              setState(() {
+                _futureKey = UniqueKey();
+              });
+            }
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.collections_bookmark_outlined,
+                  size: 22, color: AppColors.primary),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '主題收集冊',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      '把拍過的照片依生活情境集成一本本冊子',
+                      style: TextStyle(fontSize: 12.5, color: AppColors.textGrey),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSceneList(int userId) {
+    return FutureBuilder<List<dynamic>>(
               key: _futureKey, // 每次 Key 改變，這個 FutureBuilder 會重新執行
               // 傳入 limit: 999 這樣就能把所有場景都撈出來，不受首頁只撈3個的限制
               future: ApiClient.getUnlockedScenes(userId, limit: 999),
@@ -268,7 +336,6 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                   },
                 );
               },
-            ),
     );
   }
 }

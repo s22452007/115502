@@ -131,12 +131,19 @@ THEME_VOCABS = {
 
 
 def seed_theme_vocabs():
-    """在既有 app context 內執行；idempotent（word+kana 查重，已存在跳過）。回傳新增筆數。"""
+    """在既有 app context 內執行；idempotent。回傳 (新增筆數, 收編筆數)。
+
+    收編（promote）：若這個字先前已被 AI 建立過（source='ai'，scene_id 由 AI 當下判定），
+    不能只是跳過 —— 那樣官方單字牆會缺格、分母對不上。改成把它收編為官方字：
+    修正 scene_id 與 source，並補上缺的例句。既有的 UserVocab 解鎖紀錄不動，
+    所以之前拍到過這個字的人，收編後那格直接就是亮的。
+    """
     from utils.db import db
     from models import Scene, Vocab
     from services.scenario import THEME_BY_NAME
 
     added = 0
+    promoted = 0
     for theme_name, words in THEME_VOCABS.items():
         theme = THEME_BY_NAME.get(theme_name)
         if not theme:
@@ -151,6 +158,16 @@ def seed_theme_vocabs():
         for word, kana, meaning, basic, basic_zh in words:
             exists = Vocab.query.filter_by(word=word, kana=kana).first()
             if exists:
+                # 已經是這個主題的官方字就什麼都不用做
+                if exists.source == 'admin' and exists.scene_id == scene.id:
+                    continue
+                exists.scene_id = scene.id
+                exists.source = 'admin'
+                if not exists.sentence_basic:
+                    exists.sentence_basic = basic
+                if not exists.sentence_basic_zh:
+                    exists.sentence_basic_zh = basic_zh
+                promoted += 1
                 continue
             db.session.add(Vocab(
                 scene_id=scene.id,
@@ -164,11 +181,11 @@ def seed_theme_vocabs():
             added += 1
 
     db.session.commit()
-    return added
+    return added, promoted
 
 
 if __name__ == '__main__':
     from app import app
     with app.app_context():
-        n = seed_theme_vocabs()
-        print(f'[OK] 主題官方單字種入完成，新增 {n} 筆。')
+        n, p = seed_theme_vocabs()
+        print(f'[OK] 主題官方單字種入完成，新增 {n} 筆，收編既有 {p} 筆。')

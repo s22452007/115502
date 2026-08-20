@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 import '../../models/badge_model.dart';
 import '../../providers/user_provider.dart';
 
@@ -89,11 +91,20 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
 
     return SubPageTemplate(
       title: '榮譽徽章',
-      body: ListView.builder(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: coreBadges.length,
-        itemBuilder: (context, index) {
-          final badge = coreBadges[index];
+        children: [
+          ...coreBadges.map((badge) => _buildCoreBadgeCard(badge, userProvider)),
+          // 主題收集冊的專屬徽章另外一區，跟上面的成就徽章分開算
+          const SizedBox(height: 12),
+          _ThemeBadgeSection(userId: userProvider.userId),
+        ],
+      ),
+    );
+  }
+
+  /// 原本的 5 枚核心成就徽章（邏輯未動，只是從 itemBuilder 抽成方法）
+  Widget _buildCoreBadgeCard(BadgeModel badge, UserProvider userProvider) {
           final progress = userProvider.badgeProgress[badge.id] ?? 0;
           final currentLevel = _calculateLevel(progress, badge.milestones);
           final theme = _getLevelTheme(currentLevel);
@@ -174,9 +185,6 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
               ),
             ),
           );
-        },
-      ),
-    );
   }
 
   // 獨立的徽章圖示繪製工具 (支援漸層白金外框)
@@ -288,6 +296,159 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// 主題收集冊的專屬徽章：集滿一本並領取獎勵後才會拿到。
+/// 跟上面的成就徽章是兩套東西 —— 這裡固定列出全部主題，沒拿到的畫成灰色當收集目標。
+class _ThemeBadgeSection extends StatelessWidget {
+  final int? userId;
+
+  const _ThemeBadgeSection({required this.userId});
+
+  /// 後端 icon_name -> Flutter icon（與主題收集冊同一套對應）
+  static const Map<String, IconData> _themeIcons = {
+    'restaurant': Icons.restaurant,
+    'storefront': Icons.storefront,
+    'train': Icons.train,
+    'signpost': Icons.signpost,
+    'home': Icons.home,
+    'school': Icons.school,
+    'shopping_bag': Icons.shopping_bag,
+    'park': Icons.park,
+    'category': Icons.category,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (userId == null) return const SizedBox.shrink();
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ApiClient.getAchievements(userId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+          );
+        }
+        // 載不到就整區不顯示，不要讓上面既有的徽章跟著壞掉
+        if (snapshot.hasError || snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+
+        final data = snapshot.data!;
+        final badges = (data['theme'] as List?) ?? [];
+        if (badges.isEmpty) return const SizedBox.shrink();
+
+        final unlocked = data['theme_unlocked'] ?? 0;
+        final total = data['theme_total'] ?? badges.length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 4),
+              child: Row(
+                children: [
+                  const Text('主題徽章',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF333333))),
+                  const SizedBox(width: 8),
+                  Text('$unlocked / $total',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 14),
+              child: Text('集滿一本主題收集冊並領取獎勵後獲得',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.textSubtle)),
+            ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: badges.map<Widget>((b) => _ThemeBadgeTile(badge: b)).toList(),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ThemeBadgeTile extends StatelessWidget {
+  final dynamic badge;
+
+  const _ThemeBadgeTile({required this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool unlocked = badge['unlocked'] == true;
+    final icon = _ThemeBadgeSection._themeIcons[badge['icon_name']] ?? Icons.category;
+    final color = unlocked ? AppColors.secondary : Colors.grey.shade300;
+
+    return GestureDetector(
+      onTap: () => showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(unlocked ? badge['name'] : '尚未取得',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          content: Text(
+            unlocked
+                ? '${badge['description']}\n\n取得於 ${badge['unlocked_at']}'
+                : '${badge['description']}',
+            style: const TextStyle(fontSize: 14, height: 1.6),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('關閉'),
+            ),
+          ],
+        ),
+      ),
+      child: SizedBox(
+        width: 78,
+        child: Column(
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: unlocked
+                    ? AppColors.secondary.withOpacity(0.12)
+                    : Colors.grey.shade100,
+                border: Border.all(color: color, width: 2.5),
+              ),
+              child: Icon(icon,
+                  size: 28,
+                  color: unlocked ? AppColors.secondary : Colors.grey.shade400),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              badge['theme_name'] ?? '',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: unlocked ? const Color(0xFF333333) : Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

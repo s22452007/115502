@@ -83,6 +83,65 @@ def grant_initial_badges():
         "granted": granted_badge_names 
     }), 200
 
+# 取得使用者的徽章
+@user_bp.route('/achievements/<int:user_id>', methods=['GET'])
+def get_achievements(user_id):
+    """回傳使用者的徽章，並把兩種徽章分開：
+
+    - theme  ：主題收集冊集滿的專屬徽章（「XX達人」），一律回傳全部 8 枚並標記
+               unlocked，讓圖鑑可以把還沒拿到的畫成灰色當收集目標。
+    - general：其餘既有的成就徽章（程度認證那批），只回傳已解鎖的。
+
+    兩種徽章存在同一張 Achievement 表，這裡用主題徽章的命名規則區分，
+    不需要為了分類改資料庫結構。
+    """
+    from services.scenario import THEME_DEFS, theme_badge_name
+
+    # 主題徽章名稱 -> 主題定義（順便把 icon 帶給前端畫圖示）
+    theme_defs = {
+        theme_badge_name(t['name']): t
+        for t in THEME_DEFS if t['name'] != '其他'
+    }
+
+    rows = (db.session.query(UserAchievement, Achievement)
+            .join(Achievement, UserAchievement.achievement_id == Achievement.id)
+            .filter(UserAchievement.user_id == user_id)
+            .order_by(UserAchievement.unlocked_at.desc())
+            .all())
+
+    owned = {}   # 徽章名稱 -> 解鎖時間
+    general = []
+    for ua, ach in rows:
+        if ach.name in theme_defs:
+            owned[ach.name] = ua.unlocked_at
+            continue
+        general.append({
+            'name': ach.name,
+            'description': ach.description,
+            'icon_codepoint': ach.icon_codepoint,
+            'unlocked_at': ua.unlocked_at.strftime('%Y.%m.%d') if ua.unlocked_at else '',
+        })
+
+    theme = []
+    for badge_name, t in theme_defs.items():
+        unlocked_at = owned.get(badge_name)
+        theme.append({
+            'name': badge_name,
+            'theme_name': t['name'],
+            'icon_name': t['icon'],
+            'description': f"集滿「{t['name']}」主題收集冊的所有官方單字",
+            'unlocked': badge_name in owned,
+            'unlocked_at': unlocked_at.strftime('%Y.%m.%d') if unlocked_at else '',
+        })
+
+    return jsonify({
+        'theme': theme,
+        'general': general,
+        'theme_unlocked': len(owned),
+        'theme_total': len(theme_defs),
+    }), 200
+
+
 # 上傳大頭貼
 @user_bp.route('/upload_avatar', methods=['POST'])
 def upload_avatar():

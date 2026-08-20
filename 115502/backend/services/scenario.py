@@ -54,6 +54,71 @@ def get_or_create_theme_scene(category):
     return scene
 
 
+# ==========================================
+# 🎁 主題收集冊的里程碑獎勵
+# ==========================================
+# 領過沒有不另外開表：用 PointTransaction.related_feature 存
+# 'theme_reward:{scene_id}:{tier}' 當作領取憑證，查得到就是領過了。
+THEME_REWARDS = {
+    'half':     {'points': 20,  'extra_photo': 0, 'badge': False, 'label': '收集過半'},
+    'complete': {'points': 100, 'extra_photo': 3, 'badge': True,  'label': '收集完成'},
+}
+
+# 集滿專屬徽章的命名規則（seed_themes.py 會照這個種 Achievement）
+def theme_badge_name(theme_name):
+    return f'{theme_name}達人'
+
+
+def _reward_key(scene_id, tier):
+    return f'theme_reward:{scene_id}:{tier}'
+
+
+def _claimed_tiers(user_id, scene_ids):
+    """一次查出使用者在這些主題已經領過哪些 tier，回傳 {(scene_id, tier), ...}。"""
+    from models import PointTransaction
+
+    if not scene_ids:
+        return set()
+    keys = {_reward_key(sid, tier) for sid in scene_ids for tier in THEME_REWARDS}
+    rows = (PointTransaction.query
+            .filter(PointTransaction.user_id == user_id,
+                    PointTransaction.related_feature.in_(list(keys)))
+            .all())
+    claimed = set()
+    for r in rows:
+        try:
+            _, sid, tier = r.related_feature.split(':')
+            claimed.add((int(sid), tier))
+        except (ValueError, AttributeError):
+            continue
+    return claimed
+
+
+def _reward_state(unlocked, total, scene_id, claimed_set):
+    """回傳這個主題兩個 tier 的狀態：locked / claimable / claimed。"""
+    ratio = (unlocked / total) if total else 0.0
+    reached = {
+        'half': total > 0 and ratio >= 0.5,
+        'complete': total > 0 and unlocked >= total,
+    }
+    state = {}
+    for tier, cfg in THEME_REWARDS.items():
+        if (scene_id, tier) in claimed_set:
+            s = 'claimed'
+        elif reached[tier]:
+            s = 'claimable'
+        else:
+            s = 'locked'
+        state[tier] = {
+            'state': s,
+            'points': cfg['points'],
+            'extra_photo': cfg['extra_photo'],
+            'badge': cfg['badge'],
+            'label': cfg['label'],
+        }
+    return state
+
+
 # 官方字＝seed_themes.py 種進去的收集目標（source='admin'）。
 # 完成度一律只看官方字，使用者拍照產生的 AI 新字（source='ai'）不進分母，
 # 否則別人拍到新字就會讓你的完成度倒退、集滿的冊子被打破。
@@ -420,6 +485,7 @@ def get_themes(user_id):
             scene_by_id.setdefault(s.id, s)
 
     # 3. 逐場景統計單字牆數據（完成度只算官方字；AI 額外字另外計為 bonus）
+    claimed_set = _claimed_tiers(user_id, list(scene_by_id.keys()))
     results = []
     for sid, scene in scene_by_id.items():
         unlocked, total = _theme_progress(user_id, sid)
@@ -441,15 +507,98 @@ def get_themes(user_id):
             'bonus_count': bonus,  # 官方清單以外、自己拍到的額外單字
             'progress': min(1.0, round(unlocked / total, 3)) if total else 0.0,
             'last_at': agg['last_at'].strftime('%Y.%m.%d') if agg.get('last_at') else '',
+            'rewards': _reward_state(unlocked, total, sid, claimed_set),
         })
 
-    # 4. 排序：已開始探索（有照片或有解鎖）的排前面，其餘官方主題依名稱
+    # 4. 排序：有獎勵可領的排最前面，其次是已開始探索的，最後才是還沒碰過的主題
+    def _has_claimable(x):
+        return any(r['state'] == 'claimable' for r in x['rewards'].values())
+
     results.sort(key=lambda x: (
+        not _has_claimable(x),                               # 可領取的排最前
         x['photo_count'] == 0 and x['unlocked_count'] == 0,  # 未開始的排後面
         -x['unlocked_count'],
         x['name'],
     ))
     return jsonify({'themes': results}), 200
+
+
+@scenario_bp.route('/claim_theme_reward', methods=['POST'])
+def claim_theme_reward():
+    """領取主題收集冊的里程碑獎勵（過半 / 集滿）。
+
+    前端傳 { user_id, scene_id, tier }。伺服器自己重算進度後才發，
+    不信任前端傳來的完成度；重複領取以 PointTransaction 的憑證擋掉。
+    """
+    from utils.db import db
+    from models import User, Scene, Achievement, UserAchievement, PointTransaction, TransactionType
+
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    scene_id = data.get('scene_id')
+    tier = data.get('tier')
+
+    if not user_id or not scene_id or tier not in THEME_REWARDS:
+        return jsonify({'error': '缺少 user_id / scene_id，或 tier 不合法'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': '找不到使用者'}), 404
+    scene = Scene.query.get(scene_id)
+    if not scene:
+        return jsonify({'error': '找不到主題'}), 404
+
+    # 1. 重新計算進度，確認真的達標
+    unlocked, total = _theme_progress(user_id, scene_id)
+    ratio = (unlocked / total) if total else 0.0
+    reached = (unlocked >= total) if tier == 'complete' else (ratio >= 0.5)
+    if total <= 0 or not reached:
+        return jsonify({'error': '這個主題還沒達到領取條件', 'unlocked': unlocked, 'total': total}), 400
+
+    # 2. 擋重複領取
+    key = _reward_key(scene_id, tier)
+    if PointTransaction.query.filter_by(user_id=user_id, related_feature=key).first():
+        return jsonify({'error': '這個獎勵已經領過了'}), 400
+
+    cfg = THEME_REWARDS[tier]
+
+    # 3. 發點數與額外拍照次數
+    user.j_pts = (user.j_pts or 0) + cfg['points']
+    if cfg['extra_photo']:
+        user.photo_extra_count = (user.photo_extra_count or 0) + cfg['extra_photo']
+
+    db.session.add(PointTransaction(
+        user_id=user.id,
+        points=cfg['points'],
+        price=0,
+        payment_method='theme_reward',
+        transaction_type=TransactionType.REWARD,
+        related_feature=key,  # 同時是「領過了」的憑證
+    ))
+
+    # 4. 集滿才發主題徽章（徽章不存在就跳過，不擋領獎）
+    badge_name = None
+    if cfg['badge']:
+        ach = Achievement.query.filter_by(name=theme_badge_name(scene.name)).first()
+        if ach:
+            owned = UserAchievement.query.filter_by(
+                user_id=user_id, achievement_id=ach.id).first()
+            if not owned:
+                db.session.add(UserAchievement(user_id=user_id, achievement_id=ach.id))
+            badge_name = ach.name
+
+    db.session.commit()
+
+    return jsonify({
+        'message': '獎勵領取成功！',
+        'theme_name': scene.name,
+        'tier': tier,
+        'label': cfg['label'],
+        'pts_earned': cfg['points'],
+        'bonus_photo': cfg['extra_photo'],
+        'badge_name': badge_name,
+        'j_pts': user.j_pts,
+    }), 200
 
 
 @scenario_bp.route('/theme_vocabs/<int:user_id>/<int:scene_id>', methods=['GET'])

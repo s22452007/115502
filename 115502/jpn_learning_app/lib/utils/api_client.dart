@@ -512,6 +512,29 @@ class ApiClient {
     throw Exception('無法載入主題');
   }
 
+  /// 領取主題收集冊的里程碑獎勵（tier: 'half' 過半 / 'complete' 集滿）
+  /// 成功回傳 {pts_earned, bonus_photo, badge_name, j_pts, ...}；
+  /// 未達標或重複領取會由後端擋下並丟出錯誤訊息
+  static Future<Map<String, dynamic>> claimThemeReward({
+    required int userId,
+    required int sceneId,
+    required String tier,
+  }) async {
+    final url = Uri.parse('$baseUrl/scenario/claim_theme_reward');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'user_id': userId,
+        'scene_id': sceneId,
+        'tier': tier,
+      }),
+    );
+    final body = json.decode(utf8.decode(response.bodyBytes));
+    if (response.statusCode == 200) return Map<String, dynamic>.from(body);
+    throw Exception(body['error'] ?? '領取失敗');
+  }
+
   /// 主題單字牆：取得某主題底下所有單字與解鎖狀態
   /// 回傳 {vocabs, total, unlocked}；未解鎖的字只含 hint_len（剪影）
   static Future<Map<String, dynamic>> getThemeVocabs(int userId, int sceneId) async {

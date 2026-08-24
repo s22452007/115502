@@ -561,7 +561,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 title: const Text('播放語音 (TTS)'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _playTts(messageText);
+                  // 只念日文句子，跳過中文說明與翻譯
+                  _playTts(_japaneseLinesOf(messageText));
                 },
               ),
               ListTile(
@@ -588,6 +589,20 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   bool _isTranslationLine(String line) =>
       line.startsWith('（') || line.startsWith('(');
 
+  // 判斷是否為日文句子：含有平假名或片假名即為日文。
+  // 中文（含說明與翻譯）不會出現假名，藉此區分出「可點擊發音」的行，
+  // 避免中文被送去日語 TTS 念出無意義的發音。
+  static final RegExp _kanaRegExp = RegExp(r'[぀-ゟ゠-ヿ]');
+  bool _isJapaneseLine(String line) =>
+      !_isTranslationLine(line) && _kanaRegExp.hasMatch(line);
+
+  // 從整則訊息中只取出日文行（供整段朗讀使用）
+  String _japaneseLinesOf(String text) => text
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty && _isJapaneseLine(l))
+      .join('\n');
+
   Widget _buildAiBubble(String displayText) {
     final cleaned = displayText.replaceAll('**', '').replaceAll('*', '');
     final lines = cleaned
@@ -596,8 +611,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         .where((l) => l.isNotEmpty)
         .toList();
 
-    final japaneseOnly =
-        lines.where((l) => !_isTranslationLine(l)).join('\n');
+    // 整段播放時只念日文行（跳過中文說明與翻譯）
+    final japaneseOnly = lines.where(_isJapaneseLine).join('\n');
     final isWholePlaying =
         _playingText == FuriganaText.cleanFuriganaForTts(japaneseOnly).trim();
 
@@ -614,6 +629,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: lines.map((line) {
+              // 中文翻譯行：灰色小字、不可點擊
               if (_isTranslationLine(line)) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -622,6 +638,21 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 13,
+                    ),
+                  ),
+                );
+              }
+              // 中文說明行（教學模式的中文回應）：一般文字、不可點擊，
+              // 因為日語 TTS 念中文只會發出聽不懂的音。
+              if (!_isJapaneseLine(line)) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    FuriganaText.cleanFuriganaForTts(line),
+                    style: const TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 15,
+                      height: 1.4,
                     ),
                   ),
                 );

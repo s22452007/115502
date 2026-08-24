@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
-import 'package:jpn_learning_app/screens/scenario/role_play_intro_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
 
 class ManualSearchScreen extends StatefulWidget {
@@ -63,14 +63,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   void _submitScenario() {
     if (_searchController.text.trim().isEmpty) return;
 
-    String selectedTopic = _searchController.text.trim();
+    final selectedTopic = _searchController.text.trim();
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RolePlayIntroScreen(
+        builder: (_) => RoleplayScreen(
           topicTitle: selectedTopic,
-          characterName: _selectedCharacterName, 
+          characterName: _selectedCharacterName,
         ),
       ),
     );

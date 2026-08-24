@@ -20,6 +20,7 @@ import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/history_menu_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'badge_library_screen.dart';
@@ -364,7 +365,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (i == 0) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
           else if (i == 1) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
           else if (i == 2) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen()));
-          else if (i == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen()));
+          else if (i == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HistoryMenuScreen()));
         },
       ),
     );

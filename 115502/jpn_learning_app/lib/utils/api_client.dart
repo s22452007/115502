@@ -636,6 +636,75 @@ class ApiClient {
     }
   }
 
+  // ==========================================
+  // 💬 AI 對話歷史紀錄
+  // ==========================================
+
+  /// 建立一個新的對話場次，回傳 session_id（失敗時回 null）
+  static Future<int?> createChatSession({
+    required int userId,
+    required String topic,
+    String? characterName,
+    int? dialectId,
+  }) async {
+    final url = Uri.parse('$baseUrl/chat_history/session');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'topic': topic,
+          'character_name': characterName,
+          'dialect_id': dialectId,
+        }),
+      );
+      if (response.statusCode == 201) {
+        return (jsonDecode(response.body)['session_id'] as num).toInt();
+      }
+      return null;
+    } catch (e) {
+      return null; // 建立失敗不影響對話進行，只是不會留下紀錄
+    }
+  }
+
+  /// 取得對話紀錄清單
+  static Future<List<dynamic>> fetchChatSessions(int userId) async {
+    final url = Uri.parse('$baseUrl/chat_history/sessions?user_id=$userId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['sessions'] ?? [];
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 取得某場對話的完整內容
+  static Future<Map<String, dynamic>?> fetchChatSession(int sessionId) async {
+    final url = Uri.parse('$baseUrl/chat_history/session/$sessionId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 刪除一場對話
+  static Future<bool> deleteChatSession(int sessionId) async {
+    final url = Uri.parse('$baseUrl/chat_history/session/$sessionId');
+    try {
+      final response = await http.delete(url);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   static Future<Map<String, dynamic>> submitQuizScore(int userId, int score) async {
     final url = Uri.parse('$baseUrl/quiz/submit');
     try {

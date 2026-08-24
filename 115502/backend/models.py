@@ -467,3 +467,29 @@ class SentencePracticeRecord(db.Model):
 
 
  
+# ==========================================
+# 💬 AI 對話歷史紀錄
+# ==========================================
+
+# T_chat_session: AI 對話場次（一次進入對話畫面 = 一個場次）
+class ChatSession(db.Model):
+    __tablename__ = 'chat_session'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    topic = db.Column(db.String(100), nullable=False)          # 情境主題，例如「一蘭拉麵」
+    character_name = db.Column(db.String(50), nullable=True)   # 對話角色，例如「預設老師」
+    dialect_id = db.Column(db.Integer, db.ForeignKey('dialect.id'), nullable=True)
+    message_count = db.Column(db.Integer, default=0)           # 訊息則數（清單顯示用）
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_message_at = db.Column(db.DateTime, default=datetime.utcnow)
+    messages = db.relationship('ChatMessage', backref='session', lazy=True,
+                               cascade="all, delete-orphan")
+
+# T_chat_message: 對話訊息明細
+class ChatMessage(db.Model):
+    __tablename__ = 'chat_message'
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
+    role = db.Column(db.String(10), nullable=False)   # 'user' = 使用者、'ai' = AI 回覆
+    content = db.Column(db.Text, nullable=False)      # 保留原始內容（含 [漢字|假名] 標音）
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

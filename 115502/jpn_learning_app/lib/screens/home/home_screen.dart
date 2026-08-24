@@ -13,6 +13,7 @@ import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
+import 'package:jpn_learning_app/screens/scenario/history_menu_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/screens/article/article_list_screen.dart'; 
 
@@ -321,7 +322,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           } else if (i == 2) {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())).then((_) => _syncHomeData());
           } else if (i == 3) {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData());
+             // 「紀錄」改為選單頁：單字探險 / AI 對話紀錄
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryMenuScreen())).then((_) => _syncHomeData());
           } else if (i == 4) {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _syncHomeData());
           }

@@ -695,6 +695,41 @@ add_column("vocab", "sentence_upper_inter_zh VARCHAR(255)")
 add_column("vocab", "sentence_advanced_zh VARCHAR(255)")
 print("✅ vocab 分級例句中文翻譯欄位確認完畢")
 
+# ==========================================
+# 31. 建立 AI 對話歷史紀錄表
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_session (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        topic VARCHAR(100) NOT NULL,
+        character_name VARCHAR(50),
+        dialect_id INTEGER,
+        message_count INTEGER DEFAULT 0,
+        started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES user(id),
+        FOREIGN KEY(dialect_id) REFERENCES dialect(id)
+    );
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_message (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        role VARCHAR(10) NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(session_id) REFERENCES chat_session(id)
+    );
+    """)
+    # 加速「某使用者的對話清單」與「某場次的訊息」查詢
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_session_user ON chat_session(user_id, last_message_at DESC);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_message_session ON chat_message(session_id, id);")
+    print("✅ chat_session / chat_message AI 對話紀錄表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ chat 對話紀錄表建立警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

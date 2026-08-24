@@ -18,6 +18,7 @@ from services.subscription import subscription_bp, MONTHLY_POINTS_GRANT, YEARLY_
 from services.store import store_bp
 from services.daily_reward import daily_reward_bp
 from services.article import article_bp
+from services.chat_history import chat_history_bp
 
 # 👨‍🍳 引入內場廚師 (AI 聊天函數)
 from services.tutor import get_ai_reply
@@ -76,6 +77,7 @@ app.register_blueprint(subscription_bp, url_prefix='/api/subscription')
 app.register_blueprint(store_bp, url_prefix='/api/store')
 app.register_blueprint(daily_reward_bp, url_prefix='/api/daily')
 app.register_blueprint(article_bp, url_prefix='/api/articles')
+app.register_blueprint(chat_history_bp, url_prefix='/api/chat_history')
 app.register_blueprint(sentence_bp, url_prefix='/api/sentence')
 # 啟動時自動建立資料表與執行遷移
 with app.app_context():
@@ -276,6 +278,7 @@ def chat():
     user_level = request.form.get('level', 'N5') # 接收等級！如果 App 沒傳，預設當作 N5
     dialect_id = request.form.get('dialect_id', type=int) # 接收腔調 ID（可為 None，代表標準語）
     user_id = request.form.get('user_id', type=int) # AI 失敗時要退還次數用
+    session_id = request.form.get('session_id', type=int) # 對話紀錄場次（可為 None）
 
     print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 腔調：{dialect_id} | 訊息：{user_message}")
 
@@ -290,6 +293,15 @@ def chat():
             refund_ai_usage(user_id)
         except Exception as e:
             print(f"⚠️ 退還 AI 次數時發生錯誤：{e}")
+
+    # 2c. 成功回覆才寫入對話紀錄（失敗的對話不留紀錄，避免歷史裡都是錯誤訊息）
+    #     開場白（[幫我開場]）不需要記錄使用者那一句，只存 AI 的開場內容
+    if ok and session_id:
+        try:
+            from services.chat_history import save_exchange
+            save_exchange(session_id, user_message, ai_response_text)
+        except Exception as e:
+            print(f"⚠️ 儲存對話紀錄時發生錯誤：{e}")
 
     # 3. 櫃檯送餐（把熱騰騰的 AI 回覆送回給 Flutter）
     return ai_response_text

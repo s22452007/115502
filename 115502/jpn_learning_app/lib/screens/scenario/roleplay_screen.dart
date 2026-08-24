@@ -13,12 +13,15 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 
 class RoleplayScreen extends StatefulWidget {
   final String topicTitle;
-  final String characterName; 
+  final String characterName;
+  /// 從歷史紀錄接續對話時傳入既有場次 id；新對話則留 null
+  final int? resumeSessionId;
 
   const RoleplayScreen({
     Key? key,
     required this.topicTitle,
-    required this.characterName, 
+    required this.characterName,
+    this.resumeSessionId,
   }) : super(key: key);
 
   @override
@@ -41,9 +44,13 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   String? _playingText; 
 
   final SpeechToText _speech = SpeechToText();
-  bool _speechEnabled = false; 
-  bool _isListening = false;   
-  bool _speechJapanese = true; 
+  bool _speechEnabled = false;
+  bool _isListening = false;
+  bool _speechJapanese = true;
+
+  // 對話紀錄場次 id（成功建立後，每次送出訊息都會帶上，後端才知道存到哪一場）
+  int? _sessionId;
+  bool _isLoadingHistory = false;
 
   @override
   void initState() {
@@ -55,13 +62,21 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       if (mounted) setState(() => _playingText = null);
     });
 
-    // 👉 1. 修改：一進來的歡迎訊息，把角色名字印出來讓使用者知道
-    //    標記 isGreeting，組對話紀錄時要排除（它是介面說明，不是對話內容）
-    _messages.add({
-      'text': '歡迎來到「${widget.topicTitle}」！\n我是今天的對話對象「${widget.characterName}」✨\n不知道如何開頭的話可以點擊下方：幫我開場',
-      'isUserMessage': false,
-      'isGreeting': true,
-    });
+    if (widget.resumeSessionId != null) {
+      // 從歷史紀錄接續：載入先前的訊息
+      _sessionId = widget.resumeSessionId;
+      _isLoadingHistory = true;
+      _loadPreviousMessages();
+    } else {
+      // 全新對話：顯示歡迎訊息並建立場次
+      // 標記 isGreeting，組對話紀錄時要排除（它是介面說明，不是對話內容）
+      _messages.add({
+        'text': '歡迎來到「${widget.topicTitle}」！\n我是今天的對話對象「${widget.characterName}」✨\n不知道如何開頭的話可以點擊下方：幫我開場',
+        'isUserMessage': false,
+        'isGreeting': true,
+      });
+      _createSession();
+    }
 
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
   }
@@ -324,6 +339,48 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   }
 
   // ==========================================
+  // 📚 對話紀錄：建立場次 / 載入先前訊息
+  // ==========================================
+  Future<void> _createSession() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return; // 訪客不留紀錄
+
+    final id = await ApiClient.createChatSession(
+      userId: userId,
+      topic: widget.topicTitle,
+      characterName: widget.characterName,
+    );
+    if (mounted) setState(() => _sessionId = id);
+  }
+
+  Future<void> _loadPreviousMessages() async {
+    final data = await ApiClient.fetchChatSession(widget.resumeSessionId!);
+    if (!mounted) return;
+
+    if (data == null) {
+      setState(() => _isLoadingHistory = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('載入對話紀錄失敗，可以直接繼續聊'),
+        backgroundColor: Colors.redAccent,
+      ));
+      return;
+    }
+
+    final messages = (data['messages'] as List?) ?? [];
+    setState(() {
+      _messages.addAll(messages.map((m) => {
+            'text': m['content']?.toString() ?? '',
+            'isUserMessage': m['role'] == 'user',
+          }));
+      _isLoadingHistory = false;
+      // 接續對話時給幾個常用的回應選項
+      if (_messages.isNotEmpty) {
+        _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
+      }
+    });
+  }
+
+  // ==========================================
   // 💬 組出要送給 AI 的對話紀錄（讓 AI 記得前面聊過什麼）
   // ==========================================
   // 只取最近幾則，原因：
@@ -373,6 +430,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'character': widget.characterName,
           // 帶上 user_id：AI 若回覆失敗，後端會把剛扣掉的次數退還
           'user_id': (context.read<UserProvider>().userId ?? '').toString(),
+          // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
+          'session_id': (_sessionId ?? '').toString(),
           'history': _buildChatHistory(), // 中途再按開場時，讓 AI 知道前面聊過什麼
         },
       );
@@ -428,24 +487,43 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           'character': widget.characterName,
           // 帶上 user_id：AI 若回覆失敗，後端會把剛扣掉的次數退還
           'user_id': (context.read<UserProvider>().userId ?? '').toString(),
+          // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
+          'session_id': (_sessionId ?? '').toString(),
           'history': history, // 帶入最近的對話，讓 AI 記得前文
         },
       );
 
-      if (response.statusCode == 200 && mounted) {
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
         setState(() {
           _messages.add({
-            'text': response.body, 
+            'text': response.body,
             'isUserMessage': false,
             'correction': text.contains('錯') ? '剛剛的句子動詞變化有點小問題喔！建議改成...' : null,
           });
           _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
         });
-
-        await _fetchUsageData(); 
+      } else {
+        // 伺服器錯誤時也要讓使用者知道，不能什麼都不顯示
+        setState(() {
+          _messages.add({
+            'text': '訊息送不出去，請稍後再試一次！',
+            'isUserMessage': false,
+          });
+        });
       }
+      await _fetchUsageData(); // 無論成功失敗都更新次數（失敗時後端會退還）
     } catch (e) {
       print('發送請求時發生錯誤: $e');
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            'text': '網路連線失敗，請確認連線後再試一次！',
+            'isUserMessage': false,
+          });
+        });
+      }
     } finally {
       if (mounted)
         setState(() {
@@ -608,6 +686,27 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 從歷史紀錄接續時，先顯示載入中，避免訊息突然跳出來
+    if (_isLoadingHistory) {
+      return Scaffold(
+        backgroundColor: AppColors.white,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            widget.topicTitle,
+            style: const TextStyle(
+                color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(

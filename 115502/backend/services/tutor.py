@@ -1,15 +1,11 @@
 from flask import Blueprint, request, jsonify
-import os
-import google.generativeai as genai
-from dotenv import load_dotenv
+from utils import gemini_client
 
 # 建立 Blueprint
 tutor_bp = Blueprint('tutor', __name__)
 
-# 1. 初始化金鑰
-_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# 金鑰與模型由 utils/gemini_client 統一管理
+#（AI 對話有專用金鑰，額度用完會自動切換到備用金鑰）
 
 # 2. 建立一個專門負責聊天的函數
 def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=None):
@@ -66,21 +62,20 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
 
         # 呼叫 Gemini
         print("🔍 準備呼叫 Gemini API...")
-        response = _client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        response = gemini_client.generate_content('tutor', prompt)
         print("✅ Gemini 回覆完成！")
         return response.text, True   # (回覆內容, 是否成功)
 
     except gemini_client.GeminiQuotaExhausted as e:
         # 額度用完：明確說明原因，不要讓使用者以為是暫時故障而一直重試
-        return str(e)
+        return str(e), False
 
     except gemini_client.GeminiNotConfigured as e:
         print(f"⚠️ {e}")
-        return "AI 對話服務尚未設定完成，請聯繫開發人員。"
+        return "AI 對話服務尚未設定完成，請聯繫開發人員。", False
 
     except Exception as e:
-        
         print(f"🚨 抓到 Gemini API 錯誤了：{e}")
         if gemini_client.is_overloaded_error(e):
-            return "現在使用的人比較多，請稍等幾秒再送出一次！"
-        return "系統小精靈有點累了，請稍後再試一次！"
+            return "現在使用的人比較多，請稍等幾秒再送出一次！", False
+        return "系統小精靈有點累了，請稍後再試一次！", False

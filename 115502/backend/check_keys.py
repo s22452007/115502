@@ -27,6 +27,24 @@ def mask(key):
     return f'{key[:8]}...（共 {len(key)} 碼）'
 
 
+def describe_quota(exc):
+    """把 Google 的額度錯誤翻成看得懂的說明（每分鐘限制 vs 每日額度用完）"""
+    import re
+    msg = str(exc)
+    limit = re.search(r'limit:\s*(\d+)', msg)
+    limit_text = f'，上限 {limit.group(1)} 次' if limit else ''
+
+    if 'PerDay' in msg:
+        return f'今日額度已用完{limit_text}／天，明天才會恢復'
+    if 'PerMinute' in msg:
+        seconds = gc.extract_retry_delay(exc)
+        wait = f'，約 {seconds} 秒後恢復' if seconds else ''
+        return f'每分鐘流量已達上限{limit_text}／分鐘{wait}'
+    if 'depleted' in msg.lower():
+        return '帳戶預付額度已耗盡，需要加值'
+    return '額度受限'
+
+
 def main():
     do_test = '--test' in sys.argv
 
@@ -86,8 +104,11 @@ def main():
                 print(f'  ✅ {mask(key)}  可正常使用（{用途}）')
             except Exception as e:
                 if gc.is_quota_error(e):
-                    print(f'  ⚠️ {mask(key)}  額度已用完（{用途}）')
-                    problems.append(f'{用途} 的金鑰額度已用完')
+                    detail = describe_quota(e)
+                    print(f'  ⚠️ {mask(key)}  {detail}（{用途}）')
+                    problems.append(f'{用途}：{detail}')
+                elif gc.is_overloaded_error(e):
+                    print(f'  ⏳ {mask(key)}  Google 伺服器忙碌中，金鑰本身沒問題（{用途}）')
                 else:
                     print(f'  ❌ {mask(key)}  無法使用：{str(e)[:80]}')
                     problems.append(f'{用途} 的金鑰無效')

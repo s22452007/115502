@@ -25,7 +25,10 @@ Gemini 金鑰管理與呼叫封裝。
 import os
 import time
 from dotenv import load_dotenv
-import google.generativeai as genai
+# ⚠️ 必須使用新版 SDK（google.genai），它才有 Client 類別。
+#    不可改成 `import google.generativeai as genai`（舊版），
+#    舊版沒有 Client，會在呼叫時噴 AttributeError。
+from google import genai
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
@@ -34,6 +37,12 @@ load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
 # 原因：Google 會停止讓新申請的金鑰存取舊型號（例如 gemini-2.5-flash
 # 對新使用者會回 404），寫死版本號會在換金鑰時突然壞掉。
 DEFAULT_MODEL = 'gemini-flash-latest'
+
+# 備援模型清單。
+# 免費層額度是「每個專案、每個模型」各自計算的
+# （quotaId 是 GenerateRequestsPerDayPerProjectPerModel-FreeTier），
+# 所以主模型額度用完時，換一個模型就有全新的額度可用。
+FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-2.0-flash']
 
 # 伺服器忙碌（503）時的自動重試設定。
 # 使用者正在等回覆，所以間隔要短，總等待時間控制在 6 秒內。
@@ -149,49 +158,65 @@ def get_keys(feature):
     return keys
 
 
-def generate_content(feature, contents, config=None, model=DEFAULT_MODEL):
+def generate_content(feature, contents, config=None, model=None):
     """
     以指定功能的金鑰呼叫 Gemini。
-    主金鑰額度用完時自動改用備用金鑰；全部用完則丟出 GeminiQuotaExhausted。
+
+    額度用完時的切換順序：
+      1. 同一個模型，換下一把金鑰（不同帳號的金鑰有各自的額度）
+      2. 所有金鑰都滿了，換下一個模型重來
+         （免費層額度是「每專案每模型」分開算，換模型等同拿到新額度）
+    全部用完才丟出 GeminiQuotaExhausted。
     其他錯誤（例如格式問題、網路問題）原樣丟出，由呼叫端處理。
     """
     keys = get_keys(feature)
     if not keys:
         raise GeminiNotConfigured(feature)
 
+    # 呼叫端有指定模型就只用它，否則依序嘗試主模型與備援模型
+    models_to_try = [model] if model else [DEFAULT_MODEL] + FALLBACK_MODELS
+
     last_quota_error = None
-    for index, key in enumerate(keys):
-        try:
-            client = genai.Client(api_key=key)
-            kwargs = {'model': model, 'contents': contents}
-            if config is not None:
-                kwargs['config'] = config
+    for model_index, current_model in enumerate(models_to_try):
+        for index, key in enumerate(keys):
+            try:
+                client = genai.Client(api_key=key)
+                kwargs = {'model': current_model, 'contents': contents}
+                if config is not None:
+                    kwargs['config'] = config
 
-            # 503（伺服器忙碌）是暫時性的，重試通常就會成功，
-            # 因此同一把金鑰先重試幾次再說（換金鑰對 503 沒有幫助）。
-            for attempt in range(OVERLOAD_RETRIES + 1):
-                try:
-                    return client.models.generate_content(**kwargs)
-                except Exception as inner:
-                    if is_overloaded_error(inner) and attempt < OVERLOAD_RETRIES:
-                        wait = OVERLOAD_BACKOFF[attempt]
-                        print(f'⏳ [{feature}] Gemini 忙碌中，{wait} 秒後重試'
-                              f'（第 {attempt + 1}/{OVERLOAD_RETRIES} 次）...')
-                        time.sleep(wait)
+                # 503（伺服器忙碌）是暫時性的，重試通常就會成功，
+                # 因此同一把金鑰先重試幾次再說（換金鑰對 503 沒有幫助）。
+                for attempt in range(OVERLOAD_RETRIES + 1):
+                    try:
+                        return client.models.generate_content(**kwargs)
+                    except Exception as inner:
+                        if is_overloaded_error(inner) and attempt < OVERLOAD_RETRIES:
+                            wait = OVERLOAD_BACKOFF[attempt]
+                            print(f'⏳ [{feature}] Gemini 忙碌中，{wait} 秒後重試'
+                                  f'（第 {attempt + 1}/{OVERLOAD_RETRIES} 次）...')
+                            time.sleep(wait)
+                            continue
+                        raise
+
+            except Exception as e:
+                # 模型不存在或無權使用 → 這個模型跳過，換下一個
+                if '404' in str(e) or 'NOT_FOUND' in str(e):
+                    print(f'⚠️ [{feature}] 模型 {current_model} 無法使用，改試下一個模型...')
+                    break
+                if is_quota_error(e):
+                    last_quota_error = e
+                    if index + 1 < len(keys):
+                        print(f'⚠️ [{feature}] 第 {index + 1} 把金鑰額度已滿，改用備用金鑰...')
                         continue
-                    raise
+                    # 這個模型的所有金鑰都滿了 → 換模型
+                    if model_index + 1 < len(models_to_try):
+                        print(f'⚠️ [{feature}] {current_model} 額度已滿，'
+                              f'改用備援模型 {models_to_try[model_index + 1]}...')
+                    break
+                raise  # 非額度問題，直接往上拋
 
-        except Exception as e:
-            if is_quota_error(e):
-                last_quota_error = e
-                remaining = len(keys) - index - 1
-                if remaining > 0:
-                    print(f'⚠️ [{feature}] 第 {index + 1} 把金鑰額度已滿，改用備用金鑰...')
-                    continue
-                break
-            raise  # 非額度問題，直接往上拋
-
-    print(f'🚨 [{feature}] 所有金鑰額度都已用完：{last_quota_error}')
+    print(f'🚨 [{feature}] 所有金鑰與備援模型的額度都已用完：{last_quota_error}')
     raise GeminiQuotaExhausted(feature, last_quota_error)
 
 

@@ -42,7 +42,8 @@ DEFAULT_MODEL = 'gemini-flash-latest'
 # 免費層額度是「每個專案、每個模型」各自計算的
 # （quotaId 是 GenerateRequestsPerDayPerProjectPerModel-FreeTier），
 # 所以主模型額度用完時，換一個模型就有全新的額度可用。
-FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-2.0-flash']
+#（gemini-2.0-flash 已被 Google 下架，回 404 要求改用 3.6，故移除）
+FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.6-flash']
 
 # 伺服器忙碌（503）時的自動重試設定。
 # 使用者正在等回覆，所以間隔要短，總等待時間控制在 6 秒內。
@@ -204,6 +205,14 @@ def generate_content(feature, contents, config=None, model=None):
                 if '404' in str(e) or 'NOT_FOUND' in str(e):
                     print(f'⚠️ [{feature}] 模型 {current_model} 無法使用，改試下一個模型...')
                     break
+                # 上面已經對同一個模型重試過仍是 503 → 換模型（塞車是「每個模型」各自的狀況，
+                # 常見情形是預設模型爆量、備援模型還很空，尤其圖片請求）
+                if is_overloaded_error(e):
+                    if model_index + 1 < len(models_to_try):
+                        print(f'⚠️ [{feature}] {current_model} 忙碌中，'
+                              f'改用備援模型 {models_to_try[model_index + 1]}...')
+                        break
+                    raise  # 連最後一個備援模型都塞車，才回報「使用人數較多」
                 if is_quota_error(e):
                     last_quota_error = e
                     if index + 1 < len(keys):

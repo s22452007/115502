@@ -854,6 +854,10 @@ class _UnlockedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String word = (vocab['word'] ?? '').toString();
+    final String kana = (vocab['kana'] ?? '').toString();
+    final String meaning = (vocab['meaning'] ?? '').toString();
+
     return GestureDetector(
       onTap: () => _showVocabSheet(context, vocab),
       child: Container(
@@ -866,14 +870,26 @@ class _UnlockedChip extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(vocab['word'] ?? '',
+            Text(word,
                 style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark)),
-            const SizedBox(height: 2),
-            Text(vocab['kana'] ?? '',
-                style: const TextStyle(fontSize: 11, color: AppColors.textGrey)),
+            // 片假名的字（メニュー、デザート…）假名跟單字本身一樣，重複顯示只是佔行
+            if (kana.isNotEmpty && kana != word) ...[
+              const SizedBox(height: 2),
+              Text(kana,
+                  style: const TextStyle(fontSize: 11, color: AppColors.textGrey)),
+            ],
+            // 中文意思要留著：解鎖前後看到的資訊才連得起來（？？→盤子 → 皿・盤子）
+            if (meaning.isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(meaning,
+                  style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary)),
+            ],
           ],
         ),
       ),

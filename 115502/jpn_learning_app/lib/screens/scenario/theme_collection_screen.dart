@@ -126,12 +126,16 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
                   return _buildEmptyState();
                 }
 
-                // 拍過照的用照片大卡，沒照片的收成精簡列 ——
-                // 空白大卡撐 180px 只是佔位，也讓有照片的那幾張失焦
-                final withPhoto = themes
+                // 三層：有照片的官方主題用大卡、沒照片的用精簡列、
+                //「其他」與舊場景沒有收集目標，收到最底下當附註
+                final official =
+                    themes.where((t) => t['is_official'] != false).toList();
+                final unsorted =
+                    themes.where((t) => t['is_official'] == false).toList();
+                final withPhoto = official
                     .where((t) => (t['cover_image'] ?? '').toString().isNotEmpty)
                     .toList();
-                final noPhoto = themes
+                final noPhoto = official
                     .where((t) => (t['cover_image'] ?? '').toString().isEmpty)
                     .toList();
 
@@ -154,6 +158,21 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
                         ),
                       for (final t in noPhoto)
                         _ThemeRow(theme: t, onReturn: _reload),
+                    ],
+                    // 沒有收集目標的（「其他」與舊場景）：只留細細一行入口
+                    if (unsorted.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(4, 20, 4, 6),
+                        child: Text(
+                          '未分類',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSubtle),
+                        ),
+                      ),
+                      for (final t in unsorted)
+                        _UnsortedRow(theme: t, onReturn: _reload),
                     ],
                   ],
                 );
@@ -584,6 +603,53 @@ class _ThemeRow extends StatelessWidget {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 沒有收集目標的場景（「其他」、舊場景）：一行文字入口，不佔版面。
+/// 這些字是拍照的副產品，會一直長大，不該跟有目標的冊子並列。
+class _UnsortedRow extends StatelessWidget {
+  final dynamic theme;
+  final VoidCallback onReturn;
+
+  const _UnsortedRow({required this.theme, required this.onReturn});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = theme['name'] ?? '其他';
+    final int words = theme['bonus_count'] ?? 0;
+    final int photos = theme['photo_count'] ?? 0;
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ThemeDetailScreen(
+              sceneId: theme['scene_id'] ?? 0,
+              themeName: name,
+            ),
+          ),
+        ).then((_) => onReturn());
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 11),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$name · $words 個字'
+                '${photos > 0 ? ' · $photos 張照片' : ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, color: AppColors.textGrey),
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18, color: AppColors.textSubtle),
           ],
         ),
       ),
@@ -1082,7 +1148,7 @@ class _LockedChip extends StatelessWidget {
 }
 
 /// 額外收穫：官方清單以外、使用者自己拍到的字（不計入完成度）
-class _BonusSection extends StatelessWidget {
+class _BonusSection extends StatefulWidget {
   final List<dynamic> bonus;
 
   /// 這個主題沒有官方收集目標時（例如「其他」），額外收穫就是整面牆
@@ -1091,7 +1157,23 @@ class _BonusSection extends StatelessWidget {
   const _BonusSection({required this.bonus, this.isOnly = false});
 
   @override
+  State<_BonusSection> createState() => _BonusSectionState();
+}
+
+class _BonusSectionState extends State<_BonusSection> {
+  /// 天天拍照的話這裡會累積到幾百個字，預設只攤開一部分
+  static const int _collapsedCount = 12;
+
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final bonus = widget.bonus;
+    final isOnly = widget.isOnly;
+    final visible =
+        _expanded ? bonus : bonus.take(_collapsedCount).toList();
+    final hidden = bonus.length - visible.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1121,8 +1203,29 @@ class _BonusSection extends StatelessWidget {
         Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: bonus.map<Widget>((v) => _UnlockedChip(vocab: v)).toList(),
+          children: visible.map<Widget>((v) => _UnlockedChip(vocab: v)).toList(),
         ),
+        if (hidden > 0 || _expanded) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(
+                _expanded ? '收起' : '還有 $hidden 個，全部展開',
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

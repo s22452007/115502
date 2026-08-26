@@ -520,7 +520,7 @@ class _CameraScreenState extends State<CameraScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    '試著拍看周遭造的任何東西！',
+                    '試著拍看周遭的任何東西！',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   const Text(

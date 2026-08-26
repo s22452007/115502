@@ -68,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   void didPopNext() { _syncHomeData(); }
 
   Future<void> _syncHomeData() async {
+    if (!mounted) return;
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
     if (userId == null) {
@@ -85,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   Future<void> _fetchAndCheckBadgeProgress(int userId) async {
+    if (!mounted) return;
     final userProvider = context.read<UserProvider>();
     try {
       final result = await ApiClient.fetchProfileData(userId);
@@ -119,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   Future<void> _checkPendingFriendRequests(int userId) async {
+    if (!mounted) return;
     final userProvider = context.read<UserProvider>();
     try {
       final result = await ApiClient.getPendingRequests(userId);
@@ -129,6 +132,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   Future<void> _fetchUsageStatus(int userId) async {
+    if (!mounted) return;
     final userProvider = context.read<UserProvider>();
     try {
       final res = await ApiClient.getUsageStatus(userId);
@@ -146,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   Future<void> _fetchDailyStatus(int userId) async {
+    if (!mounted) return;
     final userProvider = context.read<UserProvider>();
     try {
       final res = await ApiClient.getDailyStatus(userId);

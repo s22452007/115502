@@ -126,11 +126,36 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
                   return _buildEmptyState();
                 }
 
-                return ListView.builder(
+                // 拍過照的用照片大卡，沒照片的收成精簡列 ——
+                // 空白大卡撐 180px 只是佔位，也讓有照片的那幾張失焦
+                final withPhoto = themes
+                    .where((t) => (t['cover_image'] ?? '').toString().isNotEmpty)
+                    .toList();
+                final noPhoto = themes
+                    .where((t) => (t['cover_image'] ?? '').toString().isEmpty)
+                    .toList();
+
+                return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  itemCount: themes.length,
-                  itemBuilder: (context, index) =>
-                      _ThemeCard(theme: themes[index], onReturn: _reload),
+                  children: [
+                    for (final t in withPhoto)
+                      _ThemeCard(theme: t, onReturn: _reload),
+                    if (noPhoto.isNotEmpty) ...[
+                      if (withPhoto.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(4, 8, 4, 12),
+                          child: Text(
+                            '還沒拍過照片的主題',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSubtle),
+                          ),
+                        ),
+                      for (final t in noPhoto)
+                        _ThemeRow(theme: t, onReturn: _reload),
+                    ],
+                  ],
                 );
               },
             ),
@@ -234,7 +259,11 @@ class _ThemeCard extends StatelessWidget {
         .toList();
     final int claimablePts = claimable.fold<int>(
         0, (sum, t) => sum + ((rewards[t]?['points'] ?? 0) as int));
-    final bool isCompleteClaimed = rewards['complete']?['state'] == 'claimed';
+    // 領過「集滿」不等於現在還是滿的 —— 之後補了新的官方字，門檻會變高。
+    // 徽記要看當下是不是真的集滿，不然會出現「已完成 12 / 20」這種矛盾畫面。
+    final bool isCompleteClaimed = rewards['complete']?['state'] == 'claimed' &&
+        target > 0 &&
+        unlocked >= target;
 
     return GestureDetector(
       onTap: () {
@@ -306,7 +335,7 @@ class _ThemeCard extends StatelessWidget {
                       if (claimable.isNotEmpty)
                         _ClaimPill(
                           points: claimablePts,
-                          onClaim: () => _claimRewards(
+                          onClaim: () => _claimThemeRewards(
                             context,
                             sceneId: theme['scene_id'] ?? 0,
                             themeName: name,
@@ -397,14 +426,23 @@ class _ThemeCard extends StatelessWidget {
     );
   }
 
-  /// 一次把這個主題所有可領的里程碑領完（過半沒領、直接集滿的情況也不會漏）
-  Future<void> _claimRewards(
-    BuildContext context, {
-    required int sceneId,
-    required String themeName,
-    required List<String> tiers,
-    required VoidCallback onDone,
-  }) async {
+  Widget _fallbackCover(String name) => Container(
+        color: AppColors.primaryLighter,
+        alignment: Alignment.center,
+        child: Icon(_iconFor(theme['icon_name']),
+            size: 64, color: Colors.white.withOpacity(0.8)),
+      );
+}
+
+/// 一次把這個主題所有可領的里程碑領完（過半沒領、直接集滿的情況也不會漏）。
+/// 大卡與精簡列共用。
+Future<void> _claimThemeRewards(
+  BuildContext context, {
+  required int sceneId,
+  required String themeName,
+  required List<String> tiers,
+  required VoidCallback onDone,
+}) async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
@@ -448,14 +486,109 @@ class _ThemeCard extends StatelessWidget {
         badgeName: badgeName,
       ),
     );
-  }
+}
 
-  Widget _fallbackCover(String name) => Container(
-        color: AppColors.primaryLighter,
-        alignment: Alignment.center,
-        child: Icon(_iconFor(theme['icon_name']),
-            size: 64, color: Colors.white.withOpacity(0.8)),
-      );
+/// 還沒拍過照片的主題：不撐成大卡，用一行帶迷你進度的列就夠了
+class _ThemeRow extends StatelessWidget {
+  final dynamic theme;
+  final VoidCallback onReturn;
+
+  const _ThemeRow({required this.theme, required this.onReturn});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = theme['name'] ?? '未分類';
+    final int unlocked = theme['unlocked_count'] ?? 0;
+    final int target = theme['target_count'] ?? 0;
+    final double progress = (theme['progress'] ?? 0.0).toDouble();
+    final rewards = Map<String, dynamic>.from(theme['rewards'] ?? {});
+    final claimable = ['half', 'complete']
+        .where((t) => rewards[t]?['state'] == 'claimable')
+        .toList();
+    final int claimablePts = claimable.fold<int>(
+        0, (sum, t) => sum + ((rewards[t]?['points'] ?? 0) as int));
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ThemeDetailScreen(
+              sceneId: theme['scene_id'] ?? 0,
+              themeName: name,
+            ),
+          ),
+        ).then((_) => onReturn());
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Row(
+          children: [
+            Icon(_iconFor(theme['icon_name']), size: 22, color: AppColors.primary),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark)),
+                      ),
+                      if (target > 0)
+                        Text('$unlocked / $target',
+                            style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textGrey)),
+                    ],
+                  ),
+                  if (target > 0) ...[
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 4,
+                        backgroundColor: AppColors.borderLight,
+                        valueColor:
+                            const AlwaysStoppedAnimation(AppColors.secondary),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (claimable.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              _ClaimPill(
+                points: claimablePts,
+                onClaim: () => _claimThemeRewards(
+                  context,
+                  sceneId: theme['scene_id'] ?? 0,
+                  themeName: name,
+                  tiers: claimable,
+                  onDone: onReturn,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// 卡片左上角的「可領取」徽記，點下去直接領（不會連帶開啟主題詳情）

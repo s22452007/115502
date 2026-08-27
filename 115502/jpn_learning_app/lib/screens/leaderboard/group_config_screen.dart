@@ -26,6 +26,10 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
   Map<String, dynamic> _getDifficultyConfig() {
     if (_selectedTaskType == 'logins') {
       return {'unit': '天', 'easy': 15, 'normal': 25, 'hard': 35};
+    } else if (_selectedTaskType == 'sentences') {
+      return {'unit': '句', 'easy': 10, 'normal': 12, 'hard': 15};
+    } else if (_selectedTaskType == 'articles') {
+      return {'unit': '篇', 'easy': 5, 'normal': 7, 'hard': 10};
     } else {
       return {'unit': '次', 'easy': 15, 'normal': 30, 'hard': 50};
     }
@@ -116,6 +120,22 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
               subtitle: '計算全體成員每日登入的總天數',
               isSelected: _selectedTaskType == 'logins',
               onTap: () => _handleTaskTypeChange('logins'),
+            ),
+            const SizedBox(height: 12),
+            TaskTypeCard(
+              icon: Icons.edit_note,
+              title: '造句練習',
+              subtitle: '計算全體成員完成 AI 批改造句的總句數',
+              isSelected: _selectedTaskType == 'sentences',
+              onTap: () => _handleTaskTypeChange('sentences'),
+            ),
+            const SizedBox(height: 12),
+            TaskTypeCard(
+              icon: Icons.menu_book,
+              title: '閱讀練習',
+              subtitle: '計算全體成員完成閱讀測驗（≥60分）的總篇數',
+              isSelected: _selectedTaskType == 'articles',
+              onTap: () => _handleTaskTypeChange('articles'),
             ),
             const SizedBox(height: 32),
 

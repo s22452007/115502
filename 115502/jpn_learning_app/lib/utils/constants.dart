@@ -11,6 +11,13 @@ class AppColors {
   static const Color textGrey = Color(0xFF777777);     // 灰色文字
   static const Color textSubtle = Color(0xFF888888);   // 淡灰色文字
 
+  // 額外文字/界面色（article list 專用）
+  static const Color title = Color(0xFF2C3E50);       // 文章標題主色
+  static const Color level = Color(0xFFFF9800);       // 等級標籤橘色（對應 Colors.orange）
+  static const Color muted = Color(0xFF757575);       // 次要文字 / icon 灰色（對應 Colors.grey[600]）
+  static const Color mutedLight = Color(0xFFBDBDBD);  // 淡灰色（對應 Colors.grey[400]）
+  static const Color shadow = Color(0x0A000000);      // 卡片陰影（黑色 4% 透明度）
+
   // 背景色
   static const Color background = Color(0xFFF5F5F0);   // 頁面背景
   static const Color cardBackground = Color(0xFFFFFFFF); // 卡片背景

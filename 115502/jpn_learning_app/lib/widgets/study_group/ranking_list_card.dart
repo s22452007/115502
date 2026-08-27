@@ -25,12 +25,16 @@ class RankingListCard extends StatelessWidget {
       if (type == 'scans') { valA = a['group_scans'] ?? 0; valB = b['group_scans'] ?? 0; }
       else if (type == 'points') { valA = a['group_points'] ?? 0; valB = b['group_points'] ?? 0; }
       else if (type == 'logins') { valA = a['group_logins'] ?? 0; valB = b['group_logins'] ?? 0; }
+      else if (type == 'sentences') { valA = a['group_sentences'] ?? 0; valB = b['group_sentences'] ?? 0; }
+      else if (type == 'articles') { valA = a['group_articles'] ?? 0; valB = b['group_articles'] ?? 0; }
       return valB.compareTo(valA);
     });
 
     String unit = '次';
     if (type == 'points') unit = '點';
     if (type == 'logins') unit = '天';
+    if (type == 'sentences') unit = '句';
+    if (type == 'articles') unit = '篇';
 
     return Container(
       width: double.infinity,
@@ -56,6 +60,8 @@ class RankingListCard extends StatelessWidget {
             if (type == 'scans') score = item['group_scans'] ?? 0;
             if (type == 'points') score = item['group_points'] ?? 0;
             if (type == 'logins') score = item['group_logins'] ?? 0;
+            if (type == 'sentences') score = item['group_sentences'] ?? 0;
+            if (type == 'articles') score = item['group_articles'] ?? 0;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),

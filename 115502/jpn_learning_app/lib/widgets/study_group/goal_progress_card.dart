@@ -29,6 +29,8 @@ class GoalProgressCard extends StatelessWidget {
     String unit = '次拍照';
     if (type == 'points') unit = 'J-Pts';
     if (type == 'logins') unit = '天登入';
+    if (type == 'sentences') unit = '句造句';
+    if (type == 'articles') unit = '篇閱讀';
 
     bool isGoalReached = current >= goal;
 

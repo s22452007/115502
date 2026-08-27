@@ -250,6 +250,8 @@ class GroupMember(db.Model):
     group_scans = db.Column(db.Integer, default=0)
     group_points = db.Column(db.Integer, default=0)
     group_logins = db.Column(db.Integer, default=0)
+    group_sentences = db.Column(db.Integer, default=0)   # 個人本週完成造句句數
+    group_articles = db.Column(db.Integer, default=0)    # 個人本週完成閱讀篇數
     # 獎勵與押金
     has_claimed = db.Column(db.Boolean, default=False)
     paid_deposit = db.Column(db.Boolean, default=False)

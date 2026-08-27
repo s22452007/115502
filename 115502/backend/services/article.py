@@ -12,6 +12,7 @@ from flask import Blueprint, request, jsonify
 from models import db, User, Article, UnlockedArticle
 from datetime import datetime
 from models import db, User, Article, ArticleProgress, ScoreRecord
+from utils.group_helper import add_group_progress_and_check_reward
 
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
@@ -310,6 +311,13 @@ def submit_score():
         user = User.query.get(user_id)
         if user:
             user.j_pts = (user.j_pts or 0) + points_earned
+
+        # 5. 📊 更新小組閱讀進度（分數 >= 60 才算完成）
+        if score >= 60:
+            try:
+                add_group_progress_and_check_reward(user_id, 'articles', 1)
+            except Exception as ge:
+                print(f"⚠️ 更新小組閱讀進度失敗（不影響成績結算）：{ge}")
 
         db.session.commit()
 

@@ -173,7 +173,9 @@ def get_my_group(user_id):
                 "japanese_level": u.japanese_level, # 打包日語程度
                 "group_scans": m.group_scans,
                 "group_points": m.group_points,              
-                "group_logins": m.group_logins 
+                "group_logins": m.group_logins,
+                "group_sentences": m.group_sentences or 0,
+                "group_articles": m.group_articles or 0,
             })
 
     # 2️⃣ 接著抓取這個小組「邀請中 (pending)」的名單

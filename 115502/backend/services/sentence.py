@@ -12,6 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from models import db, User, SentencePracticeRecord
 from utils import gemini_client
+from utils.group_helper import add_group_progress_and_check_reward
 
 sentence_bp = Blueprint('sentence', __name__)
 
@@ -211,7 +212,13 @@ def evaluate_sentence():
             db.session.rollback()
             print(f"⚠️ 歷史紀錄寫入資料庫失敗 (表格可能未建立): {e}")
             # 💡 即使沒存入資料庫，依然會回傳批改結果給畫面，不讓前端卡死
-        
+
+        # 📊 更新小組造句進度（若使用者所在小組的目標是 'sentences'）
+        try:
+            add_group_progress_and_check_reward(user_id, 'sentences', 1)
+        except Exception as ge:
+            print(f"⚠️ 更新小組造句進度失敗（不影響批改結果）：{ge}")
+
         result['points_earned'] = points_earned
         result['status'] = 'success'
         return jsonify(result), 200

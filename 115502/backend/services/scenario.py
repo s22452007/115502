@@ -5,6 +5,22 @@ import uuid
 
 scenario_bp = Blueprint('scenario', __name__)
 
+
+def _refund_scan(user_id):
+    """
+    辨識失敗時退還拍照次數。
+    包成獨立函式並吞掉例外，避免退還失敗反而蓋掉原本要回報的錯誤訊息。
+    """
+    if not user_id:
+        return
+    try:
+        from utils.db import db
+        from services.user import refund_scan_usage
+        db.session.rollback()  # 確保先清掉失敗流程留下的未提交狀態
+        refund_scan_usage(int(user_id))
+    except Exception as e:
+        print(f"⚠️ 退還拍照次數時發生錯誤：{e}")
+
 # 設定圖片上傳的儲存路徑
 UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'static', 'photos')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -207,12 +223,16 @@ def analyze_scene():
                         os.remove(file_path)
                 except OSError:
                     pass
+                # 沒有辨識到任何單字，把先前扣掉的拍照次數還給使用者
+                _refund_scan(user_id)
                 return jsonify({
                     'error': ai_result_wrapper.get("error", "圖片包含不當內容，無法辨識"),
                     'blocked': True,
                 }), 400
 
             if not ai_result_wrapper.get("success"):
+                # 辨識失敗（額度用完、格式錯誤、連線問題…）→ 退還拍照次數
+                _refund_scan(user_id)
                 return jsonify({'error': ai_result_wrapper.get("error", "AI 分析失敗")}), 500
             
             ai_data = ai_result_wrapper.get("result", {})
@@ -366,68 +386,13 @@ def analyze_scene():
         except Exception as e:
             print(f"分析圖片時發生錯誤: {e}")
             db.session.rollback()
-            return jsonify({'error': f'伺服器內部錯誤: {str(e)}'}), 500
+            # 發生例外代表這次拍照沒有任何成果，把次數還給使用者
+            _refund_scan(user_id)
+            return jsonify({'error': '照片分析失敗了，請確認網路連線後再試一次。'}), 500
 
-@scenario_bp.route('/history', methods=['GET'])
-def get_scenario_history():
-    """
-    查詢過去分析過的場景紀錄。
-    (提供給你的擴充範例骨架)
-    """
-    # TODO: 1. 從 Token 中取得 user_id
-    # TODO: 2. 從資料庫 (例如 UserVocab 或是自訂的 ScenarioHistory 表) 撈取該使用者的歷史紀錄
-    # TODO: 3. 將資料格式化並回傳
-    
-    return jsonify({
-        'message': '歷史紀錄查詢成功 (目前為空，你可以自行實作這裡的邏輯)',
-        'history': []
-    }), 200
-
-@scenario_bp.route('/analyze-text', methods=['POST'])
-def analyze_text_scenario():
-    """
-    接收前端傳來的情境主題 (純文字)，交由 AI 生成相關單字與句子。
-    """
-    # 1. 取得前端傳來的 JSON 資料
-    data = request.get_json()
-    
-    # 2. 檢查有沒有 'topic' 這個欄位
-    if not data or 'topic' not in data:
-        return jsonify({'error': '請提供情境主題 (topic)'}), 400
-
-    topic = data['topic'].strip()
-    if not topic:
-        return jsonify({'error': '情境主題不能為空'}), 400
-
-    try:
-        # 3. 呼叫 AI 工具函式 (這裡未來要串接 OpenAI 的 GPT 或 Gemini)
-        # ai_result = utils.ai_helper.generate_scenario_from_text(topic)
-        
-        # --- 以下為假資料 (Mock Data) 供前端串接測試用 ---
-        # 這裡我特別針對 "便利商店" 或隨機主題做了一個假的結果
-        ai_result = {
-            'topic': topic,
-            'vocabs': [
-                {'word': 'いらっしゃいませ', 'kana': 'いらっしゃいませ', 'meaning': '歡迎光臨', 'romaji': 'irasshaimase'},
-                {'word': 'お弁当', 'kana': 'おべんとう', 'meaning': '便當', 'romaji': 'obentou'},
-                {'word': '温める', 'kana': 'あたためる', 'meaning': '加熱', 'romaji': 'atatameru'},
-                {'word': '袋', 'kana': 'ふくろ', 'meaning': '袋子', 'romaji': 'fukuro'}
-            ],
-            'sentences': [
-                {'japanese': 'お弁当温めますか？', 'chinese': '請問便當需要加熱嗎？'},
-                {'japanese': '袋はお持ちですか？', 'chinese': '請問有自備購物袋嗎？'}
-            ]
-        }
-        # --- 假資料結束 ---
-
-        return jsonify({
-            'message': f'文字情境「{topic}」生成成功',
-            'result': ai_result
-        }), 200
-
-    except Exception as e:
-        print(f"生成文字情境時發生錯誤: {e}")
-        return jsonify({'error': f'伺服器內部錯誤: {str(e)}'}), 500
+# 註：原本這裡有 /history 與 /analyze-text 兩個未完成的端點
+#（前者永遠回空陣列、後者回傳寫死的假單字），前端都沒有使用，已移除。
+# 照片歷史請改用 /unlocked/<user_id>。
 
 @scenario_bp.route('/unlocked/<int:user_id>', methods=['GET'])
 def get_unlocked_scenes(user_id):

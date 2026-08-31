@@ -235,22 +235,29 @@ class _CameraScreenState extends State<CameraScreen>
     _initCamera(cameras[_currentCameraIndex]);
   }
 
+  /// 拍照流程的唯一入口。
+  /// ⚠️ 一律透過 _checkAndProceedWithPhoto 進行，確保會先檢查並扣除拍照次數；
+  ///    請不要直接呼叫 _showNamingDialogAndProceed，那會繞過次數限制。
   Future<void> _takePicture() async {
+    // 相機未初始化（例如模擬器、網頁版）→ 改開相簿選照片
     if (_controller == null || !_controller!.value.isInitialized) {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile =
+          await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null && mounted) {
+        await _checkAndProceedWithPhoto(pickedFile.path);
+      }
       return;
     }
 
-    if (_controller!.value.isTakingPicture) {
-      return;
-    }
+    if (_controller!.value.isTakingPicture) return;
 
     try {
       final XFile photo = await _controller!.takePicture();
       if (!mounted) return;
-
-      await _showNamingDialogAndProceed(photo.path);
+      await _checkAndProceedWithPhoto(photo.path);
     } on CameraException catch (e) {
-      debugPrint('Error occured while taking picture: $e');
+      debugPrint('拍照發生錯誤: $e');
     }
   }
 
@@ -565,30 +572,7 @@ class _CameraScreenState extends State<CameraScreen>
 
                   // 📷 2. 中間的拍照按鈕 (綠色大圓圈)
                   GestureDetector(
-                    onTap: () async {
-                      // 相機未初始化（模擬器）→ 改開相簿
-                      if (_controller == null || !_controller!.value.isInitialized) {
-                        final ImagePicker picker = ImagePicker();
-                        final XFile? pickedFile = await picker.pickImage(
-                          source: ImageSource.gallery,
-                        );
-                        if (pickedFile != null) {
-                          if (!context.mounted) return;
-                          await _checkAndProceedWithPhoto(pickedFile.path);
-                        }
-                        return;
-                      }
-
-                      if (_controller!.value.isTakingPicture) return;
-
-                      try {
-                        final XFile photo = await _controller!.takePicture();
-                        if (!mounted) return;
-                        await _checkAndProceedWithPhoto(photo.path);
-                      } on CameraException catch (e) {
-                        debugPrint('拍照發生錯誤: $e');
-                      }
-                    },
+                    onTap: _takePicture, // 統一走同一個入口，確保次數一定會被檢查
                     child: Container(
                       width: 72,
                       height: 72,

@@ -606,6 +606,38 @@ def use_ai():
     }), 200
 
 
+def refund_scan_usage(user_id):
+    """
+    退還一次拍照次數（AI 辨識失敗時呼叫）。
+
+    退還方式要對應當初 increment_scan 的扣除方式：
+      - 若 photo_count_today 已超過每日上限，代表當初扣的是「加購次數」→ 還回去
+      - 否則就是扣每日免費次數 → 直接把今日計數減 1
+      - total_scans（徽章計數）也一併回復，因為實際上沒有成功辨識到任何東西
+
+    註：小組進度（group_scans / 小組目標）不做回退，
+        因為進度可能已經觸發小組獎勵，回退會造成獎勵狀態不一致。
+    """
+    user = User.query.get(user_id)
+    if not user:
+        return False
+
+    photo_today = getattr(user, 'photo_count_today', 0) or 0
+    if photo_today <= 0:
+        return False  # 沒有可退還的次數
+
+    daily_limit = 10 if user.is_premium else 2
+    if photo_today > daily_limit:
+        # 當初用掉的是加購次數，還回去
+        user.photo_extra_count = (getattr(user, 'photo_extra_count', 0) or 0) + 1
+
+    user.photo_count_today = photo_today - 1
+    user.total_scans = max(0, (user.total_scans or 0) - 1)
+    db.session.commit()
+    print(f"↩️ 已退還使用者 {user_id} 一次拍照次數（辨識失敗）")
+    return True
+
+
 def refund_ai_usage(user_id):
     """
     退還一次 AI 對話次數（AI 回覆失敗時呼叫）。

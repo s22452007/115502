@@ -186,10 +186,34 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: widget.vocabs.map((v) {
+                  final String word = v['word'] ?? '';
+                  final String kana = v['kana'] ?? '';
+                  final bool hasKanji = word.isNotEmpty && word != kana;
+
                   return Chip(
-                    label: Text(v['word'] ?? v['kana'] ?? ''),
+                    label: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (hasKanji)
+                          Text(
+                            kana,
+                            style: TextStyle(
+                              fontSize: 10,
+                              height: 1.0,
+                              color: AppColors.primary.withOpacity(0.8),
+                            ),
+                          ),
+                        Text(
+                          word.isNotEmpty ? word : kana,
+                          style: const TextStyle(
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
                     backgroundColor: AppColors.primaryLight.withOpacity(0.2),
                     side: const BorderSide(color: AppColors.primaryLight),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                   );
                 }).toList(),
               ),

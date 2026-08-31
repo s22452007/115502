@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:typed_data' show Uint8List;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
@@ -41,7 +42,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   int _aiExtra = 0;
 
   final AudioPlayer _audioPlayer = AudioPlayer();
-  String? _playingText; 
+  String? _playingText;
+
+  // 語音快取：同一句話只跟後端要一次音訊，之後重複點擊直接播放（免等待）
+  // 使用者練發音時常會反覆點同一句，這能省下每次 1~2 秒的網路往返。
+  final Map<String, Uint8List> _ttsCache = {};
+  static const int _ttsCacheMaxSize = 40; // 一句約 20~40KB，40 筆約 1MB
 
   final SpeechToText _speech = SpeechToText();
   bool _speechEnabled = false;
@@ -50,6 +56,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
   // 對話紀錄場次 id（成功建立後，每次送出訊息都會帶上，後端才知道存到哪一場）
   int? _sessionId;
+  // 記住「建立場次」這個進行中的請求，避免連續送訊息時重複建立場次
+  Future<int?>? _sessionCreation;
   bool _isLoadingHistory = false;
 
   // 訊息列表捲動控制：新訊息進來時自動捲到最下面
@@ -85,14 +93,15 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       _isLoadingHistory = true;
       _loadPreviousMessages();
     } else {
-      // 全新對話：顯示歡迎訊息並建立場次
+      // 全新對話：只顯示歡迎訊息。
+      // 場次「不」在這裡建立——等使用者真的送出第一則訊息才建，
+      // 否則只是進來看一眼就離開的話，資料庫會留下一堆沒有內容的空場次。
       // 標記 isGreeting，組對話紀錄時要排除（它是介面說明，不是對話內容）
       _messages.add({
         'text': '歡迎來到「${widget.topicTitle}」！\n我是今天的對話對象「${widget.characterName}」✨\n不知道如何開頭的話可以點擊下方：幫我開場',
         'isUserMessage': false,
         'isGreeting': true,
       });
-      _createSession();
     }
 
     _quickReplies = ['幫我開場', '請問規則是什麼？'];
@@ -164,12 +173,27 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     );
   }
 
+  /// 把音訊存進快取，超過上限就淘汰最早加入的那筆
+  void _cacheTtsAudio(String text, Uint8List bytes) {
+    _ttsCache[text] = bytes;
+    while (_ttsCache.length > _ttsCacheMaxSize) {
+      _ttsCache.remove(_ttsCache.keys.first);
+    }
+  }
+
   Future<void> _playTts(String text) async {
     final t = FuriganaText.cleanFuriganaForTts(text).trim();
     if (t.isEmpty) return;
 
     await _audioPlayer.stop();
     setState(() => _playingText = t);
+
+    // 這句先前播過 → 直接用快取播放，不必再等網路
+    final cached = _ttsCache[t];
+    if (cached != null) {
+      await _audioPlayer.play(BytesSource(cached));
+      return;
+    }
 
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/tts/synthesize');
@@ -184,6 +208,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final bytes = base64Decode(data['audio_base64'] as String);
+        _cacheTtsAudio(t, bytes);
         await _audioPlayer.play(BytesSource(bytes));
       } else {
         setState(() => _playingText = null);
@@ -360,16 +385,26 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   // ==========================================
   // 📚 對話紀錄：建立場次 / 載入先前訊息
   // ==========================================
-  Future<void> _createSession() async {
-    final userId = context.read<UserProvider>().userId;
-    if (userId == null) return; // 訪客不留紀錄
+  /// 取得（必要時才建立）對話場次 id。
+  ///
+  /// 場次是在「第一次送出訊息」時才建立的，避免使用者只是進來看看就離開，
+  /// 卻在資料庫留下沒有任何內容的空場次。
+  /// 用 _sessionCreation 記住進行中的請求，快速連送兩則訊息時不會重複建立。
+  Future<int?> _ensureSession() async {
+    if (_sessionId != null) return _sessionId;
 
-    final id = await ApiClient.createChatSession(
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return null; // 訪客不留紀錄
+
+    _sessionCreation ??= ApiClient.createChatSession(
       userId: userId,
       topic: widget.topicTitle,
       characterName: widget.characterName,
     );
+
+    final id = await _sessionCreation;
     if (mounted) setState(() => _sessionId = id);
+    return id;
   }
 
   Future<void> _loadPreviousMessages() async {
@@ -435,6 +470,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     setState(() {
       _isTyping = true;
     });
+    // 真的要送出訊息了，這時才建立對話場次
+    final sessionId = await _ensureSession();
     try {
       final userLevel = context.read<UserProvider>().japaneseLevel;
       final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
@@ -451,7 +488,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           // 帶上 user_id：AI 若回覆失敗，後端會把剛扣掉的次數退還
           'user_id': (context.read<UserProvider>().userId ?? '').toString(),
           // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
-          'session_id': (_sessionId ?? '').toString(),
+          'session_id': (sessionId ?? '').toString(),
           'history': _buildChatHistory(), // 中途再按開場時，讓 AI 知道前面聊過什麼
         },
       );
@@ -496,6 +533,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     _controller.clear();
 
+    // 真的要送出訊息了，這時才建立對話場次
+    final sessionId = await _ensureSession();
+
     try {
       final userLevel = context.read<UserProvider>().japaneseLevel;
       final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
@@ -512,7 +552,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           // 帶上 user_id：AI 若回覆失敗，後端會把剛扣掉的次數退還
           'user_id': (context.read<UserProvider>().userId ?? '').toString(),
           // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
-          'session_id': (_sessionId ?? '').toString(),
+          'session_id': (sessionId ?? '').toString(),
           'history': history, // 帶入最近的對話，讓 AI 記得前文
         },
       );

@@ -152,7 +152,7 @@ class AppDrawer extends StatelessWidget {
                     context,
                     Icons.settings_outlined,
                     '系統設定',
-                    // 沒有傳入 iconColor，所以 Icon 也是預設黑色
+                    iconColor: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(

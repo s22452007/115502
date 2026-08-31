@@ -213,14 +213,12 @@ class AppDrawer extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                // 🌟 Icon 使用 iconColor，沒給的話就用預設的 _textColor
                 Icon(icon, color: iconColor ?? _textColor, size: 24),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      // 🌟 文字使用 textColor，沒給的話就用預設的 _textColor (黑色)
                       color: textColor ?? _textColor,
                       fontWeight: FontWeight.w800,
                       fontSize: 15,

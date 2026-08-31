@@ -52,6 +52,23 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   int? _sessionId;
   bool _isLoadingHistory = false;
 
+  // 訊息列表捲動控制：新訊息進來時自動捲到最下面
+  final ScrollController _scrollController = ScrollController();
+  // 輸入框焦點：按 Enter 送出後把游標留在輸入框，可以連續打字
+  final FocusNode _inputFocusNode = FocusNode();
+
+  /// 捲到對話最底部（等版面更新完再捲，才抓得到正確高度）
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +103,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     _speech.stop();
     _audioPlayer.dispose();
     _controller.dispose();
+    _scrollController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -378,6 +397,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
       }
     });
+    _scrollToBottom(); // 接續對話時直接看到最新的訊息
   }
 
   // ==========================================
@@ -440,6 +460,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         setState(() {
           _messages.add({'text': response.body, 'isUserMessage': false});
         });
+        _scrollToBottom();
 
         await _fetchUsageData(); 
       }
@@ -469,6 +490,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       _isTyping = true;
       _quickReplies.clear();
     });
+    _scrollToBottom();
+    // 按 Enter 送出後把游標留在輸入框，使用者可以直接接著打下一句
+    _inputFocusNode.requestFocus();
 
     _controller.clear();
 
@@ -496,14 +520,17 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       if (!mounted) return;
 
       if (response.statusCode == 200) {
+        // AI 會在回覆最前面附上文法訂正（有錯才有），把它拆出來單獨顯示
+        final parsed = _extractCorrection(response.body);
         setState(() {
           _messages.add({
-            'text': response.body,
+            'text': parsed.reply,
             'isUserMessage': false,
-            'correction': text.contains('錯') ? '剛剛的句子動詞變化有點小問題喔！建議改成...' : null,
+            'correction': parsed.correction,
           });
           _quickReplies = ['そうですか', 'なるほど', 'もう少し教えて！'];
         });
+        _scrollToBottom();
       } else {
         // 伺服器錯誤時也要讓使用者知道，不能什麼都不顯示
         setState(() {
@@ -583,6 +610,30 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           ),
         );
       },
+    );
+  }
+
+  // ==========================================
+  // ✏️ 文法訂正：AI 會把訂正放在回覆的第一行，格式為
+  //    [訂正]錯誤說法 → 正確說法（說明）
+  //    這裡把它拆出來，讓它顯示在專屬的提示卡片而不是混在對話裡。
+  // ==========================================
+  ({String reply, String? correction}) _extractCorrection(String raw) {
+    final lines = raw.split('\n');
+    final index = lines.indexWhere((l) => l.trim().startsWith('[訂正]'));
+    if (index == -1) {
+      return (reply: raw, correction: null);
+    }
+
+    final correction =
+        lines[index].trim().replaceFirst('[訂正]', '').trim();
+    lines.removeAt(index);
+    // 去掉訂正行後可能留下開頭空行
+    final reply = lines.join('\n').replaceFirst(RegExp(r'^\s*\n+'), '');
+
+    return (
+      reply: reply.trim().isEmpty ? raw : reply,
+      correction: correction.isEmpty ? null : correction,
     );
   }
 
@@ -800,6 +851,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
           Expanded(
             child: ListView.builder(
+              controller: _scrollController, // 讓新訊息可以自動捲到底
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (ctx, i) {
@@ -848,6 +900,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Icon(
                                       Icons.lightbulb,
@@ -856,12 +909,30 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                     ),
                                     const SizedBox(width: 6),
                                     Expanded(
-                                      child: Text(
-                                        correction,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.orange.shade800,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '文法小提醒',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.orange.shade800,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          // 訂正內容也可能含標音，顯示前先清掉
+                                          Text(
+                                            FuriganaText.cleanFuriganaForTts(
+                                                correction),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              height: 1.4,
+                                              color: Colors.orange.shade800,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -1020,6 +1091,10 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                     Expanded(
                       child: TextField(
                         controller: _controller,
+                        focusNode: _inputFocusNode,
+                        // 手機鍵盤右下角顯示「送出」而不是「完成」
+                        textInputAction: TextInputAction.send,
+                        // 按 Enter（或鍵盤送出鍵）直接送出
                         onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
                           hintText: _isListening

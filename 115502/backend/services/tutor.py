@@ -41,6 +41,17 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
            - 送假名不要包進去，例如「好きです」要寫成 [好|す]きです。
            - 假名（平假名、片假名）本身不需要標音。
            - 中文翻譯的部分「絕對不要」加任何標音。
+        8. 文法訂正規則（重要）：
+           - 如果使用者是用「日語」發言，而且句子有文法、助詞或用詞上的錯誤，
+             請在整則回覆的「最開頭」單獨加上一行訂正，格式固定為：
+             [訂正]使用者的錯誤說法 → 正確的說法（用繁體中文簡短說明錯在哪）
+           - 例如：[訂正]私は犬が好きます → 私は犬が好きです（「好き」是形容動詞，要用「です」而不是「ます」）
+           - 這一行必須是回覆的第一行，而且獨立成一行。
+           - 以下情況「絕對不要」輸出這一行：
+             (1) 使用者說的是中文
+             (2) 使用者的日語沒有錯誤
+             (3) 只是語氣或風格差異，不算錯誤
+           - 訂正要溫和、具體，只挑真正的錯誤，不要吹毛求疵。
         """
 
         # 👇 依使用者選擇的腔調，加入對應的說話方式指令
@@ -48,7 +59,7 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
             from models import Dialect
             dialect = Dialect.query.filter_by(id=dialect_id, is_active=True).first()
             if dialect:
-                prompt += f"\n        8. 腔調要求：{dialect.prompt_instruction}"
+                prompt += f"\n        9. 腔調要求：{dialect.prompt_instruction}"
 
         if user_message == "[幫我開場]":
             prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！一句話就好，讓使用者有機會回應。"

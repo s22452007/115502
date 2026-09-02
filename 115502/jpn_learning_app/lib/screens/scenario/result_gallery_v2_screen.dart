@@ -19,8 +19,76 @@ class ResultGalleryV2Screen extends StatefulWidget {
 }
 
 class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
-  // 用來強迫 FutureBuilder 重新抓資料的 Key
-  Key _futureKey = UniqueKey();
+  /// 一次載入幾張。照片會隨著天天拍照無限累積，不能再一口氣全撈。
+  static const int _pageSize = 20;
+
+  final List<dynamic> _photos = [];
+  bool _initialLoading = true;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _total = 0;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadFirstPage());
+  }
+
+  /// 重新從第一頁載入（初次進入、改名、從子頁返回都走這裡）
+  Future<void> _loadFirstPage() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    setState(() {
+      _initialLoading = true;
+      _error = null;
+    });
+
+    try {
+      final page = await ApiClient.getUnlockedScenesPage(userId,
+          limit: _pageSize);
+      if (!mounted) return;
+      setState(() {
+        _photos
+          ..clear()
+          ..addAll((page['scenes'] as List?) ?? []);
+        _total = (page['total'] ?? _photos.length) as int;
+        _hasMore = page['has_more'] == true;
+        _initialLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _initialLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    setState(() => _loadingMore = true);
+    try {
+      final page = await ApiClient.getUnlockedScenesPage(userId,
+          limit: _pageSize, offset: _photos.length);
+      if (!mounted) return;
+      setState(() {
+        _photos.addAll((page['scenes'] as List?) ?? []);
+        _total = (page['total'] ?? _total) as int;
+        _hasMore = page['has_more'] == true;
+        _loadingMore = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('載入更多失敗，請再試一次')));
+    }
+  }
 
   Future<void> _showRenameDialog(
     BuildContext context,
@@ -65,9 +133,7 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
     );
 
     // 對話框關閉後，重新載入清單
-    setState(() {
-      _futureKey = UniqueKey();
-    });
+    _loadFirstPage();
   }
 
   @override
@@ -87,7 +153,7 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
               children: [
                 // 主題收集冊的入口（原本掛在首頁「查看全部」，改放這裡）
                 _buildThemeCollectionEntry(context),
-                Expanded(child: _buildSceneList(userId)),
+                Expanded(child: _buildSceneList()),
               ],
             ),
     );
@@ -103,11 +169,7 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
             context,
             MaterialPageRoute(builder: (_) => const ThemeCollectionScreen()),
           ).then((_) {
-            if (mounted) {
-              setState(() {
-                _futureKey = UniqueKey();
-              });
-            }
+            if (mounted) _loadFirstPage();
           });
         },
         child: Container(
@@ -149,51 +211,47 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
     );
   }
 
-  Widget _buildSceneList(int userId) {
-    return FutureBuilder<List<dynamic>>(
-              key: _futureKey, // 每次 Key 改變，這個 FutureBuilder 會重新執行
-              // 傳入 limit: 999 這樣就能把所有場景都撈出來，不受首頁只撈3個的限制
-              future: ApiClient.getUnlockedScenes(userId, limit: 999),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  // 把錯誤訊息印在編輯器的終端機裡
-                  debugPrint('取得單字探險發生錯誤: ${snapshot.error}');
+  Widget _buildSceneList() {
+    if (_initialLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-                  // 並且也顯示在手機畫面上，方便我們看
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text(
-                        '載入失敗原因：\n${snapshot.error}',
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  );
-                }
+    if (_error != null) {
+      debugPrint('取得單字探險發生錯誤: $_error');
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(
+            '載入失敗原因：\n$_error',
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
 
-                final scenarios = snapshot.data ?? [];
+    if (_photos.isEmpty) {
+      return const Center(
+        child: Text(
+          '還沒有解鎖任何場景喔！\n趕快去拍照探索吧！',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+            height: 1.5,
+          ),
+        ),
+      );
+    }
 
-                if (scenarios.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      '還沒有解鎖任何場景喔！\n趕快去拍照探索吧！',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                        height: 1.5,
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
+    final scenarios = _photos;
+    return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: scenarios.length,
+                  // 最後多一格放「載入更多」
+                  itemCount: scenarios.length + (_hasMore ? 1 : 0),
                   itemBuilder: (context, index) {
+                    if (index == scenarios.length) {
+                      return _buildLoadMore();
+                    }
                     final scene = scenarios[index];
 
                     return GestureDetector(
@@ -207,11 +265,7 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                           ),
                         ).then((_) {
                           // 從詳細畫面返回時，重新整理清單
-                          if (mounted) {
-                            setState(() {
-                              _futureKey = UniqueKey();
-                            });
-                          }
+                          if (mounted) _loadFirstPage();
                         });
                       },
                       child: Container(
@@ -334,8 +388,41 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                       ),
                     );
                   },
-                );
-              },
+    );
+  }
+
+  /// 清單底部的「載入更多」；一次再拿 20 張
+  Widget _buildLoadMore() {
+    final remaining = _total - _photos.length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24, top: 4),
+      child: Center(
+        child: _loadingMore
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              )
+            : OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                onPressed: _loadMore,
+                child: Text(
+                  remaining > 0 ? '載入更多（還有 $remaining 張）' : '載入更多',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+      ),
     );
   }
 }

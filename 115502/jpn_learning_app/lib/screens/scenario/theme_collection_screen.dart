@@ -844,7 +844,10 @@ class _ThemeDetailScreenState extends State<ThemeDetailScreen> {
 
   Widget _buildPhotoList(int userId) {
     return FutureBuilder<List<dynamic>>(
-      future: ApiClient.getUnlockedScenes(userId, limit: 999),
+      // 只要這個主題的照片，交給資料庫過濾；
+      // 以前是整包撈回來再前端丟掉 95%，照片一多就會拖慢每次進頁
+      future: ApiClient.getUnlockedScenes(userId,
+          limit: 50, sceneId: widget.sceneId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
@@ -853,9 +856,7 @@ class _ThemeDetailScreenState extends State<ThemeDetailScreen> {
                 child: CircularProgressIndicator(color: AppColors.primary)),
           );
         }
-        final all = snapshot.data ?? [];
-        final photos =
-            all.where((p) => (p['scene_id'] ?? 0) == widget.sceneId).toList();
+        final photos = snapshot.data ?? [];
 
         if (photos.isEmpty) {
           return const Padding(

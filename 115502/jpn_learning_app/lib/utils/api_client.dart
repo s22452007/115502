@@ -496,10 +496,42 @@ class ApiClient {
     return [];
   }
 
-  static Future<List<dynamic>> getUnlockedScenes(int userId, {int limit = 3}) async {
-    final url = Uri.parse('$baseUrl/scenario/unlocked/$userId?limit=$limit');
+  /// 照片紀錄。sceneId 給了就只撈那個主題的（在資料庫過濾，不要整包撈回來再丟掉），
+  /// offset 配合 limit 做分頁。
+  static Future<List<dynamic>> getUnlockedScenes(
+    int userId, {
+    int limit = 3,
+    int offset = 0,
+    int? sceneId,
+  }) async {
+    final page = await getUnlockedScenesPage(
+      userId,
+      limit: limit,
+      offset: offset,
+      sceneId: sceneId,
+    );
+    return (page['scenes'] as List?) ?? [];
+  }
+
+  /// 同上，但連 total / has_more 一起回傳，給需要「載入更多」的清單用
+  static Future<Map<String, dynamic>> getUnlockedScenesPage(
+    int userId, {
+    int limit = 20,
+    int offset = 0,
+    int? sceneId,
+  }) async {
+    final params = <String, String>{
+      'limit': '$limit',
+      if (offset > 0) 'offset': '$offset',
+      if (sceneId != null) 'scene_id': '$sceneId',
+    };
+    final url = Uri.parse('$baseUrl/scenario/unlocked/$userId')
+        .replace(queryParameters: params);
     final response = await http.get(url);
-    if (response.statusCode == 200) return json.decode(response.body)['scenes'];
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(
+          json.decode(utf8.decode(response.bodyBytes)));
+    }
     throw Exception('無法載入');
   }
 

@@ -396,18 +396,34 @@ def analyze_scene():
 
 @scenario_bp.route('/unlocked/<int:user_id>', methods=['GET'])
 def get_unlocked_scenes(user_id):
-    """
-    取得使用者拍過的照片紀錄
+    """取得使用者拍過的照片紀錄。
+
+    查詢參數：
+      limit    最多幾筆（不給＝全部）
+      offset   從第幾筆開始，配合 limit 做分頁
+      scene_id 只要某個主題的照片（給了就在資料庫過濾，不要撈全部再讓前端丟掉）
+
+    回傳除了 scenes 之外還有 total（符合條件的總筆數）與 has_more，
+    讓前端知道還有沒有下一頁。
     """
     limit = request.args.get('limit', type=int)
-    
+    offset = request.args.get('offset', type=int) or 0
+    scene_id = request.args.get('scene_id', type=int)
+
     # 1. 直接撈使用者的「拍照事件表」
-    query = UserPhoto.query.filter(UserPhoto.user_id == user_id).order_by(UserPhoto.created_at.desc())
+    query = UserPhoto.query.filter(UserPhoto.user_id == user_id)
+    if scene_id is not None:
+        query = query.filter(UserPhoto.scene_id == scene_id)
+
+    total = query.count()
+
+    query = query.order_by(UserPhoto.created_at.desc())
+    if offset:
+        query = query.offset(offset)
     if limit:
-        photos = query.limit(limit).all()
-    else:
-        photos = query.all()
-    
+        query = query.limit(limit)
+    photos = query.all()
+
     results = []
     for p in photos:
         # 2. 算一下這張照片下面掛了幾個單字
@@ -423,8 +439,12 @@ def get_unlocked_scenes(user_id):
             "unlocked_at": p.created_at.strftime('%Y.%m.%d'),
             "vocab_count": vocab_count
         })
-        
-    return jsonify({"scenes": results}), 200
+
+    return jsonify({
+        "scenes": results,
+        "total": total,
+        "has_more": (offset + len(results)) < total,
+    }), 200
 
 @scenario_bp.route('/themes/<int:user_id>', methods=['GET'])
 def get_themes(user_id):

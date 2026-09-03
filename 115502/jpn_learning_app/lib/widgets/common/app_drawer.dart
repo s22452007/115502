@@ -151,7 +151,9 @@ class AppDrawer extends StatelessWidget {
                   _buildPillItem(
                     context,
                     Icons.settings_outlined,
-                    '系統設定',
+                    '
+                    
+                    ', 
                     iconColor: AppColors.primary,
                     onTap: () => Navigator.push(
                       context,

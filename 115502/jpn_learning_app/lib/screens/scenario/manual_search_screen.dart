@@ -36,15 +36,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       'personality': '1. 隨性慵懶 2. 對喜歡的事物充滿熱情 3. 說話帶點幽默感',
       'special_traits': '獨立樂團貝斯手、App開發者、重度貓奴',
     },
-    {
-      'name': '瀨戶 景',
-      'role': '隨性慵懶的貓奴貝斯手',
-      'origin': '九州',
-      'age': '23',
-      'gender': '男',
-      'personality': '1. 隨性慵懶 2. 對喜歡的事物充滿熱情 3. 說話帶點幽默感',
-      'special_traits': '獨立樂團貝斯手、App開發者、重度貓奴',
-    },
     
   ];
 

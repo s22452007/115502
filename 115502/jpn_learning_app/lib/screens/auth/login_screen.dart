@@ -1,4 +1,4 @@
-﻿// 1. Flutter 官方套件
+// 1. Flutter 官方套件
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 
@@ -150,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
 
-        try { await NotificationService.setLoginStatus(true); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
+        try { await NotificationService.recordLogin(); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
 
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
@@ -194,6 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context.read<UserProvider>().setEmail(email);
         if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
         if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
+        try { await NotificationService.recordLogin(); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('註冊成功！請選擇您的日語程度')));
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
       } else {
@@ -298,6 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
+      try { await NotificationService.recordLogin(); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
       if (result['japanese_level'] != null) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));

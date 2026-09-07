@@ -13,6 +13,14 @@ class DailyGoalCard extends StatelessWidget {
 
   static const _green = Color(0xFF6AA86B);
 
+  /// 還能用幾次。後端扣次數時是「先扣每日額度、用完才扣加購次數」
+  /// （services/user.py 的 consume 邏輯），這裡照同一個算法還原，
+  /// 才不會跟相機頁顯示的數字對不起來。
+  static int _remaining(int countToday, int dailyLimit, int extraCount) {
+    final dailyRemaining = (dailyLimit - countToday).clamp(0, dailyLimit);
+    return dailyRemaining + extraCount;
+  }
+
   void _showSelectOverlay(BuildContext context) {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
@@ -105,12 +113,22 @@ class DailyGoalCard extends StatelessWidget {
             icon: Icons.camera_alt_outlined,
             label: '使用拍照辨識',
             done: photoDone,
+            remaining: _remaining(
+              userProvider.photoCountToday,
+              userProvider.photoDailyLimit,
+              userProvider.photoExtraCount,
+            ),
           ),
           const SizedBox(height: 10),
           _TaskRow(
             icon: Icons.smart_toy_outlined,
             label: '進行 AI 對話',
             done: aiDone,
+            remaining: _remaining(
+              userProvider.aiCountToday,
+              userProvider.aiDailyLimit,
+              userProvider.aiExtraCount,
+            ),
           ),
           if (!claimed) ...[
             const SizedBox(height: 16),
@@ -161,11 +179,18 @@ class _TaskRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool done;
+  final int remaining;
 
-  const _TaskRow({required this.icon, required this.label, required this.done});
+  const _TaskRow({
+    required this.icon,
+    required this.label,
+    required this.done,
+    required this.remaining,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final usedUp = remaining <= 0;
     return Row(
       children: [
         Container(
@@ -188,6 +213,25 @@ class _TaskRow extends StatelessWidget {
             color: done ? Colors.white : Colors.white.withValues(alpha: 0.7),
             fontSize: 14,
             fontWeight: done ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        const Spacer(),
+        // 剩餘次數：用完時改成紅底提示，避免使用者點進去才發現不能用
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(
+            color: usedUp
+                ? Colors.red.shade400.withValues(alpha: 0.85)
+                : Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            usedUp ? '已用完' : '剩 $remaining 次',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],

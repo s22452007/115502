@@ -1,7 +1,6 @@
 # 1. Python 內建標準庫
 import re
 from datetime import date, datetime, timedelta
-from sqlalchemy import func
 
 # 2. 第三方套件 (Third-Party)
 from flask import Blueprint, request, jsonify
@@ -11,6 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import db
 from utils.auth_helper import generate_friend_id
 from utils.subscription_helper import check_and_expire_subscription
+from utils.group_helper import add_group_progress_and_check_reward
 from models import (
     User, UserAchievement, Achievement,
     UserVocab, UserFolder, FriendRequest, Friendship,
@@ -101,32 +101,19 @@ def login():
             # 2. 算小組的貢獻 (確保一天只能加一次！)
             member_record = GroupMember.query.filter_by(user_id=user.id).first()
             if member_record:
-                member_record.group_logins += 1 # 個人對小組的貢獻 +1
+                member_record.group_logins = (member_record.group_logins or 0) + 1
 
-                member = GroupMember.query.filter_by(
-                    group_id=member_record.group_id, user_id=user.id
-                ).first()
+                # 小組總進度統一交給 group_helper 處理，它會自己判斷這個小組的
+                # 目標類型是不是 'logins'，不是就不動。
+                #
+                # 這裡原本自己重寫了一套：只在 goal_type 是 'logins' / 'scans' 時
+                # 才算出 total，卻無條件執行 group.current_progress = total，
+                # 所以目標是 'sentences' 或 'articles' 的小組，成員一登入就會
+                # 噴 UnboundLocalError 讓 /api/auth/login 回 500。
+                # 而且它先把進度覆寫成總和、後面又額外 +1，等於重複累加。
+                add_group_progress_and_check_reward(user.id, 'logins')
 
-                if member:
-                    group = StudyGroup.query.get(member.group_id)
-                    if group:
-                        if group.goal_type == 'logins':
-                            total = db.session.query(
-                                func.sum(GroupMember.group_logins)
-                            ).filter_by(group_id=group.id).scalar() or 0
-                        elif group.goal_type == 'scans':
-                            total = db.session.query(
-                                func.sum(GroupMember.group_scans)
-                            ).filter_by(group_id=group.id).scalar() or 0
-                        group.current_progress = total
-                        db.session.commit()
 
-                # 順便找出他們小組的資料
-                # 3. 如果小組這週的任務剛好是「登入 (logins)」，才幫小組總進度 +1
-                group = StudyGroup.query.get(member_record.group_id)
-                if group and group.goal_type == 'logins':
-                    group.current_progress += 1
-                    
         # 不管是不是第一次登入，都要更新最後上線時間
         user.last_login_date = today
         user.last_seen_at = datetime.utcnow()

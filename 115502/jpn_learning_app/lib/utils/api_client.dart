@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
@@ -14,6 +15,42 @@ class ApiClient {
     }
   }
 
+  /// 把底層例外翻譯成「使用者看得懂、而且查得出原因」的訊息。
+  ///
+  /// 原本 34 處都直接回「網路連線失敗」，結果連不上、逾時、CORS 被擋、
+  /// 伺服器回傳非 JSON 這四種完全不同的狀況會顯示同一句話，
+  /// 等於把除錯線索蓋掉了。這裡依例外型別分開描述。
+  static Map<String, dynamic> _netError(Object e, Uri url) {
+    debugPrint('[ApiClient] $url 失敗: ${e.runtimeType} → $e');
+
+    final text = e.toString();
+    String msg;
+
+    if (e is FormatException) {
+      // 有連到伺服器，但回傳的不是 JSON（多半是 Flask 的 HTML 錯誤頁 / 500）
+      msg = '伺服器回應格式錯誤，請查看後端終端機的錯誤訊息';
+    } else if (e is TimeoutException) {
+      msg = '伺服器沒有回應（逾時），請確認後端是否還在執行';
+    } else if (text.contains('Failed to fetch') ||
+        text.contains('XMLHttpRequest')) {
+      // 網頁版拿不到回應時瀏覽器只會丟這句籠統的話，兩種情況都會長這樣：
+      //   1. 後端真的沒在跑（或 debug 模式正在自動重啟）
+      //   2. 後端拋出未攔截的例外回 500，此時 flask_cors 補不上 CORS 標頭，
+      //      回應會被瀏覽器擋掉，前端只看得到 Failed to fetch
+      // 第 2 種從前端無從分辨，所以直接請使用者去看後端終端機。
+      msg = '伺服器沒有正常回應，請查看後端終端機是否有錯誤訊息，或稍等幾秒再試';
+    } else if (text.contains('Connection refused') ||
+        text.contains('SocketException')) {
+      msg = '無法連線到伺服器，請先啟動後端（$_host）';
+    } else {
+      msg = '連線失敗：$e';
+    }
+
+    return {'error': msg};
+  }
+
+  static String get _host => baseUrl.replaceAll('/api', '');
+
   // ==========================================
   // 🔐 登入與註冊
   // ==========================================
@@ -21,24 +58,25 @@ class ApiClient {
   static Future<Map<String, dynamic>> register(String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/register');
     try {
-      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'password': password}));
+      final response = await http
+          .post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'password': password}))
+          .timeout(const Duration(seconds: 15));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/login');
     try {
-      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'password': password}));
+      // 加逾時，否則後端掛掉時登入畫面會無限轉圈，使用者不知道發生什麼事
+      final response = await http
+          .post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'password': password}))
+          .timeout(const Duration(seconds: 15));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -50,9 +88,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode(body));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -62,9 +98,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'new_password': newPassword}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -78,9 +112,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'level': level}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -90,9 +122,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'avatar': avatarBase64}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -103,9 +133,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -115,9 +143,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'payment_method': paymentMethod}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -129,9 +155,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode(body));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -141,9 +165,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'username': username}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -153,9 +175,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -165,9 +185,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'email': email, 'feedback_type': feedbackType, 'content': content}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -178,9 +196,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -190,9 +206,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'points': points, 'price': price, 'payment_method': paymentMethod}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -203,9 +217,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -217,7 +229,7 @@ class ApiClient {
       data['statusCode'] = response.statusCode; 
       return data;
     } catch (e) {
-      return {'error': '網路連線失敗', 'statusCode': 500};
+      return {..._netError(e, url), 'statusCode': 500};
     }
   }
 
@@ -228,9 +240,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'error': '無法取得使用量'};
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -240,9 +250,7 @@ class ApiClient {
       final response = await http.get(url);
       return jsonDecode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -252,9 +260,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId}));
       return jsonDecode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -277,9 +283,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'friend_id': friendId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -320,9 +324,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -332,9 +334,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'friend_id': friendId, 'nickname': newNickname}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -344,9 +344,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'friend_id': friendId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -360,9 +358,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'name': groupName, 'friend_ids': friendIds, 'goal_type': goalType, 'goal_target': goalTarget}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -373,9 +369,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -386,7 +380,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'invites': []};
     } catch (e) {
-      return {'error': '網路連線失敗', 'invites': []};
+      return {..._netError(e, url), 'invites': []};
     }
   }
 
@@ -396,9 +390,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'invite_id': inviteId, 'action': action, 'user_id': userId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -408,9 +400,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'group_id': groupId, 'sender_id': senderId, 'friend_ids': friendIds}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -426,13 +416,12 @@ class ApiClient {
   }
 
   static Future<Map<String, dynamic>> cancelGroupInvite(int groupId, String receiverId) async {
+    final url = Uri.parse('$baseUrl/group/cancel_invite');
     try {
-      final response = await http.post(Uri.parse('$baseUrl/group/cancel_invite'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'group_id': groupId, 'receiver_id': receiverId}));
+      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'group_id': groupId, 'receiver_id': receiverId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] cancel_invite 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -442,9 +431,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'group_id': groupId, 'user_id': userId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -469,9 +456,7 @@ class ApiClient {
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -483,7 +468,7 @@ class ApiClient {
       if (response.statusCode == 201 || response.statusCode == 200) return data['folder_id'];
       throw Exception(data['error'] ?? '建立失敗');
     } catch (e) {
-      throw Exception('網路連線失敗');
+      throw Exception(_netError(e, url)['error']);
     }
   }
 
@@ -493,9 +478,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'folder_id': folderId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -505,9 +488,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_vocab_id': userVocabId, 'target_folder_id': targetFolderId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -517,9 +498,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'user_id': userId, 'vocab_id': vocabId, 'folder_id': folderId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -539,9 +518,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'folder_id': folderId}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 
@@ -551,9 +528,7 @@ class ApiClient {
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'folder_id': folderId, 'name': name}));
       return jsonDecode(response.body);
     } catch (e) {
-      // 印出真正的例外，不然連不上時只看得到「網路連線失敗」，查不出原因
-      debugPrint('[ApiClient] $url 失敗: $e');
-      return {'error': '網路連線失敗'};
+      return _netError(e, url);
     }
   }
 

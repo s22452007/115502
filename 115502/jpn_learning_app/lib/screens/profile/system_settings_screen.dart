@@ -300,17 +300,14 @@ class NotificationSettingsScreen extends StatefulWidget {
 class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
   bool dailyReminder = true;
-  bool reviewReminder = true;
-  bool streakReminder = true;
-  bool friendNotification = false;
+  bool lastChanceReminder = true;
+  bool socialNotification = true;
   bool inactiveReminder = true;
   int inactiveDays = 3;
 
   TimeOfDay _dailyTime = const TimeOfDay(hour: 8, minute: 0);
-  TimeOfDay _reviewTime = const TimeOfDay(hour: 19, minute: 0);
   TimeOfDay _inactiveTime = const TimeOfDay(hour: 20, minute: 0);
 
-  static const Color bgColor = Color(0xFFF3F4EF);
   static const Color primaryGreen = Color(0xFF5C8663);
   static const Color textColor = Color(0xFF3E3E3E);
 
@@ -326,12 +323,10 @@ class _NotificationSettingsScreenState
     final inact = await NotificationService.loadInactiveSettings();
     if (!mounted) return;
     setState(() {
-      dailyReminder = s['daily']!;
-      reviewReminder = s['review']!;
-      streakReminder = s['streak']!;
-      friendNotification = s['friend']!;
-      _dailyTime = TimeOfDay(hour: t['daily_hour']!, minute: t['daily_minute']!);
-      _reviewTime = TimeOfDay(hour: t['review_hour']!, minute: t['review_minute']!);
+      dailyReminder = s['daily'] ?? true;
+      lastChanceReminder = s['last_chance'] ?? true;
+      socialNotification = s['social'] ?? true;
+      _dailyTime = TimeOfDay(hour: t['daily_hour'] ?? 8, minute: t['daily_minute'] ?? 0);
       inactiveReminder = inact['enabled'] as bool? ?? true;
       inactiveDays = inact['days'] as int? ?? 3;
       _inactiveTime = TimeOfDay(
@@ -344,9 +339,8 @@ class _NotificationSettingsScreenState
   Future<void> _save() async {
     await NotificationService.saveSettings(
       daily: dailyReminder,
-      review: reviewReminder,
-      streak: streakReminder,
-      friend: friendNotification,
+      lastChance: lastChanceReminder,
+      social: socialNotification,
     );
   }
 
@@ -354,8 +348,6 @@ class _NotificationSettingsScreenState
     await NotificationService.saveTimes(
       dailyHour: _dailyTime.hour,
       dailyMinute: _dailyTime.minute,
-      reviewHour: _reviewTime.hour,
-      reviewMinute: _reviewTime.minute,
     );
   }
 
@@ -407,8 +399,8 @@ class _NotificationSettingsScreenState
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               children: [
                 _buildTimedNotifTile(
-                  title: '每日學習提醒',
-                  subtitle: '每天早上提醒你開始學習',
+                  title: '每日學習時間提醒',
+                  subtitle: '每天 1 則，對照您設定的時間提醒開始學習',
                   value: dailyReminder,
                   time: _dailyTime,
                   onChanged: (value) {
@@ -420,39 +412,25 @@ class _NotificationSettingsScreenState
                     onPicked: (t) => _dailyTime = t,
                   ),
                 ),
-                _buildTimedNotifTile(
-                  title: '單字複習提醒',
-                  subtitle: '每天提醒你複習單字',
-                  value: reviewReminder,
-                  time: _reviewTime,
+                _buildSwitchTile(
+                  title: '晚間「最後機會」提醒',
+                  subtitle: '若當天快過渡且尚未完成學習，於晚間 21:30 提醒保住連續紀錄',
+                  value: lastChanceReminder,
                   onChanged: (value) {
-                    setState(() => reviewReminder = value);
+                    setState(() => lastChanceReminder = value);
                     _save();
                   },
-                  onTimeTap: () => _pickTime(
-                    current: _reviewTime,
-                    onPicked: (t) => _reviewTime = t,
-                  ),
                 ),
                 _buildSwitchTile(
-                  title: '連續登入提醒',
-                  subtitle: '每天晚上 9:00 提醒你維持連續紀錄',
-                  value: streakReminder,
+                  title: '每週社交與排行榜動態',
+                  subtitle: '每週僅 2-3 次（週三/五/日），通知好友動態與週末排行結算',
+                  value: socialNotification,
                   onChanged: (value) {
-                    setState(() => streakReminder = value);
+                    setState(() => socialNotification = value);
                     _save();
                   },
                 ),
                 _buildInactiveNotifTile(),
-                _buildSwitchTile(
-                  title: '好友互動通知',
-                  subtitle: '例如好友新增、互動或排行榜變動',
-                  value: friendNotification,
-                  onChanged: (value) {
-                    setState(() => friendNotification = value);
-                    _save();
-                  },
-                ),
               ],
             ),
           ),
@@ -590,11 +568,11 @@ class _NotificationSettingsScreenState
         NotificationService.getInactiveNotificationContent(inactiveDays);
 
     final dayOptions = [
-      (1, '1 天'),
-      (2, '2 天'),
-      (3, '3 天 (建議)'),
-      (5, '5 天'),
-      (7, '7 天 (一週)'),
+      (1, '1 天（溫和提醒）'),
+      (2, '2 天（善意叮嚀）'),
+      (3, '3 天（戲劇化整活 建議）'),
+      (5, '5 天（戲劇化整活）'),
+      (7, '7 天（戲劇化整活）'),
       (0, '漸進式 (1/3/7天)'),
     ];
 
@@ -618,7 +596,7 @@ class _NotificationSettingsScreenState
           SwitchListTile(
             contentPadding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
             title: const Text(
-              '久未登入提醒',
+              '久未登入提醒（戲劇化整活）',
               style: TextStyle(
                 color: textColor,
                 fontSize: 16,
@@ -628,7 +606,7 @@ class _NotificationSettingsScreenState
             subtitle: const Padding(
               padding: EdgeInsets.only(top: 3),
               child: Text(
-                '依照多久沒登入自動排程提醒，守護你的學習動力',
+                '斷記錄超過 3-7 天啟動幽默戲劇化召回文案',
                 style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
               ),
             ),

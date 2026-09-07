@@ -387,6 +387,9 @@ def explore_vocabs():
     """
     前端會傳入 JSON: { user_id: 1, count: 10, scene_id: optional }
     回傳隨機的單字清單，並標示是否已解鎖。
+
+    註：目前 App 沒有呼叫這支 API（單字探險的引導文案已改寫在前端），
+        保留供之後「隨機探索單字」功能使用。
     """
     data = request.get_json() or {}
     user_id = data.get('user_id')
@@ -438,19 +441,4 @@ def explore_vocabs():
                 "action": {"type": "view", "label": "查看單字"}
             })
 
-    # 引導提示：對於尚未進行過任何掃描的使用者，顯示一次性引導
-    show_guide = False
-    guide = None
-    try:
-        show_guide = (getattr(user, 'total_scans', 0) == 0)
-    except Exception:
-        show_guide = False
-
-    if show_guide:
-        guide = {
-            "title": "單字探險小提示",
-            "body": "遇到陌生單字可按『拍照解鎖』，系統會自動把該單字加入你的圖鑑，不會花點數。要收藏到資料夾或擴充容量才需要花點數。",
-            "dismiss_label": "知道了"
-        }
-
-    return jsonify({"vocabs": results, "guide": guide}), 200
+    return jsonify({"vocabs": results}), 200

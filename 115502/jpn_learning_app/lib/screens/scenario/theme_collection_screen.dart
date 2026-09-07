@@ -126,16 +126,12 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
                   return _buildEmptyState();
                 }
 
-                // 三層：有照片的官方主題用大卡、沒照片的用精簡列、
-                //「其他」與舊場景沒有收集目標，收到最底下當附註
-                final official =
-                    themes.where((t) => t['is_official'] != false).toList();
-                final unsorted =
-                    themes.where((t) => t['is_official'] == false).toList();
-                final withPhoto = official
+                // 兩層：拍過照的用照片大卡，沒照片的收成精簡列。
+                // 後端只會回八個有收集目標的官方主題（「其他」不進收集冊）。
+                final withPhoto = themes
                     .where((t) => (t['cover_image'] ?? '').toString().isNotEmpty)
                     .toList();
-                final noPhoto = official
+                final noPhoto = themes
                     .where((t) => (t['cover_image'] ?? '').toString().isEmpty)
                     .toList();
 
@@ -158,21 +154,6 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
                         ),
                       for (final t in noPhoto)
                         _ThemeRow(theme: t, onReturn: _reload),
-                    ],
-                    // 沒有收集目標的（「其他」與舊場景）：只留細細一行入口
-                    if (unsorted.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(4, 20, 4, 6),
-                        child: Text(
-                          '未分類',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textSubtle),
-                        ),
-                      ),
-                      for (final t in unsorted)
-                        _UnsortedRow(theme: t, onReturn: _reload),
                     ],
                   ],
                 );
@@ -603,53 +584,6 @@ class _ThemeRow extends StatelessWidget {
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 沒有收集目標的場景（「其他」、舊場景）：一行文字入口，不佔版面。
-/// 這些字是拍照的副產品，會一直長大，不該跟有目標的冊子並列。
-class _UnsortedRow extends StatelessWidget {
-  final dynamic theme;
-  final VoidCallback onReturn;
-
-  const _UnsortedRow({required this.theme, required this.onReturn});
-
-  @override
-  Widget build(BuildContext context) {
-    final name = theme['name'] ?? '其他';
-    final int words = theme['bonus_count'] ?? 0;
-    final int photos = theme['photo_count'] ?? 0;
-
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ThemeDetailScreen(
-              sceneId: theme['scene_id'] ?? 0,
-              themeName: name,
-            ),
-          ),
-        ).then((_) => onReturn());
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 11),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                '$name · $words 個字'
-                '${photos > 0 ? ' · $photos 張照片' : ''}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, color: AppColors.textGrey),
-              ),
-            ),
-            const Icon(Icons.chevron_right, size: 18, color: AppColors.textSubtle),
           ],
         ),
       ),

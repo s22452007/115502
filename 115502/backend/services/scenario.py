@@ -471,16 +471,11 @@ def get_themes(user_id):
         if p.created_at and (a['last_at'] is None or p.created_at > a['last_at']):
             a['last_at'] = p.created_at
 
-    # 2. 要顯示的場景集合：所有官方主題（排除「其他」）＋ 使用者有照片的場景
-    #    「其他」與舊場景沒有收集目標，會標成 is_official=False，
-    #    讓前端收到頁面底部，不要跟有目標的冊子搶版面。
+    # 2. 要顯示的場景集合：只放八個有收集目標的官方主題。
+    #    「其他」與舊場景沒有官方單字、永遠不會集滿，放進收集冊只會越積越多，
+    #    那些字仍可從單字探險的照片、單字圖鑑與資料夾找到。
     official_names = [t['name'] for t in THEME_DEFS if t['name'] != '其他']
-    official_name_set = set(official_names)
     scene_by_id = {s.id: s for s in Scene.query.filter(Scene.name.in_(official_names)).all()}
-    photo_scene_ids = [sid for sid in photo_agg if sid]
-    if photo_scene_ids:
-        for s in Scene.query.filter(Scene.id.in_(photo_scene_ids)).all():
-            scene_by_id.setdefault(s.id, s)
 
     # 3. 逐場景統計單字牆數據（完成度只算官方字；AI 額外字另外計為 bonus）
     claimed_set = _claimed_tiers(user_id, list(scene_by_id.keys()))
@@ -503,7 +498,6 @@ def get_themes(user_id):
             'unlocked_count': unlocked,
             'target_count': total,
             'bonus_count': bonus,  # 官方清單以外、自己拍到的額外單字
-            'is_official': scene.name in official_name_set,  # False＝「其他」或舊場景
             'progress': min(1.0, round(unlocked / total, 3)) if total else 0.0,
             'last_at': agg['last_at'].strftime('%Y.%m.%d') if agg.get('last_at') else '',
             'rewards': _reward_state(unlocked, total, sid, claimed_set),

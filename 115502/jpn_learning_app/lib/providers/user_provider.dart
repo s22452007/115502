@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
 
 class UserProvider extends ChangeNotifier {
   int? _userId;
@@ -244,6 +245,9 @@ class UserProvider extends ChangeNotifier {
     _dailyPhotoDone = false;
     _dailyAiDone = false;
     _dailyRewardClaimed = false;
+    try {
+      NotificationService.setLoginStatus(false);
+    } catch (_) {}
     notifyListeners();
   }
 }

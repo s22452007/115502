@@ -26,6 +26,7 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _feedbackResult;
   String? _errorMessage;
+  String? _submittedSentence;
 
   @override
   void dispose() {
@@ -41,6 +42,7 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
       _isLoading = true;
       _errorMessage = null;
       _feedbackResult = null;
+      _submittedSentence = text;
     });
 
     try {
@@ -142,6 +144,20 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
             Text(
               translation,
               style: const TextStyle(fontSize: 16),
+            ),
+          ],
+          if (_submittedSentence != null) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Text(
+              '您的造句：',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _submittedSentence!,
+              style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
             ),
           ],
         ],

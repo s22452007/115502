@@ -1,4 +1,5 @@
 import re
+import base64
 from datetime import date, datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify
@@ -143,6 +144,20 @@ def get_achievements(user_id):
 
 
 # 上傳大頭貼
+def _is_valid_avatar(value):
+    """avatar 只允許三種格式：http(s) 網址、單一 emoji 預設頭像、base64 圖片。"""
+    if value.startswith('http://') or value.startswith('https://'):
+        return True
+    # emoji 預設頭像（前端 kAvatarPresets）：很短，而且不含 ASCII 英數字
+    if len(value) <= 8 and not re.search(r'[A-Za-z0-9]', value):
+        return True
+    try:
+        base64.b64decode(value, validate=True)
+        return True
+    except Exception:
+        return False
+
+
 @user_bp.route('/upload_avatar', methods=['POST'])
 def upload_avatar():
     data = request.get_json()
@@ -159,6 +174,11 @@ def upload_avatar():
     # 去掉 data URI 前綴（如 data:image/png;base64,）
     if ',' in avatar_base64:
         avatar_base64 = avatar_base64.split(',', 1)[1]
+
+    # 擋掉不是圖片的內容。這裡原本照單全收，結果前端「從相簿選擇」的哨兵字串
+    # '__gallery__' 被存進資料庫，好友清單一渲染到就 base64Decode 失敗整頁崩潰。
+    if not _is_valid_avatar(avatar_base64):
+        return jsonify({"error": "頭像格式不正確"}), 400
 
     user.avatar = avatar_base64
     db.session.commit()

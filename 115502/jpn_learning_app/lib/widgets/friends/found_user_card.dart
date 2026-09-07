@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 
 class FoundUserCard extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -47,11 +47,7 @@ class FoundUserCard extends StatelessWidget {
             radius: 24,
             backgroundColor: Colors.grey.shade200,
             // 完美顯示 Base64 或預設圖片
-            backgroundImage: (avatarBase64 != null && avatarBase64.isNotEmpty)
-                ? (avatarBase64.startsWith('http')
-                    ? NetworkImage(avatarBase64)
-                    : MemoryImage(base64Decode(avatarBase64.split(",").last)) as ImageProvider)
-                : NetworkImage(defaultAvatarUrl) as ImageProvider,
+            backgroundImage: safeAvatarImage(avatarBase64, defaultAvatarUrl),
           ),
           const SizedBox(width: 12),
           Expanded(

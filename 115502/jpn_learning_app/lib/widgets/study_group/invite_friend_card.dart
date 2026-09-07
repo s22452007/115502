@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
 
@@ -50,9 +50,7 @@ class InviteFriendCard extends StatelessWidget {
           CircleAvatar(
             radius: 26,
             backgroundColor: Colors.grey.shade200,
-            backgroundImage: (avatarBase64.isNotEmpty)
-                ? (avatarBase64.startsWith('http') ? NetworkImage(avatarBase64) : MemoryImage(base64Decode(avatarBase64.split(",").last)) as ImageProvider)
-                : NetworkImage(defaultAvatarUrl) as ImageProvider,
+            backgroundImage: safeAvatarImage(avatarBase64, defaultAvatarUrl),
           ),
           const SizedBox(width: 12),
           Expanded(

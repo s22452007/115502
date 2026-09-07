@@ -1,6 +1,24 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
+/// 安全地把頭像欄位轉成 ImageProvider，任何解不開的內容都退回預設圖。
+///
+/// 資料庫裡的 avatar 不保證是合法 base64：舊版程式曾把「從相簿選擇」的
+/// 哨兵字串 '__gallery__' 直接存進去。各張卡片原本都自己寫 base64Decode，
+/// 沒有任何防護，只要好友清單裡有一個這種帳號，base64Decode 就會丟出
+/// FormatException，讓整頁變成紅色錯誤畫面而不只是那一個頭像壞掉。
+ImageProvider safeAvatarImage(String? avatar, String fallbackUrl) {
+  if (avatar == null || avatar.isEmpty) return NetworkImage(fallbackUrl);
+  if (avatar.startsWith('http')) return NetworkImage(avatar);
+  try {
+    // data:image/png;base64,xxxx 這種格式要先去掉前綴
+    final raw = avatar.contains(',') ? avatar.substring(avatar.indexOf(',') + 1) : avatar;
+    return MemoryImage(base64Decode(raw));
+  } catch (_) {
+    return NetworkImage(fallbackUrl);
+  }
+}
+
 // 預設可愛動物頭像 (emoji → 背景色)
 const Map<String, Color> kAvatarPresets = {
   '🐱': Color(0xFFFFAB91),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
+import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
 
 class FriendListCard extends StatelessWidget {
@@ -62,11 +62,7 @@ class FriendListCard extends StatelessWidget {
           CircleAvatar(
             radius: 30,
             backgroundColor: Colors.grey.shade200,
-            backgroundImage: (avatarBase64 != null && avatarBase64.isNotEmpty)
-                ? (avatarBase64.startsWith('http')
-                    ? NetworkImage(avatarBase64)
-                    : MemoryImage(base64Decode(avatarBase64.split(",").last)) as ImageProvider)
-                : NetworkImage(defaultAvatarUrl) as ImageProvider,
+            backgroundImage: safeAvatarImage(avatarBase64, defaultAvatarUrl),
           ),
           const SizedBox(width: 16),
           

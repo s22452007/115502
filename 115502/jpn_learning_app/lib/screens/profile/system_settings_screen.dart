@@ -303,9 +303,12 @@ class _NotificationSettingsScreenState
   bool reviewReminder = true;
   bool streakReminder = true;
   bool friendNotification = false;
+  bool inactiveReminder = true;
+  int inactiveDays = 3;
 
   TimeOfDay _dailyTime = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _reviewTime = const TimeOfDay(hour: 19, minute: 0);
+  TimeOfDay _inactiveTime = const TimeOfDay(hour: 20, minute: 0);
 
   static const Color bgColor = Color(0xFFF3F4EF);
   static const Color primaryGreen = Color(0xFF5C8663);
@@ -320,6 +323,7 @@ class _NotificationSettingsScreenState
   Future<void> _loadSettings() async {
     final s = await NotificationService.loadSettings();
     final t = await NotificationService.loadTimes();
+    final inact = await NotificationService.loadInactiveSettings();
     if (!mounted) return;
     setState(() {
       dailyReminder = s['daily']!;
@@ -328,6 +332,12 @@ class _NotificationSettingsScreenState
       friendNotification = s['friend']!;
       _dailyTime = TimeOfDay(hour: t['daily_hour']!, minute: t['daily_minute']!);
       _reviewTime = TimeOfDay(hour: t['review_hour']!, minute: t['review_minute']!);
+      inactiveReminder = inact['enabled'] as bool? ?? true;
+      inactiveDays = inact['days'] as int? ?? 3;
+      _inactiveTime = TimeOfDay(
+        hour: inact['hour'] as int? ?? 20,
+        minute: inact['minute'] as int? ?? 0,
+      );
     });
   }
 
@@ -346,6 +356,15 @@ class _NotificationSettingsScreenState
       dailyMinute: _dailyTime.minute,
       reviewHour: _reviewTime.hour,
       reviewMinute: _reviewTime.minute,
+    );
+  }
+
+  Future<void> _saveInactive() async {
+    await NotificationService.saveInactiveSettings(
+      enabled: inactiveReminder,
+      days: inactiveDays,
+      hour: _inactiveTime.hour,
+      minute: _inactiveTime.minute,
     );
   }
 
@@ -424,6 +443,7 @@ class _NotificationSettingsScreenState
                     _save();
                   },
                 ),
+                _buildInactiveNotifTile(),
                 _buildSwitchTile(
                   title: '好友互動通知',
                   subtitle: '例如好友新增、互動或排行榜變動',
@@ -561,6 +581,222 @@ class _NotificationSettingsScreenState
         inactiveTrackColor: const Color(0xFFBDBDBD),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
         onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildInactiveNotifTile() {
+    final previewContent =
+        NotificationService.getInactiveNotificationContent(inactiveDays);
+
+    final dayOptions = [
+      (1, '1 天'),
+      (2, '2 天'),
+      (3, '3 天 (建議)'),
+      (5, '5 天'),
+      (7, '7 天 (一週)'),
+      (0, '漸進式 (1/3/7天)'),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE7E7E7)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x07000000),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            contentPadding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+            title: const Text(
+              '久未登入提醒',
+              style: TextStyle(
+                color: textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            subtitle: const Padding(
+              padding: EdgeInsets.only(top: 3),
+              child: Text(
+                '依照多久沒登入自動排程提醒，守護你的學習動力',
+                style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
+              ),
+            ),
+            value: inactiveReminder,
+            activeThumbColor: Colors.white,
+            activeTrackColor: primaryGreen,
+            inactiveThumbColor: Colors.white,
+            inactiveTrackColor: const Color(0xFFBDBDBD),
+            trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+            onChanged: (value) {
+              setState(() => inactiveReminder = value);
+              _saveInactive();
+            },
+          ),
+          if (inactiveReminder) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Divider(height: 16, color: Color(0xFFEEEEEE)),
+            ),
+            // 天數選擇區
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '多久未登入時通知：',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF555555),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: dayOptions.map((opt) {
+                      final isSelected = inactiveDays == opt.$1;
+                      return ChoiceChip(
+                        label: Text(
+                          opt.$2,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? Colors.white : textColor,
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: primaryGreen,
+                        backgroundColor: const Color(0xFFF2F4F2),
+                        showCheckmark: false,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: isSelected
+                                ? primaryGreen
+                                : const Color(0xFFE0E0E0),
+                          ),
+                        ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() => inactiveDays = opt.$1);
+                            _saveInactive();
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // 時間選擇區
+            InkWell(
+              onTap: () => _pickTime(
+                current: _inactiveTime,
+                onPicked: (t) {
+                  setState(() => _inactiveTime = t);
+                  _saveInactive();
+                },
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 15,
+                      color: primaryGreen,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _fmtTime(_inactiveTime),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: primaryGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '點擊修改發送時間',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFAAAAAA),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // 即時預覽卡片
+            Container(
+              margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9F7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E7E2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.notifications_active_outlined,
+                        size: 14,
+                        color: primaryGreen,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '推播預覽（${inactiveDays == 0 ? "漸進提醒" : "未登入 $inactiveDays 天"}）',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: primaryGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    previewContent.title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    previewContent.body,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF666666),
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

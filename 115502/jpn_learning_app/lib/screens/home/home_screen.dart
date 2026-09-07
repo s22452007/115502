@@ -18,6 +18,7 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/screens/article/article_list_screen.dart'; 
 
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart';
@@ -78,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     }
     if (!mounted) return;
     setState(() { _isLoadingScenes = true; });
+    NotificationService.recordUserActive();
     await _checkPendingFriendRequests(userId);
     await _fetchRecentScenes(userId);
     await _fetchAndCheckBadgeProgress(userId);

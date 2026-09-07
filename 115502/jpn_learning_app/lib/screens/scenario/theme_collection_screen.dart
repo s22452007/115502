@@ -953,7 +953,7 @@ class _VocabWall extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              '灰色的是還沒發現的字：下面寫著中文意思，拍到就會免費點亮',
+              '灰色的是還沒發現的字，點一下可以看提示；拍到就會免費點亮',
               style: TextStyle(fontSize: 12.5, color: AppColors.textSubtle),
             ),
             const SizedBox(height: 16),
@@ -1042,40 +1042,31 @@ class _LockedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 問號數量＝假名長度，順便暗示這個字有幾個音
+    // 問號數量＝假名長度，順便暗示這個字有幾個音。
+    // 中文提示刻意不攤在牆上：直接寫著「筷子」等於幫使用者列好待拍清單，
+    // 收集就退化成照表操課。想要線索的人自己點開，是他選擇看答案。
     final int len = hintLen.clamp(1, 6);
     return GestureDetector(
       onTap: () => _showLockedHint(context, hint),
       child: Container(
-        constraints: const BoxConstraints(minWidth: 72),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        height: 52,
+        constraints: const BoxConstraints(minWidth: 64),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: const Color(0xFFF7F7F7),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFE0E0E0)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '？' * len,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -2,
-                color: Colors.grey.shade400,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              hint.isEmpty ? '未發現' : hint,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: AppColors.textSubtle),
-            ),
-          ],
+        child: Text(
+          '？' * len,
+          maxLines: 1,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: -1,
+            color: Colors.grey.shade400,
+          ),
         ),
       ),
     );

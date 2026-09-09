@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/auth/edu_login_screen.dart';
+import 'package:jpn_learning_app/screens/auth/splash_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 // 請確認路徑是否正確
 
@@ -47,6 +48,12 @@ class WelcomeScreen extends StatelessWidget {
                   // TODO: 跳轉一般版介紹
                 },
                 onLoginTap: () {
+                  var push = Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SplashScreen(), 
+                    ),
+                  );
                   // TODO: 跳轉一般版登入頁面
                 },
               ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/screens/auth/edu_login_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+// 請確認路徑是否正確
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -61,6 +63,12 @@ class WelcomeScreen extends StatelessWidget {
                   // TODO: 跳轉教育版介紹
                 },
                 onLoginTap: () {
+                        Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EduLoginScreen(),
+                      ),
+                    );
                   // TODO: 跳轉教育版登入頁面
                 },
               ),

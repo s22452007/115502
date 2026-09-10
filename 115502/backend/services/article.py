@@ -17,6 +17,9 @@ from utils.group_helper import add_group_progress_and_check_reward
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
 
+# 後台沒有指定價格時採用的預設解鎖點數
+DEFAULT_UNLOCK_COST = 50
+
 # ==========================================
 # 1. 取得文章列表 (動態判斷是否已解鎖)
 # ==========================================
@@ -38,26 +41,22 @@ def get_article_dashboard():
         return jsonify({"error": "缺少 user_id"}), 400
 
     try:
-        # 1. 抓出該難度等級的所有文章
-        articles = Article.query.filter_by(level=user_level).all()
+        # 1. 抓出該難度等級「已上架」的所有文章（後台可隨時下架）
+        articles = Article.query.filter_by(level=user_level).filter(
+            Article.is_published.isnot(False)
+        ).order_by(Article.id).all()
 
         # 2. 抓出這個玩家「已經解鎖」的所有文章 ID 清單
         unlocked_records = UnlockedArticle.query.filter_by(user_id=user_id).all()
         unlocked_article_ids = [record.article_id for record in unlocked_records]
 
         result = []
-       # 這些 ID 對應各級別的 5 篇一般文章，使用者不需付費即可閱讀
-        free_article_ids = [
-            101, 102, 103, 104, 105,  # N5
-            201, 202, 203, 204, 205,  # N4
-            301, 302, 303, 304, 305,  # N3
-            401, 402, 403, 404, 405,  # N2
-            501, 502, 503, 504, 505   # N1
-]
 
         for a in articles:
+            # 免費與否改由資料庫欄位決定（後台新增的文章一律為付費）
+            is_free = bool(a.is_free)
             # 動態判斷：如果是免費文章，或是玩家已經解鎖過，is_unlocked 就是 True
-            is_unlocked = (a.id in free_article_ids) or (a.id in unlocked_article_ids)
+            is_unlocked = is_free or (a.id in unlocked_article_ids)
 
             result.append({
                 "id": a.id,
@@ -67,6 +66,8 @@ def get_article_dashboard():
                 "content": a.content,
                 "translation": a.translation,
                 "grammar_points": a.grammar_points,
+                "is_free": is_free,
+                "unlock_cost": 0 if is_free else (a.unlock_cost or DEFAULT_UNLOCK_COST),
                 "is_unlocked": is_unlocked
             })
 
@@ -248,20 +249,54 @@ def unlock_article():
     if not user_id or not article_id:
         return jsonify({"error": "缺少必要參數"}), 400
 
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"status": "error", "message": "找不到使用者"}), 404
+
+    article = Article.query.get(article_id)
+    if not article:
+        return jsonify({"status": "error", "message": "找不到文章"}), 404
+
+    # 免費文章不需要解鎖紀錄，直接放行
+    if article.is_free:
+        return jsonify({
+            "status": "success",
+            "message": "此文章免費閱讀",
+            "cost": 0,
+            "new_j_pts": user.j_pts or 0
+        }), 200
+
     # 1. 檢查是否已經解鎖過
     existing_unlock = UnlockedArticle.query.filter_by(user_id=user_id, article_id=article_id).first()
     if existing_unlock:
-        return jsonify({"status": "already_unlocked", "message": "此文章已解鎖"}), 200
+        return jsonify({
+            "status": "already_unlocked",
+            "message": "此文章已解鎖",
+            "new_j_pts": user.j_pts or 0
+        }), 200
+
+    # 2. 以後台設定的價格為準，點數不足就擋下來
+    cost = article.unlock_cost if article.unlock_cost is not None else DEFAULT_UNLOCK_COST
+    if (user.j_pts or 0) < cost:
+        return jsonify({
+            "status": "not_enough_points",
+            "message": f"J-pts 不足，解鎖此文章需要 {cost} 點",
+            "cost": cost,
+            "new_j_pts": user.j_pts or 0
+        }), 400
 
     try:
-        # 2. 單純寫入解鎖紀錄 (點數檢查與扣除交由 Flutter 前端處理)
+        # 3. 扣點並寫入解鎖紀錄
+        user.j_pts = (user.j_pts or 0) - cost
         new_unlock = UnlockedArticle(user_id=user_id, article_id=article_id)
         db.session.add(new_unlock)
         db.session.commit()
 
         return jsonify({
             "status": "success", 
-            "message": "解鎖成功"
+            "message": "解鎖成功",
+            "cost": cost,
+            "new_j_pts": user.j_pts
         }), 200
         
     except Exception as e:

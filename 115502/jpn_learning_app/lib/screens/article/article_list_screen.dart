@@ -157,7 +157,7 @@ void _loadArticles() {
                 ),
               );
             } else {
-              _showUnlockDialog(context, article.id, _cleanRubyTags(article.title), 50);
+              _showUnlockDialog(context, article.id, _cleanRubyTags(article.title), article.unlockCost);
             }
           },
           child: Padding(
@@ -221,7 +221,7 @@ void _loadArticles() {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      isUnlocked ? '點擊開始閱讀' : '花費 50 J-pts 解鎖此文章', 
+                      isUnlocked ? '點擊開始閱讀' : '花費 ${article.unlockCost} J-pts 解鎖此文章', 
                       style: TextStyle(
                         fontSize: 13, 
                         color: isUnlocked ? Colors.grey[600] : AppColors.primary, 
@@ -307,9 +307,9 @@ void _loadArticles() {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId ?? 0;
     
-    // 🌟 採用你原系統的點數判斷（例如 380 點）
+    // 先在前端擋一次，實際扣點與最終判斷都在後端
 
-    final currentPoints = userProvider.jPts ?? 0; // ✅ 改用正確的 jPts
+    final currentPoints = userProvider.jPts; // ✅ 改用正確的 jPts
     if (currentPoints < cost) {
       _showInsufficientPointsDialog(context);
       return;
@@ -331,6 +331,11 @@ void _loadArticles() {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     if (result['_status'] == 200 && result['status'] == 'success') {
+      // 🌟 點數由後端扣除，這裡直接同步後端回傳的最新餘額
+      final newPts = result['new_j_pts'];
+      if (newPts is int) {
+        userProvider.setJPts(newPts);
+      }
       _loadArticles(); // 重新整理畫面
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -342,6 +347,9 @@ void _loadArticles() {
           margin: const EdgeInsets.only(bottom: 40, left: 24, right: 24),
         ),
       );
+    } else if (result['status'] == 'not_enough_points') {
+      // 後端以後台設定的價格重新驗算，點數不足時導向儲值
+      _showInsufficientPointsDialog(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

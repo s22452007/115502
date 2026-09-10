@@ -166,7 +166,13 @@ class UserProvider extends ChangeNotifier {
   void setTrialUsed(bool value) { _trialUsed = value; notifyListeners(); }
   void setPendingUpgradeStart(String? value) { _pendingUpgradeStart = value; notifyListeners(); }
   void setPendingFriendRequests(int count) { _pendingFriendRequests = count; notifyListeners(); }
-  void setDailyScans(int scans) { _dailyScans = scans; notifyListeners(); }
+  void setDailyScans(int scans) {
+    _dailyScans = scans;
+    if (scans > 0) {
+      NotificationService.recordDailyStudyCompleted();
+    }
+    notifyListeners();
+  }
   void setUserId(int? id) { _userId = id; notifyListeners(); }
   void setJapaneseLevel(String level) {
     _japaneseLevel = level;

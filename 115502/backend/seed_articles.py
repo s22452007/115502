@@ -198,6 +198,12 @@ def seed_articles():
                 grammar_points={"grammars": [{"expression": "〜にとどまらず", "meaning": "不僅限於...", "example": "単なる物語にとどまらず。"}], "vocabularies": [{"word": "反映", "reading": "はんえい", "meaning": "反映"}, {"word": "権力", "reading": "けんりょく", "meaning": "權力"}]}),
         ]
 
+        # 每個級別的前 5 篇（ID 尾數 01~05）為免費文章，其餘一律付費解鎖
+        for a in all_articles:
+            a.is_free = (a.id % 100) <= 5
+            a.unlock_cost = 0 if a.is_free else 50
+            a.is_published = True
+
         db.session.add_all(all_articles)
         db.session.commit()
         print("🎉 N5~N1 各級別（含免費5篇、解鎖3篇）文章已全部成功寫入資料庫！")

@@ -1,12 +1,13 @@
 import sqlite3
 import os
+import json
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
 import os
 from flask import session, flash, redirect, url_for, render_template, request
 from functools import wraps
 from utils.db import db
-from models import Admin, Vocab, SystemLog
+from models import Admin, Vocab, SystemLog, Article
 
 
 def utc_to_tw(utc_str):
@@ -916,6 +917,274 @@ def vocab_delete(id):
     db.session.commit()
     return redirect(url_for('vocab_list'))
 
+
+
+# ==========================================
+# 📖 閱讀文章管理 (依等級上架、預設付費解鎖)
+# ==========================================
+ARTICLE_LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1']
+ARTICLE_THEMES = ['日常生活', '日本文化', '旅遊觀光', '職場應用', '流行動漫',
+                  '日本美食', '台灣文化', '日本傳說']
+DEFAULT_ARTICLE_COST = 50
+
+
+def _parse_grammar_points(raw_json, grammars_text, vocabs_text):
+    """把後台表單的文法／單字欄位整理成 Article.grammar_points 的 JSON 結構。
+
+    優先採用「進階模式」直接貼上的 JSON；否則用一行一筆的簡易格式：
+      文法：表現形式 | 中文說明 | 例句
+      單字：單字 | 讀音 | 中文意思
+    """
+    raw_json = (raw_json or '').strip()
+    if raw_json:
+        try:
+            parsed = json.loads(raw_json)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            raise ValueError('文法解析 JSON 格式錯誤，請確認括號與引號是否正確')
+
+    def split_lines(text):
+        return [line.strip() for line in (text or '').splitlines() if line.strip()]
+
+    grammars = []
+    for line in split_lines(grammars_text):
+        parts = [p.strip() for p in line.split('|')]
+        grammars.append({
+            'expression': parts[0],
+            'meaning': parts[1] if len(parts) > 1 else '',
+            'example': parts[2] if len(parts) > 2 else '',
+        })
+
+    vocabularies = []
+    for line in split_lines(vocabs_text):
+        parts = [p.strip() for p in line.split('|')]
+        vocabularies.append({
+            'word': parts[0],
+            'reading': parts[1] if len(parts) > 1 else '',
+            'meaning': parts[2] if len(parts) > 2 else '',
+        })
+
+    if not grammars and not vocabularies:
+        return None
+    return {'grammars': grammars, 'vocabularies': vocabularies}
+
+
+def _grammar_points_to_text(grammar_points):
+    """把 JSON 還原成編輯畫面用的一行一筆文字"""
+    data = grammar_points if isinstance(grammar_points, dict) else {}
+    grammars = '\n'.join(
+        ' | '.join([g.get('expression', ''), g.get('meaning', ''), g.get('example', '')]).rstrip(' |')
+        for g in data.get('grammars', []) if isinstance(g, dict)
+    )
+    vocabs = '\n'.join(
+        ' | '.join([v.get('word', ''), v.get('reading', ''), v.get('meaning', '')]).rstrip(' |')
+        for v in data.get('vocabularies', []) if isinstance(v, dict)
+    )
+    return {'grammars': grammars, 'vocabs': vocabs}
+
+
+def _read_article_form(form):
+    """讀取並驗證新增／編輯文章的共用欄位，回傳 dict 或丟出 ValueError"""
+    title = (form.get('title') or '').strip()
+    level = (form.get('level') or '').strip()
+    theme = (form.get('theme') or '').strip()
+    content = (form.get('content') or '').strip()
+    translation = (form.get('translation') or '').strip()
+
+    if not title or not content:
+        raise ValueError('標題與日文內容為必填欄位')
+    if level not in ARTICLE_LEVELS:
+        raise ValueError('請選擇正確的等級 (N5~N1)')
+    if not theme:
+        raise ValueError('請選擇或輸入文章主題')
+
+    try:
+        unlock_cost = int(form.get('unlock_cost') or DEFAULT_ARTICLE_COST)
+    except ValueError:
+        raise ValueError('解鎖點數必須是數字')
+    if unlock_cost <= 0:
+        raise ValueError('解鎖點數必須大於 0（新文章一律付費解鎖）')
+
+    grammar_points = _parse_grammar_points(
+        form.get('grammar_json'), form.get('grammars_text'), form.get('vocabs_text')
+    )
+
+    return {
+        'title': title,
+        'level': level,
+        'theme': theme,
+        'content': content,
+        'translation': translation or None,
+        'unlock_cost': unlock_cost,
+        'is_published': form.get('is_published') == 'on',
+        'grammar_points': grammar_points,
+    }
+
+
+@app.route('/article/list')
+@admin_login_required
+def article_list():
+    level = request.args.get('level', '')
+    keyword = (request.args.get('keyword') or '').strip()
+
+    query = Article.query
+    if level in ARTICLE_LEVELS:
+        query = query.filter_by(level=level)
+    if keyword:
+        query = query.filter(Article.title.like('%' + keyword + '%'))
+    articles = query.order_by(Article.id.desc()).all()
+
+    # 每篇文章被付費解鎖的次數，讓管理者看得出成效
+    unlock_counts = {}
+    try:
+        conn = get_db_connection()
+        rows = conn.execute(
+            'SELECT article_id, COUNT(*) AS c FROM unlocked_articles GROUP BY article_id'
+        ).fetchall()
+        conn.close()
+        unlock_counts = {r['article_id']: r['c'] for r in rows}
+    except sqlite3.Error:
+        unlock_counts = {}
+
+    # 依等級統計，方便確認每個級別各上架了幾篇
+    level_stats = []
+    for lv in ARTICLE_LEVELS:
+        lv_articles = Article.query.filter_by(level=lv).all()
+        level_stats.append({
+            'level': lv,
+            'total': len(lv_articles),
+            'published': sum(1 for a in lv_articles if a.is_published is not False),
+            'paid': sum(1 for a in lv_articles if not a.is_free),
+        })
+
+    return render_template('article/list.html',
+                           articles=articles,
+                           levels=ARTICLE_LEVELS,
+                           themes=ARTICLE_THEMES,
+                           level_stats=level_stats,
+                           unlock_counts=unlock_counts,
+                           default_cost=DEFAULT_ARTICLE_COST,
+                           grammar_texts={a.id: _grammar_points_to_text(a.grammar_points) for a in articles},
+                           current_level=level,
+                           keyword=keyword)
+
+
+@app.route('/article/add', methods=['POST'])
+@admin_login_required
+def article_add():
+    admin_id = session.get('admin_id')
+    try:
+        data = _read_article_form(request.form)
+    except ValueError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('article_list'))
+
+    article = Article(
+        theme=data['theme'],
+        level=data['level'],
+        title=data['title'],
+        content=data['content'],
+        translation=data['translation'],
+        grammar_points=data['grammar_points'],
+        is_free=False,          # 後台新增的文章一律付費解鎖
+        unlock_cost=data['unlock_cost'],
+        is_published=data['is_published'],
+        created_by=admin_id,
+    )
+    db.session.add(article)
+    db.session.flush()  # 先取得 id 才能寫入操作紀錄
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='CREATE', target_table='articles', target_id=article.id,
+        new_value={'title': article.title, 'level': article.level,
+                   'unlock_cost': article.unlock_cost, 'is_published': article.is_published}
+    ))
+    db.session.commit()
+    flash('已新增 %s 文章「%s」，需 %d J-pts 解鎖' % (article.level, article.title, article.unlock_cost), 'success')
+    return redirect(url_for('article_list', level=article.level))
+
+
+@app.route('/article/edit/<int:article_id>', methods=['POST'])
+@admin_login_required
+def article_edit(article_id):
+    admin_id = session.get('admin_id')
+    article = Article.query.get_or_404(article_id)
+    try:
+        data = _read_article_form(request.form)
+    except ValueError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('article_list'))
+
+    old_value = {'title': article.title, 'level': article.level,
+                 'unlock_cost': article.unlock_cost, 'is_published': article.is_published}
+
+    article.theme = data['theme']
+    article.level = data['level']
+    article.title = data['title']
+    article.content = data['content']
+    article.translation = data['translation']
+    article.grammar_points = data['grammar_points']
+    article.unlock_cost = data['unlock_cost']
+    article.is_published = data['is_published']
+    article.updated_at = datetime.utcnow()
+
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='UPDATE', target_table='articles', target_id=article_id,
+        old_value=old_value,
+        new_value={'title': article.title, 'level': article.level,
+                   'unlock_cost': article.unlock_cost, 'is_published': article.is_published}
+    ))
+    db.session.commit()
+    flash('已更新文章「%s」' % article.title, 'success')
+    return redirect(url_for('article_list', level=article.level))
+
+
+@app.route('/article/toggle/<int:article_id>', methods=['POST'])
+@admin_login_required
+def article_toggle(article_id):
+    """上架 / 下架切換：下架後 App 端的文章列表就看不到這篇"""
+    admin_id = session.get('admin_id')
+    article = Article.query.get_or_404(article_id)
+    article.is_published = not (article.is_published is not False)
+    article.updated_at = datetime.utcnow()
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='UPDATE', target_table='articles', target_id=article_id,
+        new_value={'is_published': article.is_published}
+    ))
+    db.session.commit()
+    flash(('已上架「%s」' if article.is_published else '已下架「%s」') % article.title, 'success')
+    return redirect(url_for('article_list', level=request.args.get('level', '')))
+
+
+@app.route('/article/delete/<int:article_id>', methods=['POST'])
+@admin_login_required
+def article_delete(article_id):
+    admin_id = session.get('admin_id')
+    article = Article.query.get_or_404(article_id)
+    title = article.title
+
+    # 先清掉關聯資料，避免留下指向已刪除文章的孤兒紀錄
+    conn = get_db_connection()
+    try:
+        conn.execute('DELETE FROM unlocked_articles WHERE article_id = ?', (article_id,))
+        conn.execute('DELETE FROM article_progress WHERE article_id = ?', (article_id,))
+        conn.execute('DELETE FROM score_record WHERE article_id = ?', (article_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+    db.session.delete(article)
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='DELETE', target_table='articles', target_id=article_id,
+        old_value={'title': title}
+    ))
+    db.session.commit()
+    flash('已刪除文章「%s」' % title, 'success')
+    return redirect(url_for('article_list'))
 
 
 if __name__ == '__main__':

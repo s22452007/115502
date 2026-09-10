@@ -4,7 +4,8 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/sentence/sentence_history_screen.dart'; 
-import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart'; 
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/widgets/common/staged_progress_overlay.dart';
 
 class SentencePracticeScreen extends StatefulWidget {
   const SentencePracticeScreen({Key? key}) : super(key: key);
@@ -431,7 +432,12 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: _isLoadingTask
+      // 批改進行中時蓋一層分階段進度，讓使用者知道 AI 做到哪，
+      // 而不是只有按鈕上一個轉圈。用 Stack 而非跳新畫面，
+      // 這樣使用者輸入的造句不會被清掉，批改失敗也能直接重試。
+      body: Stack(
+        children: [
+          _isLoadingTask
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -562,6 +568,37 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                 ],
               ),
             ),
+
+          // 階段順序對應後端 /api/sentence/evaluate 的實際流程：
+          // 收到請求 → Gemini 批改文法 → 評分 → 寫入練習紀錄
+          if (_isEvaluating)
+            const StagedProgressOverlay(
+              stages: [
+                ProgressStage(
+                  icon: Icons.send_rounded,
+                  label: '正在送出你的造句…',
+                  seconds: 2,
+                ),
+                ProgressStage(
+                  icon: Icons.spellcheck_rounded,
+                  label: 'AI 正在檢查文法與助詞…',
+                  seconds: 8,
+                ),
+                ProgressStage(
+                  icon: Icons.grading_rounded,
+                  label: '正在評分並寫下建議…',
+                  seconds: 6,
+                ),
+                ProgressStage(
+                  icon: Icons.bookmark_added_rounded,
+                  label: '正在記錄這次的練習成果…',
+                  seconds: 999,
+                ),
+              ],
+              reassureText: 'AI 正在仔細看你的句子，請稍候…',
+            ),
+        ],
+      ),
     );
   }
 }

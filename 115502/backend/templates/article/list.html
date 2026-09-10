@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 閱讀文章管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+
+        /* 側邊欄樣式 */
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light, #dce7de); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent, #5c8364); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        /* 主內容區樣式 */
+        .main-content { flex: 1; padding: 0; overflow-x: hidden; }
+        .body-area { padding: 32px 48px; }
+        .page-title-box { margin-bottom: 24px; }
+        .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
+
+        /* 面板設計 */
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .panel-header { padding: 14px 20px; font-weight: bold; font-size: 0.95rem; color: white; background: var(--green-dark); letter-spacing: 0.5px; }
+
+        /* 表格樣式 */
+        .table > :not(caption) > * > * { padding: 14px 20px; border-bottom-color: #f4f7f5; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.9rem; }
+
+        /* 搜尋與按鈕樣式 */
+        .search-input { border-radius: 8px; border: 1px solid #ddd; padding: 0.5rem 1rem; font-size: 0.9rem; width: 220px; }
+        .btn-snap { background-color: var(--green-accent); color: white; border: none; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .btn-snap:hover { background-color: var(--green-dark); color: white; }
+
+        /* 等級篩選列 */
+        .level-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+        .level-tab { display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 16px; border-radius: 999px; background: white; border: 1px solid #e3e8e4; color: #666; text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
+        .level-tab:hover { border-color: var(--green-mid); color: var(--green-accent); }
+        .level-tab.active { background: var(--green-accent); border-color: var(--green-accent); color: white; font-weight: bold; }
+        .level-tab .count { font-size: 0.78rem; opacity: 0.75; }
+
+        .lv-badge { display: inline-block; min-width: 34px; text-align: center; font-weight: bold; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; background: var(--green-light); color: var(--green-dark); }
+        .cost-tag { font-weight: bold; color: #c47f2c; }
+        .free-tag { color: #7a8b7d; }
+        .state-on { color: var(--green-accent); font-weight: bold; font-size: 0.85rem; }
+        .state-off { color: #b0b7b2; font-size: 0.85rem; }
+        .article-title { font-weight: bold; color: #333; }
+        .article-sub { font-size: 0.78rem; color: #aaa; margin-top: 2px; }
+        .form-hint { font-size: 0.75rem; color: #999; margin-top: 4px; }
+        .modal-body label.form-label { font-size: 0.82rem; color: #777; margin-bottom: 4px; }
+        textarea.form-control { font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">使用者</li>
+            <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            {% if session.get('role') == 'super_admin' %}
+            <li class="sidebar-section-title">方案管理</li>
+            <li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
+            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>
+            {% endif %}
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list" class="active"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">互動</li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
+            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="body-area">
+
+            <div class="page-title-box d-flex justify-content-between align-items-end">
+                <div>
+                    <h3 class="page-title"><i class="bi bi-file-earmark-text me-2"></i>閱讀文章管理</h3>
+                    <div class="text-muted small mt-1">依 N5～N1 等級上架文章；後台新增的文章一律需付費解鎖</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <form method="GET" action="{{ url_for('article_list') }}" class="d-flex gap-2">
+                        <input type="hidden" name="level" value="{{ current_level }}">
+                        <input type="text" name="keyword" class="search-input" placeholder="搜尋文章標題..." value="{{ keyword }}">
+                        <button class="btn btn-outline-secondary" style="border-radius:8px;" type="submit"><i class="bi bi-search"></i></button>
+                    </form>
+                    <button class="btn btn-snap px-3" data-bs-toggle="modal" data-bs-target="#addModal">
+                        <i class="bi bi-plus-lg me-1"></i> 新增文章
+                    </button>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert {{ 'alert-danger' if category == 'error' else 'alert-success' }} py-2" style="border-radius:10px; font-size:0.9rem;">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <div class="level-tabs">
+                <a class="level-tab {{ 'active' if not current_level }}" href="{{ url_for('article_list', keyword=keyword) }}">
+                    全部等級 <span class="count">{{ level_stats | sum(attribute='total') }} 篇</span>
+                </a>
+                {% for s in level_stats %}
+                <a class="level-tab {{ 'active' if current_level == s.level }}" href="{{ url_for('article_list', level=s.level, keyword=keyword) }}">
+                    {{ s.level }} <span class="count">上架 {{ s.published }} / 共 {{ s.total }} 篇．付費 {{ s.paid }}</span>
+                </a>
+                {% endfor %}
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="bi bi-journal-richtext me-1"></i>
+                    文章清單{% if current_level %}（{{ current_level }}）{% endif %}
+                </div>
+                <div class="p-0 table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th style="width: 70px;">等級</th>
+                                <th style="width: 110px;">主題</th>
+                                <th>標題</th>
+                                <th style="width: 110px;">解鎖點數</th>
+                                <th style="width: 90px;">狀態</th>
+                                <th class="text-center" style="width: 90px;">已解鎖<br><span class="text-muted" style="font-size:0.72rem;">人次</span></th>
+                                <th class="text-center" style="width: 170px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in articles %}
+                            <tr>
+                                <td><span class="text-muted small">#{{ a.id }}</span></td>
+                                <td><span class="lv-badge">{{ a.level }}</span></td>
+                                <td><span class="text-muted" style="font-size:0.85rem;">{{ a.theme }}</span></td>
+                                <td>
+                                    <div class="article-title">{{ a.title | striptags }}</div>
+                                    <div class="article-sub">{{ (a.content | striptags)[:40] }}{% if (a.content | striptags) | length > 40 %}…{% endif %}</div>
+                                </td>
+                                <td>
+                                    {% if a.is_free %}
+                                        <span class="free-tag">免費閱讀</span>
+                                    {% else %}
+                                        <span class="cost-tag">{{ a.unlock_cost or default_cost }} J-pts</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if a.is_published is not false %}
+                                        <span class="state-on"><i class="bi bi-circle-fill" style="font-size:0.5rem;"></i> 已上架</span>
+                                    {% else %}
+                                        <span class="state-off"><i class="bi bi-circle" style="font-size:0.5rem;"></i> 已下架</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ unlock_counts.get(a.id, 0) }}</td>
+                                <td class="text-center">
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ a.id }}" style="border-radius: 8px;" title="編輯">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <form action="{{ url_for('article_toggle', article_id=a.id, level=current_level) }}" method="POST">
+                                            <button type="submit" class="btn btn-sm {{ 'btn-outline-warning' if a.is_published is not false else 'btn-outline-success' }}" style="border-radius: 8px;"
+                                                    title="{{ '下架' if a.is_published is not false else '上架' }}">
+                                                <i class="bi {{ 'bi-eye-slash' if a.is_published is not false else 'bi-eye' }}"></i>
+                                            </button>
+                                        </form>
+                                        <form action="{{ url_for('article_delete', article_id=a.id) }}" method="POST" onsubmit="return confirm('刪除後，使用者已付費解鎖的紀錄與成績也會一併移除，確定刪除「{{ a.title | striptags }}」嗎？');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 8px;" title="刪除">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="8" class="text-center py-5 text-muted">目前沒有符合條件的文章。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+        </div>
+    </main>
+
+    <!-- 主題選單（新增與編輯共用） -->
+    <datalist id="themeOptions">
+        {% for t in themes %}<option value="{{ t }}">{% endfor %}
+    </datalist>
+
+    <!-- 新增文章 -->
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 16px;">
+                <form action="{{ url_for('article_add') }}" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" style="color: var(--green-accent);"><i class="bi bi-plus-circle-fill me-2"></i>新增閱讀文章</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">發布等級</label>
+                                <select name="level" class="form-select" required>
+                                    {% for lv in levels %}
+                                    <option value="{{ lv }}" {{ 'selected' if current_level == lv }}>{{ lv }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-hint">只有該等級的使用者看得到</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">主題</label>
+                                <input type="text" name="theme" class="form-control" list="themeOptions" placeholder="例：日常生活" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">解鎖點數</label>
+                                <input type="number" name="unlock_cost" class="form-control" value="{{ default_cost }}" min="1" required>
+                                <div class="form-hint">新文章一律付費</div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">上架</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="is_published" checked>
+                                    <label class="form-check-label small text-muted">立即發布</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">文章標題（日文）</label>
+                            <input type="text" name="title" class="form-control" placeholder="例：毎日の朝ごはん" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">日文內容</label>
+                            <textarea name="content" class="form-control" rows="6" placeholder="可使用 &lt;ruby&gt;漢字&lt;rt&gt;かんじ&lt;/rt&gt;&lt;/ruby&gt; 標註假名" required></textarea>
+                            <div class="form-hint">支援 ruby 標籤，App 端會顯示振假名</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">中文翻譯</label>
+                            <textarea name="translation" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">重點文法（一行一筆）</label>
+                                <textarea name="grammars_text" class="form-control" rows="4" placeholder="〜ます | 動詞肯定形 | パンを食べます。"></textarea>
+                                <div class="form-hint">格式：表現形式 | 中文說明 | 例句</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">重點單字（一行一筆）</label>
+                                <textarea name="vocabs_text" class="form-control" rows="4" placeholder="毎日 | まいにち | 每天"></textarea>
+                                <div class="form-hint">格式：單字 | 讀音 | 中文意思</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <a class="small text-muted" data-bs-toggle="collapse" href="#advAdd" role="button" style="cursor:pointer;">
+                                <i class="bi bi-code-slash"></i> 進階：直接貼上 grammar_points JSON
+                            </a>
+                            <div class="collapse mt-2" id="advAdd">
+                                <textarea name="grammar_json" class="form-control" rows="4" placeholder='{"grammars": [...], "vocabularies": [...]}'></textarea>
+                                <div class="form-hint">若填寫此欄，會覆蓋上面兩個欄位</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-snap w-100 py-2">確認新增</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編輯文章 -->
+    {% for a in articles %}
+    <div class="modal fade" id="editModal{{ a.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 16px;">
+                <form action="{{ url_for('article_edit', article_id=a.id) }}" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" style="color: var(--green-accent);"><i class="bi bi-pencil-fill me-2"></i>編輯文章 #{{ a.id }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        {% if a.is_free %}
+                        <div class="alert alert-light border py-2 small text-muted">這是系統預設的免費文章，不會向使用者收取點數。</div>
+                        {% endif %}
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">發布等級</label>
+                                <select name="level" class="form-select" required>
+                                    {% for lv in levels %}
+                                    <option value="{{ lv }}" {{ 'selected' if a.level == lv }}>{{ lv }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">主題</label>
+                                <input type="text" name="theme" class="form-control" list="themeOptions" value="{{ a.theme }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">解鎖點數</label>
+                                <input type="number" name="unlock_cost" class="form-control" value="{{ a.unlock_cost or default_cost }}" min="1" required {{ 'readonly' if a.is_free }}>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">上架</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="is_published" {{ 'checked' if a.is_published is not false }}>
+                                    <label class="form-check-label small text-muted">發布中</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">文章標題（日文）</label>
+                            <input type="text" name="title" class="form-control" value="{{ a.title }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">日文內容</label>
+                            <textarea name="content" class="form-control" rows="6" required>{{ a.content }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">中文翻譯</label>
+                            <textarea name="translation" class="form-control" rows="3">{{ a.translation or '' }}</textarea>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">重點文法（一行一筆）</label>
+                                <textarea name="grammars_text" class="form-control" rows="4">{{ grammar_texts[a.id].grammars }}</textarea>
+                                <div class="form-hint">格式：表現形式 | 中文說明 | 例句</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">重點單字（一行一筆）</label>
+                                <textarea name="vocabs_text" class="form-control" rows="4">{{ grammar_texts[a.id].vocabs }}</textarea>
+                                <div class="form-hint">格式：單字 | 讀音 | 中文意思</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <a class="small text-muted" data-bs-toggle="collapse" href="#advEdit{{ a.id }}" role="button" style="cursor:pointer;">
+                                <i class="bi bi-code-slash"></i> 進階：直接貼上 grammar_points JSON
+                            </a>
+                            <div class="collapse mt-2" id="advEdit{{ a.id }}">
+                                <textarea name="grammar_json" class="form-control" rows="4" placeholder='{"grammars": [...], "vocabularies": [...]}'></textarea>
+                                <div class="form-hint">若填寫此欄，會覆蓋上面兩個欄位</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-snap w-100 py-2">儲存變更</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

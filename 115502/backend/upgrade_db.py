@@ -732,6 +732,35 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ chat 對話紀錄表建立警告：{e}")
 
+# ==========================================
+# 32. 升級 articles：後台上架/付費解鎖欄位
+# ==========================================
+add_column("articles", "is_free BOOLEAN DEFAULT 0")
+add_column("articles", "unlock_cost INTEGER DEFAULT 50")
+add_column("articles", "is_published BOOLEAN DEFAULT 1")
+add_column("articles", "created_by INTEGER")
+add_column("articles", "updated_at DATETIME")
+
+# 原本寫死在程式裡的免費文章 ID（各級別前 5 篇），改成資料庫欄位保存
+FREE_ARTICLE_IDS = [
+    101, 102, 103, 104, 105,  # N5
+    201, 202, 203, 204, 205,  # N4
+    301, 302, 303, 304, 305,  # N3
+    401, 402, 403, 404, 405,  # N2
+    501, 502, 503, 504, 505,  # N1
+]
+try:
+    # 舊資料補上預設值：全部先設為付費、已上架，再把免費清單標回免費
+    cursor.execute("UPDATE articles SET is_free = 0 WHERE is_free IS NULL;")
+    cursor.execute("UPDATE articles SET unlock_cost = 50 WHERE unlock_cost IS NULL;")
+    cursor.execute("UPDATE articles SET is_published = 1 WHERE is_published IS NULL;")
+    placeholders = ",".join("?" * len(FREE_ARTICLE_IDS))
+    cursor.execute(f"UPDATE articles SET is_free = 1 WHERE id IN ({placeholders});", FREE_ARTICLE_IDS)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_articles_level ON articles(level, is_published);")
+    print("✅ articles 上架與付費解鎖欄位確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ articles 欄位升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

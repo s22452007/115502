@@ -401,7 +401,14 @@ class Article(db.Model):
     translation = db.Column(db.Text, nullable=True) # 中文翻譯
     grammar_points = db.Column(db.JSON, nullable=True) # 重點文法解析 (存成 JSON 格式)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    # === 後台上架用欄位 ===
+    is_free = db.Column(db.Boolean, default=False)      # 是否免費閱讀；後台新增的文章一律付費 (False)
+    unlock_cost = db.Column(db.Integer, default=50)     # 解鎖所需的 J-pts
+    is_published = db.Column(db.Boolean, default=True)  # 是否已上架，下架後 App 端看不到
+    created_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True) # 由哪位管理者新增
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 class ArticleProgress(db.Model):
     __tablename__ = 'article_progress'

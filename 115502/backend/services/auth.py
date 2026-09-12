@@ -141,6 +141,8 @@ def login():
             "friend_id": user.friend_id,
             "username": user.username,
             "is_premium": bool(getattr(user, 'is_premium', False)),
+            # 前端靠這個欄位決定進一般版還是校園教育版
+            "account_type": getattr(user, 'account_type', 'general'),
             "subscription_end_date": end_date.isoformat() if end_date else None,
             "auto_renew": bool(getattr(user, 'auto_renew', False)),
         }), 200
@@ -242,6 +244,8 @@ def google_login():
         "friend_id": user.friend_id,
         "username": user.username,
         "is_premium": bool(getattr(user, 'is_premium', False)),
+        # 前端靠這個欄位決定進一般版還是校園教育版
+        "account_type": getattr(user, 'account_type', 'general'),
         "subscription_end_date": end_date.isoformat() if end_date else None,
         "auto_renew": bool(getattr(user, 'auto_renew', False)),
     }), 200

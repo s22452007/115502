@@ -9,6 +9,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from utils.db import db
 from utils.group_helper import add_group_progress_and_check_reward
+from utils.account_helper import has_unlimited_usage, is_payment_free
 from models import (
     User, UserAchievement, UserVocab, UserFolder,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
@@ -541,11 +542,16 @@ def increment_scan():
 
     _reset_daily_if_needed(user)
 
+    unlimited = has_unlimited_usage(user)
     daily_limit = 10 if user.is_premium else 2
     photo_today = getattr(user, 'photo_count_today', 0) or 0
     photo_extra = getattr(user, 'photo_extra_count', 0) or 0
 
-    if photo_today < daily_limit:
+    if unlimited:
+        # 教育版學生不受每日上限限制，也不消耗加購次數。
+        # 仍然累計 photo_count_today，老師端才看得到學生今天用了幾次。
+        user.photo_count_today = photo_today + 1
+    elif photo_today < daily_limit:
         user.photo_count_today = photo_today + 1
     elif photo_extra > 0:
         user.photo_count_today = photo_today + 1
@@ -578,6 +584,7 @@ def increment_scan():
         "daily_scans": getattr(user, 'photo_count_today', 0) or 0,
         "daily_limit": daily_limit,
         "extra_count": getattr(user, 'photo_extra_count', 0) or 0,
+        "unlimited": unlimited,
     }), 200
 
 
@@ -593,11 +600,15 @@ def use_ai():
 
     _reset_daily_if_needed(user)
 
+    unlimited = has_unlimited_usage(user)
     daily_limit = 10 if user.is_premium else 3
     ai_today = getattr(user, 'ai_count_today', 0) or 0
     ai_extra = getattr(user, 'ai_extra_count', 0) or 0
 
-    if ai_today < daily_limit:
+    if unlimited:
+        # 教育版學生不受每日上限限制，也不消耗加購次數
+        user.ai_count_today = ai_today + 1
+    elif ai_today < daily_limit:
         user.ai_count_today = ai_today + 1
     elif ai_extra > 0:
         user.ai_count_today = ai_today + 1
@@ -623,6 +634,7 @@ def use_ai():
         "daily_ai": getattr(user, 'ai_count_today', 0) or 0,
         "daily_limit": daily_limit,
         "extra_count": getattr(user, 'ai_extra_count', 0) or 0,
+        "unlimited": unlimited,
     }), 200
 
 
@@ -647,7 +659,9 @@ def refund_scan_usage(user_id):
         return False  # 沒有可退還的次數
 
     daily_limit = 10 if user.is_premium else 2
-    if photo_today > daily_limit:
+    # 教育版學生當初沒扣加購次數（不受上限限制），這裡也不能還加購次數給他，
+    # 否則他的 photo_count_today 一旦超過上限就會每次失敗都白賺一次加購。
+    if not has_unlimited_usage(user) and photo_today > daily_limit:
         # 當初用掉的是加購次數，還回去
         user.photo_extra_count = (getattr(user, 'photo_extra_count', 0) or 0) + 1
 
@@ -675,7 +689,8 @@ def refund_ai_usage(user_id):
         return False  # 沒有可退還的次數
 
     daily_limit = 10 if user.is_premium else 3
-    if ai_today > daily_limit:
+    # 同 refund_scan_usage：教育版學生當初沒扣加購次數，這裡也不能還給他
+    if not has_unlimited_usage(user) and ai_today > daily_limit:
         # 當初用掉的是加購次數，還回去
         user.ai_extra_count = (getattr(user, 'ai_extra_count', 0) or 0) + 1
 
@@ -706,6 +721,10 @@ def get_usage_status(user_id):
 
     return jsonify({
         "is_premium": user.is_premium,
+        # 前端靠這兩個欄位決定要不要顯示剩餘次數與加購入口：
+        # unlimited 為 true 時整個次數 UI 都不該出現
+        "account_type": getattr(user, 'account_type', 'general'),
+        "unlimited": has_unlimited_usage(user),
         "photo_count_today": getattr(user, 'photo_count_today', 0) or 0,
         "photo_extra_count": getattr(user, 'photo_extra_count', 0) or 0,
         "ai_count_today": getattr(user, 'ai_count_today', 0) or 0,

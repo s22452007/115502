@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from utils.db import db
 from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction, TransactionType
+from utils.account_helper import is_payment_free
 from datetime import datetime, timezone
 
 group_bp = Blueprint('group', __name__)
@@ -28,6 +29,10 @@ def handle_deposit_and_free_quota(user):
     if getattr(user, 'last_free_group_week', None) != current_week:
         user.last_free_group_week = current_week
         user.group_free_used_this_week = 0
+
+    # 教育版學生不受每週免費額度限制，也永遠不用付押金
+    if is_payment_free(user):
+        return True, "OK", 0
 
     free_quota = 3 if user.is_premium else 1
     free_used = getattr(user, 'group_free_used_this_week', 0) or 0

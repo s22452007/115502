@@ -13,6 +13,7 @@ from models import db, User, Article, UnlockedArticle
 from datetime import datetime
 from models import db, User, Article, ArticleProgress, ScoreRecord
 from utils.group_helper import add_group_progress_and_check_reward
+from utils.account_helper import is_payment_free
 
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
@@ -52,9 +53,13 @@ def get_article_dashboard():
 
         result = []
 
+        # 教育版學生所有文章一律免費、全部視為已解鎖，
+        # 前端就不會顯示任何鎖頭或解鎖價格
+        edu_free = is_payment_free(User.query.get(user_id))
+
         for a in articles:
             # 免費與否改由資料庫欄位決定（後台新增的文章一律為付費）
-            is_free = bool(a.is_free)
+            is_free = edu_free or bool(a.is_free)
             # 動態判斷：如果是免費文章，或是玩家已經解鎖過，is_unlocked 就是 True
             is_unlocked = is_free or (a.id in unlocked_article_ids)
 
@@ -275,9 +280,12 @@ def unlock_article():
             "new_j_pts": user.j_pts or 0
         }), 200
 
-    # 2. 以後台設定的價格為準，點數不足就擋下來
-    cost = article.unlock_cost if article.unlock_cost is not None else DEFAULT_UNLOCK_COST
-    if (user.j_pts or 0) < cost:
+    # 2. 以後台設定的價格為準，點數不足就擋下來。
+    #    教育版學生所有文章免費，成本直接歸零、不做點數檢查。
+    cost = 0 if is_payment_free(user) else (
+        article.unlock_cost if article.unlock_cost is not None else DEFAULT_UNLOCK_COST
+    )
+    if cost > 0 and (user.j_pts or 0) < cost:
         return jsonify({
             "status": "not_enough_points",
             "message": f"J-pts 不足，解鎖此文章需要 {cost} 點",

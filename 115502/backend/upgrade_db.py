@@ -761,6 +761,82 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ articles 欄位升級警告：{e}")
 
+# ==========================================
+# 🎓 校園教育版：帳號類型、教室、作業
+# ==========================================
+# 學生端與老師端共用這幾張表，欄位定義請以 models.py 為準。
+add_column("user", "account_type VARCHAR(20) DEFAULT 'general'")
+try:
+    # 舊帳號一律視為一般版，行為完全不變
+    cursor.execute("UPDATE user SET account_type = 'general' WHERE account_type IS NULL;")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS classroom (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        join_code VARCHAR(10) NOT NULL UNIQUE,
+        is_open BOOLEAN DEFAULT 1,
+        is_archived BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (teacher_id) REFERENCES user (id)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_classroom_join_code ON classroom(join_code);")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS classroom_member (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        classroom_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        display_name VARCHAR(50),
+        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (classroom_id) REFERENCES classroom (id),
+        FOREIGN KEY (student_id) REFERENCES user (id),
+        CONSTRAINT uq_classroom_student UNIQUE (classroom_id, student_id)
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS assignment (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        classroom_id INTEGER NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        instructions TEXT,
+        task_type VARCHAR(20) NOT NULL,
+        config JSON,
+        due_at DATETIME,
+        is_published BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (classroom_id) REFERENCES classroom (id)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_assignment_classroom ON assignment(classroom_id, is_published);")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS assignment_submission (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        assignment_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        result_ref_id INTEGER,
+        score INTEGER,
+        teacher_comment TEXT,
+        attempt_count INTEGER DEFAULT 0,
+        submitted_at DATETIME,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (assignment_id) REFERENCES assignment (id),
+        FOREIGN KEY (student_id) REFERENCES user (id),
+        CONSTRAINT uq_assignment_student UNIQUE (assignment_id, student_id)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_submission_student ON assignment_submission(student_id, status);")
+
+    print("✅ 校園教育版資料表（classroom / classroom_member / assignment / assignment_submission）確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 教育版資料表升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

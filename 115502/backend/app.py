@@ -24,6 +24,7 @@ from services.chat_history import chat_history_bp
 from services.tutor import get_ai_reply
 # 先在上方 import
 from services.sentence import sentence_bp
+from services.classroom import classroom_bp
 
 
 # 自動抓取 app.py 所在的絕對路徑
@@ -79,6 +80,7 @@ app.register_blueprint(daily_reward_bp, url_prefix='/api/daily')
 app.register_blueprint(article_bp, url_prefix='/api/articles')
 app.register_blueprint(chat_history_bp, url_prefix='/api/chat_history')
 app.register_blueprint(sentence_bp, url_prefix='/api/sentence')
+app.register_blueprint(classroom_bp, url_prefix='/api/classroom')
 # 啟動時自動建立資料表與執行遷移
 with app.app_context():
     db.create_all()  # 建立所有新表

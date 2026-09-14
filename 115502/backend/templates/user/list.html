@@ -200,12 +200,11 @@
         {% for u in users %}
         <div class="user-card">
             <div class="card-top">
-                {% if u.avatar %}
-                {% if u.avatar.startswith('http') or u.avatar.startswith('data:') %}
-                <img src="{{ u.avatar }}" class="avatar" style="object-fit:cover;">
-                {% else %}
-                <img src="data:image/jpeg;base64,{{ u.avatar }}" class="avatar" style="object-fit:cover;">
-                {% endif %}
+                {% set av = avatar_info(u.avatar) %}
+                {% if av and av.type == 'image' %}
+                <img src="{{ av.src }}" class="avatar" style="object-fit:cover;">
+                {% elif av %}
+                <div class="avatar" style="background:{{ av.bg }}; font-size:1.7rem;">{{ av.emoji }}</div>
                 {% else %}
                 <div class="avatar">{{ (u.username or u.email)[0]|upper }}</div>
                 {% endif %}

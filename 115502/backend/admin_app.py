@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import json
+import base64
+import binascii
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
 import os
@@ -1518,6 +1520,55 @@ def achievement_sync_theme():
     else:
         flash('主題徽章都已存在，不需要補建', 'success')
     return redirect(url_for('achievement_list'))
+
+
+# ==========================================
+# 🖼️ 大頭貼與照片的顯示規則（首頁、使用者、照片管控共用）
+# ==========================================
+# App 內建的表情符號頭像與背景色，對應 jpn_learning_app/lib/widgets/common/user_avatar.dart 的 kAvatarPresets
+AVATAR_PRESET_COLORS = {
+    '🐱': '#FFAB91', '🐶': '#FFCC80', '🐼': '#CFD8DC', '🐨': '#80DEEA',
+    '🐸': '#A5D6A7', '🦊': '#FFB74D', '🐰': '#F48FB1', '🐻': '#BCAAA4',
+    '🐯': '#FFD54F', '🐮': '#DCE775', '🦁': '#FFE082', '🐧': '#80CBC4',
+    '🐙': '#CE93D8', '🦋': '#B39DDB', '🐢': '#80CBC4', '🦄': '#F8BBD9',
+}
+PHOTO_DIR = os.path.join(BASE_DIR, 'static', 'photos')
+
+
+@app.template_global()
+def avatar_info(avatar):
+    """判斷 user.avatar 要怎麼顯示，規則與 App 的 UserAvatar 相同：
+    - App 內建的表情符號 → {'type': 'emoji', 'emoji', 'bg'}
+    - http 網址、data: URL、合法 base64 → {'type': 'image', 'src'}
+    - 空值或解不開的內容（例如舊版存進去的 '__gallery__'）→ None，頁面改顯示名字首字
+    """
+    if not avatar:
+        return None
+    if avatar in AVATAR_PRESET_COLORS:
+        return {'type': 'emoji', 'emoji': avatar, 'bg': AVATAR_PRESET_COLORS[avatar]}
+    if avatar.startswith('http') or avatar.startswith('data:'):
+        return {'type': 'image', 'src': avatar}
+    try:
+        base64.b64decode(avatar, validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    return {'type': 'image', 'src': 'data:image/jpeg;base64,' + avatar}
+
+
+@app.template_global()
+def photo_src(image_path):
+    """把 user_photo.image_path 轉成網址，照片檔不存在時回傳 None。
+
+    API 存的是 '/static/photos/<檔名>'，較早的種子資料只存檔名，兩種實際上都放在 static/photos。
+    """
+    if not image_path:
+        return None
+    if image_path.startswith('http'):
+        return image_path
+    filename = os.path.basename(image_path)
+    if not filename or not os.path.isfile(os.path.join(PHOTO_DIR, filename)):
+        return None
+    return url_for('static', filename='photos/' + filename)
 
 
 if __name__ == '__main__':

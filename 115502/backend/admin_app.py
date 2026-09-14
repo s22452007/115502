@@ -1,13 +1,15 @@
 import sqlite3
 import os
 import json
+import base64
+import binascii
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
 import os
 from flask import session, flash, redirect, url_for, render_template, request
 from functools import wraps
 from utils.db import db
-from models import Admin, Vocab, SystemLog, Article
+from models import Admin, Vocab, SystemLog, Article, Achievement
 
 
 def utc_to_tw(utc_str):
@@ -592,12 +594,14 @@ def user_list():
     has_trial_used   = 'trial_used'            in cols
     has_sub_end      = 'subscription_end_date' in cols
     has_is_suspended = 'is_suspended'          in cols
+    has_account_type = 'account_type'          in cols
 
     last_seen_col    = 'u.last_seen_at'          if has_last_seen    else 'NULL as last_seen_at'
     is_premium_col   = 'u.is_premium'            if has_is_premium   else '0 as is_premium'
     trial_used_col   = 'u.trial_used'            if has_trial_used   else '0 as trial_used'
     sub_end_col      = 'u.subscription_end_date' if has_sub_end      else 'NULL as subscription_end_date'
     is_suspended_col = 'u.is_suspended'          if has_is_suspended else '0 as is_suspended'
+    account_type_col = 'u.account_type'          if has_account_type else "'general' as account_type"
 
     base_query = f'''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
@@ -611,6 +615,7 @@ def user_list():
                {trial_used_col},
                {sub_end_col},
                {is_suspended_col},
+               {account_type_col},
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count,
@@ -718,12 +723,22 @@ def user_detail(user_id):
     except: feedbacks = []
 
     try:
+        # study_group 沒有 description、group_member 也沒有 role 欄位，
+        # 原本的查詢會直接丟例外被 except 吃掉，導致這區永遠顯示「未加入任何小組」
         groups = conn.execute('''
-            SELECT sg.id, sg.name, sg.description, gm.role, gm.joined_at
+            SELECT sg.id, sg.name, sg.goal_type, sg.goal_target, sg.current_progress,
+                   gm.joined_at, gm.group_scans, gm.group_points, gm.group_logins,
+                   gm.group_sentences, gm.group_articles, gm.has_claimed
             FROM group_member gm JOIN study_group sg ON sg.id = gm.group_id
             WHERE gm.user_id = ?
+            ORDER BY gm.joined_at DESC
         ''', (user_id,)).fetchall()
-        groups = [{**dict(g), 'joined_at': utc_to_tw(g['joined_at'] or '')} for g in groups]
+        groups = [dict(g) for g in groups]
+        for g in groups:
+            label, contrib_col = GROUP_GOAL_MAP.get(g['goal_type'], (g['goal_type'] or '—', None))
+            g['goal_label'] = label
+            g['my_contribution'] = (g.get(contrib_col) or 0) if contrib_col else None
+            g['joined_at'] = utc_to_tw(g['joined_at'] or '')
     except: groups = []
 
     conn.close()
@@ -1185,6 +1200,375 @@ def article_delete(article_id):
     db.session.commit()
     flash('已刪除文章「%s」' % title, 'success')
     return redirect(url_for('article_list'))
+
+
+# ==========================================
+# 👥 學習成果與社群：學習小組總覽
+# ==========================================
+# 小組目標類型 -> (顯示名稱, group_member 上對應的個人貢獻欄位)
+GROUP_GOAL_MAP = {
+    'scans':     ('拍照', 'group_scans'),
+    'points':    ('點數', 'group_points'),
+    'logins':    ('登入', 'group_logins'),
+    'sentences': ('造句', 'group_sentences'),
+    'articles':  ('閱讀', 'group_articles'),
+}
+GROUP_STATUS_LABELS = {'active': '進行中', 'achieved': '已達標', 'expired': '已過週待結算'}
+
+
+def _parse_db_datetime(value):
+    """把 SQLite 取出的時間字串轉成 datetime（資料庫存的是 UTC），失敗回傳 None"""
+    if not value:
+        return None
+    for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
+        try:
+            return datetime.strptime(str(value), fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _group_status(group, now):
+    """與 services/group.py 的 get_my_group 採用同一套規則：
+    - 建立時的 ISO 週次已經過去 → 待結算（要等成員下次打開小組頁才會真正結算並解散）
+    - 進度達標 → 已達標
+    - 其餘 → 進行中
+    """
+    created = _parse_db_datetime(group['created_at'])
+    if created and now.isocalendar()[:2] > created.isocalendar()[:2]:
+        return 'expired'
+    if (group['current_progress'] or 0) >= (group['goal_target'] or 0):
+        return 'achieved'
+    return 'active'
+
+
+@app.route('/group/list')
+@admin_login_required
+def group_list():
+    status_filter = request.args.get('status', '')
+
+    conn = get_db_connection()
+    try:
+        groups = [dict(g) for g in conn.execute(
+            'SELECT id, name, goal_type, goal_target, current_progress, created_at '
+            'FROM study_group ORDER BY created_at DESC'
+        ).fetchall()]
+        members = conn.execute('''
+            SELECT gm.group_id, gm.user_id, gm.joined_at,
+                   gm.group_scans, gm.group_points, gm.group_logins,
+                   gm.group_sentences, gm.group_articles,
+                   gm.has_claimed, gm.paid_deposit, gm.deposit_amount,
+                   u.username, u.email, u.japanese_level
+            FROM group_member gm LEFT JOIN user u ON u.id = gm.user_id
+        ''').fetchall()
+        pending_rows = conn.execute(
+            "SELECT group_id, COUNT(*) AS c FROM group_invite WHERE status = 'pending' GROUP BY group_id"
+        ).fetchall()
+    except sqlite3.Error:
+        groups, members, pending_rows = [], [], []
+    finally:
+        conn.close()
+
+    members_by_group = {}
+    for m in members:
+        members_by_group.setdefault(m['group_id'], []).append(dict(m))
+    pending_by_group = {r['group_id']: r['c'] for r in pending_rows}
+
+    now = datetime.utcnow()
+    counts = {'active': 0, 'achieved': 0, 'expired': 0}
+    for g in groups:
+        label, contrib_col = GROUP_GOAL_MAP.get(g['goal_type'], (g['goal_type'] or '—', None))
+        g['goal_label'] = label
+        g['status'] = _group_status(g, now)
+        counts[g['status']] += 1
+
+        created = _parse_db_datetime(g['created_at'])
+        # 挑戰在建立當週的週日結束（UTC），之後才會被結算
+        g['week_end'] = (created + timedelta(days=7 - created.isoweekday())).strftime('%Y-%m-%d') if created else '—'
+        g['created_at'] = utc_to_tw(g['created_at'])
+
+        target = g['goal_target'] or 0
+        g['percent'] = min(100, round((g['current_progress'] or 0) * 100 / target)) if target else 0
+        g['pending_invites'] = pending_by_group.get(g['id'], 0)
+
+        g['members'] = members_by_group.get(g['id'], [])
+        g['deposit_total'] = 0
+        for m in g['members']:
+            m['contribution'] = (m.get(contrib_col) or 0) if contrib_col else None
+            # 與 _give_group_reward 相同：舊資料 deposit_amount 為 0 但有付押金時視為 20 點
+            m['deposit'] = m['deposit_amount'] or (20 if m['paid_deposit'] else 0)
+            m['joined_at'] = utc_to_tw(m['joined_at'])
+            g['deposit_total'] += m['deposit']
+        g['members'].sort(key=lambda m: m['contribution'] or 0, reverse=True)
+
+    if status_filter in counts:
+        shown = [g for g in groups if g['status'] == status_filter]
+    else:
+        status_filter = ''
+        shown = groups
+
+    return render_template('group/list.html',
+                           groups=shown,
+                           counts=counts,
+                           total=len(groups),
+                           status_filter=status_filter,
+                           status_labels=GROUP_STATUS_LABELS)
+
+
+# ==========================================
+# 📝 學習成果與社群：造句與朗讀紀錄
+# ==========================================
+RECORD_PAGE_SIZE = 30
+# 同一人同一篇文章測驗達到這個次數就特別標示（每次送出都會重新發點數）
+REPEAT_THRESHOLD = 3
+
+
+@app.route('/record/list')
+@admin_login_required
+def record_list():
+    tab = request.args.get('tab', 'sentence')
+    if tab not in ('sentence', 'reading'):
+        tab = 'sentence'
+    keyword = (request.args.get('q') or '').strip()
+    page = max(1, request.args.get('page', 1, type=int) or 1)
+    offset = (page - 1) * RECORD_PAGE_SIZE
+    pattern = '%' + keyword + '%'
+
+    records, summary, total = [], [], 0
+    tab_counts = {}
+    conn = get_db_connection()
+    try:
+        for key, table in (('sentence', 'sentence_practice_record'), ('reading', 'score_record')):
+            try:
+                tab_counts[key] = conn.execute('SELECT COUNT(*) FROM ' + table).fetchone()[0]
+            except sqlite3.Error:
+                tab_counts[key] = 0
+
+        if tab == 'sentence':
+            where = 'WHERE (u.email LIKE ? OR u.username LIKE ? OR r.grammar_point LIKE ?)' if keyword else ''
+            params = (pattern, pattern, pattern) if keyword else ()
+            total = conn.execute(
+                'SELECT COUNT(*) FROM sentence_practice_record r LEFT JOIN user u ON u.id = r.user_id ' + where,
+                params
+            ).fetchone()[0]
+            rows = conn.execute('''
+                SELECT r.id, r.user_id, r.grammar_point, r.selected_vocabs, r.user_sentence,
+                       r.corrected_sentence, r.ai_feedback, r.score, r.points_earned,
+                       r.is_claimed, r.created_at, u.username, u.email
+                FROM sentence_practice_record r LEFT JOIN user u ON u.id = r.user_id
+                ''' + where + '''
+                ORDER BY r.created_at DESC LIMIT ? OFFSET ?
+            ''', params + (RECORD_PAGE_SIZE, offset)).fetchall()
+            for row in rows:
+                r = dict(row)
+                try:
+                    vocabs = json.loads(r['selected_vocabs']) if r['selected_vocabs'] else []
+                except (TypeError, ValueError):
+                    vocabs = []
+                r['vocabs'] = vocabs if isinstance(vocabs, list) else []
+                r['created_at'] = utc_to_tw(r['created_at'])
+                records.append(r)
+
+            # 各文法的練習次數與表現，找出學生普遍卡關的文法
+            summary = [dict(s) for s in conn.execute('''
+                SELECT grammar_point,
+                       COUNT(*) AS times,
+                       ROUND(AVG(score), 1) AS avg_score,
+                       ROUND(100.0 * SUM(CASE WHEN score >= 60 THEN 1 ELSE 0 END) / COUNT(*)) AS pass_rate
+                FROM sentence_practice_record
+                GROUP BY grammar_point
+                ORDER BY times DESC
+                LIMIT 8
+            ''').fetchall()]
+        else:
+            where = 'WHERE (u.email LIKE ? OR u.username LIKE ? OR a.title LIKE ?)' if keyword else ''
+            params = (pattern, pattern, pattern) if keyword else ()
+            total = conn.execute(
+                'SELECT COUNT(*) FROM score_record s '
+                'LEFT JOIN user u ON u.id = s.user_id LEFT JOIN articles a ON a.id = s.article_id ' + where,
+                params
+            ).fetchone()[0]
+            rows = conn.execute('''
+                SELECT s.id, s.user_id, s.article_id, s.score, s.points_earned, s.created_at,
+                       u.username, u.email, a.title, a.level,
+                       (SELECT COUNT(*) FROM score_record s2
+                        WHERE s2.user_id = s.user_id AND s2.article_id = s.article_id
+                          AND s2.id <= s.id) AS attempt_no
+                FROM score_record s
+                LEFT JOIN user u ON u.id = s.user_id
+                LEFT JOIN articles a ON a.id = s.article_id
+                ''' + where + '''
+                ORDER BY s.created_at DESC LIMIT ? OFFSET ?
+            ''', params + (RECORD_PAGE_SIZE, offset)).fetchall()
+            records = [{**dict(r), 'created_at': utc_to_tw(r['created_at'])} for r in rows]
+
+            # 同一人同一篇文章重複測驗很多次的組合
+            summary = [dict(s) for s in conn.execute('''
+                SELECT s.user_id, s.article_id, COUNT(*) AS times,
+                       SUM(s.points_earned) AS total_points, MAX(s.score) AS best_score,
+                       u.username, u.email, a.title
+                FROM score_record s
+                LEFT JOIN user u ON u.id = s.user_id
+                LEFT JOIN articles a ON a.id = s.article_id
+                GROUP BY s.user_id, s.article_id
+                HAVING COUNT(*) >= ?
+                ORDER BY times DESC
+                LIMIT 8
+            ''', (REPEAT_THRESHOLD,)).fetchall()]
+    except sqlite3.Error:
+        records, summary, total = [], [], 0
+    finally:
+        conn.close()
+
+    pages = max(1, -(-total // RECORD_PAGE_SIZE))
+    return render_template('record/list.html',
+                           tab=tab,
+                           keyword=keyword,
+                           records=records,
+                           summary=summary,
+                           total=total,
+                           page=page,
+                           pages=pages,
+                           tab_counts=tab_counts,
+                           repeat_threshold=REPEAT_THRESHOLD)
+
+
+# ==========================================
+# 🏅 學習成果與社群：成就徽章
+# ==========================================
+def _theme_badge_names():
+    """主題收集冊徽章 [(徽章名稱, 主題名稱)]。
+
+    直接引用 services/scenario.py 的定義，避免後台與使用者端的主題清單不同步。
+    徽章是用「名稱」比對發放的，所以名稱不能在後台修改。
+    """
+    try:
+        from services.scenario import THEME_DEFS, theme_badge_name
+        return [(theme_badge_name(t['name']), t['name']) for t in THEME_DEFS if t['name'] != '其他']
+    except Exception:
+        return []
+
+
+@app.route('/achievement/list')
+@admin_login_required
+def achievement_list():
+    conn = get_db_connection()
+    try:
+        user_total = conn.execute('SELECT COUNT(*) FROM user').fetchone()[0]
+        achievements = [dict(a) for a in conn.execute('''
+            SELECT a.id, a.name, a.description,
+                   (SELECT COUNT(*) FROM user_achievement ua WHERE ua.achievement_id = a.id) AS unlock_count
+            FROM achievement a ORDER BY a.id
+        ''').fetchall()]
+        holder_rows = conn.execute('''
+            SELECT ua.achievement_id, ua.unlocked_at, u.id AS user_id, u.username, u.email
+            FROM user_achievement ua JOIN user u ON u.id = ua.user_id
+            ORDER BY ua.unlocked_at DESC
+        ''').fetchall()
+    except sqlite3.Error:
+        user_total, achievements, holder_rows = 0, [], []
+    finally:
+        conn.close()
+
+    holders = {}
+    for h in holder_rows:
+        bucket = holders.setdefault(h['achievement_id'], [])
+        if len(bucket) < 50:
+            bucket.append({**dict(h), 'unlocked_at': utc_to_tw(h['unlocked_at'])})
+
+    theme_badges = dict(_theme_badge_names())  # 徽章名稱 -> 主題名稱
+    existing = {a['name'] for a in achievements}
+    for a in achievements:
+        a['theme_name'] = theme_badges.get(a['name'])
+        a['holders'] = holders.get(a['id'], [])
+        a['unlock_rate'] = round(a['unlock_count'] * 100 / user_total) if user_total else 0
+    missing = [(badge, theme) for badge, theme in theme_badges.items() if badge not in existing]
+
+    return render_template('achievement/list.html',
+                           achievements=achievements,
+                           missing=missing,
+                           user_total=user_total)
+
+
+@app.route('/achievement/sync_theme', methods=['POST'])
+@admin_login_required
+def achievement_sync_theme():
+    """補建缺少的主題徽章：資料庫少了某個徽章時，使用者集滿該主題也拿不到徽章"""
+    admin_id = session.get('admin_id')
+    existing = {a.name for a in Achievement.query.all()}
+    created = []
+    for badge, theme in _theme_badge_names():
+        if badge in existing:
+            continue
+        ach = Achievement(
+            name=badge,
+            description='集滿「%s」主題收集冊的所有官方單字' % theme,
+            updated_by=admin_id,
+        )
+        db.session.add(ach)
+        db.session.flush()
+        db.session.add(SystemLog(
+            admin_id=admin_id, user_id=None,
+            action='CREATE', target_table='achievement', target_id=ach.id,
+            new_value={'name': badge}
+        ))
+        created.append(badge)
+    db.session.commit()
+
+    if created:
+        flash('已補建 %d 個主題徽章：%s' % (len(created), '、'.join(created)), 'success')
+    else:
+        flash('主題徽章都已存在，不需要補建', 'success')
+    return redirect(url_for('achievement_list'))
+
+
+# ==========================================
+# 🖼️ 大頭貼與照片的顯示規則（首頁、使用者、照片管控共用）
+# ==========================================
+# App 內建的表情符號頭像與背景色，對應 jpn_learning_app/lib/widgets/common/user_avatar.dart 的 kAvatarPresets
+AVATAR_PRESET_COLORS = {
+    '🐱': '#FFAB91', '🐶': '#FFCC80', '🐼': '#CFD8DC', '🐨': '#80DEEA',
+    '🐸': '#A5D6A7', '🦊': '#FFB74D', '🐰': '#F48FB1', '🐻': '#BCAAA4',
+    '🐯': '#FFD54F', '🐮': '#DCE775', '🦁': '#FFE082', '🐧': '#80CBC4',
+    '🐙': '#CE93D8', '🦋': '#B39DDB', '🐢': '#80CBC4', '🦄': '#F8BBD9',
+}
+PHOTO_DIR = os.path.join(BASE_DIR, 'static', 'photos')
+
+
+@app.template_global()
+def avatar_info(avatar):
+    """判斷 user.avatar 要怎麼顯示，規則與 App 的 UserAvatar 相同：
+    - App 內建的表情符號 → {'type': 'emoji', 'emoji', 'bg'}
+    - http 網址、data: URL、合法 base64 → {'type': 'image', 'src'}
+    - 空值或解不開的內容（例如舊版存進去的 '__gallery__'）→ None，頁面改顯示名字首字
+    """
+    if not avatar:
+        return None
+    if avatar in AVATAR_PRESET_COLORS:
+        return {'type': 'emoji', 'emoji': avatar, 'bg': AVATAR_PRESET_COLORS[avatar]}
+    if avatar.startswith('http') or avatar.startswith('data:'):
+        return {'type': 'image', 'src': avatar}
+    try:
+        base64.b64decode(avatar, validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    return {'type': 'image', 'src': 'data:image/jpeg;base64,' + avatar}
+
+
+@app.template_global()
+def photo_src(image_path):
+    """把 user_photo.image_path 轉成網址，照片檔不存在時回傳 None。
+
+    API 存的是 '/static/photos/<檔名>'，較早的種子資料只存檔名，兩種實際上都放在 static/photos。
+    """
+    if not image_path:
+        return None
+    if image_path.startswith('http'):
+        return image_path
+    filename = os.path.basename(image_path)
+    if not filename or not os.path.isfile(os.path.join(PHOTO_DIR, filename)):
+        return None
+    return url_for('static', filename='photos/' + filename)
 
 
 if __name__ == '__main__':

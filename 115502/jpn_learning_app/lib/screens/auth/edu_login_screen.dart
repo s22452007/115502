@@ -1,5 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
+import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
+import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
+
+/// 校園教育版登入頁。
+///
+/// 跟一般版共用同一支登入 API，差別在帶 portal: 'edu'：
+/// 後端只允許學生帳號從這裡登入，一般帳號會被擋下並提示改走一般版。
 class EduLoginScreen extends StatefulWidget {
   const EduLoginScreen({Key? key}) : super(key: key);
 
@@ -13,8 +25,7 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
   final Color _textDark = const Color(0xFF2C3E50);
 
   final _formKey = GlobalKey<FormState>();
-  final _schoolCodeCtrl = TextEditingController();
-  final _studentIdCtrl = TextEditingController();
+  final _accountCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
   bool _isPasswordVisible = false;
@@ -22,30 +33,72 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
 
   @override
   void dispose() {
-    _schoolCodeCtrl.dispose();
-    _studentIdCtrl.dispose();
+    _accountCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
-  void _handleLogin() async {
+  int _toInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    return int.tryParse(value.toString()) ?? defaultValue;
+  }
+
+  Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    // 模擬登入等待時間
-    await Future.delayed(const Duration(seconds: 2));
+    final account = _accountCtrl.text.trim();
+    final password = _passwordCtrl.text.trim();
+    final result = await ApiClient.login(account, password, portal: 'edu');
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
+    if (!result.containsKey('user_id')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error']?.toString() ?? '登入失敗，請稍後再試')),
+      );
+      return;
+    }
+
+    final provider = context.read<UserProvider>();
+    provider.setUserId(_toInt(result['user_id']));
+    provider.setEmail(account);
+    // 一定要記下帳號類型，各畫面靠它決定「不限次數、不顯示加購」
+    provider.setAccountType(result['account_type']?.toString());
+    if (result['username'] != null) provider.setUsername(result['username']);
+    if (result['friend_id'] != null) provider.setFriendId(result['friend_id']);
+    if (result['avatar'] != null && result['avatar'].toString().isNotEmpty) {
+      provider.setAvatar(result['avatar']);
+    }
+    provider.setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
+    provider.setJPts(_toInt(result['j_pts']));
+    provider.setDailyScans(_toInt(result['daily_scans']));
+
+    try {
+      await NotificationService.recordLogin();
+    } catch (e) {
+      debugPrint('推播狀態設定失敗: $e');
+    }
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('登入成功！歡迎回到校園模式'),
+      SnackBar(
+        content: Text('登入成功！歡迎回到校園模式，${result['username'] ?? account}'),
         backgroundColor: Colors.green,
       ),
     );
-    // TODO: Navigator.pushReplacement(...) 跳轉到教育版的首頁
+
+    // 跟一般版一樣：還沒選過日文程度的先去選程度
+    final level = result['japanese_level'];
+    if (level != null) {
+      provider.setJapaneseLevel(level.toString());
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } else {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
+    }
   }
 
   @override
@@ -57,7 +110,17 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
+          // 學生登出後會直接被帶到這一頁，底下沒有上一頁；這時返回鍵改成回版本選擇頁
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              );
+            }
+          },
         ),
       ),
       body: Container(
@@ -108,24 +171,17 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    '請輸入學校代碼與學號進行登入',
+                    '請輸入學校提供的帳號與密碼',
                     style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 32),
 
                   // 輸入框區塊
                   _buildTextField(
-                    controller: _schoolCodeCtrl,
-                    hintText: '學校代碼 (School Code)',
-                    icon: Icons.account_balance_outlined,
-                    validatorMsg: '請輸入學校代碼',
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _studentIdCtrl,
-                    hintText: '學號 / 員工編號',
+                    controller: _accountCtrl,
+                    hintText: '帳號',
                     icon: Icons.badge_outlined,
-                    validatorMsg: '請輸入學號',
+                    validatorMsg: '請輸入帳號',
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
@@ -135,7 +191,7 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
                     validatorMsg: '請輸入密碼',
                     isPassword: true,
                   ),
-                  
+
                   // 👉 4. 忘記密碼 (跟普通版一樣移到按鈕右上方)
                   const SizedBox(height: 8),
                   Align(
@@ -143,7 +199,7 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
                     child: TextButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('請聯繫您的學校系統管理員重設密碼')),
+                          const SnackBar(content: Text('請聯繫您的老師或學校系統管理員重設密碼')),
                         );
                       },
                       style: TextButton.styleFrom(
@@ -212,6 +268,9 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
     return TextFormField(
       controller: controller,
       obscureText: isPassword && !_isPasswordVisible,
+      // 帳號框按 Enter 跳到密碼框，密碼框按 Enter 直接登入
+      textInputAction: isPassword ? TextInputAction.done : TextInputAction.next,
+      onFieldSubmitted: isPassword ? (_) => _isLoading ? null : _handleLogin() : null,
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
           return validatorMsg;

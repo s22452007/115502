@@ -48,6 +48,9 @@ class User(db.Model):
     total_active_days = db.Column(db.Integer, default=0)
     total_scans = db.Column(db.Integer, default=0)
     notified_levels = db.Column(db.JSON, default={})
+    # 帳號類型：登入分流與免費判斷的根據，合法值見 AccountType。
+    # 舊資料一律是 'general'，行為完全不變。
+    account_type = db.Column(db.String(20), default='general', nullable=False)
     # 訂閱與小組狀態
     is_premium = db.Column(db.Boolean, default=False)
     subscription_end_date = db.Column(db.DateTime, nullable=True)
@@ -502,3 +505,126 @@ class ChatMessage(db.Model):
     role = db.Column(db.String(10), nullable=False)   # 'user' = 使用者、'ai' = AI 回覆
     content = db.Column(db.Text, nullable=False)      # 保留原始內容（含 [漢字|假名] 標音）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ==========================================
+# 🎓 校園教育版：教室與作業
+# ==========================================
+#
+# 這幾張表是「學生端」與「老師端」共用的介面，兩邊都要照這個欄位定義寫。
+# 設計原則：作業本身只負責「指派」與「收件」，學生實際作答的內容仍然寫進
+# 原本各功能的表（造句 → sentence_practice_record、拍照 → user_photo …），
+# 由 AssignmentSubmission.result_ref_id 指過去。這樣教育版不必把既有功能
+# 重寫一遍，學生的作業成果也會同時出現在他自己的學習紀錄裡。
+
+
+class AccountType:
+    """User.account_type 的合法值。登入分流與免費判斷都看這個欄位。"""
+    GENERAL = 'general'   # 一般自主學習版（維持原本的付費／次數機制）
+    STUDENT = 'student'   # 校園教育版學生（不限次數、沒有任何付費入口）
+    TEACHER = 'teacher'   # 校園教育版老師（由老師端負責，這裡只先定義值）
+
+
+class TaskType:
+    """Assignment.task_type 的合法值，對應四種既有功能。"""
+    SENTENCE = 'sentence'   # 造句挑戰
+    PHOTO = 'photo'         # 拍照學習
+    CHAT = 'chat'           # AI 情境對話
+    ARTICLE = 'article'     # 文章閱讀
+
+    ALL = (SENTENCE, PHOTO, CHAT, ARTICLE)
+
+
+class SubmissionStatus:
+    """AssignmentSubmission.status 的合法值。"""
+    PENDING = 'pending'       # 已指派，學生還沒做
+    SUBMITTED = 'submitted'   # 學生已完成，等老師看
+    GRADED = 'graded'         # 老師已批閱（AI 自動給分的也算）
+
+
+# T_classroom: 學習教室。老師建立，學生用 join_code 加入。
+class Classroom(db.Model):
+    __tablename__ = 'classroom'
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    # 學生加入用的隨機碼。全大寫英數、去掉容易看錯的 0/O/1/I/L。
+    join_code = db.Column(db.String(10), unique=True, nullable=False, index=True)
+    # 老師可以關閉加入（例如開學一週後就不再收人），關閉後既有成員不受影響
+    is_open = db.Column(db.Boolean, default=True)
+    is_archived = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    members = db.relationship('ClassroomMember', backref='classroom', lazy=True,
+                              cascade="all, delete-orphan")
+    assignments = db.relationship('Assignment', backref='classroom', lazy=True,
+                                  cascade="all, delete-orphan")
+
+
+# T_classroom_member: 學生與教室的關聯。一個學生可以同時加入多間教室。
+class ClassroomMember(db.Model):
+    __tablename__ = 'classroom_member'
+    id = db.Column(db.Integer, primary_key=True)
+    classroom_id = db.Column(db.Integer, db.ForeignKey('classroom.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # 老師看到的顯示名稱，預設抄 User.username，但老師可以改成座號或真名
+    display_name = db.Column(db.String(50), nullable=True)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # 同一個學生在同一間教室只會有一筆
+    __table_args__ = (
+        db.UniqueConstraint('classroom_id', 'student_id', name='uq_classroom_student'),
+    )
+
+
+# T_assignment: 老師出的題目
+class Assignment(db.Model):
+    __tablename__ = 'assignment'
+    id = db.Column(db.Integer, primary_key=True)
+    classroom_id = db.Column(db.Integer, db.ForeignKey('classroom.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    instructions = db.Column(db.Text, nullable=True)      # 老師給學生的說明
+    task_type = db.Column(db.String(20), nullable=False)  # TaskType 其中之一
+
+    # 各題型的參數，用 JSON 存，避免四種題型要開四張表。欄位約定：
+    #   sentence: {"grammar_point": "～はいけません", "required_vocabs": ["犬"], "pass_score": 60}
+    #   photo:    {"theme": "廚房裡的東西", "min_vocab_count": 3}
+    #   chat:     {"topic": "在餐廳點餐", "dialect_id": 1, "min_turns": 6}
+    #   article:  {"article_id": 101}
+    config = db.Column(db.JSON, nullable=True)
+
+    due_at = db.Column(db.DateTime, nullable=True)        # 不設就是沒有截止日
+    is_published = db.Column(db.Boolean, default=True)    # 老師可以先存草稿
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    submissions = db.relationship('AssignmentSubmission', backref='assignment',
+                                  lazy=True, cascade="all, delete-orphan")
+
+
+# T_assignment_submission: 學生的作業繳交紀錄
+class AssignmentSubmission(db.Model):
+    __tablename__ = 'assignment_submission'
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default=SubmissionStatus.PENDING)
+
+    # 指向學生實際作答的那筆紀錄，對應的表由 assignment.task_type 決定：
+    #   sentence → sentence_practice_record.id
+    #   photo    → user_photo.id
+    #   chat     → chat_session.id
+    #   article  → article_progress.id
+    # 不用 ForeignKey 是因為要指向四張不同的表。
+    result_ref_id = db.Column(db.Integer, nullable=True)
+
+    score = db.Column(db.Integer, nullable=True)          # AI 或老師給的分數
+    teacher_comment = db.Column(db.Text, nullable=True)
+    attempt_count = db.Column(db.Integer, default=0)      # 重做次數，允許學生再挑戰
+    submitted_at = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 一個學生對一份作業只有一筆繳交紀錄，重做就更新同一筆並累加 attempt_count
+    __table_args__ = (
+        db.UniqueConstraint('assignment_id', 'student_id', name='uq_assignment_student'),
+    )

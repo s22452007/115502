@@ -869,20 +869,26 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       body: Column(
         children: [
           Builder(builder: (_) {
+            // 教育版學生不限次數：只顯示今天對話幾次，不顯示上限，也不會變紅
+            final isEduStudent = context.watch<UserProvider>().isEduStudent;
             final dailyRemaining = (_aiMax - _aiUsed).clamp(0, _aiMax);
             final effectiveRemaining = dailyRemaining + _aiExtra;
-            final countColor = effectiveRemaining <= 0
-                ? Colors.red.shade600
-                : effectiveRemaining == 1
-                    ? Colors.orange.shade700
-                    : AppColors.primary;
+            final countColor = isEduStudent
+                ? AppColors.primary
+                : effectiveRemaining <= 0
+                    ? Colors.red.shade600
+                    : effectiveRemaining == 1
+                        ? Colors.orange.shade700
+                        : AppColors.primary;
             final extraText = _aiExtra > 0 ? ' 額外$_aiExtra次' : '';
             return Container(
               width: double.infinity,
               color: AppColors.primaryLighter.withValues(alpha: 0.2),
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: Text(
-                '今日對話：$_aiUsed / $_aiMax 次$extraText',
+                isEduStudent
+                    ? '今日對話：$_aiUsed 次（不限次數）'
+                    : '今日對話：$_aiUsed / $_aiMax 次$extraText',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: countColor, fontWeight: FontWeight.bold),
               ),

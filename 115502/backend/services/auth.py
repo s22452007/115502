@@ -14,7 +14,7 @@ from utils.group_helper import add_group_progress_and_check_reward
 from models import (
     User, UserAchievement, Achievement,
     UserVocab, UserFolder, FriendRequest, Friendship,
-    StudyGroup, GroupMember, GroupInvite
+    StudyGroup, GroupMember, GroupInvite, AccountType
 )
 
 # 建立 auth 的 Blueprint
@@ -33,20 +33,34 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "這個 Email 已經註冊過囉！"}), 400
 
+    # 帳號類型由前端在註冊時指定：一般版送 'general'（或不送），
+    # 校園教育版的註冊畫面送 'student'。
+    # 只接受這兩種 —— 'teacher' 不能由使用者自己選，必須由老師端後台建立，
+    # 否則任何人都能把自己變成老師去建教室、看學生資料。
+    account_type = (data.get('account_type') or AccountType.GENERAL).strip().lower()
+    if account_type not in (AccountType.GENERAL, AccountType.STUDENT):
+        return jsonify({"error": "帳號類型不正確"}), 400
+
     # 將密碼加密後，存入資料庫
     hashed_pw = generate_password_hash(password)
-    
+
     # 在建立新使用者時，給他一組隨機交友 ID
     new_friend_id = generate_friend_id()
-    new_user = User(email=email, password_hash=hashed_pw, friend_id=new_friend_id)
-    
+    new_user = User(
+        email=email,
+        password_hash=hashed_pw,
+        friend_id=new_friend_id,
+        account_type=account_type,
+    )
+
     db.session.add(new_user)
     db.session.commit()
 
     return jsonify({
-        "message": "註冊成功！", 
+        "message": "註冊成功！",
         "user_id": new_user.id,
-        "friend_id": new_friend_id  
+        "friend_id": new_friend_id,
+        "account_type": account_type,
     }), 201
 
 @auth_bp.route('/login', methods=['POST'])
@@ -77,6 +91,24 @@ def login():
 
     # 如果帳號密碼正確
     if pw_match:
+
+        # 登入入口分流：校園教育版入口只收學生帳號，一般版入口只收一般帳號。
+        # 放在密碼驗證之後，避免用錯誤密碼就能試出某個帳號是哪一種類型。
+        # portal 沒帶時不檢查，保留給舊版前端與其他呼叫端。
+        portal = (data.get('portal') or '').strip().lower()
+        account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
+        if portal == 'edu' and account_type != AccountType.STUDENT:
+            return jsonify({
+                "status": "wrong_portal",
+                "error": "這不是校園教育版的學生帳號，請改從「一般自主學習」登入",
+            }), 403
+        if portal == 'general' and account_type != AccountType.GENERAL:
+            return jsonify({
+                "status": "wrong_portal",
+                "error": ("這是校園教育版的學生帳號，請改從「校園教育版」登入"
+                          if account_type == AccountType.STUDENT
+                          else "這個帳號不能從一般版登入"),
+            }), 403
 
         # 防呆：如果舊玩家沒有 friend_id，就在登入時幫他補發一個
         if not user.friend_id:
@@ -141,6 +173,8 @@ def login():
             "friend_id": user.friend_id,
             "username": user.username,
             "is_premium": bool(getattr(user, 'is_premium', False)),
+            # 前端靠這個欄位決定進一般版還是校園教育版
+            "account_type": getattr(user, 'account_type', 'general'),
             "subscription_end_date": end_date.isoformat() if end_date else None,
             "auto_renew": bool(getattr(user, 'auto_renew', False)),
         }), 200
@@ -242,6 +276,8 @@ def google_login():
         "friend_id": user.friend_id,
         "username": user.username,
         "is_premium": bool(getattr(user, 'is_premium', False)),
+        # 前端靠這個欄位決定進一般版還是校園教育版
+        "account_type": getattr(user, 'account_type', 'general'),
         "subscription_end_date": end_date.isoformat() if end_date else None,
         "auto_renew": bool(getattr(user, 'auto_renew', False)),
     }), 200

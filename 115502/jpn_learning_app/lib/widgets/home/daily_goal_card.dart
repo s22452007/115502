@@ -118,6 +118,7 @@ class DailyGoalCard extends StatelessWidget {
               userProvider.photoDailyLimit,
               userProvider.photoExtraCount,
             ),
+            unlimited: userProvider.isEduStudent,
           ),
           const SizedBox(height: 10),
           _TaskRow(
@@ -129,6 +130,7 @@ class DailyGoalCard extends StatelessWidget {
               userProvider.aiDailyLimit,
               userProvider.aiExtraCount,
             ),
+            unlimited: userProvider.isEduStudent,
           ),
           if (!claimed) ...[
             const SizedBox(height: 16),
@@ -181,16 +183,20 @@ class _TaskRow extends StatelessWidget {
   final bool done;
   final int remaining;
 
+  /// 教育版學生不限次數：標籤顯示「不限次數」，也永遠不會出現紅色的「已用完」
+  final bool unlimited;
+
   const _TaskRow({
     required this.icon,
     required this.label,
     required this.done,
     required this.remaining,
+    this.unlimited = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final usedUp = remaining <= 0;
+    final usedUp = !unlimited && remaining <= 0;
     return Row(
       children: [
         Container(
@@ -226,7 +232,7 @@ class _TaskRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            usedUp ? '已用完' : '剩 $remaining 次',
+            usedUp ? '已用完' : (unlimited ? '不限次數' : '剩 $remaining 次'),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 12,

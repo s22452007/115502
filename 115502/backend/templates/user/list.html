@@ -163,6 +163,10 @@
             <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
             <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
             <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
             <li class="sidebar-section-title">互動</li>
             <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
             <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
@@ -170,6 +174,7 @@
             <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
         </ul>
     </aside>
+    <script src="{{ url_for('static', filename='admin/sidebar.js') }}"></script>
 
     <main class="main-content">
         <div class="page-header">
@@ -195,12 +200,11 @@
         {% for u in users %}
         <div class="user-card">
             <div class="card-top">
-                {% if u.avatar %}
-                {% if u.avatar.startswith('http') or u.avatar.startswith('data:') %}
-                <img src="{{ u.avatar }}" class="avatar" style="object-fit:cover;">
-                {% else %}
-                <img src="data:image/jpeg;base64,{{ u.avatar }}" class="avatar" style="object-fit:cover;">
-                {% endif %}
+                {% set av = avatar_info(u.avatar) %}
+                {% if av and av.type == 'image' %}
+                <img src="{{ av.src }}" class="avatar" style="object-fit:cover;">
+                {% elif av %}
+                <div class="avatar" style="background:{{ av.bg }}; font-size:1.7rem;">{{ av.emoji }}</div>
                 {% else %}
                 <div class="avatar">{{ (u.username or u.email)[0]|upper }}</div>
                 {% endif %}
@@ -209,6 +213,11 @@
                         {{ u.username or '未設定暱稱' }}
                         {% if u.japanese_level %}
                         <span class="badge-level">{{ u.japanese_level }}</span>
+                        {% endif %}
+                        {% if u.account_type == 'student' %}
+                        <span class="badge-level" style="background:#e3eefc;color:#2f5f9e;"><i class="bi bi-mortarboard-fill"></i> 教育版學生</span>
+                        {% elif u.account_type == 'teacher' %}
+                        <span class="badge-level" style="background:#e3eefc;color:#2f5f9e;"><i class="bi bi-person-video3"></i> 教育版老師</span>
                         {% endif %}
                         {% if u.is_premium or u.trial_used %}
                             {% set tip_parts = [] %}

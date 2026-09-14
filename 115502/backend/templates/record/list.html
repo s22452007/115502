@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 造句與朗讀紀錄</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 0; overflow-x: hidden; }
+        .body-area { padding: 32px 48px; }
+        .page-title-box { margin-bottom: 24px; }
+        .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
+
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 22px; }
+        .panel-header { padding: 14px 20px; font-weight: bold; font-size: 0.95rem; color: white; background: var(--green-dark); letter-spacing: 0.5px; }
+        .panel-header.light { background: white; color: #333; border-bottom: 1px solid #f0f0f0; }
+        .table > :not(caption) > * > * { padding: 13px 18px; border-bottom-color: #f4f7f5; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.88rem; white-space: nowrap; }
+
+        .filter-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+        .filter-tab { display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 16px; border-radius: 999px; background: white; border: 1px solid #e3e8e4; color: #666; text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
+        .filter-tab:hover { border-color: var(--green-mid); color: var(--green-accent); }
+        .filter-tab.active { background: var(--green-accent); border-color: var(--green-accent); color: white; font-weight: bold; }
+        .filter-tab .count { font-size: 0.78rem; opacity: 0.75; }
+        .search-input { border-radius: 8px; border: 1px solid #ddd; padding: 0.45rem 1rem; font-size: 0.9rem; width: 240px; }
+
+        .sub { font-size: 0.76rem; color: #aaa; margin-top: 3px; }
+        .user-link { color: #333; text-decoration: none; font-weight: 600; }
+        .user-link:hover { color: var(--green-accent); }
+        .chip { display: inline-block; padding: 2px 9px; border-radius: 50px; font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+        .chip-green { background: var(--green-light); color: var(--green-dark); }
+        .chip-blue  { background: #e8f4fd; color: #0a6bb5; }
+        .chip-red   { background: #fde8e8; color: #b50a0a; }
+        .chip-gold  { background: #fff3cd; color: #856404; }
+        .chip-grey  { background: #eee; color: #888; }
+        .vocab-chip { display: inline-block; font-size: 0.72rem; padding: 1px 7px; border-radius: 6px; background: #f1f3f1; color: #777; margin: 3px 3px 0 0; }
+        .jp { font-size: 0.95rem; color: #333; }
+        .fb-row > td { background: #fafbfa; }
+        .fb-box { font-size: 0.86rem; line-height: 1.7; }
+        .fb-box .label { color: #999; font-size: 0.76rem; font-weight: 700; margin-right: 6px; }
+        .summary-note { font-size: 0.8rem; color: #999; padding: 12px 18px 0; }
+        .pager { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; font-size: 0.85rem; color: #888; }
+    </style>
+</head>
+<body>
+{% macro score_chip(score) -%}
+    {%- set s = score or 0 -%}
+    <span class="chip {{ 'chip-green' if s >= 80 else ('chip-blue' if s >= 60 else 'chip-red') }}">{{ s }} 分</span>
+{%- endmacro %}
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">使用者</li>
+            <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            {% if session.get('role') == 'super_admin' %}
+            <li class="sidebar-section-title">方案管理</li>
+            <li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
+            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>
+            {% endif %}
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list" class="active"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
+            <li class="sidebar-section-title">互動</li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
+            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+    <script src="{{ url_for('static', filename='admin/sidebar.js') }}"></script>
+
+    <main class="main-content">
+        <div class="body-area">
+
+            <div class="page-title-box">
+                <h3 class="page-title"><i class="bi bi-clipboard-data me-2"></i>造句與朗讀紀錄</h3>
+                <div class="text-muted small mt-1">查看使用者的造句批改結果與文章朗讀成績</div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="filter-tabs">
+                    <a class="filter-tab {{ 'active' if tab == 'sentence' }}" href="{{ url_for('record_list', tab='sentence') }}">
+                        造句紀錄 <span class="count">{{ tab_counts.get('sentence', 0) }} 筆</span>
+                    </a>
+                    <a class="filter-tab {{ 'active' if tab == 'reading' }}" href="{{ url_for('record_list', tab='reading') }}">
+                        朗讀成績 <span class="count">{{ tab_counts.get('reading', 0) }} 筆</span>
+                    </a>
+                </div>
+                <form method="GET" action="{{ url_for('record_list') }}" class="d-flex gap-2">
+                    <input type="hidden" name="tab" value="{{ tab }}">
+                    <input type="text" name="q" class="search-input" value="{{ keyword }}"
+                           placeholder="{{ '搜尋使用者或文法...' if tab == 'sentence' else '搜尋使用者或文章標題...' }}">
+                    <button class="btn btn-outline-secondary" style="border-radius:8px;" type="submit"><i class="bi bi-search"></i></button>
+                    {% if keyword %}<a class="btn btn-outline-secondary" style="border-radius:8px;" href="{{ url_for('record_list', tab=tab) }}">清除</a>{% endif %}
+                </form>
+            </div>
+
+            {% if tab == 'sentence' %}
+
+            {% if summary %}
+            <div class="panel">
+                <div class="panel-header light"><i class="bi bi-bar-chart-line me-1" style="color:var(--green-accent);"></i> 各文法練習表現</div>
+                <div class="summary-note">平均分數低、及格率低的文法，代表多數使用者在這裡卡關。</div>
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead><tr><th>文法</th><th>練習次數</th><th>平均分數</th><th>及格率（60 分以上）</th></tr></thead>
+                        <tbody>
+                            {% for s in summary %}
+                            <tr>
+                                <td class="jp">{{ s.grammar_point }}</td>
+                                <td>{{ s.times }}</td>
+                                <td>{{ s.avg_score }}</td>
+                                <td>{{ (s.pass_rate or 0) | int }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="panel">
+                <div class="panel-header"><i class="bi bi-pencil me-1"></i> 造句紀錄{% if keyword %}（搜尋：{{ keyword }}，共 {{ total }} 筆）{% endif %}</div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr><th>時間</th><th>使用者</th><th>文法</th><th>使用者造句</th><th>分數</th><th>點數</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            {% for r in records %}
+                            <tr>
+                                <td style="white-space:nowrap; color:#999; font-size:0.85rem;">{{ r.created_at }}</td>
+                                <td><a class="user-link" href="/user/{{ r.user_id }}">{{ r.username or (r.email or '已刪除的使用者').split('@')[0] }}</a></td>
+                                <td class="jp" style="white-space:nowrap;">{{ r.grammar_point }}</td>
+                                <td>
+                                    <div class="jp">{{ r.user_sentence }}</div>
+                                    {% for v in r.vocabs %}<span class="vocab-chip">{{ v }}</span>{% endfor %}
+                                </td>
+                                <td>{{ score_chip(r.score) }}</td>
+                                <td style="white-space:nowrap;">
+                                    +{{ r.points_earned or 0 }}
+                                    <div class="sub">{{ '已領取' if r.is_claimed else '未領取' }}</div>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px; white-space:nowrap;" data-bs-toggle="collapse" data-bs-target="#fb{{ r.id }}">
+                                        AI 批改
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="collapse fb-row" id="fb{{ r.id }}">
+                                <td colspan="7">
+                                    <div class="fb-box">
+                                        <div><span class="label">修正後</span><span class="jp">{{ r.corrected_sentence or '—' }}</span></div>
+                                        <div style="white-space: pre-wrap;"><span class="label">評語</span>{{ r.ai_feedback or '—' }}</div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="text-center py-5 text-muted">目前沒有造句紀錄。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if pages > 1 %}
+                <div class="pager">
+                    <span>第 {{ page }} / {{ pages }} 頁</span>
+                    <span class="d-flex gap-2">
+                        {% if page > 1 %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('record_list', tab=tab, q=keyword, page=page-1) }}">上一頁</a>{% endif %}
+                        {% if page < pages %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('record_list', tab=tab, q=keyword, page=page+1) }}">下一頁</a>{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% else %}
+
+            {% if summary %}
+            <div class="panel">
+                <div class="panel-header light"><i class="bi bi-arrow-repeat me-1" style="color:#c9a227;"></i> 同一篇文章重複測驗 {{ repeat_threshold }} 次以上</div>
+                <div class="summary-note">朗讀成績每次送出都會重新發點數，而且沒有次數上限。累計點數特別高的組合，可以留意是否在刷點。</div>
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead><tr><th>使用者</th><th>文章</th><th>測驗次數</th><th>累計獲得點數</th><th>最高分</th></tr></thead>
+                        <tbody>
+                            {% for s in summary %}
+                            <tr>
+                                <td><a class="user-link" href="/user/{{ s.user_id }}">{{ s.username or (s.email or '已刪除的使用者').split('@')[0] }}</a></td>
+                                <td class="jp">{{ (s.title or '已刪除的文章') | striptags }}</td>
+                                <td>{{ s.times }} 次</td>
+                                <td>{{ s.total_points or 0 }} 點</td>
+                                <td>{{ score_chip(s.best_score) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="panel">
+                <div class="panel-header"><i class="bi bi-mic me-1"></i> 朗讀成績{% if keyword %}（搜尋：{{ keyword }}，共 {{ total }} 筆）{% endif %}</div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr><th>時間</th><th>使用者</th><th>文章</th><th>分數</th><th>獲得點數</th><th>同篇第幾次</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for r in records %}
+                            <tr>
+                                <td style="white-space:nowrap; color:#999; font-size:0.85rem;">{{ r.created_at }}</td>
+                                <td><a class="user-link" href="/user/{{ r.user_id }}">{{ r.username or (r.email or '已刪除的使用者').split('@')[0] }}</a></td>
+                                <td>
+                                    {% if r.level %}<span class="chip chip-grey me-1">{{ r.level }}</span>{% endif %}
+                                    <span class="jp">{{ (r.title or '已刪除的文章') | striptags }}</span>
+                                </td>
+                                <td>{{ score_chip(r.score) }}</td>
+                                <td>+{{ r.points_earned or 0 }}</td>
+                                <td>
+                                    {% if r.attempt_no >= repeat_threshold %}
+                                    <span class="chip chip-gold">第 {{ r.attempt_no }} 次</span>
+                                    {% else %}
+                                    <span class="text-muted">第 {{ r.attempt_no }} 次</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-center py-5 text-muted">目前沒有朗讀成績紀錄。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if pages > 1 %}
+                <div class="pager">
+                    <span>第 {{ page }} / {{ pages }} 頁</span>
+                    <span class="d-flex gap-2">
+                        {% if page > 1 %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('record_list', tab=tab, q=keyword, page=page-1) }}">上一頁</a>{% endif %}
+                        {% if page < pages %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('record_list', tab=tab, q=keyword, page=page+1) }}">下一頁</a>{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% endif %}
+
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -120,8 +120,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       return;
     }
 
-    // 判斷是否超過免費次數，且尚未同意支付點數
-    if (_todayCount >= _maxFreeCount && !payWithPoints) {
+    // 判斷是否超過免費次數，且尚未同意支付點數。
+    // 教育版學生沒有每日上限（後端也不會擋），前端不能先把他擋下來。
+    final isEduStudent = context.read<UserProvider>().isEduStudent;
+    if (!isEduStudent && _todayCount >= _maxFreeCount && !payWithPoints) {
       _showOutOfQuotaDialog();
       return;
     }
@@ -406,24 +408,31 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
         centerTitle: true,
         actions: [
           if (!_isLoadingTask)
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _todayCount >= _maxFreeCount ? Colors.red.withOpacity(0.1) : AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '免費: ${_todayCount < _maxFreeCount ? _maxFreeCount - _todayCount : 0}/$_maxFreeCount',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _todayCount >= _maxFreeCount ? Colors.red : AppColors.primary,
+            Builder(builder: (context) {
+              // 教育版學生沒有每日上限：改顯示「不限次數」，也不會變紅
+              final isEduStudent = context.watch<UserProvider>().isEduStudent;
+              final outOfQuota = !isEduStudent && _todayCount >= _maxFreeCount;
+              return Center(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: outOfQuota ? Colors.red.withOpacity(0.1) : AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    isEduStudent
+                        ? '不限次數'
+                        : '免費: ${_todayCount < _maxFreeCount ? _maxFreeCount - _todayCount : 0}/$_maxFreeCount',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: outOfQuota ? Colors.red : AppColors.primary,
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
           IconButton(
             icon: const Icon(Icons.history_rounded, color: AppColors.primary),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SentenceHistoryScreen())),

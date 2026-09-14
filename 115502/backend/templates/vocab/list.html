@@ -80,6 +80,10 @@
             <li><a href="/vocab/list" class="active"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
             <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
             <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
             <li class="sidebar-section-title">互動</li>
             <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
             <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
@@ -87,6 +91,7 @@
             <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
         </ul>
     </aside>
+    <script src="{{ url_for('static', filename='admin/sidebar.js') }}"></script>
 
     <main class="main-content">
         <div class="body-area">

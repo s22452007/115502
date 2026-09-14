@@ -24,6 +24,16 @@ class UserProvider extends ChangeNotifier {
   bool _isPremium = false;
   bool get isPremium => _isPremium;
 
+  // 帳號類型：'general'（一般版）、'student'（校園教育版學生）。
+  // 教育版學生不限次數、沒有付費入口，各畫面靠 isEduStudent 決定要不要顯示次數與加購。
+  String _accountType = 'general';
+  String get accountType => _accountType;
+  bool get isEduStudent => _accountType == 'student';
+  void setAccountType(String? type) {
+    _accountType = (type == null || type.isEmpty) ? 'general' : type;
+    notifyListeners();
+  }
+
   bool _trialUsed = false;
   bool get trialUsed => _trialUsed;
 
@@ -225,6 +235,7 @@ class UserProvider extends ChangeNotifier {
 
   void logout() {
     _userId = null;
+    _accountType = 'general';
     _email = null;
     _username = null;
     _japaneseLevel = '';

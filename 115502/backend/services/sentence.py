@@ -13,6 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models import db, User, SentencePracticeRecord
 from utils import gemini_client
 from utils.group_helper import add_group_progress_and_check_reward
+from utils.account_helper import is_payment_free
 
 sentence_bp = Blueprint('sentence', __name__)
 
@@ -143,13 +144,13 @@ def evaluate_sentence():
     except Exception as e:
         print(f"⚠️ 無法計算今日次數，跳過檢查: {e}")
 
-    # 檢查免費次數與扣點機制
-    if today_count >= 5:
+    # 檢查免費次數與扣點機制。教育版學生完全跳過：不限次數也不扣點。
+    if today_count >= 5 and not is_payment_free(user):
         if not pay_with_points:
             return jsonify({"status": "quota_exceeded", "error": "今日免費次數已用盡"}), 400
         if (user.j_pts or 0) < 10:
             return jsonify({"status": "insufficient_points", "error": "點數不足"}), 400
-        
+
         # 確定支付，立刻扣除 10 點
         try:
             user.j_pts -= 10

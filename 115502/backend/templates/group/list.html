@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 學習小組總覽</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 0; overflow-x: hidden; }
+        .body-area { padding: 32px 48px; }
+        .page-title-box { margin-bottom: 24px; }
+        .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
+
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .panel-header { padding: 14px 20px; font-weight: bold; font-size: 0.95rem; color: white; background: var(--green-dark); letter-spacing: 0.5px; }
+        .table > :not(caption) > * > * { padding: 14px 18px; border-bottom-color: #f4f7f5; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.88rem; white-space: nowrap; }
+
+        .filter-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+        .filter-tab { display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 16px; border-radius: 999px; background: white; border: 1px solid #e3e8e4; color: #666; text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
+        .filter-tab:hover { border-color: var(--green-mid); color: var(--green-accent); }
+        .filter-tab.active { background: var(--green-accent); border-color: var(--green-accent); color: white; font-weight: bold; }
+        .filter-tab .count { font-size: 0.78rem; opacity: 0.75; }
+
+        .sub { font-size: 0.76rem; color: #aaa; margin-top: 3px; }
+        .bar { height: 8px; width: 150px; background: #eef2ef; border-radius: 99px; overflow: hidden; }
+        .bar > span { display: block; height: 100%; background: var(--green-accent); }
+        .bar.done > span { background: #c9a227; }
+        .bar.expired > span { background: #b0b7b2; }
+
+        .chip { display: inline-block; padding: 2px 9px; border-radius: 50px; font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+        .chip-green { background: var(--green-light); color: var(--green-dark); }
+        .chip-gold  { background: #fff3cd; color: #856404; }
+        .chip-grey  { background: #eee; color: #888; }
+        .chip-red   { background: #fde8e8; color: #b50a0a; }
+
+        .member-row > td { background: #fafbfa; }
+        .member-table { width: 100%; font-size: 0.85rem; }
+        .member-table th { color: #999; font-weight: 600; padding: 6px 10px; border-bottom: 1px solid #eee; }
+        .member-table td { padding: 8px 10px; border-bottom: 1px solid #f1f3f1; }
+        .member-table a { color: #333; text-decoration: none; font-weight: 600; }
+        .member-table a:hover { color: var(--green-accent); }
+        .rule-note { font-size: 0.8rem; color: #999; margin-bottom: 14px; }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">使用者</li>
+            <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            {% if session.get('role') == 'super_admin' %}
+            <li class="sidebar-section-title">方案管理</li>
+            <li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
+            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>
+            {% endif %}
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list" class="active"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
+            <li class="sidebar-section-title">互動</li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
+            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+    <script src="{{ url_for('static', filename='admin/sidebar.js') }}"></script>
+
+    <main class="main-content">
+        <div class="body-area">
+
+            <div class="page-title-box">
+                <h3 class="page-title"><i class="bi bi-people-fill me-2"></i>學習小組總覽</h3>
+                <div class="text-muted small mt-1">查看所有小組的挑戰目標、進度、押金與成員貢獻</div>
+            </div>
+
+            <div class="filter-tabs">
+                <a class="filter-tab {{ 'active' if not status_filter }}" href="{{ url_for('group_list') }}">全部 <span class="count">{{ total }} 組</span></a>
+                {% for key in ['active', 'achieved', 'expired'] %}
+                <a class="filter-tab {{ 'active' if status_filter == key }}" href="{{ url_for('group_list', status=key) }}">
+                    {{ status_labels[key] }} <span class="count">{{ counts[key] }} 組</span>
+                </a>
+                {% endfor %}
+            </div>
+
+            <div class="rule-note">
+                <i class="bi bi-info-circle me-1"></i>
+                小組為一週挑戰制，建立當週的週日結束。結算不是排程自動跑的，要等成員下次打開小組頁才會執行：達標就發獎並退押金，沒達標就沒收押金，接著解散小組。
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="bi bi-list-ul me-1"></i> 小組清單{% if status_filter %}（{{ status_labels[status_filter] }}）{% endif %}
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>小組</th>
+                                <th>挑戰目標</th>
+                                <th>進度</th>
+                                <th>成員</th>
+                                <th>押金</th>
+                                <th>狀態</th>
+                                <th>挑戰結束日</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for g in groups %}
+                            {% set reached = (g.current_progress or 0) >= (g.goal_target or 0) %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold" style="color:#333;">{{ g.name or '未命名小組' }}</div>
+                                    <div class="sub">#{{ g.id }} · 建立於 {{ g.created_at or '—' }}</div>
+                                </td>
+                                <td>{{ g.goal_label }} {{ g.goal_target or 0 }} 次</td>
+                                <td>
+                                    <div class="bar {{ 'done' if g.status == 'achieved' }} {{ 'expired' if g.status == 'expired' }}"><span style="width: {{ g.percent }}%;"></span></div>
+                                    <div class="sub">{{ g.current_progress or 0 }} / {{ g.goal_target or 0 }}（{{ g.percent }}%）</div>
+                                </td>
+                                <td>
+                                    {{ g.members | length }} 人
+                                    {% if g.pending_invites %}<div class="sub">邀請中 {{ g.pending_invites }} 人</div>{% endif %}
+                                </td>
+                                <td>{% if g.deposit_total %}{{ g.deposit_total }} 點{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>
+                                    {% if g.status == 'active' %}
+                                        <span class="chip chip-green">進行中</span>
+                                    {% elif g.status == 'achieved' %}
+                                        <span class="chip chip-gold">已達標</span>
+                                    {% else %}
+                                        <span class="chip chip-grey">已過週待結算</span>
+                                        <div class="sub">{{ '達標，結算時會發獎' if reached else '未達標，押金將被沒收' }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ g.week_end }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px; white-space:nowrap;" data-bs-toggle="collapse" data-bs-target="#members{{ g.id }}">
+                                        <i class="bi bi-chevron-down"></i> 成員
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="collapse member-row" id="members{{ g.id }}">
+                                <td colspan="8">
+                                    {% if g.members %}
+                                    <table class="member-table">
+                                        <thead>
+                                            <tr><th>成員</th><th>等級</th><th>本週貢獻（{{ g.goal_label }}）</th><th>押金</th><th>獎勵</th><th>加入時間</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for m in g.members %}
+                                            <tr>
+                                                <td>
+                                                    <a href="/user/{{ m.user_id }}">{{ m.username or (m.email or '已刪除的使用者').split('@')[0] }}</a>
+                                                    <div class="sub">{{ m.email or '' }}</div>
+                                                </td>
+                                                <td>{{ m.japanese_level or '—' }}</td>
+                                                <td>{{ m.contribution if m.contribution is not none else '—' }}</td>
+                                                <td>{% if m.deposit %}{{ m.deposit }} 點{% else %}<span class="text-muted">免費額度</span>{% endif %}</td>
+                                                <td>{% if m.has_claimed %}<span class="chip chip-gold">已領獎</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                                <td style="color:#aaa;">{{ m.joined_at or '—' }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    {% else %}
+                                    <div class="text-muted small py-2">這個小組目前沒有成員。</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="8" class="text-center py-5 text-muted">目前沒有符合條件的小組。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -364,3 +364,111 @@ def submit():
 
     payload, code = submit_assignment(int(user_id), int(assignment_id), int(result_ref_id))
     return jsonify(payload), code
+
+
+@student_assignment_bp.route('/submit_quiz', methods=['POST'])
+def submit_quiz():
+    """學生提交文章閱讀作業的測驗答案（選擇題 / 是非題），系統自動閱卷計分。"""
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    assignment_id = data.get('assignment_id')
+    answers = data.get('answers') or {}  # { "0": "A", "1": "O" } 或 [ "A", "O" ]
+
+    if not user_id or not assignment_id:
+        return jsonify({"error": "缺少 user_id 或 assignment_id"}), 400
+
+    assignment, err, code = _visible_assignment(assignment_id, user_id)
+    if err:
+        return jsonify({"error": err}), code
+
+    config = assignment.config or {}
+    questions = config.get('questions') or []
+    if not questions:
+        return jsonify({"error": "這份作業並未包含測驗題目"}), 400
+
+    # 自動核對答案
+    total_q = len(questions)
+    correct_count = 0
+    feedback_details = []
+
+    for idx, q in enumerate(questions):
+        # 取得學生針對該題的作答
+        user_ans = answers.get(str(idx)) if isinstance(answers, dict) else (answers[idx] if idx < len(answers) else None)
+        user_ans_str = str(user_ans).strip().upper() if user_ans is not None else ''
+        expected_ans_str = str(q.get('answer')).strip().upper()
+
+        is_correct = (user_ans_str == expected_ans_str)
+        if is_correct:
+            correct_count += 1
+
+        feedback_details.append({
+            "question_index": idx,
+            "type": q.get('type'),
+            "question": q.get('question'),
+            "your_answer": user_ans,
+            "correct_answer": q.get('answer'),
+            "is_correct": is_correct,
+            "explanation": q.get('explanation') or ''
+        })
+
+    score = int(round((correct_count / total_q) * 100)) if total_q > 0 else 100
+
+    # 確保有 ArticleProgress 紀錄
+    article_id = config.get('article_id')
+    progress = None
+    if article_id:
+        progress = ArticleProgress.query.filter_by(user_id=user_id, article_id=int(article_id)).first()
+        if not progress:
+            progress = ArticleProgress(
+                user_id=user_id,
+                article_id=int(article_id),
+                is_completed=True,
+                score=score,
+                completed_at=datetime.utcnow()
+            )
+            db.session.add(progress)
+            db.session.flush()
+        else:
+            progress.is_completed = True
+            progress.score = max(progress.score or 0, score)
+            progress.completed_at = datetime.utcnow()
+
+    # 記錄或更新繳交紀錄
+    submission = AssignmentSubmission.query.filter_by(
+        assignment_id=assignment.id, student_id=user_id
+    ).first()
+
+    now = datetime.utcnow()
+    if not submission:
+        submission = AssignmentSubmission(
+            assignment_id=assignment.id,
+            student_id=user_id,
+            result_ref_id=progress.id if progress else None,
+            score=score,
+            status=SubmissionStatus.GRADED,
+            attempt_count=1,
+            submitted_at=now,
+            updated_at=now
+        )
+        db.session.add(submission)
+    else:
+        submission.attempt_count = (submission.attempt_count or 0) + 1
+        # 保留較高分或最新作答
+        if submission.score is None or score >= submission.score:
+            submission.score = score
+            submission.result_ref_id = progress.id if progress else submission.result_ref_id
+            submission.submitted_at = now
+        submission.status = SubmissionStatus.GRADED
+        submission.updated_at = now
+
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "score": score,
+        "correct_count": correct_count,
+        "total_questions": total_q,
+        "results": feedback_details,
+        "message": f"測驗完成！答對 {correct_count}/{total_q} 題，得分：{score} 分"
+    }), 200
+

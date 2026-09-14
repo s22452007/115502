@@ -6,6 +6,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
+import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
 
 /// 校園教育版登入頁。
 ///
@@ -109,7 +110,17 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
+          // 學生登出後會直接被帶到這一頁，底下沒有上一頁；這時返回鍵改成回版本選擇頁
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              );
+            }
+          },
         ),
       ),
       body: Container(

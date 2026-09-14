@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/profile/profile_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/auth/edu_login_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
@@ -130,6 +131,8 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // 教育版學生沒有付費機制，不顯示商城入口
+                  if (!userProvider.isEduStudent)
                   _buildPillItem(
                     context,
                     Icons.storefront,
@@ -170,10 +173,15 @@ class AppDrawer extends StatelessWidget {
                         ? Colors.blue.withOpacity(0.1)
                         : Colors.redAccent.withOpacity(0.1),
                     onTap: () {
+                      // logout() 會把帳號類型重設，要先記下來：學生回教育版登入頁，
+                      // 帶去一般版登入頁的話，一般版入口不收學生帳號
+                      final wasEduStudent = userProvider.isEduStudent;
                       if (!isGuest) userProvider.logout();
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => wasEduStudent ? const EduLoginScreen() : const LoginScreen(),
+                        ),
                         (r) => false,
                       );
                     },

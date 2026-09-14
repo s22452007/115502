@@ -22,6 +22,7 @@ import 'photo_folder_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/history_menu_screen.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/auth/edu_login_screen.dart';
 import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
 import 'badge_library_screen.dart';
 import 'upgrade_test_screen.dart';
@@ -319,7 +320,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  if (!isGuest)
+                  // 教育版學生沒有付費機制：不顯示會員卡（沒訂閱時點進去是商城）
+                  if (!isGuest && !userProvider.isEduStudent)
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: _sidePadding),
                       child: _buildSubscriptionCard(userProvider),
@@ -329,7 +331,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: EdgeInsets.symmetric(horizontal: _sidePadding),
                     child: Column(
                       children: [
-                        _buildListItem(icon: Icons.monetization_on_rounded, title: 'J-Points', trailingText: '$jPts', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))),
+                        // J-Points 點進去是買點數的頁面，學生也不顯示
+                        if (!userProvider.isEduStudent)
+                          _buildListItem(icon: Icons.monetization_on_rounded, title: 'J-Points', trailingText: '$jPts', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))),
                         _buildListItem(icon: Icons.folder_special_rounded, title: '我的收藏', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))),
                         _buildListItem(icon: Icons.people_alt_rounded, title: '好友綁定', iconColor: AppColors.primary, trailingText: friendId, onTap: () => isGuest ? _handleGuestClick('好友綁定') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
                         _buildListItem(icon: Icons.military_tech_rounded, title: '成就徽章', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('成就徽章') : Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()))),
@@ -349,8 +353,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           iconColor: isGuest ? AppColors.primary : Colors.redAccent,
                           textColor: isGuest ? _textColor : Colors.redAccent,
                           onTap: () {
+                            // logout() 會把帳號類型重設，所以要先記下來。
+                            // 學生要回教育版登入頁；帶去一般版登入頁的話，一般版入口不收學生帳號。
+                            final wasEduStudent = context.read<UserProvider>().isEduStudent;
                             if (!isGuest) context.read<UserProvider>().logout();
-                            Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => wasEduStudent ? const EduLoginScreen() : const LoginScreen()),
+                              (route) => false,
+                            );
                           }
                         ),
                       ],

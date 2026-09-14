@@ -257,6 +257,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                   ],
                                 ),
                               ),
+                              // 教育版學生沒有付費機制，點數標籤點進去是商城，直接不顯示
+                              if (!userProvider.isEduStudent)
                               GestureDetector(
                               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1))),
                               child: Container(

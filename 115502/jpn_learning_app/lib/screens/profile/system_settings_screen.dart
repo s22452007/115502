@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/auth/login_screen.dart';
+import 'package:jpn_learning_app/screens/auth/edu_login_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 
@@ -213,9 +214,14 @@ class SystemSettingsScreen extends StatelessWidget {
                 return;
               }
 
+              // logout() 會把帳號類型重設，要先記下來：學生回教育版登入頁，
+              // 帶去一般版登入頁的話，一般版入口不收學生帳號
+              final wasEduStudent = context.read<UserProvider>().isEduStudent;
               context.read<UserProvider>().logout();
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                MaterialPageRoute(
+                  builder: (_) => wasEduStudent ? const EduLoginScreen() : const LoginScreen(),
+                ),
                 (route) => false,
               );
               ScaffoldMessenger.of(context).showSnackBar(

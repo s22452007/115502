@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 校園教育版 - 作業批閱與繳交名冊</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 32px 48px; overflow-x: hidden; }
+        .page-header { margin-bottom: 24px; }
+        .page-title { color: var(--green-dark); font-weight: 900; margin: 0; font-size: 1.6rem; }
+        .page-sub { font-size: 0.85rem; color: #888; margin-top: 4px; }
+
+        .info-card { background: white; border-radius: 16px; padding: 22px 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-bottom: 24px; border-left: 6px solid var(--green-accent); }
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .panel-header { padding: 16px 24px; background-color: var(--green-dark); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .table > :not(caption) > * > * { padding: 14px 20px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <!-- 側邊欄 -->
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">教師 / 管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">校園教育版（教師）</li>
+            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> 班級與隨機碼</a></li>
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">系統</li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <!-- 主要內容區 -->
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="mb-3">
+            <a href="/teacher/classroom/{{ data.assignment.classroom_id }}/assignments" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
+                <i class="bi bi-arrow-left"></i> 返回作業列表
+            </a>
+        </div>
+
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="fw-bold mb-0 text-dark">{{ data.assignment.title }}</h4>
+                        {% if data.assignment.task_type == 'sentence' %}
+                            <span class="badge bg-primary-subtle text-primary border">造句挑戰</span>
+                        {% else %}
+                            <span class="badge bg-success-subtle text-success border">文章閱讀</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small mt-1">{{ data.assignment.instructions if data.assignment.instructions else '（無特殊說明）' }}</div>
+                    {% if data.assignment.task_type == 'sentence' and data.assignment.config %}
+                        <div class="small text-secondary mt-1">
+                            文法重點：<strong>{{ data.assignment.config.get('grammar_point') }}</strong>
+                            {% if data.assignment.config.get('required_vocabs') %}
+                                ｜ 指定單字：{{ data.assignment.config.get('required_vocabs')|join(', ') }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end">
+                        <div class="small text-muted">繳交進度</div>
+                        <div class="fs-5 fw-bold text-success">{{ data.stats.submitted_count }} / {{ data.stats.total_students }} 人已交</div>
+                    </div>
+                    {% if data.article_info %}
+                        <button class="btn btn-outline-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#articlePreviewModal">
+                            <i class="bi bi-file-earmark-text me-1"></i>預覽作業文章
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 學生繳交列表 -->
+        <div class="panel">
+            <div class="panel-header">
+                <div><i class="bi bi-check2-square me-2"></i>學生作業作答與批閱名單</div>
+                <div class="small text-white-50">可直接為學生給分並留下回饋評語</div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>學生名稱 / 帳號</th>
+                            <th>繳交狀態</th>
+                            <th>繳交時間</th>
+                            <th>作答內容摘要</th>
+                            <th style="min-width: 280px;">教師批閱與評分</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in data.submissions %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ s.display_name }}</div>
+                                <div class="text-muted small">{{ s.email }}</div>
+                            </td>
+                            <td>
+                                {% if s.status == 'graded' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        <i class="bi bi-check-circle"></i> 已批閱 ({{ s.score }}分)
+                                    </span>
+                                {% elif s.status == 'submitted' %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                        <i class="bi bi-hourglass-split"></i> 待批閱
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                        尚未繳交
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">{{ s.submitted_at }}</td>
+                            <td>
+                                {% if s.detail %}
+                                    {% if s.detail.type == 'sentence' %}
+                                        <div>
+                                            <strong>造句：</strong>{{ s.detail.user_sentence }}
+                                        </div>
+                                        {% if s.detail.corrected %}
+                                            <div class="small text-muted"><strong>AI 潤飾：</strong>{{ s.detail.corrected }}</div>
+                                        {% endif %}
+                                        {% if s.detail.ai_feedback %}
+                                            <div class="small text-info"><strong>AI 評語：</strong>{{ s.detail.ai_feedback }}</div>
+                                        {% endif %}
+                                        <div class="small text-muted">AI 評分：{{ s.detail.ai_score }} 分</div>
+                                    {% elif s.detail.type == 'article' %}
+                                        <div>
+                                            <i class="bi bi-check-circle-fill text-success"></i> 已完成文章閱讀
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small">尚無作答紀錄</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.submission_id %}
+                                <form action="/teacher/submission/{{ s.submission_id }}/grade" method="POST" class="d-flex flex-column gap-2">
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <div class="input-group input-group-sm" style="width: 130px;">
+                                            <span class="input-group-text">分數</span>
+                                            <input type="number" name="score" class="form-control" value="{{ s.score if s.score is not none else '' }}" placeholder="0-100" min="0" max="100" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-success fw-bold flex-shrink-0" style="background-color: var(--green-accent); border: none;">
+                                            <i class="bi bi-check2"></i> 儲存批閱
+                                        </button>
+                                    </div>
+                                    <input type="text" name="teacher_comment" class="form-control form-control-sm" placeholder="輸入給學生的評語/指導建議..." value="{{ s.teacher_comment }}">
+                                </form>
+                                {% else %}
+                                    <span class="text-muted small">學生尚未送出作業，無法評分</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 文章預覽 Modal -->
+{% if data.article_info %}
+<div class="modal fade" id="articlePreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-book-half me-2"></i>{{ data.article_info.title }} ({{ data.article_info.level }})</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <h6 class="fw-bold text-success mb-2">日文原文</h6>
+        <div class="p-3 bg-light rounded-3 mb-4" style="line-height: 1.8; font-size: 1.05rem; white-space: pre-wrap;">{{ data.article_info.content }}</div>
+        
+        {% if data.article_info.translation %}
+        <h6 class="fw-bold text-secondary mb-2">中文對照翻譯</h6>
+        <div class="p-3 bg-light rounded-3 text-secondary" style="line-height: 1.8; white-space: pre-wrap;">{{ data.article_info.translation }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+</body>
+</html>

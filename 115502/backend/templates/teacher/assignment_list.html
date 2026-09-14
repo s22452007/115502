@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 校園教育版 - 班級作業管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 32px 48px; overflow-x: hidden; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-title { color: var(--green-dark); font-weight: 900; margin: 0; font-size: 1.6rem; }
+        .page-sub { font-size: 0.85rem; color: #888; margin-top: 4px; }
+
+        .assignment-card { background: white; border-radius: 16px; padding: 22px 26px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-bottom: 16px; border-left: 5px solid var(--green-accent); transition: 0.2s; }
+        .assignment-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.07); }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <!-- 側邊欄 -->
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">教師 / 管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">校園教育版（教師）</li>
+            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> 班級與隨機碼</a></li>
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
+            <li class="sidebar-section-title">系統</li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <!-- 主內容區 -->
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="mb-3">
+            <a href="/teacher/classrooms" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
+                <i class="bi bi-arrow-left"></i> 返回班級列表
+            </a>
+        </div>
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title"><i class="bi bi-journal-check me-2"></i>{{ classroom.name }} - 作業列表</h1>
+                <div class="page-sub">班級隨機碼：<strong>{{ classroom.join_code }}</strong> ｜ 管理作業指派、審閱學生繳交與批閱評分</div>
+            </div>
+            <div>
+                <a href="/teacher/classroom/{{ classroom.id }}/assignment/create" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px; padding: 10px 18px;">
+                    <i class="bi bi-plus-lg me-1"></i>出題新作業
+                </a>
+            </div>
+        </div>
+
+        {% if not assignments %}
+            <div class="card p-5 text-center" style="border: 2px dashed #ddd; border-radius: 16px; background: white;">
+                <i class="bi bi-journal-x" style="font-size: 3rem; color: #bbb;"></i>
+                <h5 class="mt-3 text-muted">本班級目前尚未出過任何作業</h5>
+                <p class="text-secondary mb-4">您可以出「造句挑戰」指定文法，或是「文章閱讀」上傳文章並自訂選擇題與是非題！</p>
+                <div>
+                    <a href="/teacher/classroom/{{ classroom.id }}/assignment/create" class="btn btn-success px-4" style="background-color: var(--green-accent); border: none;">
+                        立即開始出題
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            {% for a in assignments %}
+            <div class="assignment-card">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h5 class="fw-bold mb-0 text-dark">{{ a.title }}</h5>
+                            {% if a.task_type == 'sentence' %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    <i class="bi bi-pen"></i> 造句挑戰
+                                </span>
+                            {% elif a.task_type == 'article' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-book"></i> 文章閱讀
+                                </span>
+                                {% if a.config and a.config.get('has_quiz') %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                        含測驗題 ({{ a.config.get('questions')|length }}題)
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary border">純閱讀</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small mt-1">{{ a.instructions if a.instructions else '（無特殊說明）' }}</div>
+                        {% if a.task_type == 'sentence' and a.config %}
+                            <div class="mt-2 text-secondary small">
+                                指定文法：<strong class="text-dark">{{ a.config.get('grammar_point', '無') }}</strong>
+                                {% if a.config.get('required_vocabs') %}
+                                    ｜ 指定單字：<span class="badge bg-light text-dark border">{{ a.config.get('required_vocabs')|join(', ') }}</span>
+                                {% endif %}
+                                ｜ 及格門檻：{{ a.config.get('pass_score', 60) }} 分
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-end">
+                        <a href="/teacher/assignment/{{ a.id }}/submissions" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
+                            <i class="bi bi-check2-circle me-1"></i>批閱與檢視名單 ({{ a.submitted_count }}/{{ a.total_students }})
+                        </a>
+                    </div>
+                </div>
+
+                <hr style="margin: 14px 0; opacity: 0.1;">
+
+                <div class="d-flex justify-content-between align-items-center text-muted small">
+                    <div>
+                        <i class="bi bi-calendar-event me-1"></i>截止日期：
+                        <strong class="text-dark">{{ a.due_at if a.due_at else '無截止日期' }}</strong>
+                    </div>
+                    <div>
+                        出題時間：{{ a.created_at }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 校園教育版 - 班級管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 32px 48px; overflow-x: hidden; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-title { color: var(--green-dark); font-weight: 900; margin: 0; font-size: 1.6rem; }
+        .page-sub { font-size: 0.85rem; color: #888; margin-top: 4px; }
+
+        .class-card { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); padding: 24px; margin-bottom: 20px; transition: transform 0.15s ease, box-shadow 0.15s ease; border-left: 6px solid var(--green-accent); }
+        .class-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        
+        .code-box {
+            background: #f8faf9;
+            border: 1.5px dashed var(--green-mid);
+            border-radius: 10px;
+            padding: 8px 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .code-text {
+            font-family: 'Consolas', monospace;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--green-dark);
+            letter-spacing: 3px;
+        }
+        .btn-copy {
+            background: var(--green-light);
+            color: var(--green-dark);
+            border: none;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-copy:hover {
+            background: var(--green-mid);
+            color: white;
+        }
+        .stat-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f0f4f2;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #555;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <!-- 側邊欄 -->
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">教師 / 管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">校園教育版（教師）</li>
+            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> 班級與隨機碼</a></li>
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
+            <li class="sidebar-section-title">系統</li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <!-- 主要內容區 -->
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title"><i class="bi bi-mortarboard me-2"></i>校園教育版 - 班級管理</h1>
+                <div class="page-sub">管理班級、產出專屬隨機碼提供學生加入，並掌握各班出題與學習進度</div>
+            </div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createClassModal" style="background-color: var(--green-accent); border: none; font-weight: bold; border-radius: 8px; padding: 10px 18px;">
+                <i class="bi bi-plus-lg me-1"></i>建立新班級
+            </button>
+        </div>
+
+        {% if not classrooms %}
+            <div class="card p-5 text-center" style="border: 2px dashed #ddd; border-radius: 16px; background: white;">
+                <i class="bi bi-people" style="font-size: 3rem; color: #bbb;"></i>
+                <h5 class="mt-3 text-muted">目前尚未建立任何班級</h5>
+                <p class="text-secondary mb-4">點擊右上角「建立新班級」，系統將自動生成專屬隨機碼供學生輸入加入！</p>
+                <div>
+                    <button class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#createClassModal" style="background-color: var(--green-accent); border: none;">
+                        立即建立班級
+                    </button>
+                </div>
+            </div>
+        {% else %}
+            <div class="row">
+                {% for c in classrooms %}
+                <div class="col-12">
+                    <div class="class-card">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h4 class="mb-0 fw-bold" style="color: #222;">{{ c.name }}</h4>
+                                    {% if c.is_open %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">開放加入中</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">已關閉加入</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted mt-1 small">{{ c.description if c.description else '（無班級說明）' }}</div>
+                            </div>
+
+                            <!-- 隨機碼展示與一鍵複製 -->
+                            <div class="code-box">
+                                <div class="text-start">
+                                    <div style="font-size: 0.68rem; color: #888; font-weight: 700; text-transform: uppercase;">學生加入隨機碼</div>
+                                    <div class="code-text" id="code-{{ c.id }}">{{ c.join_code }}</div>
+                                </div>
+                                <button class="btn-copy" onclick="copyCode('{{ c.join_code }}')">
+                                    <i class="bi bi-clipboard"></i> 複製
+                                </button>
+                                <form action="/teacher/classroom/{{ c.id }}/regenerate_code" method="POST" style="display:inline;" onsubmit="return confirm('確定要重新產生隨機碼嗎？舊代碼將會立即失效！');">
+                                    <button type="submit" class="btn btn-link text-secondary p-0 ms-1" title="重產隨機碼">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <hr style="margin: 16px 0; opacity: 0.1;">
+
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <span class="stat-pill"><i class="bi bi-people-fill text-success"></i> 學生人數：<strong>{{ c.member_count }}</strong></span>
+                                <span class="stat-pill"><i class="bi bi-journal-text text-primary"></i> 班級作業：<strong>{{ c.assignment_count }}</strong> 份</span>
+                                <span class="stat-pill"><i class="bi bi-clock text-muted"></i> 建立於 {{ c.created_at }}</span>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <form action="/teacher/classroom/{{ c.id }}/toggle_open" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm {{ 'btn-outline-secondary' if c.is_open else 'btn-outline-success' }}" style="border-radius: 8px;">
+                                        <i class="bi {{ 'bi-lock' if c.is_open else 'bi-unlock' }}"></i> {{ '關閉加入' if c.is_open else '開放加入' }}
+                                    </button>
+                                </form>
+                                <a href="/teacher/classroom/{{ c.id }}/students" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;">
+                                    <i class="bi bi-bar-chart-line"></i> 學生學習狀況
+                                </a>
+                                <a href="/teacher/classroom/{{ c.id }}/assignments" class="btn btn-sm btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
+                                    <i class="bi bi-pencil-square"></i> 作業出題與批閱
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </main>
+</div>
+
+<!-- 建立新班級 Modal -->
+<div class="modal fade" id="createClassModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>建立新班級</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/teacher/classroom/create" method="POST">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-bold">班級名稱 <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" placeholder="例如：日文系大一A班、實用觀光日語班" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">班級說明</label>
+            <textarea name="description" class="form-control" rows="3" placeholder="例如：授課教師 Emily、週三第 3-4 節、學習教材範圍等"></textarea>
+          </div>
+          <div class="alert alert-success d-flex align-items-center p-2 mb-0" style="font-size: 0.85rem;">
+            <i class="bi bi-info-circle-fill me-2"></i>建立後系統將自動生成唯一的 6 碼大寫英數隨機碼。
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none;">建立班級</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(() => {
+        alert("隨機碼已複製至剪貼簿：" + code);
+    }).catch(err => {
+        prompt("請手動複製班級隨機碼：", code);
+    });
+}
+</script>
+</body>
+</html>

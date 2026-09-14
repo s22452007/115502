@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 成就徽章</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #444; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 0; overflow-x: hidden; }
+        .body-area { padding: 32px 48px; }
+        .page-title-box { margin-bottom: 20px; }
+        .page-title { color: var(--green-accent); font-weight: bold; margin: 0; font-size: 1.5rem; }
+
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .panel-header { padding: 14px 20px; font-weight: bold; font-size: 0.95rem; color: white; background: var(--green-dark); letter-spacing: 0.5px; }
+        .table > :not(caption) > * > * { padding: 14px 18px; border-bottom-color: #f4f7f5; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.88rem; white-space: nowrap; }
+
+        .sub { font-size: 0.76rem; color: #aaa; margin-top: 3px; }
+        .chip { display: inline-block; padding: 2px 9px; border-radius: 50px; font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+        .chip-green { background: var(--green-light); color: var(--green-dark); }
+        .chip-grey  { background: #eee; color: #888; }
+        .rate { display: flex; align-items: center; gap: 10px; }
+        .rate .bar { height: 6px; width: 110px; background: #eef2ef; border-radius: 99px; overflow: hidden; }
+        .rate .bar > span { display: block; height: 100%; background: var(--green-accent); }
+        .holder-row > td { background: #fafbfa; }
+        .holder-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .holder { background: white; border: 1px solid #eceeec; border-radius: 10px; padding: 6px 12px; font-size: 0.84rem; text-decoration: none; color: #333; }
+        .holder:hover { border-color: var(--green-mid); color: var(--green-accent); }
+        .holder .when { color: #aaa; font-size: 0.74rem; margin-left: 6px; }
+        .note { font-size: 0.82rem; color: #888; margin-bottom: 16px; line-height: 1.7; }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">使用者</li>
+            <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            {% if session.get('role') == 'super_admin' %}
+            <li class="sidebar-section-title">方案管理</li>
+            <li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
+            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>
+            {% endif %}
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list" class="active"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
+            <li class="sidebar-section-title">互動</li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
+            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="body-area">
+
+            <div class="page-title-box">
+                <h3 class="page-title"><i class="bi bi-award-fill me-2"></i>成就徽章</h3>
+                <div class="text-muted small mt-1">查看每枚徽章的解鎖人數與得主，並檢查徽章資料是否完整</div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for category, message in messages %}
+              <div class="alert {{ 'alert-danger' if category == 'error' else 'alert-success' }} py-2" style="border-radius:10px; font-size:0.9rem;">{{ message }}</div>
+              {% endfor %}
+            {% endwith %}
+
+            {% if missing %}
+            <div class="alert alert-warning d-flex justify-content-between align-items-center gap-3" style="border-radius:12px;">
+                <div style="font-size:0.9rem;">
+                    <b><i class="bi bi-exclamation-triangle-fill me-1"></i>資料庫缺少 {{ missing | length }} 個主題徽章：</b>
+                    {% for badge, theme in missing %}{{ badge }}{{ '、' if not loop.last }}{% endfor %}
+                    <div class="small mt-1">徽章缺少時，使用者集滿該主題的收集冊也拿不到徽章。</div>
+                </div>
+                <form method="POST" action="{{ url_for('achievement_sync_theme') }}" onsubmit="return confirm('確定要補建缺少的主題徽章嗎？');">
+                    <button class="btn btn-warning btn-sm" style="border-radius:8px; white-space:nowrap;" type="submit">補建徽章</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <div class="note">
+                <i class="bi bi-info-circle me-1"></i>
+                徽章名稱是程式發放徽章時比對用的，改名會導致使用者拿不到徽章，所以這裡不開放修改。<br>
+                程度徽章（新手上路～日語大師）是 App 依使用者的日語等級直接顯示的，不存在資料庫裡，所以不會出現在下表。
+            </div>
+
+            <div class="panel">
+                <div class="panel-header"><i class="bi bi-list-ul me-1"></i> 徽章清單（使用者共 {{ user_total }} 人）</div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr><th>徽章</th><th>類型</th><th>取得條件</th><th>解鎖人數</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            {% for a in achievements %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold" style="color:#333;">{{ a.name }}</div>
+                                    <div class="sub">#{{ a.id }}</div>
+                                </td>
+                                <td>
+                                    {% if a.theme_name %}
+                                    <span class="chip chip-green">主題收集冊・{{ a.theme_name }}</span>
+                                    {% else %}
+                                    <span class="chip chip-grey">其他</span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size:0.88rem;">{{ a.description or '—' }}</td>
+                                <td>
+                                    <div class="rate">
+                                        <div class="bar"><span style="width: {{ a.unlock_rate }}%;"></span></div>
+                                        <span>{{ a.unlock_count }} 人（{{ a.unlock_rate }}%）</span>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    {% if a.unlock_count %}
+                                    <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px; white-space:nowrap;" data-bs-toggle="collapse" data-bs-target="#holders{{ a.id }}">
+                                        <i class="bi bi-chevron-down"></i> 得主
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if a.unlock_count %}
+                            <tr class="collapse holder-row" id="holders{{ a.id }}">
+                                <td colspan="5">
+                                    <div class="holder-list">
+                                        {% for h in a.holders %}
+                                        <a class="holder" href="/user/{{ h.user_id }}">
+                                            {{ h.username or (h.email or '').split('@')[0] }}<span class="when">{{ h.unlocked_at }}</span>
+                                        </a>
+                                        {% endfor %}
+                                    </div>
+                                    {% if a.unlock_count > a.holders | length %}
+                                    <div class="sub mt-2">只列出最近 {{ a.holders | length }} 位，共 {{ a.unlock_count }} 位。</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">資料庫中沒有任何徽章。</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

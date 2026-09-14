@@ -75,6 +75,10 @@
             <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
             <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
             <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
             <li class="sidebar-section-title">互動</li>
             <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
             <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
@@ -106,7 +110,11 @@
                     {% if user.japanese_level %}
                     <span class="chip chip-gold ms-1">{{ user.japanese_level }}</span>
                     {% endif %}
-                    {% if user.is_premium %}
+                    {% if user.account_type == 'student' %}
+                    <span class="badge-status ms-1" style="background:#e3eefc;color:#2f5f9e;"><i class="bi bi-mortarboard-fill"></i> 教育版學生（免付費）</span>
+                    {% elif user.account_type == 'teacher' %}
+                    <span class="badge-status ms-1" style="background:#e3eefc;color:#2f5f9e;"><i class="bi bi-person-video3"></i> 教育版老師</span>
+                    {% elif user.is_premium %}
                     <span class="badge-status badge-premium ms-1"><i class="bi bi-patch-check-fill"></i> Premium</span>
                     {% elif user.trial_used %}
                     <span class="badge-status badge-free ms-1">已用過試用</span>
@@ -247,12 +255,14 @@
                 <div class="section-body" style="padding:0;">
                     {% if groups %}
                     <table>
-                        <thead><tr><th>小組名稱</th><th>角色</th><th>加入時間</th></tr></thead>
+                        <thead><tr><th>小組名稱</th><th>小組目標</th><th>小組進度</th><th>本人貢獻</th><th>加入時間</th></tr></thead>
                         <tbody>
                         {% for g in groups %}
                         <tr>
                             <td>{{ g.name or '—' }}</td>
-                            <td>{% if g.role == 'owner' %}<span class="chip chip-gold">組長</span>{% else %}<span class="chip chip-grey">成員</span>{% endif %}</td>
+                            <td><span class="chip chip-grey">{{ g.goal_label }} {{ g.goal_target or 0 }}</span></td>
+                            <td>{{ g.current_progress or 0 }} / {{ g.goal_target or 0 }}{% if g.has_claimed %} <span class="chip chip-gold">已領獎</span>{% endif %}</td>
+                            <td>{{ g.my_contribution if g.my_contribution is not none else '—' }}</td>
                             <td style="color:#aaa;">{{ g.joined_at or '—' }}</td>
                         </tr>
                         {% endfor %}

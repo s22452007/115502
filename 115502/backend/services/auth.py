@@ -92,6 +92,24 @@ def login():
     # 如果帳號密碼正確
     if pw_match:
 
+        # 登入入口分流：校園教育版入口只收學生帳號，一般版入口只收一般帳號。
+        # 放在密碼驗證之後，避免用錯誤密碼就能試出某個帳號是哪一種類型。
+        # portal 沒帶時不檢查，保留給舊版前端與其他呼叫端。
+        portal = (data.get('portal') or '').strip().lower()
+        account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
+        if portal == 'edu' and account_type != AccountType.STUDENT:
+            return jsonify({
+                "status": "wrong_portal",
+                "error": "這不是校園教育版的學生帳號，請改從「一般自主學習」登入",
+            }), 403
+        if portal == 'general' and account_type != AccountType.GENERAL:
+            return jsonify({
+                "status": "wrong_portal",
+                "error": ("這是校園教育版的學生帳號，請改從「校園教育版」登入"
+                          if account_type == AccountType.STUDENT
+                          else "這個帳號不能從一般版登入"),
+            }), 403
+
         # 防呆：如果舊玩家沒有 friend_id，就在登入時幫他補發一個
         if not user.friend_id:
             user.friend_id = generate_friend_id()

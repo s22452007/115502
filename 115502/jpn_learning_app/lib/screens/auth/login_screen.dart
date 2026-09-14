@@ -124,12 +124,13 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isLogin ? '登入中...' : '註冊中...')));
 
     if (_isLogin) {
-      final result = await ApiClient.login(email, password);
+      final result = await ApiClient.login(email, password, portal: 'general');
       if (!context.mounted) return;
 
       if (result.containsKey('user_id')) {
         context.read<UserProvider>().setUserId(_toInt(result['user_id']));
         context.read<UserProvider>().setEmail(email);
+        context.read<UserProvider>().setAccountType(result['account_type']?.toString());
         if (result.containsKey('avatar') && result['avatar'] != null && result['avatar'].toString().isNotEmpty) {
           context.read<UserProvider>().setAvatar(result['avatar']);
         }

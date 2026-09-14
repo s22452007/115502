@@ -487,13 +487,17 @@ class _CameraScreenState extends State<CameraScreen>
             left: 60,
             right: 60,
             child: Builder(builder: (_) {
+              // 教育版學生不限次數：只顯示今天拍了幾張，不顯示上限，也不會變紅
+              final isEduStudent = context.watch<UserProvider>().isEduStudent;
               final dailyRemaining = (_photoDailyLimit - _photoCountToday).clamp(0, _photoDailyLimit);
               final effectiveRemaining = dailyRemaining + _photoExtraCount;
-              final countColor = effectiveRemaining <= 0
-                  ? Colors.red.shade300
-                  : effectiveRemaining == 1
-                      ? Colors.orange.shade300
-                      : Colors.white;
+              final countColor = isEduStudent
+                  ? Colors.white
+                  : effectiveRemaining <= 0
+                      ? Colors.red.shade300
+                      : effectiveRemaining == 1
+                          ? Colors.orange.shade300
+                          : Colors.white;
               final extraText = _photoExtraCount > 0 ? ' 額外$_photoExtraCount次' : '';
               return Container(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -502,7 +506,9 @@ class _CameraScreenState extends State<CameraScreen>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '今日拍照：$_photoCountToday / $_photoDailyLimit 次$extraText',
+                  isEduStudent
+                      ? '今日拍照：$_photoCountToday 次（不限次數）'
+                      : '今日拍照：$_photoCountToday / $_photoDailyLimit 次$extraText',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: countColor,

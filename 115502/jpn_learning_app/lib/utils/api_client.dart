@@ -67,12 +67,18 @@ class ApiClient {
     }
   }
 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  /// [portal] 是從哪個入口登入：'general'（一般自主學習）或 'edu'（校園教育版）。
+  /// 帳號類型跟入口對不上時，後端會回 status = 'wrong_portal'。
+  static Future<Map<String, dynamic>> login(String email, String password, {String? portal}) async {
     final url = Uri.parse('$baseUrl/auth/login');
     try {
       // 加逾時，否則後端掛掉時登入畫面會無限轉圈，使用者不知道發生什麼事
       final response = await http
-          .post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'password': password}))
+          .post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode({
+            'email': email,
+            'password': password,
+            if (portal != null) 'portal': portal,
+          }))
           .timeout(const Duration(seconds: 15));
       return jsonDecode(response.body);
     } catch (e) {

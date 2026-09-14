@@ -556,6 +556,15 @@ class Classroom(db.Model):
     is_archived = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    @staticmethod
+    def generate_code():
+        import secrets, string
+        safe_chars = ''.join(c for c in string.ascii_uppercase + string.digits if c not in '01OIL')
+        while True:
+            code = ''.join(secrets.choice(safe_chars) for _ in range(6))
+            if not Classroom.query.filter_by(join_code=code).first():
+                return code
+
     members = db.relationship('ClassroomMember', backref='classroom', lazy=True,
                               cascade="all, delete-orphan")
     assignments = db.relationship('Assignment', backref='classroom', lazy=True,

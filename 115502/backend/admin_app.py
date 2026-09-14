@@ -1571,6 +1571,212 @@ def photo_src(image_path):
     return url_for('static', filename='photos/' + filename)
 
 
+# ==========================================
+# 🎓 校園教育版：教師端核心功能
+# ==========================================
+from services.teacher_service import (
+    get_or_create_teacher_user, create_classroom, regenerate_join_code,
+    toggle_classroom_open, get_classroom_list, get_classroom_student_stats,
+    get_student_detail, create_sentence_assignment, create_article_assignment,
+    get_assignment_submissions_list, grade_submission
+)
+from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Article
+
+
+@app.route('/teacher/classrooms')
+@admin_login_required
+def teacher_classrooms():
+    """班級列表與隨機碼管理首頁"""
+    classrooms = get_classroom_list()
+    return render_template('teacher/classroom_list.html', classrooms=classrooms)
+
+
+@app.route('/teacher/classroom/create', methods=['POST'])
+@admin_login_required
+def teacher_classroom_create():
+    """教師建立新班級"""
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+    if not name:
+        flash("請填寫班級名稱", "danger")
+        return redirect(url_for('teacher_classrooms'))
+
+    admin_username = session.get('admin_user', 'teacher')
+    teacher_id = get_or_create_teacher_user(admin_username)
+    c = create_classroom(teacher_id, name, description)
+    flash(f"班級「{c.name}」建立成功！學生加入隨機碼為：{c.join_code}", "success")
+    return redirect(url_for('teacher_classrooms'))
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/regenerate_code', methods=['POST'])
+@admin_login_required
+def teacher_classroom_regenerate_code(classroom_id):
+    """重新生成班級隨機碼"""
+    new_code = regenerate_join_code(classroom_id)
+    if not new_code:
+        flash("找不到該班級", "danger")
+    else:
+        flash(f"班級隨機碼已更新為：{new_code}", "success")
+    return redirect(url_for('teacher_classrooms'))
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/toggle_open', methods=['POST'])
+@admin_login_required
+def teacher_classroom_toggle_open(classroom_id):
+    """切換班級開放或關閉加入"""
+    is_open = toggle_classroom_open(classroom_id)
+    if is_open is None:
+        flash("找不到該班級", "danger")
+    else:
+        status_text = "開放" if is_open else "關閉"
+        flash(f"已將班級狀態切換為【{status_text}加入】", "info")
+    return redirect(url_for('teacher_classrooms'))
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/students')
+@admin_login_required
+def teacher_classroom_students(classroom_id):
+    """依班級檢視學生學習狀況與名冊"""
+    data = get_classroom_student_stats(classroom_id)
+    if not data:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    return render_template('teacher/student_progress.html', data=data)
+
+
+@app.route('/teacher/student/<int:student_id>/detail')
+@admin_login_required
+def teacher_student_detail(student_id):
+    """取得單一學生的詳細學習紀錄 (AJAX)"""
+    classroom_id = request.args.get('classroom_id', type=int)
+    if not classroom_id:
+        return jsonify({"error": "缺少 classroom_id"}), 400
+    detail = get_student_detail(student_id, classroom_id)
+    if not detail:
+        return jsonify({"error": "找不到學生資料"}), 404
+    return jsonify(detail)
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/assignments')
+@admin_login_required
+def teacher_classroom_assignments(classroom_id):
+    """班級作業總覽清單"""
+    classroom = Classroom.query.get(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+
+    assignments = Assignment.query.filter_by(classroom_id=classroom_id).order_by(Assignment.created_at.desc()).all()
+    member_count = ClassroomMember.query.filter_by(classroom_id=classroom_id).count()
+
+    for a in assignments:
+        a.total_students = member_count
+        a.submitted_count = AssignmentSubmission.query.filter_by(assignment_id=a.id).filter(
+            AssignmentSubmission.status.in_(['submitted', 'graded'])
+        ).count()
+
+    return render_template('teacher/assignment_list.html', classroom=classroom, assignments=assignments)
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/assignment/create', methods=['GET', 'POST'])
+@admin_login_required
+def teacher_assignment_create(classroom_id):
+    """出題新作業：造句挑戰 vs 文章閱讀（支援上傳文章、選擇題、是非題）"""
+    classroom = Classroom.query.get(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+
+    if request.method == 'POST':
+        task_type = request.form.get('task_type', 'sentence')
+        title = request.form.get('title', '').strip()
+        instructions = request.form.get('instructions', '').strip()
+        due_at_str = request.form.get('due_at')
+        due_at = None
+        if due_at_str:
+            try:
+                due_at = datetime.fromisoformat(due_at_str)
+            except Exception:
+                pass
+
+        if not title:
+            flash("請填寫作業標題", "danger")
+            return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
+
+        if task_type == 'sentence':
+            grammar = request.form.get('grammar_point', '').strip()
+            vocabs_raw = request.form.get('required_vocabs', '')
+            vocabs = [v.strip() for v in vocabs_raw.replace('，', ',').split(',') if v.strip()]
+            pass_score = request.form.get('pass_score', 60)
+            create_sentence_assignment(classroom_id, title, instructions, grammar, vocabs, pass_score, due_at)
+            flash(f"造句挑戰作業「{title}」發布成功！", "success")
+
+        elif task_type == 'article':
+            source = request.form.get('article_source', 'existing')
+            new_art = None
+            art_id = None
+            if source == 'new':
+                new_title = request.form.get('new_art_title', '').strip()
+                new_content = request.form.get('new_art_content', '').strip()
+                if not new_title or not new_content:
+                    flash("上傳新文章時，標題與日文內文為必填！", "danger")
+                    return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
+                new_art = {
+                    'title': new_title,
+                    'level': request.form.get('new_art_level', 'N3'),
+                    'content': new_content,
+                    'translation': request.form.get('new_art_translation', '').strip()
+                }
+            else:
+                art_id = request.form.get('article_id', type=int)
+
+            has_quiz = bool(request.form.get('has_quiz'))
+            questions_json = request.form.get('questions_json', '[]')
+            try:
+                questions = json.loads(questions_json) if has_quiz else []
+            except Exception:
+                questions = []
+
+            create_article_assignment(
+                classroom_id, title, instructions,
+                article_id=art_id, new_article=new_art,
+                has_quiz=has_quiz, questions=questions, due_at=due_at
+            )
+            flash(f"文章閱讀作業「{title}」發布成功！", "success")
+
+        return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
+
+    existing_articles = Article.query.filter(Article.is_published.isnot(False)).order_by(Article.level, Article.id).all()
+    return render_template('teacher/assignment_create.html', classroom=classroom, existing_articles=existing_articles)
+
+
+@app.route('/teacher/assignment/<int:assignment_id>/submissions')
+@admin_login_required
+def teacher_assignment_submissions(assignment_id):
+    """作業繳交名單與批閱給分"""
+    data = get_assignment_submissions_list(assignment_id)
+    if not data:
+        flash("找不到該作業", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    return render_template('teacher/assignment_submissions.html', data=data)
+
+
+@app.route('/teacher/submission/<int:submission_id>/grade', methods=['POST'])
+@admin_login_required
+def teacher_submission_grade(submission_id):
+    """批閱儲存成績與評語"""
+    score = request.form.get('score')
+    teacher_comment = request.form.get('teacher_comment', '')
+    sub = AssignmentSubmission.query.get(submission_id)
+    if not sub:
+        flash("找不到該繳交紀錄", "danger")
+        return redirect(url_for('teacher_classrooms'))
+
+    grade_submission(submission_id, score, teacher_comment)
+    flash("批閱成績與教師評語已成功儲存！", "success")
+    return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+
+
 if __name__ == '__main__':
     # host='0.0.0.0'：容器內要綁全介面，外面才連得到（本機直接跑也不影響）
     app.run(host='0.0.0.0', debug=True, port=5001)

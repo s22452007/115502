@@ -8,10 +8,15 @@ from admin_app import app
 
 client = app.test_client()
 
+# 教師頁面現在只有老師身分能進：session 要用老師登入後的樣子（role='teacher' + teacher_user_id）
 with client.session_transaction() as sess:
-    sess['admin_user'] = '11156001'
-    sess['admin_id'] = 1
-    sess['role'] = 'super_admin'
+    sess['admin_user'] = 'test_teacher_01'
+    sess['admin_id'] = None
+    sess['role'] = 'teacher'
+    from models import User
+    with app.app_context():
+        teacher = User.query.filter_by(username='test_teacher_01').first()
+    sess['teacher_user_id'] = teacher.id if teacher else 1
 
 print("=== 1. 測試 GET /teacher/classrooms ===")
 resp = client.get('/teacher/classrooms')

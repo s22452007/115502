@@ -6,10 +6,12 @@ import binascii
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
 import os
-from flask import session, flash, redirect, url_for, render_template, request
+from flask import session, flash, redirect, url_for, render_template, request, jsonify
 from functools import wraps
 from utils.db import db
-from models import Admin, Vocab, SystemLog, Article, Achievement
+from models import Admin, Vocab, SystemLog, Article, Achievement, User, AccountType
+from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import func
 
 
 def utc_to_tw(utc_str):
@@ -68,6 +70,9 @@ def admin_login_required(f):
     def decorated_function(*args, **kwargs):
         if 'admin_user' not in session:
             return redirect(url_for('admin_login'))
+        # 老師的 session 也有 admin_user（側欄顯示名稱用），但不能進管理者的頁面
+        if session.get('role') == 'teacher':
+            return redirect(url_for('teacher_classrooms'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -76,9 +81,22 @@ def super_admin_required(f):
     def decorated_function(*args, **kwargs):
         if 'admin_user' not in session:
             return redirect(url_for('admin_login'))
+        if session.get('role') == 'teacher':
+            return redirect(url_for('teacher_classrooms'))
         if session.get('role') != 'super_admin':
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('admin_dashboard'))
         return f(*args, **kwargs)
+    return decorated_function
+
+def teacher_required(f):
+    """校園教育版老師專用頁面：只有從登入頁「老師」分頁登入的帳號能進"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('role') == 'teacher' and session.get('teacher_user_id'):
+            return f(*args, **kwargs)
+        if 'admin_user' in session:
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_login'))
     return decorated_function
 
 # ==========================================
@@ -102,6 +120,10 @@ def login_preview():
 @app.route('/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
+        # 登入頁分成「管理者」與「老師」兩個分頁，用 login_as 區分
+        if request.form.get('login_as') == 'teacher':
+            return _teacher_login()
+
         # 現在 username 會接收到我們下拉選單選到的學號 (例如 "11156001")
         username = request.form.get('username')
         password = request.form.get('password')
@@ -125,6 +147,31 @@ def admin_login():
             return render_template('admin_login.html', error="密碼錯誤，請重新輸入")
             
     return render_template('admin_login.html')
+
+
+def _teacher_login():
+    """校園教育版老師登入：帳號是 user 表裡 account_type='teacher' 的使用者（由 super_admin 建立）"""
+    email = (request.form.get('email') or '').strip()
+    password = request.form.get('password') or ''
+    user = User.query.filter_by(email=email).first()
+
+    if not user or not check_password_hash(user.password_hash, password):
+        print(f"❌ 老師登入失敗: {email} (帳號或密碼錯誤)")
+        return render_template('admin_login.html', login_as='teacher', error="Email 或密碼錯誤，請重新輸入")
+    if getattr(user, 'account_type', AccountType.GENERAL) != AccountType.TEACHER:
+        return render_template('admin_login.html', login_as='teacher',
+                               error="這不是老師帳號。老師帳號需由學校系統管理員在後台建立")
+    if getattr(user, 'is_suspended', False):
+        return render_template('admin_login.html', login_as='teacher', error="此老師帳號已被停用，請聯繫系統管理員")
+
+    session.clear()
+    session['admin_user'] = user.username or user.email   # 側欄顯示名稱
+    session['admin_id'] = None                            # 老師不是 admin 表的帳號
+    session['role'] = 'teacher'
+    session['teacher_user_id'] = user.id
+    session.permanent = True
+    print(f"✅ 老師登入成功: {email} (user_id={user.id})")
+    return redirect(url_for('teacher_classrooms'))
 
 @app.route('/admin/forgot_password', methods=['GET', 'POST'])
 def admin_forgot_password():
@@ -1574,25 +1621,41 @@ def photo_src(image_path):
 # ==========================================
 # 🎓 校園教育版：教師端核心功能
 # ==========================================
+# 老師用自己的 User 帳號（account_type='teacher'）從登入頁的「老師」分頁登入，
+# 登入後 session['role'] = 'teacher'、session['teacher_user_id'] = User.id。
+# 老師只看得到自己建立的班級；管理者不會進到這些頁面。
+# 老師帳號由 super_admin 在「教師帳號管理」建立，老師不能自己註冊。
 from services.teacher_service import (
-    get_or_create_teacher_user, create_classroom, regenerate_join_code,
+    create_classroom, regenerate_join_code,
     toggle_classroom_open, get_classroom_list, get_classroom_student_stats,
     get_student_detail, create_sentence_assignment, create_article_assignment,
     get_assignment_submissions_list, grade_submission
 )
-from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Article
+from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission
+
+
+def _own_classroom(classroom_id):
+    """回傳目前登入老師自己的班級；不是他的（或不存在）就回 None，避免看到別班的隨機碼與學生"""
+    return Classroom.query.filter_by(id=classroom_id, teacher_id=session.get('teacher_user_id')).first()
+
+
+def _own_assignment(assignment_id):
+    assignment = Assignment.query.get(assignment_id)
+    if not assignment or not _own_classroom(assignment.classroom_id):
+        return None
+    return assignment
 
 
 @app.route('/teacher/classrooms')
-@admin_login_required
+@teacher_required
 def teacher_classrooms():
-    """班級列表與隨機碼管理首頁"""
-    classrooms = get_classroom_list()
+    """班級列表與隨機碼管理首頁（只列出自己的班級）"""
+    classrooms = get_classroom_list(teacher_id=session['teacher_user_id'])
     return render_template('teacher/classroom_list.html', classrooms=classrooms)
 
 
 @app.route('/teacher/classroom/create', methods=['POST'])
-@admin_login_required
+@teacher_required
 def teacher_classroom_create():
     """教師建立新班級"""
     name = request.form.get('name', '').strip()
@@ -1601,43 +1664,41 @@ def teacher_classroom_create():
         flash("請填寫班級名稱", "danger")
         return redirect(url_for('teacher_classrooms'))
 
-    admin_username = session.get('admin_user', 'teacher')
-    teacher_id = get_or_create_teacher_user(admin_username)
-    c = create_classroom(teacher_id, name, description)
+    c = create_classroom(session['teacher_user_id'], name, description)
     flash(f"班級「{c.name}」建立成功！學生加入隨機碼為：{c.join_code}", "success")
     return redirect(url_for('teacher_classrooms'))
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/regenerate_code', methods=['POST'])
-@admin_login_required
+@teacher_required
 def teacher_classroom_regenerate_code(classroom_id):
     """重新生成班級隨機碼"""
-    new_code = regenerate_join_code(classroom_id)
-    if not new_code:
+    if not _own_classroom(classroom_id):
         flash("找不到該班級", "danger")
-    else:
-        flash(f"班級隨機碼已更新為：{new_code}", "success")
+        return redirect(url_for('teacher_classrooms'))
+    new_code = regenerate_join_code(classroom_id)
+    flash(f"班級隨機碼已更新為：{new_code}", "success")
     return redirect(url_for('teacher_classrooms'))
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/toggle_open', methods=['POST'])
-@admin_login_required
+@teacher_required
 def teacher_classroom_toggle_open(classroom_id):
     """切換班級開放或關閉加入"""
-    is_open = toggle_classroom_open(classroom_id)
-    if is_open is None:
+    if not _own_classroom(classroom_id):
         flash("找不到該班級", "danger")
-    else:
-        status_text = "開放" if is_open else "關閉"
-        flash(f"已將班級狀態切換為【{status_text}加入】", "info")
+        return redirect(url_for('teacher_classrooms'))
+    is_open = toggle_classroom_open(classroom_id)
+    status_text = "開放" if is_open else "關閉"
+    flash(f"已將班級狀態切換為【{status_text}加入】", "info")
     return redirect(url_for('teacher_classrooms'))
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/students')
-@admin_login_required
+@teacher_required
 def teacher_classroom_students(classroom_id):
     """依班級檢視學生學習狀況與名冊"""
-    data = get_classroom_student_stats(classroom_id)
+    data = get_classroom_student_stats(classroom_id) if _own_classroom(classroom_id) else None
     if not data:
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
@@ -1645,12 +1706,14 @@ def teacher_classroom_students(classroom_id):
 
 
 @app.route('/teacher/student/<int:student_id>/detail')
-@admin_login_required
+@teacher_required
 def teacher_student_detail(student_id):
     """取得單一學生的詳細學習紀錄 (AJAX)"""
     classroom_id = request.args.get('classroom_id', type=int)
     if not classroom_id:
         return jsonify({"error": "缺少 classroom_id"}), 400
+    if not _own_classroom(classroom_id):
+        return jsonify({"error": "找不到該班級"}), 404
     detail = get_student_detail(student_id, classroom_id)
     if not detail:
         return jsonify({"error": "找不到學生資料"}), 404
@@ -1658,10 +1721,10 @@ def teacher_student_detail(student_id):
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/assignments')
-@admin_login_required
+@teacher_required
 def teacher_classroom_assignments(classroom_id):
     """班級作業總覽清單"""
-    classroom = Classroom.query.get(classroom_id)
+    classroom = _own_classroom(classroom_id)
     if not classroom:
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
@@ -1679,10 +1742,10 @@ def teacher_classroom_assignments(classroom_id):
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/assignment/create', methods=['GET', 'POST'])
-@admin_login_required
+@teacher_required
 def teacher_assignment_create(classroom_id):
     """出題新作業：造句挑戰 vs 文章閱讀（支援上傳文章、選擇題、是非題）"""
-    classroom = Classroom.query.get(classroom_id)
+    classroom = _own_classroom(classroom_id)
     if not classroom:
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
@@ -1751,10 +1814,10 @@ def teacher_assignment_create(classroom_id):
 
 
 @app.route('/teacher/assignment/<int:assignment_id>/submissions')
-@admin_login_required
+@teacher_required
 def teacher_assignment_submissions(assignment_id):
     """作業繳交名單與批閱給分"""
-    data = get_assignment_submissions_list(assignment_id)
+    data = get_assignment_submissions_list(assignment_id) if _own_assignment(assignment_id) else None
     if not data:
         flash("找不到該作業", "danger")
         return redirect(url_for('teacher_classrooms'))
@@ -1762,13 +1825,13 @@ def teacher_assignment_submissions(assignment_id):
 
 
 @app.route('/teacher/submission/<int:submission_id>/grade', methods=['POST'])
-@admin_login_required
+@teacher_required
 def teacher_submission_grade(submission_id):
     """批閱儲存成績與評語"""
     score = request.form.get('score')
     teacher_comment = request.form.get('teacher_comment', '')
     sub = AssignmentSubmission.query.get(submission_id)
-    if not sub:
+    if not sub or not _own_assignment(sub.assignment_id):
         flash("找不到該繳交紀錄", "danger")
         return redirect(url_for('teacher_classrooms'))
 

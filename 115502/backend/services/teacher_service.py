@@ -79,9 +79,15 @@ def toggle_classroom_open(classroom_id):
     return classroom.is_open
 
 
-def get_classroom_list():
-    """取得所有未封存的班級資訊列表（含成員數、作業數）。"""
-    classrooms = Classroom.query.filter_by(is_archived=False).order_by(Classroom.created_at.desc()).all()
+def get_classroom_list(teacher_id=None):
+    """取得未封存的班級資訊列表（含成員數、作業數）。
+
+    teacher_id 有給時只回傳該老師自己的班級（後台老師登入用）；沒給就是全部。
+    """
+    query = Classroom.query.filter_by(is_archived=False)
+    if teacher_id is not None:
+        query = query.filter_by(teacher_id=teacher_id)
+    classrooms = query.order_by(Classroom.created_at.desc()).all()
     result = []
     for c in classrooms:
         teacher = User.query.get(c.teacher_id)

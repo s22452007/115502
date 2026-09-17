@@ -1840,6 +1840,114 @@ def teacher_submission_grade(submission_id):
     return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
 
 
+# ==========================================
+# 🎓 校園教育版：教師帳號管理（super_admin）
+# ==========================================
+# 老師帳號存在 user 表（account_type='teacher'），不能自己註冊，只能由這裡建立。
+# 這種帳號只能從後台登入頁的「老師」分頁登入，App 的兩個入口都會擋下來。
+@app.route('/teacher_account/list')
+@super_admin_required
+def teacher_account_list():
+    teachers = User.query.filter_by(account_type=AccountType.TEACHER).order_by(User.created_at.desc()).all()
+    classroom_counts = dict(
+        db.session.query(Classroom.teacher_id, func.count(Classroom.id)).group_by(Classroom.teacher_id).all()
+    )
+    rows = [{
+        'id': t.id,
+        'username': t.username,
+        'email': t.email,
+        'is_suspended': bool(t.is_suspended),
+        'classroom_count': classroom_counts.get(t.id, 0),
+        'created_at': utc_to_tw(t.created_at.strftime('%Y-%m-%d %H:%M:%S')) if t.created_at else '',
+    } for t in teachers]
+    return render_template('teacher_account/list.html', teachers=rows)
+
+
+def _validate_password(pw):
+    if len(pw or '') < 6:
+        return '密碼至少需要 6 個字元'
+    return None
+
+
+@app.route('/teacher_account/add', methods=['POST'])
+@super_admin_required
+def teacher_account_add():
+    admin_id = session.get('admin_id')
+    email = (request.form.get('email') or '').strip()
+    username = (request.form.get('username') or '').strip()
+    password = request.form.get('password') or ''
+
+    error = None
+    if not email or '@' not in email:
+        error = '請輸入正確的 Email'
+    elif not username:
+        error = '請輸入老師姓名'
+    elif _validate_password(password):
+        error = _validate_password(password)
+    elif User.query.filter_by(email=email).first():
+        error = f'Email「{email}」已經被使用'
+    elif User.query.filter_by(username=username).first():
+        error = f'名稱「{username}」已經被使用，請換一個（例如加上科目或班級）'
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('teacher_account_list'))
+
+    teacher = User(
+        email=email,
+        username=username,
+        password_hash=generate_password_hash(password),
+        account_type=AccountType.TEACHER,
+    )
+    db.session.add(teacher)
+    db.session.flush()
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=teacher.id,
+        action='CREATE', target_table='user', target_id=teacher.id,
+        new_value={'email': email, 'username': username, 'account_type': AccountType.TEACHER}
+    ))
+    db.session.commit()
+    flash(f'已建立老師帳號「{username}」，請將 Email 與密碼交給老師，從登入頁的「老師」分頁登入', 'success')
+    return redirect(url_for('teacher_account_list'))
+
+
+@app.route('/teacher_account/reset_password/<int:user_id>', methods=['POST'])
+@super_admin_required
+def teacher_account_reset_password(user_id):
+    admin_id = session.get('admin_id')
+    teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
+    password = request.form.get('password') or ''
+    error = _validate_password(password)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('teacher_account_list'))
+    teacher.password_hash = generate_password_hash(password)
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=teacher.id,
+        action='UPDATE', target_table='user', target_id=teacher.id,
+        new_value={'password': 'reset'}
+    ))
+    db.session.commit()
+    flash(f'已重設「{teacher.username}」的密碼', 'success')
+    return redirect(url_for('teacher_account_list'))
+
+
+@app.route('/teacher_account/toggle/<int:user_id>', methods=['POST'])
+@super_admin_required
+def teacher_account_toggle(user_id):
+    """停用／啟用老師帳號：停用後無法登入後台，已建立的班級與隨機碼保留"""
+    admin_id = session.get('admin_id')
+    teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
+    teacher.is_suspended = not bool(teacher.is_suspended)
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=teacher.id,
+        action='UPDATE', target_table='user', target_id=teacher.id,
+        new_value={'is_suspended': teacher.is_suspended}
+    ))
+    db.session.commit()
+    flash(('已停用「%s」' if teacher.is_suspended else '已啟用「%s」') % teacher.username, 'success')
+    return redirect(url_for('teacher_account_list'))
+
+
 if __name__ == '__main__':
     # host='0.0.0.0'：容器內要綁全介面，外面才連得到（本機直接跑也不影響）
     app.run(host='0.0.0.0', debug=True, port=5001)

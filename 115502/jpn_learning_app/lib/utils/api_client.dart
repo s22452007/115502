@@ -987,7 +987,9 @@ class ApiClient {
   // 🌟 文章錄音與 AI 評分 API (超級除錯版)
   // ==========================================
 
-  static Future<Map<String, dynamic>> evaluateArticleAudio(String audioPath, String articleText) async {
+  /// 帶 [userId]、[articleId] 時，後端會把評分結果存起來並回傳 evaluation_id，
+  /// 結算成績時只能用這個 id（後端不再相信前端送的分數）。
+  static Future<Map<String, dynamic>> evaluateArticleAudio(String audioPath, String articleText, {int? userId, int? articleId}) async {
     final url = Uri.parse('$baseUrl/articles/evaluate');
     try {
       debugPrint('🟢 [進度 1] 準備發送錄音... API 網址: $url');
@@ -995,6 +997,8 @@ class ApiClient {
 
       var request = http.MultipartRequest('POST', url);
       request.fields['article_text'] = articleText;
+      if (userId != null) request.fields['user_id'] = '$userId';
+      if (articleId != null) request.fields['article_id'] = '$articleId';
 
       if (kIsWeb) {
         debugPrint('🟢 [進度 3] Web 模式：正在讀取虛擬錄音檔...');
@@ -1074,7 +1078,9 @@ class ApiClient {
   // ==========================================
   // 🌟 閱讀測驗成績結算 API (新增)
   // ==========================================
-  static Future<Map<String, dynamic>> submitArticleScore(int userId, int articleId, int score) async {
+  /// 分數由後端依 [evaluationId] 查出，前端無法指定分數。
+  /// 從作業進來時帶 [assignmentId]，結算完會自動繳交作業。
+  static Future<Map<String, dynamic>> submitArticleScore(int userId, int articleId, int evaluationId, {int? assignmentId}) async {
     final url = Uri.parse('$baseUrl/articles/submit_score');
     try {
       final response = await http.post(
@@ -1083,7 +1089,8 @@ class ApiClient {
         body: jsonEncode({
           'user_id': userId,
           'article_id': articleId,
-          'score': score,
+          'evaluation_id': evaluationId,
+          if (assignmentId != null) 'assignment_id': assignmentId,
         }),
       );
       return jsonDecode(utf8.decode(response.bodyBytes));

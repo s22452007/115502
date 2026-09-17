@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from utils.db import db
 
@@ -306,6 +306,19 @@ def chat():
             save_exchange(session_id, user_message, ai_response_text)
         except Exception as e:
             print(f"⚠️ 儲存對話紀錄時發生錯誤：{e}")
+
+    # 2d. 從作業進來的對話：每輪結束檢查是否達到老師規定的輪數，達到就自動繳交。
+    #     一般對話（沒帶 assignment_id）完全不走這段。
+    assignment_id = request.form.get('assignment_id', type=int)
+    if assignment_id:
+        assignment_result = None
+        if ok:
+            from services.student_assignment import auto_submit_chat
+            assignment_result = auto_submit_chat(user_id, assignment_id, session_id)
+        # 這支 API 原本回傳純文字，前端直接把整個回應當成 AI 回覆。
+        # 作業模式需要多帶繳交進度，所以只有帶 assignment_id 時才改回 JSON，
+        # 一般對話維持純文字，現有前端完全不受影響。
+        return jsonify({"reply": ai_response_text, "assignment_result": assignment_result})
 
     # 3. 櫃檯送餐（把熱騰騰的 AI 回覆送回給 Flutter）
     return ai_response_text

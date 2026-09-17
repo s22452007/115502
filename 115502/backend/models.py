@@ -459,6 +459,20 @@ class ScoreRecord(db.Model):
     points_earned = db.Column(db.Integer, default=0) # 這次測驗賺到的點數
     created_at = db.Column(db.DateTime, default=datetime.utcnow) # 測驗時間
 
+
+# T_reading_evaluation: 朗讀評分結果，只由後端寫入。
+# 原本 /evaluate 把 AI 分數交給前端、/submit_score 再照單全收前端送回來的分數，
+# 等於學生可以自己決定分數。現在 AI 評完分就存在這裡，結算時只認 evaluation_id，
+# 而且每筆只能結算一次，避免同一次好成績被重複送出刷點數。
+class ReadingEvaluation(db.Model):
+    __tablename__ = 'reading_evaluation'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    settled_at = db.Column(db.DateTime, nullable=True)   # 已結算的時間，有值就不能再結算
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 # ==========================================
 # 🌟 新增：造句練習歷史紀錄表
 # ==========================================

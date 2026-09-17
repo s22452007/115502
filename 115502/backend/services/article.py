@@ -11,7 +11,7 @@ from utils import gemini_client
 from flask import Blueprint, request, jsonify
 from models import db, User, Article, UnlockedArticle
 from datetime import datetime
-from models import db, User, Article, ArticleProgress, ScoreRecord
+from models import db, User, Article, ArticleProgress, ScoreRecord, ReadingEvaluation
 from utils.group_helper import add_group_progress_and_check_reward
 from utils.account_helper import is_payment_free
 
@@ -97,6 +97,15 @@ def evaluate_audio():
     audio_file = request.files['audio']
     article_text = request.form.get('article_text', '')
 
+    # 評分要綁定「誰、哪一篇」，結算時才能驗證分數沒被竄改。
+    # 比對用的文章內容以資料庫為準，不採用前端傳來的文字 ——
+    # 否則只要傳一個很短的句子去比對，就能輕鬆拿高分。
+    eval_user_id = request.form.get('user_id', type=int)
+    eval_article_id = request.form.get('article_id', type=int)
+    eval_article = Article.query.get(eval_article_id) if eval_article_id else None
+    if eval_article and eval_article.content:
+        article_text = eval_article.content
+
     temp_dir = tempfile.gettempdir()
     temp_path = os.path.join(temp_dir, "temp_reading.m4a")
     audio_file.save(temp_path)
@@ -176,6 +185,23 @@ def evaluate_audio():
                 "status": "error",
                 "message": "無法辨識到有效的語音，請確認麥克風收音或大聲再試一次！"
             }), 200
+
+        # 把 AI 給的分數存在後端，前端只拿到 evaluation_id，結算時以這裡存的分數為準。
+        # 沒帶 user_id / article_id 的呼叫拿不到 id，也就無法結算成績。
+        if eval_user_id and eval_article:
+            try:
+                raw_score = float(result.get('score') or 0)
+            except (TypeError, ValueError):
+                raw_score = 0
+            evaluation = ReadingEvaluation(
+                user_id=eval_user_id,
+                article_id=eval_article.id,
+                score=max(0, min(100, int(raw_score))),
+            )
+            db.session.add(evaluation)
+            db.session.commit()
+            result['evaluation_id'] = evaluation.id
+            result['score'] = evaluation.score  # 讓畫面顯示的分數跟存下來的一致
         return jsonify(result), 200
 
     except gemini_client.GeminiQuotaExhausted as e:
@@ -320,10 +346,21 @@ def submit_score():
     data = request.get_json()
     user_id = data.get('user_id')
     article_id = data.get('article_id')
-    score = data.get('score', 0)
+    evaluation_id = data.get('evaluation_id')
 
     if not user_id or not article_id:
         return jsonify({"error": "缺少必要參數"}), 400
+
+    # 分數只認後端存下的 AI 評分結果，前端送來的 score 一律不採用。
+    # 同時確認這筆評分是這個人、這篇文章的，而且還沒結算過。
+    evaluation = ReadingEvaluation.query.get(evaluation_id) if evaluation_id else None
+    if (evaluation is None
+            or evaluation.user_id != int(user_id)
+            or evaluation.article_id != int(article_id)):
+        return jsonify({"status": "error", "error": "找不到這次的朗讀評分，請重新錄音"}), 404
+    if evaluation.settled_at is not None:
+        return jsonify({"status": "error", "error": "這次的朗讀成績已經結算過了"}), 409
+    score = evaluation.score
 
     try:
         # 1. 🏅 區間點數獎勵邏輯 (90分以上50點, 80分以上30點, 及格10點, 參加5點)
@@ -362,17 +399,28 @@ def submit_score():
             except Exception as ge:
                 print(f"⚠️ 更新小組閱讀進度失敗（不影響成績結算）：{ge}")
 
+        # 這筆評分結算完就作廢，不能再拿同一次成績重複領點數
+        evaluation.settled_at = datetime.utcnow()
         db.session.commit()
 
-        return jsonify({
+        response = {
             "status": "success",
             "score": score,
             "points_earned": points_earned,
             "total_points": user.j_pts if user else 0,
             "is_new_record": is_new_record,
             "highest_score": highest_score,
+            "progress_id": progress.id,  # 作業繳交用的作答紀錄 id
             "message": "成績結算成功！"
-        }), 200
+        }
+
+        # 從作業進來的閱讀：結算完直接繳交
+        from services.student_assignment import auto_submit
+        assignment_result = auto_submit(user_id, data.get('assignment_id'), progress.id)
+        if assignment_result is not None:
+            response['assignment_result'] = assignment_result
+
+        return jsonify(response), 200
 
     except Exception as e:
         db.session.rollback()

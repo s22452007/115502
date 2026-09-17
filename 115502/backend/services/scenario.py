@@ -376,12 +376,23 @@ def analyze_scene():
                     'badge': cfg.get('badge', False),
                 }
 
-            return jsonify({
+            response = {
                 'message': '圖片分析成功並已存入圖鑑',
                 'file_path': relative_image_path,
+                'photo_id': new_photo.id,  # 作業繳交用的作答紀錄 id
                 'result': ai_data,
                 'milestone': milestone,  # dict 或 null，供前端結果頁播慶祝動畫
-            }), 200
+            }
+
+            # 從作業進來的拍照：辨識完直接繳交。繳交失敗（例如辨識出的單字不夠）
+            # 不影響照片和單字已經存進圖鑑，只在 assignment_result 裡說明原因。
+            # auto_submit 保證不丟例外，不會掉進下面的 except 被誤退拍照次數。
+            from services.student_assignment import auto_submit
+            assignment_result = auto_submit(user_id, request.form.get('assignment_id'), new_photo.id)
+            if assignment_result is not None:
+                response['assignment_result'] = assignment_result
+
+            return jsonify(response), 200
 
         except Exception as e:
             print(f"分析圖片時發生錯誤: {e}")

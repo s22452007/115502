@@ -837,6 +837,26 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ 教育版資料表升級警告：{e}")
 
+# ==========================================
+# 📖 朗讀評分結果（防止前端竄改分數）
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS reading_evaluation (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        article_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        settled_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES user (id),
+        FOREIGN KEY (article_id) REFERENCES articles (id)
+    );
+    """)
+    print("✅ reading_evaluation 朗讀評分結果表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ reading_evaluation 升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

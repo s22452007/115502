@@ -5,11 +5,17 @@ import 'package:path_provider/path_provider.dart';
 import 'package:jpn_learning_app/models/article_model.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'article_result_screen.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final Article article;
-  const ArticleDetailScreen({Key? key, required this.article}) : super(key: key);
+
+  /// 從作業進來時帶作業 id，朗讀結算完會自動繳交作業。一般練習不用帶。
+  final int? assignmentId;
+
+  const ArticleDetailScreen({Key? key, required this.article, this.assignmentId}) : super(key: key);
 
   @override
   State<ArticleDetailScreen> createState() => _ArticleDetailScreenState();
@@ -23,8 +29,8 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   bool _isAnalyzing = false;
   final AudioRecorder _audioRecorder = AudioRecorder();
 
-  // 📝 假設使用者 ID 為 8 (之後若串接 UserProvider 可在此修改)
-  final int currentUserId = 8; 
+  // 原本這裡寫死 8，所有人的朗讀成績和點數都記到 8 號使用者身上
+  int? get currentUserId => context.read<UserProvider>().userId; 
 
   List<dynamic> get _vocabularies {
     final data = widget.article.grammarPoints;
@@ -108,11 +114,16 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   // 🌟 2. 選擇資料夾彈出視窗
   // ====================================================
   void _showFolderSelectionDialog(Map<String, dynamic> vocab) {
+    // 收藏單字要綁定帳號：沒登入就先提示。通過這裡之後，底下的 currentUserId! 都安全
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入才能收藏單字')));
+      return;
+    }
     showDialog(
       context: context,
       builder: (context) {
         return FutureBuilder<Map<String, dynamic>>(
-          future: ApiClient.fetchUserFavorites(currentUserId),
+          future: ApiClient.fetchUserFavorites(currentUserId!),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Dialog(
@@ -285,7 +296,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                           final name = _folderController.text.trim();
                           if (name.isNotEmpty) {
                             try {
-                              final folderId = await ApiClient.createFolder(currentUserId, name); 
+                              final folderId = await ApiClient.createFolder(currentUserId!, name); 
                               if (!mounted) return;
                               Navigator.pop(context);
                               _executeCollection(vocab, folderId); 
@@ -314,8 +325,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   // 🌟 4. 執行收藏動作並顯示提示
   // ====================================================
   Future<void> _executeCollection(Map<String, dynamic> vocab, int? folderId) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入才能收藏單字')));
+      return;
+    }
     final result = await ApiClient.collectArticleVocab(
-      currentUserId, 
+      userId, 
       vocab['word'], 
       vocab['reading'], 
       vocab['meaning'],
@@ -371,7 +387,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
       if (path != null && path.isNotEmpty) {
         // 1. 呼叫語音評分 API
-        final result = await ApiClient.evaluateArticleAudio(path, widget.article.content);
+        final result = await ApiClient.evaluateArticleAudio(
+          path,
+          widget.article.content,
+          userId: currentUserId,
+          articleId: widget.article.id,
+        );
         if (!mounted) return;
 
         if (result['status'] == 'success') {
@@ -412,7 +433,19 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
   // 🌟 處理成績結算與導航
   Future<void> _submitScoreAndShowResult(int score, Map<String, dynamic> evaluateResult) async {
-    final submitResult = await ApiClient.submitArticleScore(currentUserId, widget.article.id, score);
+    final userId = currentUserId;
+    final evaluationId = (evaluateResult['evaluation_id'] as num?)?.toInt();
+
+    // 沒登入、或後端沒存到評分（拿不到 evaluation_id）就無法結算成績：
+    // 只顯示這次的朗讀報告，不發點數、也不算作業。
+    final Map<String, dynamic> submitResult = (userId == null || evaluationId == null)
+        ? {'status': 'skipped'}
+        : await ApiClient.submitArticleScore(
+            userId,
+            widget.article.id,
+            evaluationId,
+            assignmentId: widget.assignmentId,
+          );
     
     if (!mounted) return;
     setState(() => _isAnalyzing = false);

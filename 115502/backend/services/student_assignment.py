@@ -261,6 +261,102 @@ def submit_assignment(student_id, assignment_id, result_ref_id):
     }, 200
 
 
+def auto_submit(student_id, assignment_id, result_ref_id):
+    """給各功能端點用：作答完成後，如果是從作業進來的，就順便繳交。
+
+    回傳值直接放進功能端點回應的 assignment_result 欄位：
+      - 沒帶 assignment_id：不是作業，回傳 None，呼叫端照常回應
+      - 作答紀錄沒存成功：回傳說明，不要讓學生以為交了
+      - 不符合作業要求：回傳原因，但作答本身已經存好，不受影響
+
+    這個函式絕對不丟例外。呼叫端都在作答流程的最後面，作業繳交出錯
+    不該讓整次作答變成失敗（例如拍照失敗會退還次數，但照片其實已經存了）。
+    """
+    if assignment_id in (None, '', 0, '0'):
+        return None
+    try:
+        assignment_id = int(assignment_id)
+        student_id = int(student_id)
+    except (TypeError, ValueError):
+        return {"submitted": False, "status": "invalid_assignment", "error": "作業編號格式不正確"}
+
+    if not result_ref_id:
+        return {"submitted": False, "status": "record_not_saved",
+                "error": "作答紀錄沒有儲存成功，這次沒有交到作業，請再做一次"}
+
+    try:
+        payload, code = submit_assignment(student_id, assignment_id, int(result_ref_id))
+        return {"submitted": code == 200, "http_status": code, **payload}
+    except Exception as e:
+        db.session.rollback()
+        print(f"⚠️ 自動繳交作業失敗（不影響作答本身）：{e}")
+        return {"submitted": False, "status": "error",
+                "error": "作業繳交時發生錯誤，請到作業頁面重新繳交"}
+
+
+def auto_submit_chat(student_id, assignment_id, session_id):
+    """AI 對話作業專用的自動繳交，學生每說完一輪話呼叫一次。
+
+    對話是多輪的，不像造句、拍照做一次就結束，所以規則不同：
+      - 輪數還不夠：回報進度（還差幾輪），不嘗試繳交
+      - 這個場次已經交過：不再重交，避免每多說一句 attempt_count 就加一
+      - 第一次達到輪數，或換了一個新的場次：正式繳交
+    跟 auto_submit 一樣絕對不丟例外，不能讓作業問題弄壞對話本身。
+    """
+    if assignment_id in (None, '', 0, '0'):
+        return None
+    try:
+        assignment_id = int(assignment_id)
+        student_id = int(student_id)
+    except (TypeError, ValueError):
+        return {"submitted": False, "status": "invalid_request", "error": "缺少使用者或作業編號"}
+
+    if not session_id:
+        return {"submitted": False, "status": "record_not_saved",
+                "error": "這段對話沒有被記錄下來，無法繳交作業，請重新開始對話"}
+
+    try:
+        assignment, err, code = _visible_assignment(assignment_id, student_id)
+        if err:
+            return {"submitted": False, "status": "not_found", "error": err}
+        if assignment.task_type != TaskType.CHAT:
+            return {"submitted": False, "status": "invalid_task_type", "error": "這份作業不是 AI 對話題"}
+
+        session = ChatSession.query.get(int(session_id))
+        if session is None or session.user_id != student_id:
+            return {"submitted": False, "status": "record_not_found", "error": "找不到這段對話紀錄"}
+
+        config = assignment.config or {}
+        required_topic = config.get('topic')
+        if required_topic and session.topic != required_topic:
+            return {"submitted": False, "status": "requirement_not_met",
+                    "error": f"這份作業指定的對話情境是「{required_topic}」"}
+
+        need = int(config.get('min_turns') or 0)
+        # 只算學生自己說的話，AI 回覆不算輪數
+        turns = ChatMessage.query.filter_by(session_id=session.id, role='user').count()
+        progress = {"turns": turns, "min_turns": need}
+
+        if turns < need:
+            return {"submitted": False, "status": "in_progress", **progress,
+                    "message": f"再對話 {need - turns} 輪就完成作業"}
+
+        existing = AssignmentSubmission.query.filter_by(
+            assignment_id=assignment.id, student_id=student_id
+        ).first()
+        if existing and existing.result_ref_id == session.id:
+            return {"submitted": True, "status": "already_submitted", **progress,
+                    "message": "這段對話已經交過作業了"}
+
+        payload, code = submit_assignment(student_id, assignment.id, session.id)
+        return {"submitted": code == 200, "http_status": code, **progress, **payload}
+    except Exception as e:
+        db.session.rollback()
+        print(f"⚠️ AI 對話作業自動繳交失敗（不影響對話本身）：{e}")
+        return {"submitted": False, "status": "error",
+                "error": "作業繳交時發生錯誤，請到作業頁面重新繳交"}
+
+
 # ==========================================
 # 路由
 # ==========================================

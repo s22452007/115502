@@ -195,6 +195,7 @@ def evaluate_sentence():
         points_earned = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
 
         # 🌟 防呆 2：安全寫入資料庫
+        record_id = None
         try:
             new_record = SentencePracticeRecord(
                 user_id=user_id,
@@ -205,10 +206,11 @@ def evaluate_sentence():
                 ai_feedback=result.get('strict_feedback', ''),
                 score=score,
                 points_earned=points_earned,
-                is_claimed=False 
+                is_claimed=False
             )
             db.session.add(new_record)
             db.session.commit()
+            record_id = new_record.id
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ 歷史紀錄寫入資料庫失敗 (表格可能未建立): {e}")
@@ -221,6 +223,15 @@ def evaluate_sentence():
             print(f"⚠️ 更新小組造句進度失敗（不影響批改結果）：{ge}")
 
         result['points_earned'] = points_earned
+        result['record_id'] = record_id  # 作業繳交用的作答紀錄 id（寫入失敗時為 None）
+
+        # 從作業進來的造句：批改完直接繳交。繳交失敗（例如沒用到指定單字）
+        # 不影響批改結果本身，只在 assignment_result 裡說明原因。
+        from services.student_assignment import auto_submit
+        assignment_result = auto_submit(user_id, data.get('assignment_id'), record_id)
+        if assignment_result is not None:
+            result['assignment_result'] = assignment_result
+
         result['status'] = 'success'
         return jsonify(result), 200
     except Exception as e:

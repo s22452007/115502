@@ -12,6 +12,7 @@ from utils.db import db
 from models import Admin, Vocab, SystemLog, Article, Achievement, User, AccountType
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func
+from dotenv import load_dotenv
 
 
 def utc_to_tw(utc_str):
@@ -35,6 +36,15 @@ app = Flask(__name__)
 app.secret_key = 'jlens_admin_secure_key_2024'
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))  # GOOGLE_WEB_CLIENT_ID、TEACHER_GOOGLE_DOMAINS 等設定
+
+# ---- 老師用學校 Google 帳號登入 ----
+# GOOGLE_WEB_CLIENT_ID：Firebase 專案裡「Web client」的 OAuth client ID（與 App 的 serverClientId 同一個）。
+#   沒設定時登入頁不顯示 Google 按鈕，老師仍可用管理者建立的帳號密碼登入。
+# TEACHER_GOOGLE_DOMAINS：允許的學校網域，逗號分隔（例如 ntub.edu.tw）。留空表示不限制網域。
+GOOGLE_WEB_CLIENT_ID = (os.getenv('GOOGLE_WEB_CLIENT_ID') or '').strip()
+TEACHER_GOOGLE_DOMAINS = [d.strip().lower().lstrip('@') for d in (os.getenv('TEACHER_GOOGLE_DOMAINS') or '').split(',') if d.strip()]
+
 path1 = os.path.join(BASE_DIR, 'instance', 'jlens.db')
 path2 = os.path.join(BASE_DIR, 'jlens.db')
 DB_FILE_PATH = path1 if os.path.exists(path1) else path2
@@ -48,6 +58,12 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'timeout': 15},
 }
 db.init_app(app)
+
+
+@app.context_processor
+def _inject_google_login_settings():
+    """登入頁用：有設定 client ID 才顯示「用學校 Google 帳號登入」按鈕"""
+    return {'google_client_id': GOOGLE_WEB_CLIENT_ID, 'teacher_domains': TEACHER_GOOGLE_DOMAINS}
 # ==========================================
 # 🚀 自動路徑偵測
 # ==========================================
@@ -164,14 +180,92 @@ def _teacher_login():
     if getattr(user, 'is_suspended', False):
         return render_template('admin_login.html', login_as='teacher', error="此老師帳號已被停用，請聯繫系統管理員")
 
+    print(f"✅ 老師登入成功: {email} (user_id={user.id})")
+    return _start_teacher_session(user)
+
+
+def _start_teacher_session(user):
     session.clear()
     session['admin_user'] = user.username or user.email   # 側欄顯示名稱
     session['admin_id'] = None                            # 老師不是 admin 表的帳號
     session['role'] = 'teacher'
     session['teacher_user_id'] = user.id
     session.permanent = True
-    print(f"✅ 老師登入成功: {email} (user_id={user.id})")
     return redirect(url_for('teacher_classrooms'))
+
+
+def _verify_google_id_token(credential):
+    """向 Google 驗證登入頁送來的 ID token，回傳 claims（email、name、picture…）；驗證失敗丟 ValueError。
+
+    這裡一定要在伺服器端驗，不能像 App 的 /google_login 那樣直接相信前端送來的 Email。
+    """
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+    return google_id_token.verify_oauth2_token(credential, google_requests.Request(), GOOGLE_WEB_CLIENT_ID)
+
+
+def _unique_teacher_username(preferred, email):
+    """user.username 有唯一限制；Google 顯示名稱撞名時改用 Email 帳號部分，再撞就加流水號"""
+    base = (preferred or '').strip() or email.split('@')[0]
+    candidates = [base, email.split('@')[0]] + [f'{base}{i}' for i in range(2, 100)]
+    for name in candidates:
+        if not User.query.filter_by(username=name).first():
+            return name
+    return email
+
+
+@app.route('/login/google', methods=['POST'])
+def teacher_google_login():
+    """老師用學校 Google 帳號登入：第一次登入自動建立老師帳號，之後直接登入"""
+    def fail(msg):
+        print(f"❌ 老師 Google 登入失敗: {msg}")
+        return render_template('admin_login.html', login_as='teacher', error=msg)
+
+    if not GOOGLE_WEB_CLIENT_ID:
+        return fail('尚未設定 Google 登入，請聯繫系統管理員')
+    credential = request.form.get('credential') or ''
+    if not credential:
+        return fail('沒有收到 Google 登入資料，請再試一次')
+
+    try:
+        claims = _verify_google_id_token(credential)
+    except ValueError as e:
+        return fail('Google 登入驗證失敗，請再試一次')
+
+    email = (claims.get('email') or '').strip()
+    if not email or not claims.get('email_verified', False):
+        return fail('這個 Google 帳號的 Email 尚未驗證')
+    domain = email.split('@')[-1].lower()
+    if TEACHER_GOOGLE_DOMAINS and domain not in TEACHER_GOOGLE_DOMAINS:
+        allowed = '、'.join('@' + d for d in TEACHER_GOOGLE_DOMAINS)
+        return fail(f'請使用學校配發的 Google 帳號（{allowed}）登入，一般 Gmail 無法作為老師帳號')
+
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        # 學校網域驗證通過的第一次登入：自動建立老師帳號，不需要管理者手動建
+        user = User(
+            email=email,
+            username=_unique_teacher_username(claims.get('name'), email),
+            password_hash=generate_password_hash('GOOGLE_OAUTH_' + os.urandom(16).hex()),
+            account_type=AccountType.TEACHER,
+            avatar=claims.get('picture') or None,
+        )
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(SystemLog(
+            admin_id=None, user_id=user.id,
+            action='CREATE', target_table='user', target_id=user.id,
+            new_value={'email': email, 'username': user.username, 'account_type': AccountType.TEACHER, 'via': 'google'}
+        ))
+        db.session.commit()
+        print(f"🆕 以學校 Google 帳號建立老師: {email}")
+    elif getattr(user, 'account_type', AccountType.GENERAL) != AccountType.TEACHER:
+        return fail(f'「{email}」已是 App 的一般使用者帳號，無法作為老師帳號；請改用其他學校帳號，或請管理者處理')
+    elif getattr(user, 'is_suspended', False):
+        return fail('此老師帳號已被停用，請聯繫系統管理員')
+
+    print(f"✅ 老師 Google 登入成功: {email} (user_id={user.id})")
+    return _start_teacher_session(user)
 
 @app.route('/admin/forgot_password', methods=['GET', 'POST'])
 def admin_forgot_password():

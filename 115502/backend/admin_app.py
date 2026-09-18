@@ -1,3 +1,11 @@
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 import sqlite3
 import os
 import json
@@ -110,8 +118,18 @@ def teacher_required(f):
     def decorated_function(*args, **kwargs):
         if session.get('role') == 'teacher' and session.get('teacher_user_id'):
             return f(*args, **kwargs)
-        if 'admin_user' in session:
-            return redirect(url_for('admin_dashboard'))
+        if session.get('role') == 'super_admin' or 'admin_user' in session:
+            # 管理者若無 teacher_user_id，依 admin_user 帳號查找或綁定教師帳號
+            if not session.get('teacher_user_id'):
+                from models import User
+                u = User.query.filter((User.username == session.get('admin_user')) | (User.email == session.get('admin_user'))).first()
+                if not u:
+                    u = User.query.filter_by(account_type='teacher').first()
+                if not u:
+                    u = User.query.first()
+                if u:
+                    session['teacher_user_id'] = u.id
+            return f(*args, **kwargs)
         return redirect(url_for('admin_login'))
     return decorated_function
 
@@ -156,10 +174,10 @@ def admin_login():
             session['role'] = admin.role # 確保這行有加上，這樣才能分辨 super_admin
             session.permanent = True
             
-            print(f"✅ 登入成功: {username} (權限: {admin.role})")
+            print(f"[OK] 登入成功: {username} (權限: {admin.role})")
             return redirect(url_for('admin_dashboard')) # 密碼正確去儀表板
         else:
-            print(f"❌ 登入失敗: {username} (密碼錯誤)")
+            print(f"[FAIL] 登入失敗: {username} (密碼錯誤)")
             return render_template('admin_login.html', error="密碼錯誤，請重新輸入")
             
     return render_template('admin_login.html')
@@ -172,7 +190,7 @@ def _teacher_login():
     user = User.query.filter_by(email=email).first()
 
     if not user or not check_password_hash(user.password_hash, password):
-        print(f"❌ 老師登入失敗: {email} (帳號或密碼錯誤)")
+        print(f"[FAIL] 老師登入失敗: {email} (帳號或密碼錯誤)")
         return render_template('admin_login.html', login_as='teacher', error="Email 或密碼錯誤，請重新輸入")
     if getattr(user, 'account_type', AccountType.GENERAL) != AccountType.TEACHER:
         return render_template('admin_login.html', login_as='teacher',
@@ -180,7 +198,7 @@ def _teacher_login():
     if getattr(user, 'is_suspended', False):
         return render_template('admin_login.html', login_as='teacher', error="此老師帳號已被停用，請聯繫系統管理員")
 
-    print(f"✅ 老師登入成功: {email} (user_id={user.id})")
+    print(f"[OK] 老師登入成功: {email} (user_id={user.id})")
     return _start_teacher_session(user)
 
 
@@ -218,7 +236,7 @@ def _unique_teacher_username(preferred, email):
 def teacher_google_login():
     """老師用學校 Google 帳號登入：第一次登入自動建立老師帳號，之後直接登入"""
     def fail(msg):
-        print(f"❌ 老師 Google 登入失敗: {msg}")
+        print(f"[FAIL] 老師 Google 登入失敗: {msg}")
         return render_template('admin_login.html', login_as='teacher', error=msg)
 
     if not GOOGLE_WEB_CLIENT_ID:
@@ -258,13 +276,13 @@ def teacher_google_login():
             new_value={'email': email, 'username': user.username, 'account_type': AccountType.TEACHER, 'via': 'google'}
         ))
         db.session.commit()
-        print(f"🆕 以學校 Google 帳號建立老師: {email}")
+        print(f"[NEW] 以學校 Google 帳號建立老師: {email}")
     elif getattr(user, 'account_type', AccountType.GENERAL) != AccountType.TEACHER:
         return fail(f'「{email}」已是 App 的一般使用者帳號，無法作為老師帳號；請改用其他學校帳號，或請管理者處理')
     elif getattr(user, 'is_suspended', False):
         return fail('此老師帳號已被停用，請聯繫系統管理員')
 
-    print(f"✅ 老師 Google 登入成功: {email} (user_id={user.id})")
+    print(f"[OK] 老師 Google 登入成功: {email} (user_id={user.id})")
     return _start_teacher_session(user)
 
 @app.route('/admin/forgot_password', methods=['GET', 'POST'])
@@ -1729,7 +1747,9 @@ from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission
 
 
 def _own_classroom(classroom_id):
-    """回傳目前登入老師自己的班級；不是他的（或不存在）就回 None，避免看到別班的隨機碼與學生"""
+    """回傳目前登入老師自己的班級；若是 super_admin 則可管理所有班級"""
+    if session.get('role') == 'super_admin':
+        return Classroom.query.get(classroom_id)
     return Classroom.query.filter_by(id=classroom_id, teacher_id=session.get('teacher_user_id')).first()
 
 
@@ -1743,8 +1763,9 @@ def _own_assignment(assignment_id):
 @app.route('/teacher/classrooms')
 @teacher_required
 def teacher_classrooms():
-    """班級列表與隨機碼管理首頁（只列出自己的班級）"""
-    classrooms = get_classroom_list(teacher_id=session['teacher_user_id'])
+    """班級列表與隨機碼管理首頁（老師只看自己，管理者可查看全部班級）"""
+    t_id = session.get('teacher_user_id')
+    classrooms = get_classroom_list(teacher_id=t_id if session.get('role') != 'super_admin' else None)
     return render_template('teacher/classroom_list.html', classrooms=classrooms)
 
 

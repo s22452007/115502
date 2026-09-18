@@ -15,6 +15,7 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 class RoleplayScreen extends StatefulWidget {
   final String topicTitle;
   final String characterName;
+
   /// 從歷史紀錄接續對話時傳入既有場次 id；新對話則留 null
   final int? resumeSessionId;
 
@@ -80,8 +81,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUsageData(); 
-    _initSpeech();     
+    _fetchUsageData();
+    _initSpeech();
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingText = null);
@@ -98,7 +99,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       // 否則只是進來看一眼就離開的話，資料庫會留下一堆沒有內容的空場次。
       // 標記 isGreeting，組對話紀錄時要排除（它是介面說明，不是對話內容）
       _messages.add({
-        'text': '歡迎來到「${widget.topicTitle}」！\n我是今天的對話對象「${widget.characterName}」✨\n不知道如何開頭的話可以點擊下方：幫我開場',
+        'text':
+            '歡迎來到「${widget.topicTitle}」！\n我是今天的對話對象「${widget.characterName}」✨\n不知道如何開頭的話可以點擊下方：幫我開場',
         'isUserMessage': false,
         'isGreeting': true,
       });
@@ -139,10 +141,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
   Future<void> _toggleListening() async {
     if (!_speechEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('此裝置不支援語音辨識，或未授權麥克風權限'),
-        backgroundColor: Colors.redAccent,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('此裝置不支援語音辨識，或未授權麥克風權限'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
       return;
     }
 
@@ -158,8 +162,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         : (kIsWeb ? 'zh-TW' : 'zh_TW');
     await _speech.listen(
       listenOptions: SpeechListenOptions(
-        localeId: locale, 
-        partialResults: true, 
+        localeId: locale,
+        partialResults: true,
         listenMode: ListenMode.dictation,
       ),
       onResult: (result) {
@@ -212,10 +216,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         await _audioPlayer.play(BytesSource(bytes));
       } else {
         setState(() => _playingText = null);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('語音合成失敗，請稍後再試'),
-          backgroundColor: Colors.redAccent,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('語音合成失敗，請稍後再試'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     } catch (e) {
       print('TTS 播放錯誤: $e');
@@ -271,16 +277,23 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       });
       return true;
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('連線失敗，無法確認使用次數，請稍後再試'),
-        backgroundColor: Colors.redAccent,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('連線失敗，無法確認使用次數，請稍後再試'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
       return false;
     }
   }
 
-  void _showQuotaBottomSheet(int used, int limit, void Function() onBoughtRetry) {
+  void _showQuotaBottomSheet(
+    int used,
+    int limit,
+    void Function() onBoughtRetry,
+  ) {
     final provider = context.read<UserProvider>();
+    if (provider.isEduStudent) return;
     final jPts = provider.jPts;
     final isPremium = provider.isPremium;
 
@@ -296,12 +309,16 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(children: [
-                const Icon(Icons.smart_toy, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text('今日AI對話次數已用完',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-              ]),
+              Row(
+                children: [
+                  const Icon(Icons.smart_toy, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '今日AI對話次數已用完',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
               const SizedBox(height: 6),
               Text(
                 isPremium ? '訂閱版每天 10 次' : '免費版每天 3 次',
@@ -317,12 +334,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   backgroundColor: const Color(0xFF6AA86B),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(
-                  jPts < 60
-                      ? '點數不足（需 60 點，目前 $jPts 點）'
-                      : '花 60 點加購 +5 次（永久）',
+                  jPts < 60 ? '點數不足（需 60 點，目前 $jPts 點）' : '花 60 點加購 +5 次（永久）',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -331,17 +348,25 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 OutlinedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const StoreDashboardScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StoreDashboardScreen(),
+                      ),
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFC6B13B),
                     side: const BorderSide(color: Color(0xFFC6B13B)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text('升級訂閱  每天 10 次',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    '升級訂閱  每天 10 次',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
               const SizedBox(height: 6),
@@ -361,16 +386,22 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     final userId = provider.userId;
     if (userId == null) return;
 
-    final buyRes = await ApiClient.spendPoints(userId: userId, points: 60, feature: 'ai_extra');
+    final buyRes = await ApiClient.spendPoints(
+      userId: userId,
+      points: 60,
+      feature: 'ai_extra',
+    );
     if (!mounted) return;
 
     final status = (buyRes['_status'] as num?)?.toInt() ?? 0;
     if (status != 200) {
       final errMsg = buyRes['error']?.toString() ?? '';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(errMsg.contains('點數不足') ? '點數不足，請先購買點數' : errMsg),
-        backgroundColor: Colors.redAccent,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errMsg.contains('點數不足') ? '點數不足，請先購買點數' : errMsg),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
       return;
     }
 
@@ -379,7 +410,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     }
     await _fetchUsageData();
     if (!mounted) return;
-    onRetry(); 
+    onRetry();
   }
 
   // ==========================================
@@ -413,19 +444,25 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     if (data == null) {
       setState(() => _isLoadingHistory = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('載入對話紀錄失敗，可以直接繼續聊'),
-        backgroundColor: Colors.redAccent,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('載入對話紀錄失敗，可以直接繼續聊'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
       return;
     }
 
     final messages = (data['messages'] as List?) ?? [];
     setState(() {
-      _messages.addAll(messages.map((m) => {
+      _messages.addAll(
+        messages.map(
+          (m) => {
             'text': m['content']?.toString() ?? '',
             'isUserMessage': m['role'] == 'user',
-          }));
+          },
+        ),
+      );
       _isLoadingHistory = false;
       // 接續對話時給幾個常用的回應選項
       if (_messages.isNotEmpty) {
@@ -453,18 +490,28 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         ? real.sublist(real.length - _historyTurns)
         : real;
 
-    final aiName = widget.characterName.isNotEmpty ? widget.characterName : '老師';
+    final aiName = widget.characterName.isNotEmpty
+        ? widget.characterName
+        : '老師';
 
-    return recent.map((m) {
-      final isUser = m['isUserMessage'] == true;
-      // 去掉 [漢字|假名] 標音再送出：對理解語意沒有幫助，卻會多花不少 token
-      final text = FuriganaText.cleanFuriganaForTts(m['text']?.toString() ?? '').trim();
-      return '${isUser ? "使用者" : aiName}：$text';
-    }).join('\n');
+    return recent
+        .map((m) {
+          final isUser = m['isUserMessage'] == true;
+          // 去掉 [漢字|假名] 標音再送出：對理解語意沒有幫助，卻會多花不少 token
+          final text = FuriganaText.cleanFuriganaForTts(
+            m['text']?.toString() ?? '',
+          ).trim();
+          return '${isUser ? "使用者" : aiName}：$text';
+        })
+        .join('\n');
   }
 
   Future<void> _triggerAIOpening() async {
-    final canProceed = await _checkAILimit(onBoughtRetry: () { _triggerAIOpening(); });
+    final canProceed = await _checkAILimit(
+      onBoughtRetry: () {
+        _triggerAIOpening();
+      },
+    );
     if (!canProceed) return;
 
     setState(() {
@@ -499,7 +546,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         });
         _scrollToBottom();
 
-        await _fetchUsageData(); 
+        await _fetchUsageData();
       }
     } catch (e) {
       print('開場請求發生錯誤: $e');
@@ -515,7 +562,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    final canProceed = await _checkAILimit(onBoughtRetry: () { _sendMessage(); });
+    final canProceed = await _checkAILimit(
+      onBoughtRetry: () {
+        _sendMessage();
+      },
+    );
     if (!canProceed) return;
 
     // 先取得歷史紀錄，再把這次的新訊息加進畫面
@@ -574,10 +625,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       } else {
         // 伺服器錯誤時也要讓使用者知道，不能什麼都不顯示
         setState(() {
-          _messages.add({
-            'text': '訊息送不出去，請稍後再試一次！',
-            'isUserMessage': false,
-          });
+          _messages.add({'text': '訊息送不出去，請稍後再試一次！', 'isUserMessage': false});
         });
       }
       await _fetchUsageData(); // 無論成功失敗都更新次數（失敗時後端會退還）
@@ -585,10 +633,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       print('發送請求時發生錯誤: $e');
       if (mounted) {
         setState(() {
-          _messages.add({
-            'text': '網路連線失敗，請確認連線後再試一次！',
-            'isUserMessage': false,
-          });
+          _messages.add({'text': '網路連線失敗，請確認連線後再試一次！', 'isUserMessage': false});
         });
       }
     } finally {
@@ -665,8 +710,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       return (reply: raw, correction: null);
     }
 
-    final correction =
-        lines[index].trim().replaceFirst('[訂正]', '').trim();
+    final correction = lines[index].trim().replaceFirst('[訂正]', '').trim();
     lines.removeAt(index);
     // 去掉訂正行後可能留下開頭空行
     final reply = lines.join('\n').replaceFirst(RegExp(r'^\s*\n+'), '');
@@ -726,10 +770,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
                     FuriganaText.cleanFuriganaForTts(line),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
                 );
               }
@@ -756,8 +797,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   children: sentences.map((s) {
                     final plain = FuriganaText.cleanFuriganaForTts(s);
                     final isPlaying = _playingText == plain;
-                    final color =
-                        isPlaying ? AppColors.primary : AppColors.textDark;
+                    final color = isPlaying
+                        ? AppColors.primary
+                        : AppColors.textDark;
                     return GestureDetector(
                       onTap: () => _playTts(s),
                       child: Container(
@@ -822,10 +864,15 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           title: Text(
             widget.topicTitle,
             style: const TextStyle(
-                color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
@@ -868,32 +915,41 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       ),
       body: Column(
         children: [
-          Builder(builder: (_) {
-            // 教育版學生不限次數：只顯示今天對話幾次，不顯示上限，也不會變紅
-            final isEduStudent = context.watch<UserProvider>().isEduStudent;
-            final dailyRemaining = (_aiMax - _aiUsed).clamp(0, _aiMax);
-            final effectiveRemaining = dailyRemaining + _aiExtra;
-            final countColor = isEduStudent
-                ? AppColors.primary
-                : effectiveRemaining <= 0
-                    ? Colors.red.shade600
-                    : effectiveRemaining == 1
-                        ? Colors.orange.shade700
-                        : AppColors.primary;
-            final extraText = _aiExtra > 0 ? ' 額外$_aiExtra次' : '';
-            return Container(
-              width: double.infinity,
-              color: AppColors.primaryLighter.withValues(alpha: 0.2),
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              child: Text(
-                isEduStudent
-                    ? '今日對話：$_aiUsed 次（不限次數）'
-                    : '今日對話：$_aiUsed / $_aiMax 次$extraText',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: countColor, fontWeight: FontWeight.bold),
-              ),
-            );
-          }),
+          Builder(
+            builder: (_) {
+              // 教育版學生不限次數：只顯示今天對話幾次，不顯示上限，也不會變紅
+              final isEduStudent = context.watch<UserProvider>().isEduStudent;
+              final dailyRemaining = (_aiMax - _aiUsed).clamp(0, _aiMax);
+              final effectiveRemaining = dailyRemaining + _aiExtra;
+              final countColor = isEduStudent
+                  ? AppColors.primary
+                  : effectiveRemaining <= 0
+                  ? Colors.red.shade600
+                  : effectiveRemaining == 1
+                  ? Colors.orange.shade700
+                  : AppColors.primary;
+              final extraText = _aiExtra > 0 ? ' 額外$_aiExtra次' : '';
+              return Container(
+                width: double.infinity,
+                color: AppColors.primaryLighter.withValues(alpha: 0.2),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 16,
+                ),
+                child: Text(
+                  isEduStudent
+                      ? '今日對話：$_aiUsed 次（不限次數）'
+                      : '今日對話：$_aiUsed / $_aiMax 次$extraText',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: countColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            },
+          ),
 
           Expanded(
             child: ListView.builder(
@@ -904,7 +960,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 final msg = _messages[i];
                 bool isUserMessage = msg['isUserMessage'] ?? false;
                 String messageText = msg['text'] ?? '';
-                String? correction = msg['correction']; 
+                String? correction = msg['correction'];
 
                 return Align(
                   alignment: isUserMessage
@@ -971,7 +1027,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                           // 訂正內容也可能含標音，顯示前先清掉
                                           Text(
                                             FuriganaText.cleanFuriganaForTts(
-                                                correction),
+                                              correction,
+                                            ),
                                             style: TextStyle(
                                               fontSize: 13,
                                               height: 1.4,
@@ -990,31 +1047,33 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                   _showBottomSheetOptions(context, messageText);
                                 }
                               },
-                              child: Builder(builder: (_) {
-                                final String displayText = messageText;
+                              child: Builder(
+                                builder: (_) {
+                                  final String displayText = messageText;
 
-                                if (isUserMessage) {
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      displayText,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
+                                  if (isUserMessage) {
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
                                       ),
-                                    ),
-                                  );
-                                }
-                                return _buildAiBubble(displayText);
-                              }),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        displayText,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return _buildAiBubble(displayText);
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -1062,24 +1121,33 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                     vertical: 4,
                   ),
                   child: Row(
-                    children: _quickReplies.map((reply) => Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: ActionChip(
-                            backgroundColor: Colors.white,
-                            side: const BorderSide(color: AppColors.primary),
-                            label: Text(reply, style: const TextStyle(color: AppColors.primary)),
-                            onPressed: () {
-                              _controller.text = reply;
-                              if (reply == '幫我開場') {
-                                _triggerAIOpening();
-                                _quickReplies.clear();
-                                _controller.clear();
-                              } else {
-                                _sendMessage();
-                              }
-                            },
+                    children: _quickReplies
+                        .map(
+                          (reply) => Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ActionChip(
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: AppColors.primary),
+                              label: Text(
+                                reply,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              onPressed: () {
+                                _controller.text = reply;
+                                if (reply == '幫我開場') {
+                                  _triggerAIOpening();
+                                  _quickReplies.clear();
+                                  _controller.clear();
+                                } else {
+                                  _sendMessage();
+                                }
+                              },
+                            ),
                           ),
-                        )).toList(),
+                        )
+                        .toList(),
                   ),
                 ),
               Container(
@@ -1096,7 +1164,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                     IconButton(
                       icon: Icon(
                         _isListening ? Icons.mic : Icons.mic_none,
-                        color: _isListening ? Colors.redAccent : AppColors.primary,
+                        color: _isListening
+                            ? Colors.redAccent
+                            : AppColors.primary,
                       ),
                       tooltip: _isListening
                           ? '停止語音輸入'

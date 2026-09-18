@@ -81,13 +81,17 @@ class _CameraScreenState extends State<CameraScreen>
         _photoCountToday = (res['daily_scans'] as num?)?.toInt() ?? 0;
         _photoExtraCount = (res['extra_count'] as num?)?.toInt() ?? 0;
       });
-      provider.updatePhotoUsage(countToday: _photoCountToday, extraCount: _photoExtraCount);
+      provider.updatePhotoUsage(
+        countToday: _photoCountToday,
+        extraCount: _photoExtraCount,
+      );
       await _showNamingDialogAndProceed(imagePath);
     }
   }
 
   void _showQuotaBottomSheet(String imagePath, int used, int limit) {
     final provider = context.read<UserProvider>();
+    if (provider.isEduStudent) return;
     final jPts = provider.jPts;
     final isPremium = provider.isPremium;
 
@@ -103,12 +107,16 @@ class _CameraScreenState extends State<CameraScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(children: [
-                const Icon(Icons.camera_alt, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text('今日拍照次數已用完',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-              ]),
+              Row(
+                children: [
+                  const Icon(Icons.camera_alt, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '今日拍照次數已用完',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
               const SizedBox(height: 6),
               Text(
                 isPremium ? '訂閱版每天 10 次' : '免費版每天 2 次',
@@ -124,12 +132,12 @@ class _CameraScreenState extends State<CameraScreen>
                   backgroundColor: const Color(0xFF5F8F5B),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(
-                  jPts < 60
-                      ? '點數不足（需 60 點，目前 $jPts 點）'
-                      : '花 60 點加購 +5 次（永久）',
+                  jPts < 60 ? '點數不足（需 60 點，目前 $jPts 點）' : '花 60 點加購 +5 次（永久）',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -138,17 +146,25 @@ class _CameraScreenState extends State<CameraScreen>
                 OutlinedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const StoreDashboardScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StoreDashboardScreen(),
+                      ),
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFC6B13B),
                     side: const BorderSide(color: Color(0xFFC6B13B)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text('升級訂閱  每天 10 次',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    '升級訂閱  每天 10 次',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
               const SizedBox(height: 6),
@@ -168,16 +184,22 @@ class _CameraScreenState extends State<CameraScreen>
     final userId = provider.userId;
     if (userId == null) return;
 
-    final buyRes = await ApiClient.spendPoints(userId: userId, points: 60, feature: feature);
+    final buyRes = await ApiClient.spendPoints(
+      userId: userId,
+      points: 60,
+      feature: feature,
+    );
     if (!mounted) return;
 
     final status = (buyRes['_status'] as num?)?.toInt() ?? 0;
     if (status != 200) {
       final errMsg = buyRes['error']?.toString() ?? '';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(errMsg.contains('點數不足') ? '點數不足，請先購買點數' : errMsg),
-        backgroundColor: Colors.redAccent,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errMsg.contains('點數不足') ? '點數不足，請先購買點數' : errMsg),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
       return;
     }
 
@@ -191,10 +213,15 @@ class _CameraScreenState extends State<CameraScreen>
 
     if ((scanRes['_status'] as num?)?.toInt() == 200) {
       setState(() {
-        _photoCountToday = (scanRes['daily_scans'] as num?)?.toInt() ?? _photoCountToday + 1;
-        _photoExtraCount = (scanRes['extra_count'] as num?)?.toInt() ?? _photoExtraCount;
+        _photoCountToday =
+            (scanRes['daily_scans'] as num?)?.toInt() ?? _photoCountToday + 1;
+        _photoExtraCount =
+            (scanRes['extra_count'] as num?)?.toInt() ?? _photoExtraCount;
       });
-      provider.updatePhotoUsage(countToday: _photoCountToday, extraCount: _photoExtraCount);
+      provider.updatePhotoUsage(
+        countToday: _photoCountToday,
+        extraCount: _photoExtraCount,
+      );
       await _showNamingDialogAndProceed(imagePath);
     }
   }
@@ -242,8 +269,9 @@ class _CameraScreenState extends State<CameraScreen>
     // 相機未初始化（例如模擬器、網頁版）→ 改開相簿選照片
     if (_controller == null || !_controller!.value.isInitialized) {
       final ImagePicker picker = ImagePicker();
-      final XFile? pickedFile =
-          await picker.pickImage(source: ImageSource.gallery);
+      final XFile? pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+      );
       if (pickedFile != null && mounted) {
         await _checkAndProceedWithPhoto(pickedFile.path);
       }
@@ -310,7 +338,10 @@ class _CameraScreenState extends State<CameraScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('繼續使用', style: TextStyle(color: AppColors.primary)),
+            child: const Text(
+              '繼續使用',
+              style: TextStyle(color: AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -332,9 +363,7 @@ class _CameraScreenState extends State<CameraScreen>
           title: const Text('為這張照片命名（選填）'),
           content: TextField(
             controller: nameController,
-            decoration: const InputDecoration(
-              hintText: '例如：我的書桌',
-            ),
+            decoration: const InputDecoration(hintText: '例如：我的書桌'),
             autofocus: true,
           ),
           actions: [
@@ -348,7 +377,10 @@ class _CameraScreenState extends State<CameraScreen>
               onPressed: () {
                 Navigator.pop(dialogContext, nameController.text.trim());
               },
-              child: const Text('確定', style: TextStyle(color: AppColors.primary)),
+              child: const Text(
+                '確定',
+                style: TextStyle(color: AppColors.primary),
+              ),
             ),
           ],
         );
@@ -396,7 +428,10 @@ class _CameraScreenState extends State<CameraScreen>
               onPressed: () {
                 Navigator.pop(dialogContext, contextController.text.trim());
               },
-              child: const Text('確定', style: TextStyle(color: AppColors.primary)),
+              child: const Text(
+                '確定',
+                style: TextStyle(color: AppColors.primary),
+              ),
             ),
           ],
         );
@@ -410,11 +445,13 @@ class _CameraScreenState extends State<CameraScreen>
       MaterialPageRoute(
         builder: (_) => AnalyzingScreen(
           imagePath: imagePath,
-          customTitle: customName != null && customName.isNotEmpty ? customName : null,
+          customTitle: customName != null && customName.isNotEmpty
+              ? customName
+              : null,
           contextDescription:
               contextDescription != null && contextDescription.isNotEmpty
-                  ? contextDescription
-                  : null,
+              ? contextDescription
+              : null,
         ),
       ),
     );
@@ -467,7 +504,7 @@ class _CameraScreenState extends State<CameraScreen>
               onPressed: () => Navigator.pop(context),
             ),
           ),
-          
+
           // 手動搜尋入口
           Positioned(
             top: 48,
@@ -486,38 +523,46 @@ class _CameraScreenState extends State<CameraScreen>
             top: 54,
             left: 60,
             right: 60,
-            child: Builder(builder: (_) {
-              // 教育版學生不限次數：只顯示今天拍了幾張，不顯示上限，也不會變紅
-              final isEduStudent = context.watch<UserProvider>().isEduStudent;
-              final dailyRemaining = (_photoDailyLimit - _photoCountToday).clamp(0, _photoDailyLimit);
-              final effectiveRemaining = dailyRemaining + _photoExtraCount;
-              final countColor = isEduStudent
-                  ? Colors.white
-                  : effectiveRemaining <= 0
-                      ? Colors.red.shade300
-                      : effectiveRemaining == 1
-                          ? Colors.orange.shade300
-                          : Colors.white;
-              final extraText = _photoExtraCount > 0 ? ' 額外$_photoExtraCount次' : '';
-              return Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isEduStudent
-                      ? '今日拍照：$_photoCountToday 次（不限次數）'
-                      : '今日拍照：$_photoCountToday / $_photoDailyLimit 次$extraText',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: countColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+            child: Builder(
+              builder: (_) {
+                // 教育版學生不限次數：只顯示今天拍了幾張，不顯示上限，也不會變紅
+                final isEduStudent = context.watch<UserProvider>().isEduStudent;
+                final dailyRemaining = (_photoDailyLimit - _photoCountToday)
+                    .clamp(0, _photoDailyLimit);
+                final effectiveRemaining = dailyRemaining + _photoExtraCount;
+                final countColor = isEduStudent
+                    ? Colors.white
+                    : effectiveRemaining <= 0
+                    ? Colors.red.shade300
+                    : effectiveRemaining == 1
+                    ? Colors.orange.shade300
+                    : Colors.white;
+                final extraText = _photoExtraCount > 0
+                    ? ' 額外$_photoExtraCount次'
+                    : '';
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
                   ),
-                ),
-              );
-            }),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isEduStudent
+                        ? '今日拍照：$_photoCountToday 次（不限次數）'
+                        : '今日拍照：$_photoCountToday / $_photoDailyLimit 次$extraText',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: countColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
 
           // 中央提示框

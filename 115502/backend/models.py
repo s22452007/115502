@@ -91,9 +91,14 @@ class Admin(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='super_admin', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)              # 停用後無法登入後台
+    must_change_password = db.Column(db.Boolean, default=False)  # 新建／重設密碼後，第一次登入強制改密碼
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
 # ==========================================
 # 📖 2. 系統教材內容

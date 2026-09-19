@@ -28,6 +28,11 @@ def init_default_admins():
         print("✅ 成功為 admin 資料表加入 'created_at' 時間欄位！")
     except sqlite3.OperationalError:
         pass
+    for col in ("is_active BOOLEAN DEFAULT 1", "must_change_password BOOLEAN DEFAULT 0"):
+        try:
+            cursor.execute(f"ALTER TABLE admin ADD COLUMN {col}")
+        except sqlite3.OperationalError:
+            pass
 
     print("\n👤 開始初始化管理員帳號...")
     
@@ -35,11 +40,12 @@ def init_default_admins():
         hashed_pw = generate_password_hash(uid)
         try:
             # 統一給予 super_admin 權限
+            # 預設密碼＝學號，第一次登入會被要求立刻改掉
             cursor.execute(
-                "INSERT INTO admin (username, password_hash, role) VALUES (?, ?, ?)",
+                "INSERT INTO admin (username, password_hash, role, is_active, must_change_password) VALUES (?, ?, ?, 1, 1)",
                 (uid, hashed_pw, 'super_admin')
             )
-            print(f"✅ 帳號 {uid} 建立成功！(預設密碼: {uid})")
+            print(f"✅ 帳號 {uid} 建立成功！(預設密碼: {uid}，首次登入需修改)")
         except sqlite3.IntegrityError:
             print(f"⚠️ 帳號 {uid} 已經存在，跳過。")
             

@@ -867,6 +867,23 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ teacher_status 欄位升級警告：{e}")
 
+# ==========================================
+# 管理員帳號：停用、強制改密碼
+# ==========================================
+add_column("admin", "is_active BOOLEAN DEFAULT 1")
+add_column("admin", "must_change_password BOOLEAN DEFAULT 0")
+try:
+    cursor.execute("UPDATE admin SET is_active = 1 WHERE is_active IS NULL;")
+    cursor.execute("UPDATE admin SET must_change_password = 0 WHERE must_change_password IS NULL;")
+    # 還在用預設密碼（密碼＝帳號）的管理員，下次登入強制改密碼
+    from werkzeug.security import check_password_hash as _chk
+    for _u, _h in cursor.execute("SELECT username, password_hash FROM admin").fetchall():
+        if _chk(_h, _u):
+            cursor.execute("UPDATE admin SET must_change_password = 1 WHERE username = ?;", (_u,))
+    print("✅ admin 停用／強制改密碼欄位確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ admin 欄位升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

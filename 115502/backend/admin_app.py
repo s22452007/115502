@@ -113,6 +113,20 @@ def get_db_connection():
 # ==========================================
 # 🔐 1. 守門員：檢查是否登入
 # ==========================================
+def _refresh_admin_session():
+    """每次請求重新從資料庫確認管理員狀態，讓停用、改權限、重設密碼立即生效，不用等對方重新登入。
+    回傳需要轉址的 response，正常則回 None。"""
+    admin = Admin.query.get(session.get('admin_id') or 0)
+    if not admin or admin.is_active is False:
+        session.clear()
+        return redirect(url_for('admin_login'))
+    session['role'] = admin.role
+    session['must_change_password'] = bool(admin.must_change_password)
+    if session['must_change_password'] and request.endpoint not in ('change_password', 'admin_logout', 'static'):
+        return redirect(url_for('change_password'))
+    return None
+
+
 def admin_login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -121,6 +135,9 @@ def admin_login_required(f):
         # 老師的 session 也有 admin_user（側欄顯示名稱用），但不能進管理者的頁面
         if session.get('role') == 'teacher':
             return redirect(url_for('teacher_classrooms'))
+        blocked = _refresh_admin_session()
+        if blocked:
+            return blocked
         return f(*args, **kwargs)
     return decorated_function
 
@@ -131,6 +148,9 @@ def super_admin_required(f):
             return redirect(url_for('admin_login'))
         if session.get('role') == 'teacher':
             return redirect(url_for('teacher_classrooms'))
+        blocked = _refresh_admin_session()
+        if blocked:
+            return blocked
         if session.get('role') != 'super_admin':
             return redirect(url_for('admin_dashboard'))
         return f(*args, **kwargs)
@@ -195,11 +215,18 @@ def admin_login():
         admin = Admin.query.filter_by(username=username).first()
         
         if admin and admin.check_password(password):
+            if not (admin.is_active if admin.is_active is not None else True):
+                print(f"[FAIL] 登入失敗: {username} (帳號已停用)")
+                return render_template('admin_login.html', error="此管理員帳號已被停用，請聯繫 super_admin")
             # 登入成功，將重要資訊寫入 Session
+            session.clear()
             session['admin_user'] = admin.username
             session['admin_id'] = admin.id
             session['role'] = admin.role # 確保這行有加上，這樣才能分辨 super_admin
+            session['must_change_password'] = bool(admin.must_change_password)
             session.permanent = True
+            if session['must_change_password']:
+                return redirect(url_for('change_password'))
             
             print(f"[OK] 登入成功: {username} (權限: {admin.role})")
             return redirect(url_for('admin_dashboard')) # 密碼正確去儀表板
@@ -337,12 +364,19 @@ def change_password():
             error = '新密碼與確認密碼不一致'
         elif len(new_pw) < 6:
             error = '密碼至少需要 6 個字元'
+        elif new_pw == admin.username:
+            error = '新密碼不可與帳號相同'
+        elif new_pw == current:
+            error = '新密碼不可與目前密碼相同'
         else:
             admin.set_password(new_pw)
+            admin.must_change_password = False
             db.session.commit()
+            session['must_change_password'] = False
             success = '密碼已成功更新'
     return render_template('admin/change_password.html', error=error, success=success,
-                           admin_user=session.get('admin_user'))
+                           admin_user=session.get('admin_user'),
+                           force=bool(session.get('must_change_password')))
 
 # ==========================================
 # 📊 4. 儀表板 (讀取您的 index.html)
@@ -2269,6 +2303,134 @@ def teacher_account_toggle(user_id):
     db.session.commit()
     flash(('已停用「%s」' if teacher.is_suspended else '已啟用「%s」') % teacher.username, 'success')
     return redirect(url_for('teacher_account_list'))
+
+
+# ==========================================
+# 🔐 管理員帳號管理（super_admin）
+# ==========================================
+# 取代原本不驗證身分的「忘記密碼」：帳號建立、權限、停用、重設密碼都由 super_admin 在這裡處理。
+ADMIN_ROLES = ('admin', 'super_admin')
+
+
+def _active_super_admin_count():
+    return Admin.query.filter(Admin.role == 'super_admin', Admin.is_active.isnot(False)).count()
+
+
+@app.route('/admin_account/list')
+@super_admin_required
+def admin_account_list():
+    admins = Admin.query.order_by(Admin.id).all()
+    rows = [{
+        'id': a.id, 'username': a.username, 'role': a.role,
+        'is_active': a.is_active is not False,
+        'must_change_password': bool(a.must_change_password),
+        'is_me': a.id == session.get('admin_id'),
+        'created_at': utc_to_tw(a.created_at.strftime('%Y-%m-%d %H:%M:%S')) if a.created_at else '',
+    } for a in admins]
+    return render_template('admin_account/list.html', admins=rows)
+
+
+@app.route('/admin_account/add', methods=['POST'])
+@super_admin_required
+def admin_account_add():
+    username = (request.form.get('username') or '').strip()
+    role = request.form.get('role') or 'admin'
+    password = request.form.get('password') or ''
+    error = None
+    if not username:
+        error = '請輸入帳號'
+    elif role not in ADMIN_ROLES:
+        error = '權限不正確'
+    elif len(password) < 6:
+        error = '密碼至少需要 6 個字元'
+    elif password == username:
+        error = '初始密碼不可與帳號相同'
+    elif Admin.query.filter_by(username=username).first():
+        error = f'帳號「{username}」已存在'
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('admin_account_list'))
+    admin = Admin(username=username, role=role, is_active=True, must_change_password=True)
+    admin.set_password(password)
+    db.session.add(admin)
+    db.session.flush()
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=None,
+        action='CREATE', target_table='admin', target_id=admin.id,
+        new_value={'username': username, 'role': role}
+    ))
+    db.session.commit()
+    flash(f'已建立管理員「{username}」（{role}），對方第一次登入需先修改密碼', 'success')
+    return redirect(url_for('admin_account_list'))
+
+
+@app.route('/admin_account/reset_password/<int:admin_id>', methods=['POST'])
+@super_admin_required
+def admin_account_reset_password(admin_id):
+    admin = Admin.query.get_or_404(admin_id)
+    password = request.form.get('password') or ''
+    if len(password) < 6:
+        flash('密碼至少需要 6 個字元', 'error')
+        return redirect(url_for('admin_account_list'))
+    if password == admin.username:
+        flash('臨時密碼不可與帳號相同', 'error')
+        return redirect(url_for('admin_account_list'))
+    admin.set_password(password)
+    admin.must_change_password = True
+    if admin.id == session.get('admin_id'):
+        session['must_change_password'] = True
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=None,
+        action='UPDATE', target_table='admin', target_id=admin.id,
+        new_value={'password': 'reset'}
+    ))
+    db.session.commit()
+    flash(f'已重設「{admin.username}」的密碼，對方登入後需立刻修改', 'success')
+    return redirect(url_for('admin_account_list'))
+
+
+@app.route('/admin_account/toggle_active/<int:admin_id>', methods=['POST'])
+@super_admin_required
+def admin_account_toggle_active(admin_id):
+    admin = Admin.query.get_or_404(admin_id)
+    if admin.id == session.get('admin_id'):
+        flash('不能停用自己的帳號', 'error')
+        return redirect(url_for('admin_account_list'))
+    currently_active = admin.is_active is not False
+    if currently_active and admin.role == 'super_admin' and _active_super_admin_count() <= 1:
+        flash('至少要保留一位可用的 super_admin', 'error')
+        return redirect(url_for('admin_account_list'))
+    admin.is_active = not currently_active
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=None,
+        action='UPDATE', target_table='admin', target_id=admin.id,
+        new_value={'is_active': admin.is_active}
+    ))
+    db.session.commit()
+    flash(('已停用「%s」' if not admin.is_active else '已啟用「%s」') % admin.username, 'success')
+    return redirect(url_for('admin_account_list'))
+
+
+@app.route('/admin_account/toggle_role/<int:admin_id>', methods=['POST'])
+@super_admin_required
+def admin_account_toggle_role(admin_id):
+    admin = Admin.query.get_or_404(admin_id)
+    if admin.id == session.get('admin_id'):
+        flash('不能修改自己的權限', 'error')
+        return redirect(url_for('admin_account_list'))
+    if admin.role == 'super_admin' and (admin.is_active is not False) and _active_super_admin_count() <= 1:
+        flash('至少要保留一位可用的 super_admin', 'error')
+        return redirect(url_for('admin_account_list'))
+    old_role = admin.role
+    admin.role = 'admin' if admin.role == 'super_admin' else 'super_admin'
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=None,
+        action='UPDATE', target_table='admin', target_id=admin.id,
+        old_value={'role': old_role}, new_value={'role': admin.role}
+    ))
+    db.session.commit()
+    flash(f'「{admin.username}」的權限已改為 {admin.role}', 'success')
+    return redirect(url_for('admin_account_list'))
 
 
 if __name__ == '__main__':

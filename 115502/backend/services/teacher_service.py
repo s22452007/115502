@@ -79,12 +79,13 @@ def toggle_classroom_open(classroom_id):
     return classroom.is_open
 
 
-def get_classroom_list(teacher_id=None):
-    """取得未封存的班級資訊列表（含成員數、作業數）。
+def get_classroom_list(teacher_id=None, archived=False):
+    """取得班級資訊列表（含成員數、作業數）。
 
     teacher_id 有給時只回傳該老師自己的班級（後台老師登入用）；沒給就是全部。
+    archived=False（預設）列使用中的班級，True 則列已封存的。
     """
-    query = Classroom.query.filter_by(is_archived=False)
+    query = Classroom.query.filter(Classroom.is_archived.is_(True) if archived else Classroom.is_archived.isnot(True))
     if teacher_id is not None:
         query = query.filter_by(teacher_id=teacher_id)
     classrooms = query.order_by(Classroom.created_at.desc()).all()
@@ -99,6 +100,7 @@ def get_classroom_list(teacher_id=None):
             'description': c.description or '',
             'join_code': c.join_code,
             'is_open': c.is_open,
+            'is_archived': bool(c.is_archived),
             'teacher_name': teacher.username if teacher else '教師',
             'member_count': member_count,
             'assignment_count': assignment_count,

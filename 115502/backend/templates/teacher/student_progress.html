@@ -116,6 +116,15 @@
             </div>
         </div>
 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endwith %}
+
         <!-- 學生名冊與學習狀況表格 -->
         <div class="panel">
             <div class="panel-header">
@@ -138,7 +147,7 @@
                                 <th>作業均分</th>
                                 <th>造句練習</th>
                                 <th>文章閱讀</th>
-                                <th class="text-center">詳細歷程</th>
+                                <th class="text-center" style="min-width: 170px;">詳細歷程</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -179,9 +188,16 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-success" onclick="viewStudentDetail({{ s.student_id }}, '{{ s.display_name }}')">
+                                    <button class="btn btn-sm btn-outline-success" style="white-space: nowrap;" onclick="viewStudentDetail({{ s.student_id }}, '{{ s.display_name }}')">
                                         <i class="bi bi-eye"></i> 查看學習紀錄
                                     </button>
+                                    <div class="d-flex gap-1 justify-content-center mt-1">
+                                        <button class="btn btn-sm btn-outline-secondary" style="white-space: nowrap;" data-bs-toggle="modal" data-bs-target="#renameStu{{ s.student_id }}">改名稱</button>
+                                        <form action="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/remove" method="POST"
+                                              onsubmit="return confirm('將「{{ s.display_name }}」移出班級？學生之後可用隨機碼重新加入，已繳交的作業紀錄會保留。');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" style="white-space: nowrap;">移除</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -192,6 +208,31 @@
         </div>
     </main>
 </div>
+
+<!-- 修改學生顯示名稱 Modal（每位學生一個） -->
+{% for s in data.students %}
+<div class="modal fade" id="renameStu{{ s.student_id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-pencil me-2"></i>修改顯示名稱</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/rename" method="POST">
+        <div class="modal-body p-4">
+          <label class="form-label fw-bold">顯示名稱</label>
+          <input type="text" name="display_name" class="form-control" value="{{ s.display_name }}" placeholder="例：01 王小明" maxlength="50">
+          <div class="form-text">只影響老師這邊的名冊，例如改成座號＋真名；留空則顯示學生在 App 的暱稱。</div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none;">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
 
 <!-- 學生詳細學習歷程 Modal -->
 <div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">

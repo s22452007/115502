@@ -1795,11 +1795,10 @@ def _own_assignment(assignment_id):
 @teacher_required
 def teacher_classrooms():
     """班級列表與隨機碼管理首頁（老師只看自己，super_admin 看全部）"""
-    if session.get('role') == 'super_admin':
-        classrooms = get_classroom_list()
-    else:
-        classrooms = get_classroom_list(teacher_id=session['teacher_user_id'])
-    return render_template('teacher/classroom_list.html', classrooms=classrooms)
+    show_archived = request.args.get('show') == 'archived'
+    teacher_id = None if session.get('role') == 'super_admin' else session['teacher_user_id']
+    classrooms = get_classroom_list(teacher_id=teacher_id, archived=show_archived)
+    return render_template('teacher/classroom_list.html', classrooms=classrooms, show_archived=show_archived)
 
 
 @app.route('/teacher/pending')
@@ -1999,6 +1998,147 @@ def teacher_submission_grade(submission_id):
     grade_submission(submission_id, score, teacher_comment)
     flash("批閱成績與教師評語已成功儲存！", "success")
     return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+
+
+# ---- 班級：改名、封存 ----
+@app.route('/teacher/classroom/<int:classroom_id>/edit', methods=['POST'])
+@teacher_required
+def teacher_classroom_edit(classroom_id):
+    classroom = _own_classroom(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash("請填寫班級名稱", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    classroom.name = name
+    classroom.description = request.form.get('description', '').strip()
+    db.session.commit()
+    flash(f"班級「{name}」已更新", "success")
+    return redirect(url_for('teacher_classrooms'))
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/archive', methods=['POST'])
+@teacher_required
+def teacher_classroom_archive(classroom_id):
+    """封存／取消封存。封存後學生在 App 看不到這個班級與作業，資料全部保留"""
+    classroom = _own_classroom(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    classroom.is_archived = not bool(classroom.is_archived)
+    if classroom.is_archived:
+        classroom.is_open = False   # 封存的班級不該再有人加入
+    db.session.commit()
+    if classroom.is_archived:
+        flash(f"班級「{classroom.name}」已封存，可在「已封存的班級」中取消封存", "info")
+        return redirect(url_for('teacher_classrooms'))
+    flash(f"班級「{classroom.name}」已取消封存", "success")
+    return redirect(url_for('teacher_classrooms'))
+
+
+# ---- 學生名冊：改顯示名稱、移出班級 ----
+def _own_member(classroom_id, student_id):
+    if not _own_classroom(classroom_id):
+        return None
+    return ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=student_id).first()
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/student/<int:student_id>/rename', methods=['POST'])
+@teacher_required
+def teacher_student_rename(classroom_id, student_id):
+    member = _own_member(classroom_id, student_id)
+    if not member:
+        flash("找不到該學生", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    member.display_name = (request.form.get('display_name') or '').strip() or None
+    db.session.commit()
+    flash("學生顯示名稱已更新", "success")
+    return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/student/<int:student_id>/remove', methods=['POST'])
+@teacher_required
+def teacher_student_remove(classroom_id, student_id):
+    """把學生移出班級：只刪成員關係，已繳交的作業紀錄保留，學生之後可用隨機碼重新加入"""
+    member = _own_member(classroom_id, student_id)
+    if not member:
+        flash("找不到該學生", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    name = member.display_name or (member_user.username if (member_user := User.query.get(student_id)) else '學生')
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=student_id,
+        action='DELETE', target_table='classroom_member', target_id=member.id,
+        old_value={'classroom_id': classroom_id, 'display_name': member.display_name}
+    ))
+    db.session.delete(member)
+    db.session.commit()
+    flash(f"已將「{name}」移出班級", "success")
+    return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+
+# ---- 作業：編輯、發布／下架、刪除 ----
+@app.route('/teacher/assignment/<int:assignment_id>/edit', methods=['POST'])
+@teacher_required
+def teacher_assignment_edit(assignment_id):
+    """只改標題、說明、截止日與發布狀態；題目內容要改請刪除重出，避免學生已作答的內容被改掉"""
+    assignment = _own_assignment(assignment_id)
+    if not assignment:
+        flash("找不到該作業", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    title = request.form.get('title', '').strip()
+    if not title:
+        flash("請填寫作業標題", "danger")
+        return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
+    assignment.title = title
+    assignment.instructions = request.form.get('instructions', '').strip()
+    due_at_str = request.form.get('due_at')
+    assignment.due_at = None
+    if due_at_str:
+        try:
+            assignment.due_at = datetime.fromisoformat(due_at_str)
+        except ValueError:
+            pass
+    assignment.is_published = request.form.get('is_published') == 'on'
+    db.session.commit()
+    flash(f"作業「{title}」已更新", "success")
+    return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
+
+
+@app.route('/teacher/assignment/<int:assignment_id>/toggle_publish', methods=['POST'])
+@teacher_required
+def teacher_assignment_toggle_publish(assignment_id):
+    """下架後學生在 App 看不到這份作業，已繳交的紀錄保留"""
+    assignment = _own_assignment(assignment_id)
+    if not assignment:
+        flash("找不到該作業", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    assignment.is_published = not bool(assignment.is_published)
+    db.session.commit()
+    flash(("作業「%s」已發布，學生現在看得到" if assignment.is_published else "作業「%s」已下架，學生看不到了") % assignment.title, "info")
+    return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
+
+
+@app.route('/teacher/assignment/<int:assignment_id>/delete', methods=['POST'])
+@teacher_required
+def teacher_assignment_delete(assignment_id):
+    """刪除作業，學生的繳交與批閱紀錄一併刪除（模型有 cascade）"""
+    assignment = _own_assignment(assignment_id)
+    if not assignment:
+        flash("找不到該作業", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    classroom_id, title = assignment.classroom_id, assignment.title
+    submission_count = AssignmentSubmission.query.filter_by(assignment_id=assignment_id).count()
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=session.get('teacher_user_id'),
+        action='DELETE', target_table='assignment', target_id=assignment_id,
+        old_value={'title': title, 'classroom_id': classroom_id, 'submissions': submission_count}
+    ))
+    db.session.delete(assignment)
+    db.session.commit()
+    flash(f"作業「{title}」已刪除（含 {submission_count} 份繳交紀錄）", "success")
+    return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
 
 # ==========================================

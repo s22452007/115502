@@ -119,9 +119,16 @@
                 <h1 class="page-title"><i class="bi bi-mortarboard me-2"></i>校園教育版 - 班級管理</h1>
                 <div class="page-sub">管理班級、產出專屬隨機碼提供學生加入，並掌握各班出題與學習進度</div>
             </div>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createClassModal" style="background-color: var(--green-accent); border: none; font-weight: bold; border-radius: 8px; padding: 10px 18px;">
-                <i class="bi bi-plus-lg me-1"></i>建立新班級
-            </button>
+            <div class="d-flex gap-2">
+                <a href="/teacher/classrooms{{ '' if show_archived else '?show=archived' }}" class="btn btn-outline-secondary" style="border-radius: 8px; padding: 10px 18px; font-weight: bold;">
+                    <i class="bi {{ 'bi-arrow-left' if show_archived else 'bi-archive' }} me-1"></i>{{ '返回使用中的班級' if show_archived else '已封存的班級' }}
+                </a>
+                {% if not show_archived %}
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createClassModal" style="background-color: var(--green-accent); border: none; font-weight: bold; border-radius: 8px; padding: 10px 18px;">
+                    <i class="bi bi-plus-lg me-1"></i>建立新班級
+                </button>
+                {% endif %}
+            </div>
         </div>
 
         {% if not classrooms %}
@@ -144,7 +151,9 @@
                             <div>
                                 <div class="d-flex align-items-center gap-2">
                                     <h4 class="mb-0 fw-bold" style="color: #222;">{{ c.name }}</h4>
-                                    {% if c.is_open %}
+                                    {% if c.is_archived %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i class="bi bi-archive"></i> 已封存</span>
+                                    {% elif c.is_open %}
                                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">開放加入中</span>
                                     {% else %}
                                         <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">已關閉加入</span>
@@ -185,6 +194,15 @@
                                         <i class="bi {{ 'bi-lock' if c.is_open else 'bi-unlock' }}"></i> {{ '關閉加入' if c.is_open else '開放加入' }}
                                     </button>
                                 </form>
+                                <button class="btn btn-sm btn-outline-secondary fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#editClass{{ c.id }}">
+                                    <i class="bi bi-pencil"></i> 編輯
+                                </button>
+                                <form action="/teacher/classroom/{{ c.id }}/archive" method="POST" style="display:inline;"
+                                      onsubmit="return confirm('{{ '取消封存「' + c.name + '」？' if c.is_archived else '封存「' + c.name + '」？封存後學生在 App 看不到這個班級與作業，資料會保留，之後可以取消封存。' }}');">
+                                    <button type="submit" class="btn btn-sm {{ 'btn-outline-success' if c.is_archived else 'btn-outline-warning' }} fw-bold" style="border-radius: 8px;">
+                                        <i class="bi {{ 'bi-box-arrow-up' if c.is_archived else 'bi-archive' }}"></i> {{ '取消封存' if c.is_archived else '封存' }}
+                                    </button>
+                                </form>
                                 <a href="/teacher/classroom/{{ c.id }}/students" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;">
                                     <i class="bi bi-bar-chart-line"></i> 學生學習狀況
                                 </a>
@@ -200,6 +218,36 @@
         {% endif %}
     </main>
 </div>
+
+<!-- 編輯班級 Modal（每個班級一個） -->
+{% for c in classrooms %}
+<div class="modal fade" id="editClass{{ c.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-pencil me-2"></i>編輯班級</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/teacher/classroom/{{ c.id }}/edit" method="POST">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-bold">班級名稱 <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="{{ c.name }}" required>
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-bold">班級說明</label>
+            <textarea name="description" class="form-control" rows="3">{{ c.description }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none;">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
 
 <!-- 建立新班級 Modal -->
 <div class="modal fade" id="createClassModal" tabindex="-1" aria-hidden="true">

@@ -61,6 +61,9 @@ class User(db.Model):
     group_free_used_this_week = db.Column(db.Integer, default=0)
     vocab_slot = db.Column(db.Integer, default=50)
     is_suspended = db.Column(db.Boolean, default=False)
+    # 老師帳號審核狀態：'pending'（用學校 Google 帳號自行登入，等管理者確認是老師）／'approved'。
+    # 管理者建立的老師帳號直接 approved；一般使用者與學生用不到這個欄位。
+    teacher_status = db.Column(db.String(20), default='approved')
     # 每日任務
     daily_task_date = db.Column(db.Date, nullable=True)
     daily_task_photo = db.Column(db.Boolean, default=False)

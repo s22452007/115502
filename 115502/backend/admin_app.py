@@ -9,6 +9,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 import sqlite3
 import os
 import json
+import re
 import base64
 import binascii
 from datetime import datetime, timedelta
@@ -53,6 +54,9 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))  # GOOGLE_WEB_CLIENT_ID、TEACHER_GO
 #   例如 .edu.tw 涵蓋全台學校（ntub.edu.tw、xxjh.tp.edu.tw…）；ntub.edu.tw 則只允許該校。留空表示不限制網域。
 GOOGLE_WEB_CLIENT_ID = (os.getenv('GOOGLE_WEB_CLIENT_ID') or '').strip()
 TEACHER_GOOGLE_DOMAINS = [d.strip().lower().lstrip('@') for d in (os.getenv('TEACHER_GOOGLE_DOMAINS') or '').split(',') if d.strip()]
+# TEACHER_GOOGLE_STUDENT_PATTERN：Email @ 前面符合這個正規式的視為學生帳號、不能登入老師後台。
+#   預設 ^\d+$（帳號全是數字＝學號，例如 11156047@ntub.edu.tw）。設成空字串則不過濾。
+TEACHER_GOOGLE_STUDENT_PATTERN = os.getenv('TEACHER_GOOGLE_STUDENT_PATTERN', r'^\d+$').strip()
 
 path1 = os.path.join(BASE_DIR, 'instance', 'jlens.db')
 path2 = os.path.join(BASE_DIR, 'jlens.db')
@@ -280,6 +284,8 @@ def teacher_google_login():
     if TEACHER_GOOGLE_DOMAINS and not _teacher_domain_allowed(domain):
         allowed = '、'.join(_teacher_domain_labels())
         return fail(f'請使用學校配發的 Google 帳號（{allowed}）登入，一般 Gmail 無法作為老師帳號')
+    if TEACHER_GOOGLE_STUDENT_PATTERN and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0]):
+        return fail(f'「{email}」是學生帳號（帳號為學號），無法登入老師後台；老師請改用學校配發的教職員帳號')
 
     user = User.query.filter_by(email=email).first()
     if user is None:
@@ -290,13 +296,15 @@ def teacher_google_login():
             password_hash=generate_password_hash('GOOGLE_OAUTH_' + os.urandom(16).hex()),
             account_type=AccountType.TEACHER,
             avatar=claims.get('picture') or None,
+            teacher_status='pending',   # 學校帳號證明不了是老師，要等管理者核准
         )
         db.session.add(user)
         db.session.flush()
         db.session.add(SystemLog(
             admin_id=None, user_id=user.id,
             action='CREATE', target_table='user', target_id=user.id,
-            new_value={'email': email, 'username': user.username, 'account_type': AccountType.TEACHER, 'via': 'google'}
+            new_value={'email': email, 'username': user.username, 'account_type': AccountType.TEACHER,
+                       'via': 'google', 'teacher_status': 'pending'}
         ))
         db.session.commit()
         print(f"[NEW] 以學校 Google 帳號建立老師: {email}")
@@ -1794,6 +1802,16 @@ def teacher_classrooms():
     return render_template('teacher/classroom_list.html', classrooms=classrooms)
 
 
+@app.route('/teacher/pending')
+@teacher_required
+def teacher_pending():
+    """待審核的老師登入後只會看到這一頁"""
+    teacher = User.query.get(session.get('teacher_user_id') or 0)
+    if not teacher or (getattr(teacher, 'teacher_status', None) or 'approved') == 'approved':
+        return redirect(url_for('teacher_classrooms'))
+    return render_template('teacher/pending.html', teacher=teacher)
+
+
 @app.route('/teacher/classroom/create', methods=['POST'])
 @teacher_required
 def teacher_classroom_create():
@@ -2000,10 +2018,53 @@ def teacher_account_list():
         'username': t.username,
         'email': t.email,
         'is_suspended': bool(t.is_suspended),
+        'status': t.teacher_status or 'approved',
         'classroom_count': classroom_counts.get(t.id, 0),
         'created_at': utc_to_tw(t.created_at.strftime('%Y-%m-%d %H:%M:%S')) if t.created_at else '',
     } for t in teachers]
-    return render_template('teacher_account/list.html', teachers=rows)
+    rows.sort(key=lambda r: 0 if r['status'] == 'pending' else 1)  # 待審核排最前面
+    pending_count = sum(1 for r in rows if r['status'] == 'pending')
+    return render_template('teacher_account/list.html', teachers=rows, pending_count=pending_count)
+
+
+@app.route('/teacher_account/approve/<int:user_id>', methods=['POST'])
+@super_admin_required
+def teacher_account_approve(user_id):
+    """確認這個學校帳號真的是老師：核准後才能建班級"""
+    admin_id = session.get('admin_id')
+    teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
+    teacher.teacher_status = 'approved'
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=teacher.id,
+        action='UPDATE', target_table='user', target_id=teacher.id,
+        new_value={'teacher_status': 'approved'}
+    ))
+    db.session.commit()
+    flash(f'已核准「{teacher.username}」的老師身分，老師重新整理頁面即可建立班級', 'success')
+    return redirect(url_for('teacher_account_list'))
+
+
+@app.route('/teacher_account/reject/<int:user_id>', methods=['POST'])
+@super_admin_required
+def teacher_account_reject(user_id):
+    """拒絕待審核的申請：直接移除帳號，之後同一個帳號再登入會重新進入待審核"""
+    admin_id = session.get('admin_id')
+    teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
+    if (teacher.teacher_status or 'approved') != 'pending':
+        flash('只能拒絕「待審核」的帳號；已核准的老師請改用「停用」', 'error')
+        return redirect(url_for('teacher_account_list'))
+    if Classroom.query.filter_by(teacher_id=teacher.id).count():
+        flash('這個帳號已有班級資料，無法移除，請改用「停用」', 'error')
+        return redirect(url_for('teacher_account_list'))
+    db.session.add(SystemLog(
+        admin_id=admin_id, user_id=None,
+        action='DELETE', target_table='user', target_id=teacher.id,
+        old_value={'email': teacher.email, 'username': teacher.username, 'teacher_status': 'pending'}
+    ))
+    db.session.delete(teacher)
+    db.session.commit()
+    flash(f'已拒絕並移除「{teacher.username}」（{teacher.email}）的申請', 'success')
+    return redirect(url_for('teacher_account_list'))
 
 
 def _validate_password(pw):

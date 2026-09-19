@@ -857,6 +857,16 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ reading_evaluation 升級警告：{e}")
 
+# ==========================================
+# 校園教育版：老師帳號審核狀態
+# ==========================================
+add_column("user", "teacher_status VARCHAR(20) DEFAULT 'approved'")
+try:
+    cursor.execute("UPDATE user SET teacher_status = 'approved' WHERE teacher_status IS NULL;")
+    print("✅ user.teacher_status 老師審核欄位確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ teacher_status 欄位升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

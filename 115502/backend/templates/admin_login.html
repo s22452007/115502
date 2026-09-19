@@ -255,14 +255,7 @@
                 <input type="hidden" name="login_as" value="admin">
                 <div class="mb-4">
                     <div class="field-label">帳號</div>
-                    <select name="username" class="form-select" required>
-                        <option value="" disabled selected>選擇管理者帳號...</option>
-                        <option value="11156001">11156001</option>
-                        <option value="11156006">11156006</option>
-                        <option value="11156015">11156015</option>
-                        <option value="11156039">11156039</option>
-                        <option value="11156047">11156047</option>
-                    </select>
+                    <input type="text" name="username" class="form-control" placeholder="輸入管理者帳號" required autocomplete="username">
                 </div>
 
                 <div class="mb-4">
@@ -279,9 +272,7 @@
                 <button type="submit" class="btn-login">登入系統</button>
             </form>
 
-            <div style="text-align:center; margin-top:16px;" id="admin-forgot" {{ 'hidden' if login_as == 'teacher' }}>
-                <a href="{{ url_for('admin_forgot_password') }}" style="font-size:0.78rem; color:#aaa; text-decoration:none;">忘記密碼？</a>
-            </div>
+            <div style="text-align:center; margin-top:16px; font-size:0.78rem; color:#aaa;" id="admin-forgot" {{ 'hidden' if login_as == 'teacher' }}>忘記密碼請聯繫 super_admin 重設</div>
 
             <!-- 老師登入：帳號由管理者在「教師帳號管理」建立 -->
             <div id="form-teacher" {{ 'hidden' if login_as != 'teacher' }}>

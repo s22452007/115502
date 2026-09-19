@@ -292,12 +292,12 @@
                      data-client_id="{{ google_client_id }}"
                      data-callback="onTeacherGoogleLogin"
                      data-auto_prompt="false"
-                     {% if teacher_domains | length == 1 %}data-hd="{{ teacher_domains[0] }}"{% endif %}></div>
+                     {% if teacher_domains | length == 1 and not teacher_domains[0].startswith('.') %}data-hd="{{ teacher_domains[0] }}"{% endif %}></div>
                 <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
                      data-text="signin_with" data-shape="rectangular" data-logo_alignment="left" data-width="336"></div>
             </div>
             <div class="google-note">
-                {% if teacher_domains %}限學校帳號（{% for d in teacher_domains %}@{{ d }}{{ '、' if not loop.last }}{% endfor %}），第一次登入會自動建立老師帳號{% else %}第一次登入會自動建立老師帳號{% endif %}
+                {% if teacher_domains %}限學校帳號（{{ teacher_domain_labels | join('、') }}），第一次登入會自動建立老師帳號{% else %}第一次登入會自動建立老師帳號{% endif %}
             </div>
             <form action="{{ url_for('teacher_google_login') }}" method="POST" id="form-google">
                 <input type="hidden" name="credential" value="">

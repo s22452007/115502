@@ -49,7 +49,8 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))  # GOOGLE_WEB_CLIENT_ID、TEACHER_GO
 # ---- 老師用學校 Google 帳號登入 ----
 # GOOGLE_WEB_CLIENT_ID：Firebase 專案裡「Web client」的 OAuth client ID（與 App 的 serverClientId 同一個）。
 #   沒設定時登入頁不顯示 Google 按鈕，老師仍可用管理者建立的帳號密碼登入。
-# TEACHER_GOOGLE_DOMAINS：允許的學校網域，逗號分隔（例如 ntub.edu.tw）。留空表示不限制網域。
+# TEACHER_GOOGLE_DOMAINS：允許的學校網域，逗號分隔。以「.」開頭代表結尾比對，
+#   例如 .edu.tw 涵蓋全台學校（ntub.edu.tw、xxjh.tp.edu.tw…）；ntub.edu.tw 則只允許該校。留空表示不限制網域。
 GOOGLE_WEB_CLIENT_ID = (os.getenv('GOOGLE_WEB_CLIENT_ID') or '').strip()
 TEACHER_GOOGLE_DOMAINS = [d.strip().lower().lstrip('@') for d in (os.getenv('TEACHER_GOOGLE_DOMAINS') or '').split(',') if d.strip()]
 
@@ -71,7 +72,26 @@ db.init_app(app)
 @app.context_processor
 def _inject_google_login_settings():
     """登入頁用：有設定 client ID 才顯示「用學校 Google 帳號登入」按鈕"""
-    return {'google_client_id': GOOGLE_WEB_CLIENT_ID, 'teacher_domains': TEACHER_GOOGLE_DOMAINS}
+    return {'google_client_id': GOOGLE_WEB_CLIENT_ID,
+            'teacher_domains': TEACHER_GOOGLE_DOMAINS,
+            'teacher_domain_labels': _teacher_domain_labels()}
+
+
+def _teacher_domain_allowed(domain):
+    """'.edu.tw' 這種以「.」開頭的設定用結尾比對，其餘要完全相同"""
+    domain = (domain or '').lower()
+    for allowed in TEACHER_GOOGLE_DOMAINS:
+        if allowed.startswith('.'):
+            if domain.endswith(allowed) or domain == allowed[1:]:
+                return True
+        elif domain == allowed:
+            return True
+    return False
+
+
+def _teacher_domain_labels():
+    """顯示給老師看的網域說明，例如 ['@*.edu.tw', '@ntub.edu.tw']"""
+    return ['@*' + d if d.startswith('.') else '@' + d for d in TEACHER_GOOGLE_DOMAINS]
 # ==========================================
 # 🚀 自動路徑偵測
 # ==========================================
@@ -254,8 +274,8 @@ def teacher_google_login():
     if not email or not claims.get('email_verified', False):
         return fail('這個 Google 帳號的 Email 尚未驗證')
     domain = email.split('@')[-1].lower()
-    if TEACHER_GOOGLE_DOMAINS and domain not in TEACHER_GOOGLE_DOMAINS:
-        allowed = '、'.join('@' + d for d in TEACHER_GOOGLE_DOMAINS)
+    if TEACHER_GOOGLE_DOMAINS and not _teacher_domain_allowed(domain):
+        allowed = '、'.join(_teacher_domain_labels())
         return fail(f'請使用學校配發的 Google 帳號（{allowed}）登入，一般 Gmail 無法作為老師帳號')
 
     user = User.query.filter_by(email=email).first()

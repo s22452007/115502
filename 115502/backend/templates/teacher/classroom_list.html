@@ -88,11 +88,14 @@
             <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
             <div class="sidebar-admin-info">
                 <div class="name">{{ session['admin_user'] }}</div>
-                <div class="role">教師</div>
+                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
             </div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> 我的班級與隨機碼</a></li>
+            {% if session.get('role') == 'super_admin' %}
+            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
+            {% endif %}
+            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
             <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
             <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
         </ul>

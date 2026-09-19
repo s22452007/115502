@@ -133,23 +133,26 @@ def super_admin_required(f):
     return decorated_function
 
 def teacher_required(f):
-    """校園教育版老師專用頁面：只有從登入頁「老師」分頁登入的帳號能進"""
+    """校園教育版老師頁面：老師本人（已審核）或 super_admin 才能進。
+
+    - 老師：每次請求重新查一次帳號，被停用就登出；待審核只會看到「等待審核」頁
+    - super_admin：可以檢視、管理所有班級，但不綁定任何老師帳號（不能代替老師建班級）
+    - 一般管理者：進不了，導回管理者首頁
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get('role') == 'teacher' and session.get('teacher_user_id'):
+            teacher = User.query.get(session['teacher_user_id'])
+            if not teacher or getattr(teacher, 'is_suspended', False) or teacher.account_type != AccountType.TEACHER:
+                session.clear()
+                return redirect(url_for('admin_login'))
+            if (getattr(teacher, 'teacher_status', None) or 'approved') != 'approved' and request.endpoint != 'teacher_pending':
+                return redirect(url_for('teacher_pending'))
             return f(*args, **kwargs)
-        if session.get('role') == 'super_admin' or 'admin_user' in session:
-            # 管理者若無 teacher_user_id，依 admin_user 帳號查找或綁定教師帳號
-            if not session.get('teacher_user_id'):
-                from models import User
-                u = User.query.filter((User.username == session.get('admin_user')) | (User.email == session.get('admin_user'))).first()
-                if not u:
-                    u = User.query.filter_by(account_type='teacher').first()
-                if not u:
-                    u = User.query.first()
-                if u:
-                    session['teacher_user_id'] = u.id
+        if session.get('role') == 'super_admin':
             return f(*args, **kwargs)
+        if 'admin_user' in session:
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('admin_login'))
     return decorated_function
 
@@ -1783,9 +1786,11 @@ def _own_assignment(assignment_id):
 @app.route('/teacher/classrooms')
 @teacher_required
 def teacher_classrooms():
-    """班級列表與隨機碼管理首頁（老師只看自己，管理者可查看全部班級）"""
-    t_id = session.get('teacher_user_id')
-    classrooms = get_classroom_list(teacher_id=t_id if session.get('role') != 'super_admin' else None)
+    """班級列表與隨機碼管理首頁（老師只看自己，super_admin 看全部）"""
+    if session.get('role') == 'super_admin':
+        classrooms = get_classroom_list()
+    else:
+        classrooms = get_classroom_list(teacher_id=session['teacher_user_id'])
     return render_template('teacher/classroom_list.html', classrooms=classrooms)
 
 
@@ -1797,6 +1802,9 @@ def teacher_classroom_create():
     description = request.form.get('description', '').strip()
     if not name:
         flash("請填寫班級名稱", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        flash("管理者無法代替老師建立班級，請以老師身分登入", "danger")
         return redirect(url_for('teacher_classrooms'))
 
     c = create_classroom(session['teacher_user_id'], name, description)

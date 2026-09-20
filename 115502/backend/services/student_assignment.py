@@ -14,7 +14,7 @@
 這樣各功能在作答完成時可以直接呼叫它自動繳交。
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify
 
@@ -70,10 +70,29 @@ def _visible_assignment(assignment_id, student_id):
     return assignment, None, None
 
 
+# 老師端的截止時間輸入框是 datetime-local，存進資料庫的是「台灣時間」的 naive datetime，
+# 但這個檔案其他時間（submitted_at、utcnow）都是 UTC。兩者直接比會差 8 小時：
+# 老師設 23:00 截止，學生到隔天早上 7 點交都還不算遲交，列表的逾期標記也會晚 8 小時。
+# 台灣沒有日光節約時間、固定 UTC+8，用固定時差換算即可，不必依賴時區資料庫。
+TAIPEI_TZ = timezone(timedelta(hours=8))
+
+
+def _due_at_utc(assignment):
+    # 把老師設定的截止時間換算成 UTC，才能跟 utcnow / submitted_at 比較
+    due = assignment.due_at
+    if due is None:
+        return None
+    if due.tzinfo is not None:
+        # 萬一日後改成儲存帶時區的時間，這裡也能正確處理
+        return due.astimezone(timezone.utc).replace(tzinfo=None)
+    return due.replace(tzinfo=TAIPEI_TZ).astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def _is_late(assignment, when=None):
-    if not assignment.due_at:
+    due_utc = _due_at_utc(assignment)
+    if due_utc is None:
         return False
-    return (when or datetime.utcnow()) > assignment.due_at
+    return (when or datetime.utcnow()) > due_utc
 
 
 def _check_requirements(assignment, record):
@@ -167,6 +186,7 @@ def _assignment_json(assignment, submission=None, include_config=False):
         "classroom_name": classroom.name if classroom else None,
         "title": assignment.title,
         "task_type": assignment.task_type,
+        # 回傳老師設定的台灣時間，前端直接顯示即可；逾期判斷內部已換算成 UTC 再比較
         "due_at": assignment.due_at.isoformat() if assignment.due_at else None,
         "is_overdue": _is_late(assignment) and (submission is None),
         "created_at": assignment.created_at.isoformat() if assignment.created_at else None,

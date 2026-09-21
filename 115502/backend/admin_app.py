@@ -74,6 +74,20 @@ db.init_app(app)
 
 
 @app.context_processor
+def _inject_sidebar_badges():
+    """側欄「意見回饋」旁的紅色數字：還沒回覆的回饋筆數（管理者登入時才查）"""
+    if 'admin_user' not in session or session.get('role') == 'teacher':
+        return {'sidebar_feedback_pending': 0}
+    try:
+        conn = get_db_connection()
+        n = conn.execute('SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""').fetchone()[0]
+        conn.close()
+    except sqlite3.Error:
+        n = 0
+    return {'sidebar_feedback_pending': n}
+
+
+@app.context_processor
 def _inject_google_login_settings():
     """登入頁用：有設定 client ID 才顯示「用學校 Google 帳號登入」按鈕"""
     return {'google_client_id': GOOGLE_WEB_CLIENT_ID,

@@ -91,7 +91,7 @@
             <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
             <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
             <li class="sidebar-section-title">互動</li>
-            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋</a></li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋{% if sidebar_feedback_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_feedback_pending }}</span>{% endif %}</a></li>
             <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
             <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
             <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>

@@ -63,7 +63,6 @@
             <li><a href="/dashboard"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
             <li class="sidebar-section-title">使用者</li>
             <li><a href="/user/list" class="active"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
-            <li><a href="/customer/list"><i class="bi bi-coin"></i> 點數管理</a></li>
             <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
             {% if session.get('role') == 'super_admin' %}
             <li class="sidebar-section-title">方案管理</li>
@@ -98,6 +97,11 @@
         <a href="/user/list" class="btn btn-sm btn-outline-secondary mb-3">
             <i class="bi bi-arrow-left me-1"></i> 返回使用者列表
         </a>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+          <div class="alert {{ 'alert-danger' if category == 'error' else 'alert-success' }} py-2" style="border-radius:10px; font-size:0.9rem;">{{ message }}</div>
+          {% endfor %}
+        {% endwith %}
 
         <!-- 使用者基本資料 -->
         <div class="user-header">
@@ -196,7 +200,13 @@
             <div class="section-header">
                 <i class="bi bi-coin" style="color:var(--green);"></i>
                 <h6>點數交易明細</h6>
-                <span class="ms-auto text-muted" style="font-size:0.8rem;">最近 30 筆</span>
+                <span class="text-muted" style="font-size:0.8rem;">最近 30 筆</span>
+                <form action="/customer/adjust_pts/{{ user.id }}" method="POST" class="ms-auto d-flex gap-2 align-items-center"
+                      onsubmit="return confirm('確定調整「{{ user.username or user.email }}」的點數 ' + this.amount.value + ' 點？');">
+                    <input type="number" name="amount" class="form-control form-control-sm" style="width:110px;" placeholder="＋加 / －扣" required>
+                    <input type="text" name="reason" class="form-control form-control-sm" style="width:180px;" placeholder="原因（例：活動獎勵）" maxlength="100">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="white-space:nowrap;"><i class="bi bi-coin"></i> 調整點數</button>
+                </form>
             </div>
             <div class="section-body" style="padding:0;">
                 {% if transactions %}
@@ -205,7 +215,12 @@
                     <tbody>
                     {% for t in transactions %}
                     <tr>
-                        <td>{{ t.transaction_type or '—' }}</td>
+                        <td>
+                            {% set tx_labels = {'purchase': '購買點數', 'spend': '消費', 'reward': '獎勵', 'subscription_grant': '訂閱贈點',
+                                                'deposit': '小組押金', 'deposit_refund': '押金退還', 'group_reward': '小組獎勵', 'admin_adjust': '管理者調整'} %}
+                            {% if t.transaction_type == 'admin_adjust' %}<span class="chip chip-gold">管理者調整</span>{% else %}{{ tx_labels.get(t.transaction_type, t.transaction_type or '—') }}{% endif %}
+                            {% if t.related_feature %}<div style="font-size:0.75rem;color:#aaa;">{{ t.related_feature }}</div>{% endif %}
+                        </td>
                         <td style="font-weight:700;color:{% if (t.points or 0) > 0 %}var(--green){% else %}#e74c3c{% endif %};">
                             {{ '+' if (t.points or 0) > 0 else '' }}{{ t.points or 0 }}
                         </td>

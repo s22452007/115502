@@ -538,23 +538,43 @@ def admin_dashboard():
 @app.route('/customer/list')
 @admin_login_required
 def customer_list():
-    conn = get_db_connection()
-    users = conn.execute('SELECT id, username, email, j_pts, created_at FROM user').fetchall()
-    conn.close()
-    return render_template('customer/list.html', customers=users)
+    """點數管理已併入使用者資料：舊連結導到使用者列表，點數在各使用者的詳情頁調整"""
+    return redirect(url_for('user_list'))
 
 @app.route('/customer/adjust_pts/<int:user_id>', methods=['POST'])
 @admin_login_required
 def adjust_pts(user_id):
+    """管理者手動加減點數：寫進點數交易明細（讓使用者在 App 也看得到）與 SystemLog"""
+    from models import PointTransaction
+    user = User.query.get_or_404(user_id)
     try:
-        amount = int(request.form.get('amount', 0))
+        amount = int(request.form.get('amount', ''))
     except (ValueError, TypeError):
-        return redirect(url_for('customer_list'))
-    conn = get_db_connection()
-    conn.execute('UPDATE user SET j_pts = j_pts + ? WHERE id = ?', (amount, user_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('customer_list'))
+        flash('請輸入要調整的點數（正數加點、負數扣點）', 'error')
+        return redirect(url_for('user_detail', user_id=user_id))
+    if amount == 0:
+        flash('調整點數不可為 0', 'error')
+        return redirect(url_for('user_detail', user_id=user_id))
+    reason = (request.form.get('reason') or '').strip()
+
+    before = user.j_pts or 0
+    after = before + amount
+    if after < 0:
+        amount = -before   # 最多扣到 0，不讓餘額變負
+        after = 0
+    user.j_pts = after
+    db.session.add(PointTransaction(
+        user_id=user.id, points=amount, price=0, payment_method='admin',   # 資料表此欄 NOT NULL
+        transaction_type='admin_adjust', related_feature=reason or '管理者調整',
+    ))
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=user.id,
+        action='UPDATE', target_table='user', target_id=user.id,
+        old_value={'j_pts': before}, new_value={'j_pts': after, 'reason': reason},
+    ))
+    db.session.commit()
+    flash(f'已{"加" if amount > 0 else "扣"} {abs(amount)} 點，餘額 {before} → {after}' + ('（已扣到 0 為止）' if after == 0 and before + int(request.form.get('amount')) < 0 else ''), 'success')
+    return redirect(url_for('user_detail', user_id=user_id))
 
 @app.route('/user/suspend/<int:user_id>', methods=['POST'])
 @admin_login_required
@@ -966,7 +986,7 @@ def user_detail(user_id):
 
     try:
         transactions = conn.execute('''
-            SELECT id, transaction_type, points, price, payment_method, created_at
+            SELECT id, transaction_type, points, price, payment_method, related_feature, created_at
             FROM point_transaction WHERE user_id = ?
             ORDER BY created_at DESC LIMIT 30
         ''', (user_id,)).fetchall()

@@ -417,29 +417,99 @@ def admin_dashboard():
     except: new_users_today = 0
     try:
         recent_users = conn.execute(
-            "SELECT username, email, avatar, last_seen_at FROM user ORDER BY last_seen_at IS NULL, last_seen_at DESC LIMIT 5"
+            "SELECT username, email, avatar, last_seen_at FROM user ORDER BY last_seen_at IS NULL, last_seen_at DESC LIMIT 4"
         ).fetchall()
         recent_users = [
             {**dict(u), 'last_seen_at': utc_to_tw(u['last_seen_at']) if u['last_seen_at'] else '從未登入'}
             for u in recent_users
         ]
     except: recent_users = []
+    # ---- 待處理事項、本週活動、內容與校園版（每個查詢各自 try，缺表就顯示 0）----
+    def q1(sql, params=()):
+        try:
+            return conn.execute(sql, params).fetchone()[0] or 0
+        except sqlite3.Error:
+            return 0
+
+    # 與小組總覽頁的 _group_status 用同一套 ISO 週規則
     try:
-        pending_feedbacks = conn.execute(
-            '''SELECT f.id, f.feedback_type, f.content, f.created_at, u.username, u.email
-               FROM feedback f
-               LEFT JOIN user u ON f.user_id = u.id
-               WHERE f.reply IS NULL OR f.reply = ""
-               ORDER BY f.created_at DESC LIMIT 5'''
-        ).fetchall()
-        pending_feedbacks = [
-            {**dict(f), 'created_at': utc_to_tw(f['created_at'])}
-            for f in pending_feedbacks
-        ]
-    except: pending_feedbacks = []
+        _now = datetime.utcnow()
+        expired_groups = sum(
+            1 for (created_raw,) in conn.execute('SELECT created_at FROM study_group').fetchall()
+            if (lambda d: d and _now.isocalendar()[:2] > d.isocalendar()[:2])(_parse_db_datetime(created_raw))
+        )
+    except sqlite3.Error:
+        expired_groups = 0
+    todo = {
+        'pending_teachers': q1("SELECT COUNT(*) FROM user WHERE account_type = 'teacher' AND teacher_status = 'pending'"),
+        'feedback_pending': feedback_pending,
+        # 建立當週已過、但成員還沒打開小組頁觸發結算的小組
+        'expired_groups': expired_groups,
+        'default_password_admins': q1("SELECT COUNT(*) FROM admin WHERE must_change_password = 1") if session.get('role') == 'super_admin' else None,
+    }
+    weekly = {
+        'photos': q1("SELECT COUNT(*) FROM user_photo WHERE created_at >= datetime('now', '-7 days')"),
+        'sentences': q1("SELECT COUNT(*) FROM sentence_practice_record WHERE created_at >= datetime('now', '-7 days')"),
+        'readings': q1("SELECT COUNT(*) FROM score_record WHERE created_at >= datetime('now', '-7 days')"),
+        'unlocks': q1("SELECT COUNT(*) FROM unlocked_articles WHERE unlocked_at >= datetime('now', '-7 days')"),
+        'chats': q1("SELECT COUNT(*) FROM chat_session WHERE started_at >= datetime('now', '-7 days')"),
+        'groups': q1("SELECT COUNT(*) FROM study_group WHERE created_at >= datetime('now', '-7 days')"),
+        'new_users': q1("SELECT COUNT(*) FROM user WHERE created_at >= datetime('now', '-7 days')"),
+    }
+    content = {
+        'articles_published': q1("SELECT COUNT(*) FROM articles WHERE is_published IS NOT 0"),
+        'articles_total': q1("SELECT COUNT(*) FROM articles"),
+        'premium_users': q1("SELECT COUNT(*) FROM user WHERE is_premium = 1"),
+    }
+    edu = {
+        'classrooms': q1("SELECT COUNT(*) FROM classroom WHERE is_archived IS NOT 1"),
+    }
+    tw_now = datetime.utcnow() + timedelta(hours=8)
+
+    # 最近 14 天每日活躍人數：當天做過任一種學習活動（拍照、AI 對話、造句、朗讀）的不同使用者數，
+    # 依台灣時間分日（資料庫存 UTC）
+    days = [(tw_now - timedelta(days=i)).date() for i in range(13, -1, -1)]
+    active_users = {d.isoformat(): set() for d in days}
+    all_active = set()
+    for table, col in (('user_photo', 'created_at'), ('chat_session', 'started_at'),
+                       ('sentence_practice_record', 'created_at'), ('score_record', 'created_at')):
+        try:
+            rows = conn.execute(
+                f"SELECT DISTINCT date({col}, '+8 hours') AS d, user_id FROM {table} "
+                f"WHERE {col} >= datetime('now', '-14 days')").fetchall()
+        except sqlite3.Error:
+            continue
+        for d, uid in rows:
+            if d in active_users and uid is not None:
+                active_users[d].add(uid)
+                all_active.add(uid)
+    daily = {d: len(u) for d, u in active_users.items()}
     conn.close()
 
+    W, H, TOP, BOTTOM = 600, 100, 16, 4
+    values = [daily[d.isoformat()] for d in days]
+    vmax = max(values + [1])
+    step = W / (len(days) - 1)
+    pts = []
+    for i, v in enumerate(values):
+        x = round(i * step, 1)
+        y = round(H - BOTTOM - (v / vmax) * (H - TOP - BOTTOM), 1)
+        pts.append({'x': x, 'y': y, 'v': v, 'label': f'{days[i].month}/{days[i].day}', 'date': days[i].isoformat()})
+    daily_chart = {
+        'w': W, 'h': H, 'base': H - BOTTOM, 'step': round(step, 1),
+        'points': pts,
+        'polyline': ' '.join(f"{p['x']},{p['y']}" for p in pts),
+        'area': f"M{pts[0]['x']},{H - BOTTOM} " + ' '.join(f"L{p['x']},{p['y']}" for p in pts) + f" L{pts[-1]['x']},{H - BOTTOM} Z",
+        'total': len(all_active), 'max': vmax,
+    }
+
+    todo_count = sum(1 for v in todo.values() if v)
+    weekly_max = max(list(weekly.values()) + [1])
+
     return render_template('index.html',
+                           dashboard_todo=todo, weekly=weekly, content=content, edu=edu,
+                           todo_count=todo_count, weekly_max=weekly_max,
+                           daily_chart=daily_chart,
                            user_count=user_count,
                            photo_count=photo_count,
                            vocab_count=vocab_count,
@@ -447,7 +517,6 @@ def admin_dashboard():
                            feedback_total=feedback_total,
                            feedback_pending=feedback_pending,
                            recent_users=recent_users,
-                           pending_feedbacks=pending_feedbacks,
                            new_users_today=new_users_today)
 # ==========================================
 # [使用者管理] 包含點數 (j_pts)

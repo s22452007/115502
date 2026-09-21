@@ -97,33 +97,64 @@
         .body-area { padding: 0 48px 32px; }
 
         /* ===== Panels ===== */
-        .panel {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-        .panel-header {
-            padding: 18px 20px 14px;
-            font-weight: 800;
-            font-size: 0.95rem;
-            color: #222;
-            border-bottom: 1px solid #f2f2f2;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 18px; }
+        .panel-header { padding: 16px 22px 12px; font-weight: 800; font-size: 0.95rem; color: #2a352e; border-bottom: 1px solid #f0f3f1; display: flex; align-items: center; gap: 8px; }
         .panel-header i { color: var(--green-accent); font-size: 1rem; }
-        .panel-header .badge-count {
-            margin-left: auto;
-            background: #fce4ec;
-            color: #c2185b;
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 2px 10px;
-            border-radius: 50px;
-        }
-        .panel-body { padding: 16px 20px; }
+        .panel-header .hdr-note { margin-left: auto; font-weight: 500; font-size: 0.78rem; color: #9aa79f; }
+        .panel-header .badge-count { margin-left: auto; background: #fde8e8; color: #b50a0a; border-radius: 50px; padding: 2px 10px; font-size: 0.76rem; font-weight: 700; }
+        /* 面板內的小節 */
+        .sub-title { font-size: 0.7rem; font-weight: 800; letter-spacing: 1.4px; color: #a3b0a8; margin: 0 0 8px; display: flex; align-items: center; gap: 10px; }
+        .sub-title::after { content: ''; flex: 1; height: 1px; background: #eef2ef; }
+        .sub-block + .sub-block { margin-top: 26px; }
+        .panel-body { padding: 14px 22px 16px; }
+
+        /* ===== 首頁：少一點框，多一點留白 ===== */
+        .dash { padding: 22px 40px 16px; max-width: 1200px; }
+        .figures-body { padding: 18px 26px 16px; }
+        .figures { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 24px; padding: 0; }
+        .figure .n { font-size: 1.9rem; font-weight: 800; color: #23312a; line-height: 1; letter-spacing: -1px; }
+        .figure .n small { font-size: 0.95rem; color: #9aa79f; font-weight: 600; letter-spacing: 0; margin-left: 3px; }
+        .figure .l { font-size: 0.78rem; color: #9aa79f; margin-top: 7px; }
+        .todo-row { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #e3e9e5; text-decoration: none; color: #34423a; font-size: 0.9rem; }
+        .todo-row:last-of-type { border-bottom: none; }
+        .todo-row .n { font-weight: 800; color: #c47f2c; font-size: 1.15rem; min-width: 1.6em; letter-spacing: -0.5px; }
+        .todo-row .t { flex: 1; }
+        .todo-row .go { color: var(--green-accent); font-size: 0.82rem; white-space: nowrap; opacity: 0.75; }
+        .todo-row:hover .t, .todo-row:hover .go { color: var(--green-accent); opacity: 1; }
+        .bar-row { display: grid; grid-template-columns: 92px 1fr 56px; align-items: center; gap: 10px; padding: 5px 0; font-size: 0.86rem; color: #5b6a61; }
+        .bar-row .bar { height: 6px; background: #edf1ee; border-radius: 99px; overflow: hidden; }
+        .bar-row .bar > i { display: block; height: 100%; background: var(--green-accent); border-radius: 99px; min-width: 0; }
+        .bar-row .v { text-align: right; font-weight: 800; color: #23312a; white-space: nowrap; }
+        .bar-row .v small { font-weight: 500; color: #9aa79f; font-size: 0.74rem; margin-left: 3px; }
+        .all-clear { color: #9aa79f; font-size: 0.9rem; padding: 6px 0; }
+        .more-link { display: inline-block; margin-top: 10px; font-size: 0.85rem; color: var(--green-accent); text-decoration: none; }
+        .copyright { font-size: 0.75rem; color: #c5cdc8; margin-top: 12px; }
+
+        /* 折線圖：SVG 只畫線（可拉伸），點、數字、日期用一般文字定位，不會變形 */
+        .sec-note { font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: #9aa79f; margin-left: 4px; }
+        .chart-wrap { position: relative; height: 96px; margin: 6px 6px 22px; }
+        .chart-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
+        .chart .grid { stroke: #e3e9e5; stroke-width: 1; vector-effect: non-scaling-stroke; }
+        .chart .area { fill: var(--green-accent); opacity: 0.08; }
+        .chart .line { fill: none; stroke: var(--green-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+        .chart-wrap .day { position: absolute; top: 0; bottom: 0; width: 7.6%; transform: translateX(-50%); }
+        .chart-wrap .pt { position: absolute; transform: translate(-50%, -50%); pointer-events: none; text-align: center; }
+        .chart-wrap .pt i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--green-accent); border: 1.5px solid white; box-shadow: 0 0 0 1px var(--green-accent); margin: 0 auto; }
+        .chart-wrap .pt b { display: block; font-size: 11px; font-weight: 700; color: #23312a; line-height: 1; margin-bottom: 4px; }
+        .chart-wrap .xaxis { position: absolute; left: 0; right: 0; top: 100%; height: 18px; }
+        .chart-wrap .xaxis span { position: absolute; top: 5px; transform: translateX(-50%); font-size: 11px; color: #9aa79f; white-space: nowrap; }
+
+        /* 數字清單：一列一項，左標籤右數字，不加圖示 */
+        .kv-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f3f5f3; font-size: 0.9rem; color: #555; }
+        .kv-row:last-child { border-bottom: none; }
+        .kv-row .v { font-weight: 800; color: #333; font-size: 1.05rem; white-space: nowrap; }
+        .kv-row .v small { font-weight: 500; color: #aaa; font-size: 0.76rem; margin-left: 4px; }
+        .kv-row.hot .v { color: #c47f2c; }
+        .kv-row a { color: inherit; text-decoration: none; }
+        .kv-row a:hover { color: var(--green-accent); }
+        .kv-row .go { font-size: 0.78rem; color: var(--green-accent); margin-left: 8px; white-space: nowrap; }
+        .kv-sub { font-size: 0.74rem; color: #bbb; margin-top: 2px; }
+        .all-clear { color: #aaa; font-size: 0.88rem; padding: 8px 0; }
 
         /* ===== Timeline ===== */
         .timeline { position: relative; padding: 4px 0; }
@@ -135,7 +166,7 @@
             width: 2px;
             background: #f0f0f0;
         }
-        .tl-item { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; position: relative; }
+        .tl-item { display: flex; align-items: flex-start; gap: 14px; padding: 8px 0; position: relative; }
         .tl-dot {
             width: 36px; height: 36px;
             border-radius: 50%;
@@ -217,98 +248,114 @@
     <script src="{{ url_for('static', filename='admin/sidebar.js') }}"></script>
 
     <main class="main-content">
-        <!-- 四個統計卡片 -->
-        <div class="stat-cards">
-            <div class="stat-card">
-                <div class="icon-wrap ic-green"><i class="bi bi-people-fill"></i></div>
-                <div class="num">{{ user_count }}</div>
-                <div class="lbl">總使用者</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon-wrap ic-blue"><i class="bi bi-activity"></i></div>
-                <div class="num">{{ today_active }}</div>
-                <div class="lbl">今日活躍</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon-wrap ic-amber"><i class="bi bi-book-fill"></i></div>
-                <div class="num">{{ vocab_count }}</div>
-                <div class="lbl">教材單字</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon-wrap ic-pink"><i class="bi bi-person-plus-fill"></i></div>
-                <div class="num">{{ new_users_today }}</div>
-                <div class="lbl">今日新使用者</div>
-            </div>
-        </div>
+        <div class="dash">
 
-        <div class="body-area">
-            <div class="row g-4">
-                <div class="col-md-7">
-                    <div class="panel">
-                        <div class="panel-header">
-                            <i class="bi bi-clock-history"></i> 最近動態
-                        </div>
-                        <div class="panel-body">
-                            {% if recent_users %}
-                            <div class="timeline">
-                                {% for u in recent_users %}
-                                <div class="tl-item">
-                                    {% set av = avatar_info(u.avatar) %}
-                                    {% if av and av.type == 'image' %}
-                                    <img src="{{ av.src }}" class="tl-dot" style="object-fit:cover;">
-                                    {% elif av %}
-                                    <div class="tl-dot" style="background:{{ av.bg }}; font-size:1.2rem;">{{ av.emoji }}</div>
-                                    {% else %}
-                                    <div class="tl-dot login">{{ (u.username or u.email)[0]|upper }}</div>
-                                    {% endif %}
-                                    <div class="tl-info">
-                                        <div class="tl-name">{{ u.username or '未設定暱稱' }} 登入</div>
-                                        <div class="tl-desc">{{ u.email }} · {{ u.last_seen_at }}</div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                                <div style="text-align:center;color:#ccc;padding:24px 0;font-size:0.9rem;">尚無登入紀錄</div>
-                            {% endif %}
-                        </div>
+            <div class="panel">
+                <div class="panel-body figures-body">
+            <div class="figures">
+                <div class="figure"><div class="n">{{ user_count }}</div><div class="l">總使用者</div></div>
+                <div class="figure"><div class="n">{{ today_active }}</div><div class="l">今日活躍</div></div>
+                <div class="figure"><div class="n">{{ new_users_today }}</div><div class="l">今日新註冊</div></div>
+                <div class="figure"><div class="n">{{ content.premium_users }}</div><div class="l">Premium 訂閱中</div></div>
+                <div class="figure"><div class="n">{{ edu.classrooms }}</div><div class="l">教育版班級</div></div>
+                <div class="figure"><div class="n">{{ content.articles_published }}<small>/ {{ content.articles_total }}</small></div><div class="l">上架文章</div></div>
+            </div>
+
+                </div>
+            </div>
+
+            <div class="panel chart">
+                <div class="panel-header"><i class="bi bi-graph-up"></i> 最近 14 天的每日活躍使用者<span class="hdr-note">當天做過拍照、AI 對話、造句或朗讀任一項的人數；14 天內共 {{ daily_chart.total }} 位使用者活躍</span></div>
+                <div class="panel-body">
+                <div class="chart-wrap">
+                    <svg viewBox="0 0 {{ daily_chart.w }} {{ daily_chart.h }}" preserveAspectRatio="none" role="img" aria-label="最近 14 天每日活躍使用者折線圖">
+                        <line class="grid" x1="0" y1="{{ daily_chart.base }}" x2="{{ daily_chart.w }}" y2="{{ daily_chart.base }}"></line>
+                        <path class="area" d="{{ daily_chart.area }}"></path>
+                        <polyline class="line" points="{{ daily_chart.polyline }}"></polyline>
+                    </svg>
+                    {% for p in daily_chart.points %}
+                    <span class="day" style="left: {{ (p.x / daily_chart.w * 100) | round(2) }}%;" title="{{ p.date }}：{{ p.v }} 位活躍"></span>
+                    {% if p.v or loop.last %}
+                    <span class="pt" style="left: {{ (p.x / daily_chart.w * 100) | round(2) }}%; top: {{ (p.y / daily_chart.h * 100) | round(2) }}%;"><b>{{ p.v }}</b><i></i></span>
+                    {% endif %}
+                    {% endfor %}
+                    <div class="xaxis">
+                        {% for p in daily_chart.points %}{% if loop.index0 % 2 == 1 or loop.last %}<span style="left: {{ (p.x / daily_chart.w * 100) | round(2) }}%;">{{ p.label }}</span>{% endif %}{% endfor %}
                     </div>
                 </div>
+                </div>
+            </div>
 
-                <div class="col-md-5">
+            <div class="row g-3">
+                <div class="col-lg-4">
                     <div class="panel">
-                        <div class="panel-header">
-                            <i class="bi bi-chat-dots-fill"></i> 待回覆回饋
-                            {% if feedback_pending > 0 %}
-                            <span class="badge-count">{{ feedback_pending }} 筆</span>
-                            {% endif %}
-                        </div>
+                        <div class="panel-header"><i class="bi bi-list-check"></i> 需要處理</div>
                         <div class="panel-body">
-                            {% if pending_feedbacks %}
-                                {% for f in pending_feedbacks %}
-                                <div class="activity-item">
-                                    <div class="activity-info">
-                                        <div class="activity-name">{{ f.username or f.email or '匿名' }}</div>
-                                        <div class="activity-excerpt">{{ f.content }}</div>
-                                        <div class="activity-time">{{ f.created_at }}</div>
-                                    </div>
-                                    <a href="/feedback/list" class="reply-btn">回覆 →</a>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div style="text-align:center;color:#ccc;padding:24px 0;font-size:0.9rem;">沒有待回覆的回饋 🎉</div>
-                            {% endif %}
-                        </div>
-                        {% if feedback_pending > 0 %}
-                        <div style="border-top:1px solid #f5f5f5;padding:12px 20px;text-align:center;">
-                            <a href="/feedback/list" style="font-size:0.82rem;color:var(--green-accent);text-decoration:none;font-weight:700;">查看全部 →</a>
-                        </div>
+                        {% set t = dashboard_todo %}
+                        {% if t.pending_teachers %}
+                        <a class="todo-row" href="/teacher_account/list"><span class="n">{{ t.pending_teachers }}</span><span class="t">位老師等待審核身分</span><span class="go">去審核 →</span></a>
                         {% endif %}
+                        {% if t.feedback_pending %}
+                        <a class="todo-row" href="/feedback/list"><span class="n">{{ t.feedback_pending }}</span><span class="t">筆意見回饋還沒回覆</span><span class="go">去回覆 →</span></a>
+                        {% endif %}
+                        {% if t.expired_groups %}
+                        <a class="todo-row" href="/group/list?status=expired"><span class="n">{{ t.expired_groups }}</span><span class="t">個學習小組已過週、尚未結算</span><span class="go">查看 →</span></a>
+                        {% endif %}
+                        {% if t.default_password_admins %}
+                        <a class="todo-row" href="/admin_account/list"><span class="n">{{ t.default_password_admins }}</span><span class="t">位管理員還在用預設密碼</span><span class="go">查看 →</span></a>
+                        {% endif %}
+                        {% if not todo_count %}
+                        <div class="all-clear"><i class="bi bi-check2 me-1"></i>都處理完了</div>
+                        {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="panel">
+                        <div class="panel-header"><i class="bi bi-bar-chart-line"></i> 最近 7 天的使用量</div>
+                        <div class="panel-body">
+                        {% for label, key, unit in [('拍照辨識', 'photos', '次'), ('AI 對話', 'chats', '場'), ('造句挑戰', 'sentences', '次'), ('文章朗讀', 'readings', '次'), ('付費解鎖文章', 'unlocks', '篇'), ('新成立小組', 'groups', '組')] %}
+                        <div class="bar-row">
+                            <span>{{ label }}</span>
+                            <span class="bar"><i style="width: {{ (weekly[key] * 100 / weekly_max) | round | int }}%;"></i></span>
+                            <span class="v">{{ weekly[key] }}<small>{{ unit }}</small></span>
+                        </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="panel">
+                        <div class="panel-header"><i class="bi bi-clock-history"></i> 最近登入</div>
+                        <div class="panel-body">
+                        {% if recent_users %}
+                        <div class="timeline">
+                            {% for u in recent_users %}
+                            <div class="tl-item">
+                                {% set av = avatar_info(u.avatar) %}
+                                {% if av and av.type == 'image' %}
+                                <img src="{{ av.src }}" class="tl-dot" style="object-fit:cover;">
+                                {% elif av %}
+                                <div class="tl-dot" style="background:{{ av.bg }}; font-size:1.2rem;">{{ av.emoji }}</div>
+                                {% else %}
+                                <div class="tl-dot login">{{ (u.username or u.email)[0]|upper }}</div>
+                                {% endif %}
+                                <div class="tl-info">
+                                    <div class="tl-name">{{ u.username or '未設定暱稱' }}</div>
+                                    <div class="tl-desc">{{ u.email }} · {{ u.last_seen_at }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="all-clear">還沒有登入紀錄</div>
+                        {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <p class="mt-4" style="font-size:0.75rem;color:#ccc;">© 2026 JLens Project Team. All rights reserved.</p>
+            <p class="copyright">© 2026 JLens Project Team. All rights reserved.</p>
         </div>
     </main>
 </div>

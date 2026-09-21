@@ -232,7 +232,9 @@ def admin_login():
             if not (admin.is_active if admin.is_active is not None else True):
                 print(f"[FAIL] 登入失敗: {username} (帳號已停用)")
                 return render_template('admin_login.html', error="此管理員帳號已被停用，請聯繫 super_admin")
-            # 登入成功，將重要資訊寫入 Session
+            # 登入成功，記錄時間並將重要資訊寫入 Session
+            admin.last_login_at = datetime.utcnow()
+            db.session.commit()
             session.clear()
             session['admin_user'] = admin.username
             session['admin_id'] = admin.id
@@ -593,7 +595,7 @@ def toggle_suspend_user(user_id):
 @super_admin_required
 def plan_list():
     conn = get_db_connection()
-    plans = conn.execute('SELECT * FROM subscription_plan ORDER BY id ASC').fetchall()
+    plans = conn.execute('SELECT * FROM subscription_plan ORDER BY is_active DESC, id ASC').fetchall()
     plans = [dict(p) for p in plans]
     for p in plans:
         count = conn.execute(
@@ -606,8 +608,21 @@ def plan_list():
     free_users = conn.execute(
         "SELECT COUNT(*) FROM user WHERE is_premium = 0 OR is_premium IS NULL"
     ).fetchone()[0]
+
+    # 點數方案（原本獨立的「點數方案管理」頁已併進來）
+    packages = [dict(p) for p in conn.execute('SELECT * FROM point_package ORDER BY is_active DESC, price ASC').fetchall()]
+    for p in packages:
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt, COALESCE(SUM(price),0) as revenue FROM point_transaction WHERE points=? AND price=? AND transaction_type='purchase'",
+            (p['points'], p['price'])
+        ).fetchone()
+        p['buy_count'] = row['cnt'] if row else 0
+        p['revenue']   = row['revenue'] if row else 0
     conn.close()
-    return render_template('plan/list.html', plans=plans, free_users=free_users)
+    return render_template('plan/list.html', plans=plans, free_users=free_users, packages=packages,
+                           total_revenue=sum(p['revenue'] for p in packages),
+                           total_purchases=sum(p['buy_count'] for p in packages),
+                           active_count=sum(1 for p in packages if p['is_active']))
 
 @app.route('/plan/add', methods=['POST'])
 @super_admin_required
@@ -636,7 +651,7 @@ def plan_add():
             (admin_id, 'INSERT', 'subscription_plan', cur.lastrowid, now))
         conn.commit()
         conn.close()
-    return redirect(url_for('plan_list'))
+    return redirect(url_for('plan_list', tab='subscription'))
 
 @app.route('/plan/edit/<int:plan_id>', methods=['POST'])
 @super_admin_required
@@ -663,7 +678,7 @@ def plan_edit(plan_id):
             (admin_id, 'UPDATE', 'subscription_plan', plan_id, now))
         conn.commit()
         conn.close()
-    return redirect(url_for('plan_list'))
+    return redirect(url_for('plan_list', tab='subscription'))
 
 @app.route('/plan/toggle/<int:plan_id>', methods=['POST'])
 @super_admin_required
@@ -675,33 +690,13 @@ def plan_toggle(plan_id):
                      (0 if row['is_active'] else 1, plan_id))
         conn.commit()
     conn.close()
-    return redirect(url_for('plan_list'))
+    return redirect(url_for('plan_list', tab='subscription'))
 
 @app.route('/package/list')
 @super_admin_required
 def package_list():
-    conn = get_db_connection()
-    packages = conn.execute('SELECT * FROM point_package ORDER BY price ASC').fetchall()
-    packages = [dict(p) for p in packages]
-
-    # 計算每個方案的購買次數與累計營收
-    for p in packages:
-        row = conn.execute(
-            "SELECT COUNT(*) as cnt, COALESCE(SUM(price),0) as revenue FROM point_transaction WHERE points=? AND price=? AND transaction_type='purchase'",
-            (p['points'], p['price'])
-        ).fetchone()
-        p['buy_count'] = row['cnt'] if row else 0
-        p['revenue']   = row['revenue'] if row else 0
-
-    # 整體統計
-    total_revenue  = sum(p['revenue'] for p in packages)
-    total_purchases = sum(p['buy_count'] for p in packages)
-    active_count   = sum(1 for p in packages if p['is_active'])
-
-    conn.close()
-    return render_template('package/list.html', packages=packages,
-                           total_revenue=total_revenue, total_purchases=total_purchases,
-                           active_count=active_count)
+    """點數方案已併入「方案管理」：舊網址導到合併頁"""
+    return redirect(url_for('plan_list'))
 
 @app.route('/package/add', methods=['POST'])
 @super_admin_required
@@ -723,7 +718,7 @@ def package_add():
             (admin_id, 'INSERT', 'point_package', cur.lastrowid, now))
         conn.commit()
         conn.close()
-    return redirect(url_for('package_list'))
+    return redirect(url_for('plan_list', tab='package'))
 
 @app.route('/package/edit/<int:pkg_id>', methods=['POST'])
 @super_admin_required
@@ -745,7 +740,7 @@ def package_edit(pkg_id):
             (admin_id, 'UPDATE', 'point_package', pkg_id, now))
         conn.commit()
         conn.close()
-    return redirect(url_for('package_list'))
+    return redirect(url_for('plan_list', tab='package'))
 
 @app.route('/package/toggle/<int:pkg_id>', methods=['POST'])
 @super_admin_required
@@ -756,7 +751,7 @@ def package_toggle(pkg_id):
         conn.execute('UPDATE point_package SET is_active=? WHERE id=?', (0 if row['is_active'] else 1, pkg_id))
         conn.commit()
     conn.close()
-    return redirect(url_for('package_list'))
+    return redirect(url_for('plan_list', tab='package'))
 
 @app.route('/purchase/list')
 @admin_login_required
@@ -963,6 +958,51 @@ def user_detail(user_id):
     user = dict(user)
     user['last_seen_at'] = utc_to_tw(user.get('last_seen_at') or '')
     user['created_at']   = utc_to_tw(user.get('created_at') or '')
+    account_type = user.get('account_type') or 'general'
+
+    # 老師帳號：看班級與帳號狀態；學生帳號：看所屬班級與作業。這兩種都用不到 App 的付費功能
+    teacher_info, student_info = None, None
+    if account_type == 'teacher':
+        try:
+            classrooms = [dict(r) for r in conn.execute('''
+                SELECT c.id, c.name, c.join_code, c.is_open, c.is_archived, c.created_at,
+                       (SELECT COUNT(*) FROM classroom_member m WHERE m.classroom_id = c.id) AS members,
+                       (SELECT COUNT(*) FROM assignment a WHERE a.classroom_id = c.id AND a.is_published = 1) AS assignments
+                FROM classroom c WHERE c.teacher_id = ? ORDER BY c.is_archived, c.created_at DESC
+            ''', (user_id,)).fetchall()]
+            for c in classrooms:
+                c['created_at'] = utc_to_tw(c['created_at'] or '')
+            via_google = conn.execute(
+                "SELECT COUNT(*) FROM system_log WHERE target_table = 'user' AND target_id = ? AND action = 'CREATE' "
+                "AND new_value LIKE '%\"via\": \"google\"%'", (user_id,)).fetchone()[0] > 0
+        except sqlite3.Error:
+            classrooms, via_google = [], False
+        teacher_info = {
+            'classrooms': classrooms,
+            'active_count': sum(1 for c in classrooms if not c['is_archived']),
+            'student_total': sum(c['members'] for c in classrooms if not c['is_archived']),
+            'assignment_total': sum(c['assignments'] for c in classrooms if not c['is_archived']),
+            'status': user.get('teacher_status') or 'approved',
+            'via': 'Google 學校帳號登入自動建立' if via_google else '管理者建立',
+        }
+    elif account_type == 'student':
+        try:
+            memberships = [dict(r) for r in conn.execute('''
+                SELECT c.id, c.name, c.join_code, c.is_archived, t.username AS teacher_name, m.joined_at, m.display_name,
+                       (SELECT COUNT(*) FROM assignment a WHERE a.classroom_id = c.id AND a.is_published = 1) AS total,
+                       (SELECT COUNT(*) FROM assignment_submission s JOIN assignment a ON a.id = s.assignment_id
+                        WHERE a.classroom_id = c.id AND s.student_id = m.student_id AND s.status IN ('submitted', 'graded')) AS done,
+                       (SELECT ROUND(AVG(s.score), 1) FROM assignment_submission s JOIN assignment a ON a.id = s.assignment_id
+                        WHERE a.classroom_id = c.id AND s.student_id = m.student_id AND s.score IS NOT NULL) AS avg_score
+                FROM classroom_member m JOIN classroom c ON c.id = m.classroom_id
+                LEFT JOIN user t ON t.id = c.teacher_id
+                WHERE m.student_id = ? ORDER BY m.joined_at DESC
+            ''', (user_id,)).fetchall()]
+            for m in memberships:
+                m['joined_at'] = utc_to_tw(m['joined_at'] or '')
+        except sqlite3.Error:
+            memberships = []
+        student_info = {'memberships': memberships}
 
     try:
         subscriptions = conn.execute('''
@@ -1051,7 +1091,8 @@ def user_detail(user_id):
     return render_template('user/detail.html',
         user=user, subscriptions=subscriptions, transactions=transactions,
         photos=photos, photo_count=photo_count, vocab_count=vocab_count,
-        friends=friends, feedbacks=feedbacks, groups=groups)
+        friends=friends, feedbacks=feedbacks, groups=groups,
+        account_type=account_type, teacher_info=teacher_info, student_info=student_info)
 
 
 # ==========================================
@@ -2428,7 +2469,7 @@ def admin_account_list():
         'is_active': a.is_active is not False,
         'must_change_password': bool(a.must_change_password),
         'is_me': a.id == session.get('admin_id'),
-        'created_at': utc_to_tw(a.created_at.strftime('%Y-%m-%d %H:%M:%S')) if a.created_at else '',
+        'last_login_at': utc_to_tw(a.last_login_at.strftime('%Y-%m-%d %H:%M:%S')) if a.last_login_at else '',
     } for a in admins]
     return render_template('admin_account/list.html', admins=rows)
 

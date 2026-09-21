@@ -872,6 +872,7 @@ except sqlite3.OperationalError as e:
 # ==========================================
 add_column("admin", "is_active BOOLEAN DEFAULT 1")
 add_column("admin", "must_change_password BOOLEAN DEFAULT 0")
+add_column("admin", "last_login_at DATETIME")  # 上次登入後台時間
 try:
     cursor.execute("UPDATE admin SET is_active = 1 WHERE is_active IS NULL;")
     cursor.execute("UPDATE admin SET must_change_password = 0 WHERE must_change_password IS NULL;")

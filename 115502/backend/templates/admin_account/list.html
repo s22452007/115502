@@ -52,6 +52,13 @@
         .modal-body label.form-label { font-size: 0.82rem; color: #777; margin-bottom: 4px; }
         .how-to { font-size: 0.82rem; color: #888; line-height: 1.8; margin-bottom: 16px; }
         .me-tag { font-size: 0.72rem; color: var(--green-accent); font-weight: 700; margin-left: 6px; }
+        .actions { display: flex; gap: 6px; justify-content: flex-end; }
+        .btn-mini { padding: 4px 12px; font-size: 0.8rem; font-weight: 600; border-radius: 7px; border: 1px solid #e0e0e0; background: white; color: #555; cursor: pointer; white-space: nowrap; }
+        .btn-mini:hover { border-color: #aaa; color: #222; }
+        .btn-mini.danger { color: #c0392b; border-color: #f1d0cc; }
+        .btn-mini.danger:hover { background: #fdf2f1; }
+        .btn-mini.ok { color: var(--green-accent); border-color: var(--green-light); }
+        .btn-mini.ok:hover { background: var(--green-light); }
     </style>
 </head>
 <body>
@@ -71,9 +78,8 @@
             <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
             <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
             {% if session.get('role') == 'super_admin' %}
-            <li class="sidebar-section-title">方案管理</li>
-            <li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
-            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>
+            <li class="sidebar-section-title">營運</li>
+            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
             <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
@@ -133,8 +139,8 @@
                                 <th>帳號</th>
                                 <th>權限</th>
                                 <th>狀態</th>
-                                <th>建立時間</th>
-                                <th class="text-center" style="width: 300px;">操作</th>
+                                <th>上次登入</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -162,24 +168,18 @@
                                     <div class="sub"><span class="chip chip-warn">尚未改預設密碼</span></div>
                                     {% endif %}
                                 </td>
-                                <td style="color:#aaa; font-size:0.85rem;">{{ a.created_at or "—" }}</td>
-                                <td class="text-center">
-                                    <div class="d-flex gap-2 justify-content-center">
-                                        <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px; white-space:nowrap;" data-bs-toggle="modal" data-bs-target="#pwModal{{ a.id }}">
-                                            <i class="bi bi-key"></i> 重設密碼
-                                        </button>
+                                <td style="color:#aaa; font-size:0.85rem; white-space:nowrap;">{{ a.last_login_at or '從未登入' }}</td>
+                                <td>
+                                    <div class="actions">
+                                        <button class="btn-mini" data-bs-toggle="modal" data-bs-target="#pwModal{{ a.id }}">重設密碼</button>
                                         {% if not a.is_me %}
                                         <form action="{{ url_for('admin_account_toggle_role', admin_id=a.id) }}" method="POST"
                                               onsubmit="return confirm('{{ '將「' + a.username + '」降為一般 admin？' if a.role == 'super_admin' else '將「' + a.username + '」升為 super_admin？將可管理方案、教師與管理員帳號。' }}');">
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary" style="border-radius:8px; white-space:nowrap;">
-                                                {{ '降為 admin' if a.role == 'super_admin' else '升為 super_admin' }}
-                                            </button>
+                                            <button type="submit" class="btn-mini">{{ '降為 admin' if a.role == 'super_admin' else '升為 super_admin' }}</button>
                                         </form>
                                         <form action="{{ url_for('admin_account_toggle_active', admin_id=a.id) }}" method="POST"
                                               onsubmit="return confirm('{{ '確定要啟用「' + a.username + '」？' if not a.is_active else '確定要停用「' + a.username + '」？停用後無法登入後台。' }}');">
-                                            <button type="submit" class="btn btn-sm {{ 'btn-outline-success' if not a.is_active else 'btn-outline-warning' }}" style="border-radius:8px; white-space:nowrap;">
-                                                {{ '啟用' if not a.is_active else '停用' }}
-                                            </button>
+                                            <button type="submit" class="btn-mini {{ 'ok' if not a.is_active else 'danger' }}">{{ '啟用' if not a.is_active else '停用' }}</button>
                                         </form>
                                         {% endif %}
                                     </div>

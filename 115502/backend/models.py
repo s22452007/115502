@@ -93,6 +93,7 @@ class Admin(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)              # 停用後無法登入後台
     must_change_password = db.Column(db.Boolean, default=False)  # 新建／重設密碼後，第一次登入強制改密碼
+    last_login_at = db.Column(db.DateTime)                       # 上次成功登入後台的時間（UTC）
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)

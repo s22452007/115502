@@ -2,12 +2,12 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>訂閱方案管理</title>
+    <title>方案管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
-        :root { --green: #5c8364; --green-light: #dce7de; --bg: #f4f7f5; }
+        :root { --green: #5c8364; --green-dark: #4a7a54; --green-light: #dce7de; --bg: #f4f7f5; }
         body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
         .layout { display: flex; min-height: 100vh; }
         .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
@@ -21,53 +21,48 @@
         .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green); flex-shrink: 0; }
         .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
         .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
-        .main-content { flex: 1; overflow-x: hidden; }
+        .main-content { flex: 1; overflow-x: hidden; padding: 32px 48px; }
+        .page-title-box { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 18px; }
+        .page-title { color: var(--green); font-weight: bold; margin: 0; font-size: 1.5rem; }
+        .figures { display: flex; gap: 36px; margin-bottom: 22px; }
+        .seg { display: inline-flex; background: #e4eae5; border-radius: 12px; padding: 4px; margin-bottom: 22px; }
+        .seg button { border: none; background: transparent; padding: 10px 34px; border-radius: 9px; font-size: 1rem; font-weight: 700; color: #777; cursor: pointer; transition: 0.15s; }
+        .seg button.on { background: white; color: var(--green); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        [data-tab-panel] { display: none; }
+        [data-tab-panel].on { display: block; }
+        button[data-tab-panel].on { display: inline-block; }
+        .figures[data-tab-panel].on { display: flex; }
+        .figure .val { font-size: 1.35rem; font-weight: 800; color: #333; line-height: 1.1; }
+        .figure .lbl { font-size: 0.75rem; color: #aaa; margin-top: 3px; }
 
-        .page-banner { background: white; padding: 36px 48px 0; border-bottom: 1px solid #eee; }
-        .banner-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
-        .banner-title { font-size: 1.5rem; font-weight: bold; color: var(--green); margin: 0; }
-        .banner-stats { display: flex; gap: 40px; padding-bottom: 28px; }
-        .bstat { display: flex; align-items: baseline; gap: 6px; }
-        .bstat-val { font-size: 1.4rem; font-weight: 900; color: var(--green); }
-        .bstat-lbl { font-size: 0.8rem; color: #aaa; }
-
-        .pkg-section { padding: 32px 48px; }
-        .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
-
-        .pkg-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); display: flex; flex-direction: column; transition: box-shadow 0.2s, transform 0.15s; }
-        .pkg-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.11); transform: translateY(-2px); }
-        .pkg-card.inactive { opacity: 0.55; }
-
-        .pkg-card-header { padding: 18px 20px 14px; border-bottom: 1px solid #f2f2f2; display: flex; justify-content: space-between; align-items: center; }
-        .pkg-name { font-size: 1rem; font-weight: 800; color: #1a1a1a; }
-        .pkg-cycle { font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 4px; }
-        .pkg-cycle.monthly { background: #e8f5e9; color: var(--green); }
-        .pkg-cycle.yearly  { background: #fff3cd; color: #856404; }
-        .pkg-status-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 12px; border-radius: 20px; flex-shrink: 0; }
-        .pkg-status-badge.on  { background: #e8f5e9; color: #2e7d32; }
-        .pkg-status-badge.off { background: #f0f0f0; color: #999; }
-
-        .pkg-card-body { padding: 20px; flex: 1; }
-        .pkg-price { font-size: 2.2rem; font-weight: 900; color: var(--green); line-height: 1; }
-        .pkg-price span { font-size: 0.9rem; font-weight: 600; color: #aaa; }
-        .pkg-pts { font-size: 0.92rem; color: #666; margin-top: 8px; }
-        .pkg-pts strong { color: #333; }
-
-        .pkg-card-stats { display: flex; border-top: 1px solid #f5f5f5; background: #fafafa; }
-        .pkg-cstat { flex: 1; padding: 14px 16px; text-align: center; }
-        .pkg-cstat:first-child { border-right: 1px solid #f0f0f0; }
-        .pkg-cstat-val { font-size: 1rem; font-weight: 800; color: #222; }
-        .pkg-cstat-lbl { font-size: 0.7rem; color: #bbb; margin-top: 2px; }
-
-        .pkg-card-footer { padding: 12px 16px; display: flex; gap: 8px; border-top: 1px solid #f2f2f2; }
-        .btn-edit { flex: 1; padding: 8px; font-size: 0.82rem; font-weight: 700; border: 1.5px solid #e0e0e0; background: white; border-radius: 7px; color: #555; cursor: pointer; transition: 0.15s; }
-        .btn-edit:hover { border-color: #aaa; color: #222; }
-        .btn-toggle-off { flex: 1; padding: 8px; font-size: 0.82rem; font-weight: 700; border: 1.5px solid #fca5a5; background: #fff5f5; border-radius: 7px; color: #dc2626; cursor: pointer; transition: 0.15s; }
-        .btn-toggle-off:hover { background: #fee2e2; }
-        .btn-toggle-on  { flex: 1; padding: 8px; font-size: 0.82rem; font-weight: 700; border: 1.5px solid #86efac; background: #f0fdf4; border-radius: 7px; color: #16a34a; cursor: pointer; transition: 0.15s; }
-        .btn-toggle-on:hover { background: #dcfce7; }
-        .btn-add { background: var(--green); color: white; border: none; border-radius: 8px; padding: 8px 20px; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
-        .btn-add:hover { background: #4a6e52; color: white; }
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 20px; }
+        .panel-header { padding: 14px 22px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+        .panel-header i { color: var(--green); }
+        .panel-header h6 { margin: 0; font-size: 1rem; font-weight: 700; color: #333; }
+        .btn-snap { background-color: var(--green); color: white; border: none; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .btn-snap:hover { background-color: var(--green-dark); color: white; }
+        .table { margin: 0; }
+        .table > :not(caption) > * > * { padding: 14px 20px; border-bottom-color: #f4f7f5; vertical-align: middle; }
+        .table thead { background-color: #fafafa; }
+        .table th { font-weight: 600; color: #666; font-size: 0.9rem; white-space: nowrap; }
+        .table tbody tr:last-child td { border-bottom: none; }
+        tr.inactive td { color: #b0b7b2; }
+        tr.inactive td .name { color: #999; }
+        td .name { font-weight: bold; color: #333; }
+        .sub { font-size: 0.76rem; color: #aaa; margin-top: 3px; }
+        td.num, th.num { text-align: right; white-space: nowrap; }
+        .chip { display: inline-block; padding: 2px 9px; border-radius: 50px; font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+        .chip-green { background: var(--green-light); color: var(--green); }
+        .chip-grey  { background: #eee; color: #888; }
+        .chip-gold  { background: #fff3cd; color: #856404; }
+        .actions { display: flex; gap: 6px; justify-content: flex-end; }
+        .btn-mini { padding: 4px 12px; font-size: 0.8rem; font-weight: 600; border-radius: 7px; border: 1px solid #e0e0e0; background: white; color: #555; cursor: pointer; white-space: nowrap; }
+        .btn-mini:hover { border-color: #aaa; color: #222; }
+        .btn-mini.danger { color: #c0392b; border-color: #f1d0cc; }
+        .btn-mini.danger:hover { background: #fdf2f1; }
+        .btn-mini.ok { color: var(--green); border-color: var(--green-light); }
+        .btn-mini.ok:hover { background: var(--green-light); }
+        .empty { text-align: center; color: #bbb; padding: 28px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -86,9 +81,8 @@
             <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
             <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
             {% if session.get('role') == 'super_admin' %}
-            <li class="sidebar-section-title">方案管理</li>
-            <li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
-            <li><a href="/plan/list" class="active"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>
+            <li class="sidebar-section-title">營運</li>
+            <li><a href="/plan/list" class="active"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
             <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
@@ -114,91 +108,155 @@
     <script src="{{ url_for('static', filename='admin/sidebar.js') }}"></script>
 
     <main class="main-content">
-        <div class="page-banner">
-            <div class="banner-top">
-                <h3 class="banner-title"><i class="bi bi-card-checklist me-2"></i>訂閱方案管理</h3>
-                <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addPlanModal">+ 新增方案</button>
+        {% set tab = 'subscription' if request.args.get('tab') == 'subscription' else 'package' %}
+        <div class="page-title-box">
+            <div>
+                <h3 class="page-title"><i class="bi bi-card-checklist me-2"></i>方案管理</h3>
             </div>
-            <div class="banner-stats">
-                <div class="bstat">
-                    <div class="bstat-val">{{ plans|length }}</div>
-                    <div class="bstat-lbl">方案總數</div>
-                </div>
-                <div class="bstat">
-                    <div class="bstat-val">{{ plans|selectattr('is_active')|list|length }}</div>
-                    <div class="bstat-lbl">上架中</div>
-                </div>
-                <div class="bstat">
-                    <div class="bstat-val">{{ plans|sum(attribute='active_users') }}</div>
-                    <div class="bstat-lbl">付費訂閱人數</div>
-                </div>
-                <div class="bstat">
-                    <div class="bstat-val" style="color:#888;">{{ free_users }}</div>
-                    <div class="bstat-lbl">免費用戶</div>
-                </div>
-                {% set total = (plans|sum(attribute='active_users')) + free_users %}
-                {% if total > 0 %}
-                <div class="bstat">
-                    <div class="bstat-val" style="color:#4a7a54;">{{ ((plans|sum(attribute='active_users')) / total * 100)|round(1) }}%</div>
-                    <div class="bstat-lbl">付費轉換率</div>
-                </div>
-                {% endif %}
-            </div>
+            <button class="btn btn-snap px-3 {{ 'on' if tab == 'package' }}" data-tab-panel="package" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg me-1"></i> 新增點數方案</button>
+            <button class="btn btn-snap px-3 {{ 'on' if tab == 'subscription' }}" data-tab-panel="subscription" data-bs-toggle="modal" data-bs-target="#addPlanModal"><i class="bi bi-plus-lg me-1"></i> 新增訂閱方案</button>
         </div>
 
-        <div class="pkg-section">
-            <div class="pkg-grid">
+        <div class="seg" id="planTabs">
+            <button type="button" data-tab="package" class="{{ 'on' if tab == 'package' }}"><i class="bi bi-box-seam me-1"></i>點數方案</button>
+            <button type="button" data-tab="subscription" class="{{ 'on' if tab == 'subscription' }}"><i class="bi bi-star me-1"></i>訂閱方案</button>
+        </div>
+
+        <div class="figures {{ 'on' if tab == 'package' }}" data-tab-panel="package">
+            <div class="figure"><div class="val">NT$ {{ '{:,}'.format(total_revenue) }}</div><div class="lbl">累計營收</div></div>
+            <div class="figure"><div class="val">{{ total_purchases }}</div><div class="lbl">購買次數</div></div>
+            <div class="figure"><div class="val">{{ active_count }} / {{ packages|length }}</div><div class="lbl">上架中方案</div></div>
+        </div>
+        <div class="figures {{ 'on' if tab == 'subscription' }}" data-tab-panel="subscription">
+            <div class="figure"><div class="val">{{ plans|sum(attribute='active_users') }}</div><div class="lbl">付費訂閱人數</div></div>
+            <div class="figure"><div class="val">{{ free_users }}</div><div class="lbl">免費用戶</div></div>
+            <div class="figure"><div class="val">{{ plans|selectattr('is_active')|list|length }} / {{ plans|length }}</div><div class="lbl">上架中方案</div></div>
+        </div>
+
+        <!-- 點數方案 -->
+        <div class="panel {{ 'on' if tab == 'package' }}" data-tab-panel="package">
+            <div class="panel-header"><i class="bi bi-box-seam"></i><h6>點數方案</h6></div>
+            {% if packages %}
+            <table class="table">
+                <thead><tr>
+                    <th>方案</th><th class="num">點數</th><th class="num">售價</th>
+                    <th class="num">購買次數</th><th class="num">累計營收</th><th>狀態</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for p in packages %}
+                <tr class="{% if not p.is_active %}inactive{% endif %}">
+                    <td>
+                        <span class="name">{{ p.name }}</span>
+                        {% if p.tag %}<span class="chip chip-gold ms-2">{{ p.tag }}</span>{% endif %}
+                        {% if p.description %}<div class="sub">{{ p.description }}</div>{% endif %}
+                    </td>
+                    <td class="num">{{ p.points }} J-Pts</td>
+                    <td class="num">NT$ {{ p.price }}<div class="sub">每點 {{ '%.2f'|format(p.price / p.points) }}</div></td>
+                    <td class="num">{{ p.buy_count }}</td>
+                    <td class="num">NT$ {{ '{:,}'.format(p.revenue) }}</td>
+                    <td>{% if p.is_active %}<span class="chip chip-green">上架中</span>{% else %}<span class="chip chip-grey">已下架</span>{% endif %}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-mini" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">修改</button>
+                            <form action="/package/toggle/{{ p.id }}" method="POST">
+                                <button type="submit" class="btn-mini {{ 'danger' if p.is_active else 'ok' }}">{% if p.is_active %}下架{% else %}上架{% endif %}</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty">尚無任何點數方案</div>
+            {% endif %}
+        </div>
+
+        <!-- 訂閱方案 -->
+        <div class="panel {{ 'on' if tab == 'subscription' }}" data-tab-panel="subscription">
+            <div class="panel-header"><i class="bi bi-star"></i><h6>訂閱方案</h6></div>
+            {% if plans %}
+            <table class="table">
+                <thead><tr>
+                    <th>方案</th><th>週期</th><th class="num">價格</th><th class="num">訂閱贈點</th>
+                    <th class="num">目前訂閱人數</th><th class="num">預估收入</th><th>狀態</th><th></th>
+                </tr></thead>
+                <tbody>
                 {% for p in plans %}
-                <div class="pkg-card {% if not p.is_active %}inactive{% endif %}">
-                    <div class="pkg-card-header">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <div class="pkg-name">{{ p.name }}</div>
-                            {% if p.billing_cycle == 'monthly' %}
-                            <span class="pkg-cycle monthly">月繳</span>
-                            {% elif p.billing_cycle == 'yearly' %}
-                            <span class="pkg-cycle yearly">年繳</span>
-                            {% endif %}
+                {% set price = p.price_monthly if p.billing_cycle == 'monthly' else p.price_yearly %}
+                {% set grant = p.points_grant_monthly if p.billing_cycle == 'monthly' else p.points_grant_yearly %}
+                <tr class="{% if not p.is_active %}inactive{% endif %}">
+                    <td><span class="name">{{ p.name }}</span></td>
+                    <td>{% if p.billing_cycle == 'monthly' %}月繳{% elif p.billing_cycle == 'yearly' %}年繳{% else %}{{ p.billing_cycle }}{% endif %}</td>
+                    <td class="num">NT$ {{ price or 0 }} <span class="text-muted small">/ {{ '月' if p.billing_cycle == 'monthly' else '年' }}</span></td>
+                    <td class="num">{{ grant or 0 }} J-Pts</td>
+                    <td class="num">{{ p.active_users }}</td>
+                    <td class="num">NT$ {{ '{:,}'.format((price or 0) * p.active_users) }}</td>
+                    <td>{% if p.is_active %}<span class="chip chip-green">上架中</span>{% else %}<span class="chip chip-grey">已停用</span>{% endif %}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-mini" data-bs-toggle="modal" data-bs-target="#editPlanModal{{ p.id }}">修改</button>
+                            <form action="/plan/toggle/{{ p.id }}" method="POST">
+                                <button type="submit" class="btn-mini {{ 'danger' if p.is_active else 'ok' }}">{% if p.is_active %}停用{% else %}啟用{% endif %}</button>
+                            </form>
                         </div>
-                        <div class="pkg-status-badge {% if p.is_active %}on{% else %}off{% endif %}">{% if p.is_active %}上架中{% else %}已下架{% endif %}</div>
-                    </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty">尚無任何訂閱方案</div>
+            {% endif %}
+        </div>
+    </main>
+</div>
 
-                    <div class="pkg-card-body">
-                        {% if p.price_monthly %}
-                        <div class="pkg-price">NT$ {{ p.price_monthly }} <span>/ 月</span></div>
-                        <div class="pkg-pts">訂閱贈點：<strong>{{ p.points_grant_monthly or 0 }} J-Pts</strong></div>
-                        {% elif p.price_yearly %}
-                        <div class="pkg-price">NT$ {{ p.price_yearly }} <span>/ 年</span></div>
-                        <div class="pkg-pts">訂閱贈點：<strong>{{ p.points_grant_yearly or 0 }} J-Pts</strong></div>
-                        {% endif %}
-                    </div>
-
-                    <div class="pkg-card-stats">
-                        <div class="pkg-cstat">
-                            <div class="pkg-cstat-val">{{ p.active_users }}</div>
-                            <div class="pkg-cstat-lbl">目前訂閱人數</div>
+<!-- 修改彈窗 -->
+{% for p in packages %}
+<div class="modal fade" id="editModal{{ p.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="/package/edit/{{ p.id }}" method="POST">
+                                <div class="modal-header">
+                                    <h5 class="modal-title fw-bold">修改點數方案</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">方案名稱</label>
+                                        <input type="text" name="name" class="form-control" value="{{ p.name }}" required>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col">
+                                            <label class="form-label fw-bold">點數</label>
+                                            <input type="number" name="points" class="form-control" value="{{ p.points }}" min="1" required>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label fw-bold">售價 (NT$)</label>
+                                            <input type="number" name="price" class="form-control" value="{{ p.price }}" min="1" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">標籤</label>
+                                        <input type="text" name="tag" class="form-control" value="{{ p.tag or '' }}" placeholder="如：最划算、熱門">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">說明</label>
+                                        <input type="text" name="description" class="form-control" value="{{ p.description or '' }}">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn text-white" style="background:var(--green);">儲存</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="pkg-cstat">
-                            {% if p.price_monthly %}
-                            <div class="pkg-cstat-val">NT$ {{ '{:,}'.format(p.price_monthly * p.active_users) }}</div>
-                            {% elif p.price_yearly %}
-                            <div class="pkg-cstat-val">NT$ {{ '{:,}'.format(p.price_yearly * p.active_users) }}</div>
-                            {% endif %}
-                            <div class="pkg-cstat-lbl">月預估收入</div>
-                        </div>
-                    </div>
-
-                    <div class="pkg-card-footer">
-                        <button class="btn-edit" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">修改</button>
-                        <form action="/plan/toggle/{{ p.id }}" method="POST" class="flex-fill d-flex">
-                            <button type="submit" class="{% if p.is_active %}btn-toggle-off{% else %}btn-toggle-on{% endif %} w-100">
-                                {% if p.is_active %}停用{% else %}啟用{% endif %}
-                            </button>
-                        </form>
                     </div>
                 </div>
-
-                <!-- 修改 Modal -->
-                <div class="modal fade" id="editModal{{ p.id }}" tabindex="-1">
+{% endfor %}
+{% for p in plans %}
+<div class="modal fade" id="editPlanModal{{ p.id }}" tabindex="-1">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <form action="/plan/edit/{{ p.id }}" method="POST">
@@ -239,12 +297,47 @@
                         </div>
                     </div>
                 </div>
-                {% else %}
-                <div class="text-center text-muted py-5">尚無任何訂閱方案</div>
-                {% endfor %}
-            </div>
+{% endfor %}
+<!-- 新增 Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/package/add" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">新增點數方案</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">方案名稱</label>
+                        <input type="text" name="name" class="form-control" placeholder="例：超值包" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-bold">點數</label>
+                            <input type="number" name="points" class="form-control" placeholder="100" min="1" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-bold">售價 (NT$)</label>
+                            <input type="number" name="price" class="form-control" placeholder="50" min="1" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">標籤</label>
+                        <input type="text" name="tag" class="form-control" placeholder="如：最划算、熱門（選填）">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">說明</label>
+                        <input type="text" name="description" class="form-control" placeholder="選填">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn text-white" style="background:var(--green);">新增</button>
+                </div>
+            </form>
         </div>
-    </main>
+    </div>
 </div>
 <!-- 新增方案 Modal -->
 <div class="modal fade" id="addPlanModal" tabindex="-1">
@@ -298,6 +391,14 @@
 </div>
 
 <script>
+document.querySelectorAll('#planTabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var tab = btn.dataset.tab;
+        document.querySelectorAll('#planTabs button').forEach(function (b) { b.classList.toggle('on', b === btn); });
+        document.querySelectorAll('[data-tab-panel]').forEach(function (el) { el.classList.toggle('on', el.dataset.tabPanel === tab); });
+        history.replaceState(null, '', '/plan/list' + (tab === 'subscription' ? '?tab=subscription' : ''));
+    });
+});
 function toggleAddFields() {
     const cycle = document.getElementById('addBillingCycle').value;
     document.getElementById('addMonthlyFields').style.display = cycle === 'monthly' ? '' : 'none';

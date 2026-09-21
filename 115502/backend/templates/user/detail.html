@@ -65,9 +65,8 @@
             <li><a href="/user/list" class="active"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
             <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
             {% if session.get('role') == 'super_admin' %}
-            <li class="sidebar-section-title">方案管理</li>
-            <li><a href="/package/list"><i class="bi bi-box-seam"></i> 點數方案管理</a></li>
-            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 訂閱方案管理</a></li>
+            <li class="sidebar-section-title">營運</li>
+            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
             <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
@@ -149,16 +148,119 @@
             </div>
         </div>
 
-        <!-- 統計數字 -->
+        <!-- 統計數字（依帳號類型） -->
+        {% if account_type == 'teacher' %}
         <div class="stat-row">
+            <div class="stat-box"><div class="val">{{ teacher_info.active_count }}</div><div class="lbl">使用中的班級</div></div>
+            <div class="stat-box"><div class="val">{{ teacher_info.student_total }}</div><div class="lbl">學生總數</div></div>
+            <div class="stat-box"><div class="val">{{ teacher_info.assignment_total }}</div><div class="lbl">發布中的作業</div></div>
+            <div class="stat-box"><div class="val" style="font-size:1.1rem;padding-top:6px;">{{ '待審核' if teacher_info.status == 'pending' else '已核准' }}</div><div class="lbl">老師身分</div></div>
+        </div>
+
+        <!-- 老師：帳號狀態 -->
+        <div class="section-card">
+            <div class="section-header">
+                <i class="bi bi-person-video3" style="color:var(--green);"></i>
+                <h6>老師帳號</h6>
+                {% if session.get('role') == 'super_admin' %}
+                <a href="/teacher_account/list" class="ms-auto text-muted" style="font-size:0.8rem;text-decoration:none;">重設密碼、停用、核准 → 教師帳號管理</a>
+                {% endif %}
+            </div>
+            <div class="section-body" style="display:flex;gap:36px;flex-wrap:wrap;font-size:0.9rem;">
+                <div><div style="font-size:0.75rem;color:#aaa;">建立方式</div>{{ teacher_info.via }}</div>
+                <div><div style="font-size:0.75rem;color:#aaa;">老師身分</div>
+                    {% if teacher_info.status == 'pending' %}<span class="chip chip-gold">待審核</span>
+                    {% if session.get('role') == 'super_admin' %}
+                    <form action="/teacher_account/approve/{{ user.id }}" method="POST" style="display:inline;" onsubmit="return confirm('確認「{{ user.username }}」是學校老師，核准使用班級功能？');">
+                        <button type="submit" class="btn btn-sm btn-success ms-2" style="background-color:var(--green);border:none;padding:2px 12px;">核准</button>
+                    </form>
+                    {% endif %}
+                    {% else %}<span class="chip chip-green">已核准</span>{% endif %}
+                </div>
+                <div><div style="font-size:0.75rem;color:#aaa;">帳號狀態</div>{% if user.is_suspended %}<span class="chip chip-red">已停用</span>{% else %}<span class="chip chip-green">使用中</span>{% endif %}</div>
+                <div><div style="font-size:0.75rem;color:#aaa;">登入方式</div>後台登入頁的「老師」分頁（不能從 App 登入）</div>
+            </div>
+        </div>
+
+        <!-- 老師：班級 -->
+        <div class="section-card">
+            <div class="section-header">
+                <i class="bi bi-mortarboard-fill" style="color:var(--green);"></i>
+                <h6>建立的班級</h6>
+                <span class="ms-auto text-muted" style="font-size:0.8rem;">{{ teacher_info.classrooms|length }} 個</span>
+            </div>
+            <div class="section-body" style="padding:0;">
+                {% if teacher_info.classrooms %}
+                <table>
+                    <thead><tr><th>班級</th><th>隨機碼</th><th>學生</th><th>發布中作業</th><th>狀態</th><th>建立時間</th>{% if session.get('role') == 'super_admin' %}<th></th>{% endif %}</tr></thead>
+                    <tbody>
+                    {% for c in teacher_info.classrooms %}
+                    <tr>
+                        <td style="font-weight:700;color:#333;">{{ c.name }}</td>
+                        <td><code style="font-size:0.95rem;letter-spacing:2px;color:var(--green);">{{ c.join_code }}</code></td>
+                        <td>{{ c.members }} 人</td>
+                        <td>{{ c.assignments }} 份</td>
+                        <td>{% if c.is_archived %}<span class="chip chip-grey">已封存</span>{% elif c.is_open %}<span class="chip chip-green">開放加入</span>{% else %}<span class="chip chip-grey">關閉加入</span>{% endif %}</td>
+                        <td style="color:#aaa;">{{ c.created_at }}</td>
+                        {% if session.get('role') == 'super_admin' %}<td><a href="/teacher/classroom/{{ c.id }}/students" style="font-size:0.85rem;">學生狀況 →</a></td>{% endif %}
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty"><i class="bi bi-mortarboard"></i> 還沒有建立班級</div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-row">
+            {% if account_type != 'student' %}
             <div class="stat-box"><div class="val">{{ user.j_pts or 0 }}</div><div class="lbl">J-Pts</div></div>
+            {% endif %}
             <div class="stat-box"><div class="val">{{ vocab_count }}</div><div class="lbl">收藏單字</div></div>
             <div class="stat-box"><div class="val">{{ photo_count }}</div><div class="lbl">上傳照片</div></div>
             <div class="stat-box"><div class="val">{{ friends|length }}</div><div class="lbl">好友數</div></div>
             <div class="stat-box"><div class="val">{{ user.streak_days or 0 }}</div><div class="lbl">連續天數</div></div>
             <div class="stat-box"><div class="val">{{ groups|length }}</div><div class="lbl">學習小組</div></div>
+            {% if account_type == 'student' %}
+            <div class="stat-box"><div class="val">{{ student_info.memberships|length }}</div><div class="lbl">所屬班級</div></div>
+            {% endif %}
         </div>
+        {% endif %}
 
+        {% if account_type == 'student' %}
+        <!-- 學生：所屬班級與作業 -->
+        <div class="section-card">
+            <div class="section-header">
+                <i class="bi bi-mortarboard-fill" style="color:var(--green);"></i>
+                <h6>所屬班級與作業</h6>
+                <span class="ms-auto text-muted" style="font-size:0.8rem;">教育版學生沒有付費與點數機制</span>
+            </div>
+            <div class="section-body" style="padding:0;">
+                {% if student_info.memberships %}
+                <table>
+                    <thead><tr><th>班級</th><th>老師</th><th>名冊名稱</th><th>加入日期</th><th>作業完成</th><th>作業平均</th></tr></thead>
+                    <tbody>
+                    {% for m in student_info.memberships %}
+                    <tr>
+                        <td style="font-weight:700;color:#333;">{{ m.name }}{% if m.is_archived %} <span class="chip chip-grey">已封存</span>{% endif %}</td>
+                        <td>{{ m.teacher_name or '—' }}</td>
+                        <td>{{ m.display_name or '—' }}</td>
+                        <td style="color:#aaa;">{{ m.joined_at }}</td>
+                        <td>{{ m.done }} / {{ m.total }}</td>
+                        <td>{% if m.avg_score is not none %}{{ m.avg_score }} 分{% else %}—{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty"><i class="bi bi-mortarboard"></i> 尚未加入任何班級</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if account_type not in ['teacher', 'student'] %}
         <!-- 訂閱紀錄 -->
         <div class="section-card">
             <div class="section-header">
@@ -237,6 +339,9 @@
             </div>
         </div>
 
+        {% endif %}
+
+        {% if account_type != 'teacher' %}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
             <!-- 好友列表 -->
             <div class="section-card">
@@ -320,6 +425,8 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+
         {% endif %}
 
         <!-- 意見回饋 -->

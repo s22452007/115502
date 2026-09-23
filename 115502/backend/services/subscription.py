@@ -137,13 +137,13 @@ def subscribe():
     )
     db.session.add(new_sub)
 
-    # 贈點邏輯：只有在正式訂閱 (active) 時才發送點數
-    pts_to_grant = (getattr(plan, 'points_grant_yearly', plan.points_grant) 
-                    if billing_cycle == 'yearly' 
-                    else getattr(plan, 'points_grant_monthly', plan.points_grant))
+    # 贈點邏輯：這裡建立的都是立即生效的正式訂閱，依月繳/年繳發對應點數
+    pts_to_grant = (getattr(plan, 'points_grant_yearly', None)
+                    if billing_cycle == 'yearly'
+                    else getattr(plan, 'points_grant_monthly', None)) or 0
 
-    if pts_to_grant > 0 and sub_status == 'active':
-        user.j_pts += pts_to_grant
+    if pts_to_grant > 0:
+        user.j_pts = (user.j_pts or 0) + pts_to_grant
         db.session.add(PointTransaction(
             user_id=user_id,
             points=pts_to_grant,

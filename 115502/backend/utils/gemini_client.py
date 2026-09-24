@@ -43,12 +43,38 @@ DEFAULT_MODEL = 'gemini-flash-latest'
 # （quotaId 是 GenerateRequestsPerDayPerProjectPerModel-FreeTier），
 # 所以主模型額度用完時，換一個模型就有全新的額度可用。
 #（gemini-2.0-flash 已被 Google 下架，回 404 要求改用 3.6，故移除）
-FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.6-flash']
+FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.6-flash',
+                   # 以下同樣支援圖片，各自有獨立的免費每日額度，前面的模型額度用完或塞車時接手
+                   'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-lite-latest']
 
 # 伺服器忙碌（503）時的自動重試設定。
 # 使用者正在等回覆，所以間隔要短，總等待時間控制在 6 秒內。
 OVERLOAD_RETRIES = 3
 OVERLOAD_BACKOFF = [1, 2, 3]  # 每次重試前等待的秒數
+# 後面還有備援模型可以換時，同一個模型重試這麼多次就換下一個（0 = 直接換）
+# （塞車通常是「某個模型」整個在塞，原地重試 3 次多半白等；最後一個模型才用滿 OVERLOAD_RETRIES）
+OVERLOAD_RETRIES_BEFORE_FALLBACK = 0
+
+# 模型狀態記憶（存在記憶體，後端重啟就清空）：
+#   _last_good[feature]：該功能上一次成功的模型，下次優先使用
+#   _busy_until[model]：模型剛回 503 的話，這段時間內排到最後面再試
+BUSY_COOLDOWN_SECONDS = 120
+QUOTA_COOLDOWN_SECONDS = 30 * 60   # 每日額度用完的模型，半小時內都排到最後
+_last_good = {}
+_busy_until = {}
+
+
+def _model_order(feature):
+    """決定這次嘗試模型的順序：上次成功的模型優先，剛塞車的模型排最後（仍會嘗試，不會被跳過）"""
+    models = [DEFAULT_MODEL] + FALLBACK_MODELS
+    good = _last_good.get(feature)
+    if good in models:
+        models.remove(good)
+        models.insert(0, good)
+    now = time.time()
+    ready = [m for m in models if _busy_until.get(m, 0) <= now]
+    busy = [m for m in models if _busy_until.get(m, 0) > now]
+    return ready + busy
 
 # 各功能的金鑰查找順序：專用主金鑰 → 專用備用金鑰 → 舊版共用金鑰（相容用）
 FEATURE_KEY_ENVS = {
@@ -149,6 +175,25 @@ def is_overloaded_error(exc):
     return '503' in msg or 'UNAVAILABLE' in msg or 'overloaded' in msg.lower()
 
 
+def _is_thinking_unsupported(exc):
+    """模型不接受 thinking 設定（例如舊型號不認得 thinking_level）時，Google 會回 400"""
+    msg = str(exc)
+    return ('400' in msg or 'INVALID_ARGUMENT' in msg) and 'thinking' in msg.lower()
+
+
+def _call_model(client, kwargs, feature):
+    """呼叫一次模型；帶了 thinking 設定但該模型不支援時，拿掉設定原地重送一次"""
+    try:
+        return client.models.generate_content(**kwargs)
+    except Exception as e:
+        cfg = kwargs.get('config')
+        if cfg is not None and getattr(cfg, 'thinking_config', None) is not None and _is_thinking_unsupported(e):
+            print(f'⚠️ [{feature}] {kwargs["model"]} 不支援思考程度設定，改用預設設定重送...')
+            kwargs['config'] = cfg.model_copy(update={'thinking_config': None})
+            return client.models.generate_content(**kwargs)
+        raise
+
+
 def get_keys(feature):
     """取得該功能所有可用金鑰（依優先順序，已去除重複與空值）"""
     keys = []
@@ -174,11 +219,14 @@ def generate_content(feature, contents, config=None, model=None):
     if not keys:
         raise GeminiNotConfigured(feature)
 
-    # 呼叫端有指定模型就只用它，否則依序嘗試主模型與備援模型
-    models_to_try = [model] if model else [DEFAULT_MODEL] + FALLBACK_MODELS
+    # 呼叫端有指定模型就只用它，否則依「上次成功優先、剛塞車排後」的順序嘗試主模型與備援模型
+    models_to_try = [model] if model else _model_order(feature)
 
     last_quota_error = None
+    last_overloaded_error = None
     for model_index, current_model in enumerate(models_to_try):
+        has_next_model = model_index + 1 < len(models_to_try)
+        retries = OVERLOAD_RETRIES_BEFORE_FALLBACK if has_next_model else OVERLOAD_RETRIES
         for index, key in enumerate(keys):
             try:
                 client = genai.Client(api_key=key)
@@ -186,16 +234,19 @@ def generate_content(feature, contents, config=None, model=None):
                 if config is not None:
                     kwargs['config'] = config
 
-                # 503（伺服器忙碌）是暫時性的，重試通常就會成功，
-                # 因此同一把金鑰先重試幾次再說（換金鑰對 503 沒有幫助）。
-                for attempt in range(OVERLOAD_RETRIES + 1):
+                # 503（伺服器忙碌）是暫時性的，重試有機會成功，
+                # 因此同一把金鑰先重試再說（換金鑰對 503 沒有幫助）。
+                for attempt in range(retries + 1):
                     try:
-                        return client.models.generate_content(**kwargs)
+                        response = _call_model(client, kwargs, feature)
+                        _last_good[feature] = current_model
+                        _busy_until.pop(current_model, None)
+                        return response
                     except Exception as inner:
-                        if is_overloaded_error(inner) and attempt < OVERLOAD_RETRIES:
+                        if is_overloaded_error(inner) and attempt < retries:
                             wait = OVERLOAD_BACKOFF[attempt]
-                            print(f'⏳ [{feature}] Gemini 忙碌中，{wait} 秒後重試'
-                                  f'（第 {attempt + 1}/{OVERLOAD_RETRIES} 次）...')
+                            print(f'⏳ [{feature}] {current_model} 忙碌中，{wait} 秒後重試'
+                                  f'（第 {attempt + 1}/{retries} 次）...')
                             time.sleep(wait)
                             continue
                         raise
@@ -208,6 +259,8 @@ def generate_content(feature, contents, config=None, model=None):
                 # 上面已經對同一個模型重試過仍是 503 → 換模型（塞車是「每個模型」各自的狀況，
                 # 常見情形是預設模型爆量、備援模型還很空，尤其圖片請求）
                 if is_overloaded_error(e):
+                    _busy_until[current_model] = time.time() + BUSY_COOLDOWN_SECONDS
+                    last_overloaded_error = e
                     if model_index + 1 < len(models_to_try):
                         print(f'⚠️ [{feature}] {current_model} 忙碌中，'
                               f'改用備援模型 {models_to_try[model_index + 1]}...')
@@ -218,13 +271,21 @@ def generate_content(feature, contents, config=None, model=None):
                     if index + 1 < len(keys):
                         print(f'⚠️ [{feature}] 第 {index + 1} 把金鑰額度已滿，改用備用金鑰...')
                         continue
-                    # 這個模型的所有金鑰都滿了 → 換模型
+                    # 這個模型的所有金鑰都滿了 → 排到後面、換模型
+                    #（每分鐘流量限制等一下就好；每日額度用完則半小時內都先別試它）
+                    cooldown = BUSY_COOLDOWN_SECONDS if is_rate_limit_error(e) else QUOTA_COOLDOWN_SECONDS
+                    _busy_until[current_model] = time.time() + cooldown
                     if model_index + 1 < len(models_to_try):
                         print(f'⚠️ [{feature}] {current_model} 額度已滿，'
                               f'改用備援模型 {models_to_try[model_index + 1]}...')
                     break
                 raise  # 非額度問題，直接往上拋
 
+    # 有模型只是暫時塞車（等一下就能用）時，回報「使用人數較多」，
+    # 不要因為最後試到的模型剛好額度用完，就叫使用者「明天再試」
+    if last_overloaded_error is not None:
+        print(f'🚨 [{feature}] 可用的模型都在塞車或額度已滿')
+        raise last_overloaded_error
     print(f'🚨 [{feature}] 所有金鑰與備援模型的額度都已用完：{last_quota_error}')
     raise GeminiQuotaExhausted(feature, last_quota_error)
 

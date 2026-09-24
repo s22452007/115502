@@ -10,6 +10,7 @@ import sqlite3
 import os
 import json
 import re
+import unicodedata
 import base64
 import binascii
 from datetime import datetime, timedelta
@@ -221,9 +222,10 @@ def admin_login():
         if request.form.get('login_as') == 'teacher':
             return _teacher_login()
 
-        # 現在 username 會接收到我們下拉選單選到的學號 (例如 "11156001")
-        username = request.form.get('username')
-        password = request.form.get('password')
+        # 帳號是手動輸入的學號（例如 "11156001"）：去掉前後空白，並把中文輸入法打出的全形數字轉成半形
+        # 密碼不做任何轉換，必須一字不差
+        username = unicodedata.normalize('NFKC', request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
         
         # 增加終端機的登入紀錄 (方便您增加 Commit 內容)
         print(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] 登入嘗試: 管理員 {username}")
@@ -249,8 +251,9 @@ def admin_login():
             print(f"[OK] 登入成功: {username} (權限: {admin.role})")
             return redirect(url_for('admin_dashboard')) # 密碼正確去儀表板
         else:
-            print(f"[FAIL] 登入失敗: {username} (密碼錯誤)")
-            return render_template('admin_login.html', error="密碼錯誤，請重新輸入")
+            # 終端機分開記錄原因方便除錯；畫面上不說明是哪一個錯，避免被拿來試出有哪些帳號
+            print(f"[FAIL] 登入失敗: {username!r} ({'密碼錯誤' if admin else '沒有這個帳號'})")
+            return render_template('admin_login.html', error="帳號或密碼錯誤，請重新輸入")
             
     return render_template('admin_login.html')
 
@@ -2274,6 +2277,10 @@ def teacher_students_add(classroom_id):
     if not classroom:
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
+    # 名冊由班級老師負責；super_admin 可以檢視所有班級，但和建立班級一樣不能代替老師加學生
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        flash("管理者無法代替老師新增學生，請由班級老師登入後加入", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
     rows, bad = _parse_roster(request.form.get('roster'))
     if not rows and not bad:

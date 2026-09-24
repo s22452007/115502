@@ -79,9 +79,11 @@
                 <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 查看班級全體學生作業繳交與自學成效</div>
             </div>
             <div class="d-flex gap-2">
+                {% if session.get('role') == 'teacher' %}
                 <button type="button" class="btn btn-outline-success fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
                     <i class="bi bi-person-plus me-1"></i>新增學生
                 </button>
+                {% endif %}
                 <a href="/teacher/classroom/{{ data.classroom.id }}/assignments" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
                     <i class="bi bi-pencil-square me-1"></i>班級出題與批閱
                 </a>
@@ -137,10 +139,14 @@
             {% if not data.students %}
                 <div class="p-5 text-center text-muted">
                     <i class="bi bi-person-x" style="font-size: 2.5rem;"></i>
+                    {% if session.get('role') == 'teacher' %}
                     <p class="mt-2 mb-3">目前尚無學生加入本班級。<br>請按「新增學生」貼上班級名單，學生即可用學號登入 App 的校園教育版。</p>
                     <button type="button" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
                         <i class="bi bi-person-plus me-1"></i>新增學生
                     </button>
+                    {% else %}
+                    <p class="mt-2 mb-0">目前尚無學生加入本班級。<br>學生名單由班級老師新增。</p>
+                    {% endif %}
                 </div>
             {% else %}
                 <div class="table-responsive">
@@ -241,7 +247,8 @@
 {% endfor %}
 
 <!-- 學生詳細學習歷程 Modal -->
-<!-- 新增學生：貼上名單 -->
+<!-- 新增學生：貼上名單（只有班級老師能用） -->
+{% if session.get('role') == 'teacher' %}
 <div class="modal fade" id="addStudentsModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
@@ -269,6 +276,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">

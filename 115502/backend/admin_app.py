@@ -57,6 +57,8 @@ TEACHER_GOOGLE_DOMAINS = [d.strip().lower().lstrip('@') for d in (os.getenv('TEA
 # TEACHER_GOOGLE_STUDENT_PATTERN：Email @ 前面符合這個正規式的視為學生帳號、不能登入老師後台。
 #   預設 ^\d+$（帳號全是數字＝學號，例如 11156047@ntub.edu.tw）。設成空字串則不過濾。
 TEACHER_GOOGLE_STUDENT_PATTERN = os.getenv('TEACHER_GOOGLE_STUDENT_PATTERN', r'^\d+$').strip()
+# TEACHER_GOOGLE_ALLOWED_EMAILS：例外名單（逗號分隔），列在這裡的 Email 即使 @ 前是學號也能登入老師後台
+TEACHER_GOOGLE_ALLOWED_EMAILS = {e.strip().lower() for e in (os.getenv('TEACHER_GOOGLE_ALLOWED_EMAILS') or '').split(',') if e.strip()}
 
 path1 = os.path.join(BASE_DIR, 'instance', 'jlens.db')
 path2 = os.path.join(BASE_DIR, 'jlens.db')
@@ -302,9 +304,13 @@ def _unique_teacher_username(preferred, email):
     return email
 
 
-@app.route('/login/google', methods=['POST'])
+@app.route('/login/google', methods=['GET', 'POST'])
 def teacher_google_login():
     """老師用學校 Google 帳號登入：第一次登入自動建立老師帳號，之後直接登入"""
+    if request.method == 'GET':
+        # 直接打開這個網址（例如網址列自動完成）時導回登入頁，不要顯示 405
+        return redirect(url_for('admin_login'))
+
     def fail(msg):
         print(f"[FAIL] 老師 Google 登入失敗: {msg}")
         return render_template('admin_login.html', login_as='teacher', error=msg)
@@ -327,7 +333,8 @@ def teacher_google_login():
     if TEACHER_GOOGLE_DOMAINS and not _teacher_domain_allowed(domain):
         allowed = '、'.join(_teacher_domain_labels())
         return fail(f'請使用學校配發的 Google 帳號（{allowed}）登入，一般 Gmail 無法作為老師帳號')
-    if TEACHER_GOOGLE_STUDENT_PATTERN and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0]):
+    if (TEACHER_GOOGLE_STUDENT_PATTERN and email.lower() not in TEACHER_GOOGLE_ALLOWED_EMAILS
+            and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0])):
         return fail(f'「{email}」是學生帳號（帳號為學號），無法登入老師後台；老師請改用學校配發的教職員帳號')
 
     user = User.query.filter_by(email=email).first()
@@ -2232,6 +2239,100 @@ def teacher_student_remove(classroom_id, student_id):
     db.session.delete(member)
     db.session.commit()
     flash(f"已將「{name}」移出班級", "success")
+    return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+
+# ---- 學生名冊：老師貼上名單建立學生帳號 ----
+# 教育版學生不能自己註冊，一律由老師在班級名冊加入：帳號與初始密碼都是學號，建立後自動加入該班級
+STUDENT_ID_RE = re.compile(r'^[A-Za-z0-9_.\-]{2,30}$')
+ROSTER_MAX_LINES = 200
+
+
+def _parse_roster(text):
+    """把貼上的名單拆成 [(學號, 姓名或 None)]；每行「學號 姓名」，空白、Tab、逗號都可以分隔，姓名可省略"""
+    rows, bad = [], []
+    for line in (text or '').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = re.split(r'[\s,，、]+', line, maxsplit=1)
+        student_no = parts[0].strip()
+        name = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
+        if not STUDENT_ID_RE.match(student_no):
+            bad.append(line)
+            continue
+        rows.append((student_no, name[:50] if name else None))
+    return rows, bad
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/students/add', methods=['POST'])
+@teacher_required
+def teacher_students_add(classroom_id):
+    """貼上名單批次加入學生：沒有帳號的建立學生帳號（帳號、密碼＝學號），已有學生帳號的直接加入班級"""
+    from utils.auth_helper import generate_friend_id
+    classroom = _own_classroom(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+
+    rows, bad = _parse_roster(request.form.get('roster'))
+    if not rows and not bad:
+        flash("請貼上學生名單，每行一位：學號 姓名", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+    if len(rows) > ROSTER_MAX_LINES:
+        flash(f"一次最多加入 {ROSTER_MAX_LINES} 位學生，請分批貼上", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+    created, joined, already, conflicts = [], [], [], []
+    seen = set()
+    for student_no, name in rows:
+        if student_no in seen:
+            continue
+        seen.add(student_no)
+        user = User.query.filter_by(email=student_no).first()
+        if user is None:
+            user = User(
+                email=student_no,
+                password_hash=generate_password_hash(student_no),
+                friend_id=generate_friend_id(),
+                account_type=AccountType.STUDENT,
+            )
+            db.session.add(user)
+            db.session.flush()
+            db.session.add(SystemLog(
+                admin_id=session.get('admin_id'), user_id=user.id,
+                action='CREATE', target_table='user', target_id=user.id,
+                new_value={'email': student_no, 'account_type': AccountType.STUDENT,
+                           'via': 'teacher_roster', 'classroom_id': classroom_id}
+            ))
+            created.append(student_no)
+        elif (user.account_type or AccountType.GENERAL) != AccountType.STUDENT:
+            conflicts.append(student_no)   # 已是一般版或老師帳號，不能拿來當學生帳號
+            continue
+
+        if ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=user.id).first():
+            if student_no not in created:
+                already.append(student_no)
+            continue
+        db.session.add(ClassroomMember(classroom_id=classroom_id, student_id=user.id, display_name=name))
+        if student_no not in created:
+            joined.append(student_no)
+    db.session.commit()
+
+    parts = []
+    if created:
+        parts.append(f"新建立 {len(created)} 個學生帳號")
+    if joined:
+        parts.append(f"{len(joined)} 位已有帳號的學生加入班級")
+    if already:
+        parts.append(f"{len(already)} 位原本就在班上")
+    if parts:
+        flash("、".join(parts) + "。學生用學號當帳號與密碼，從 App 的「校園教育版」登入", "success")
+    if conflicts:
+        flash("以下帳號已是一般版或老師帳號，無法加入：" + "、".join(conflicts), "danger")
+    if bad:
+        flash("以下幾行的學號格式不正確（只能是英數字，2～30 字），已略過：" + "、".join(bad[:10])
+              + (" …" if len(bad) > 10 else ""), "danger")
     return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
 

@@ -78,7 +78,10 @@
                 <h1 class="page-title"><i class="bi bi-bar-chart-line me-2"></i>{{ data.classroom.name }} - 學生學習狀況</h1>
                 <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 查看班級全體學生作業繳交與自學成效</div>
             </div>
-            <div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-success fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
+                    <i class="bi bi-person-plus me-1"></i>新增學生
+                </button>
                 <a href="/teacher/classroom/{{ data.classroom.id }}/assignments" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
                     <i class="bi bi-pencil-square me-1"></i>班級出題與批閱
                 </a>
@@ -134,7 +137,10 @@
             {% if not data.students %}
                 <div class="p-5 text-center text-muted">
                     <i class="bi bi-person-x" style="font-size: 2.5rem;"></i>
-                    <p class="mt-2 mb-0">目前尚無學生加入本班級。<br>請將班級代碼 <strong>{{ data.classroom.join_code }}</strong> 提供給學生於 App 輸入加入！</p>
+                    <p class="mt-2 mb-3">目前尚無學生加入本班級。<br>請按「新增學生」貼上班級名單，學生即可用學號登入 App 的校園教育版。</p>
+                    <button type="button" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
+                        <i class="bi bi-person-plus me-1"></i>新增學生
+                    </button>
                 </div>
             {% else %}
                 <div class="table-responsive">
@@ -235,6 +241,35 @@
 {% endfor %}
 
 <!-- 學生詳細學習歷程 Modal -->
+<!-- 新增學生：貼上名單 -->
+<div class="modal fade" id="addStudentsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>新增學生到「{{ data.classroom.name }}」</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/teacher/classroom/{{ data.classroom.id }}/students/add" method="POST">
+        <div class="modal-body p-4">
+          <label class="form-label fw-bold">學生名單（每行一位：學號 姓名）</label>
+          <textarea name="roster" class="form-control" rows="8" required
+                    placeholder="11156001 王小明&#10;11156002 李小華&#10;11156003 陳大文"
+                    style="font-family: Consolas, monospace; border-radius: 10px;"></textarea>
+          <div class="small text-muted mt-2" style="line-height: 1.7;">
+            <i class="bi bi-info-circle me-1"></i>可直接從 Excel 複製兩欄貼上；姓名可省略，之後也能用「改名稱」修改。<br>
+            <i class="bi bi-key me-1"></i>學生的<strong>帳號與密碼都是學號</strong>，從 App 的「校園教育版」登入。<br>
+            <i class="bi bi-arrow-repeat me-1"></i>已經有帳號的學生會直接加入本班，不會重複建立。
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none;">加入學生</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
     <div class="modal-content" style="border-radius: 16px; overflow: hidden;">

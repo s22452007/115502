@@ -46,7 +46,8 @@ class _CameraScreenState extends State<CameraScreen>
     if (!mounted) return;
     final provider = context.read<UserProvider>();
     setState(() {
-      _photoDailyLimit = provider.isPremium ? 10 : 2;
+      _photoDailyLimit = (res['photo_daily_limit'] as num?)?.toInt()
+          ?? (res['is_premium'] == true ? 10 : 2);
       _photoCountToday = (res['photo_count_today'] as num?)?.toInt() ?? 0;
       _photoExtraCount = (res['photo_extra_count'] as num?)?.toInt() ?? 0;
     });
@@ -56,6 +57,10 @@ class _CameraScreenState extends State<CameraScreen>
       aiCountToday: (res['ai_count_today'] as num?)?.toInt() ?? 0,
       aiExtraCount: (res['ai_extra_count'] as num?)?.toInt() ?? 0,
       vocabSlot: (res['vocab_slot'] as num?)?.toInt() ?? 50,
+      photoDailyLimit: (res['photo_daily_limit'] as num?)?.toInt(),
+      aiDailyLimit: (res['ai_daily_limit'] as num?)?.toInt(),
+      isPremium: res['is_premium'] == true,
+      accountType: res['account_type']?.toString(),
     );
   }
 

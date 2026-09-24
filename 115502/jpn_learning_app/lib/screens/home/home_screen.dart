@@ -145,6 +145,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         aiCountToday: (res['ai_count_today'] as num?)?.toInt() ?? 0,
         aiExtraCount: (res['ai_extra_count'] as num?)?.toInt() ?? 0,
         vocabSlot: (res['vocab_slot'] as num?)?.toInt() ?? 50,
+        photoDailyLimit: (res['photo_daily_limit'] as num?)?.toInt(),
+        aiDailyLimit: (res['ai_daily_limit'] as num?)?.toInt(),
+        isPremium: res['is_premium'] == true,
+        accountType: res['account_type']?.toString(),
       );
     } catch (e) {
       debugPrint('使用量載入失敗: $e');

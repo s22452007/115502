@@ -250,7 +250,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       setState(() {
         _aiUsed = (res['ai_count_today'] as num?)?.toInt() ?? 0;
         _aiExtra = (res['ai_extra_count'] as num?)?.toInt() ?? 0;
-        _aiMax = res['is_premium'] == true ? 10 : 3;
+        _aiMax = (res['ai_daily_limit'] as num?)?.toInt()
+            ?? (res['is_premium'] == true ? 10 : 3);
       });
     }
   }

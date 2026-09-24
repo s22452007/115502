@@ -28,6 +28,9 @@ import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
 import 'package:jpn_learning_app/screens/sentence/sentence_practice_screen.dart';
 
+// 🌟 引入剛剛建立的加入教室彈窗 (請確認路徑是否正確，如果放在對話框資料夾就改一下)
+import 'package:jpn_learning_app/widgets/dialogs/join_classroom_dialog.dart'; 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -197,6 +200,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final jPts = userProvider.jPts;
     final streakDays = userProvider.streakDays;
     final avatarUrl = userProvider.avatar;
+    
+    // 🌟 判斷是否為教育版學生，用來決定要不要顯示加入教室按鈕
+    final isEduStudent = userProvider.accountType == 'student';
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
@@ -262,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                 ),
                               ),
                               // 教育版學生沒有付費機制，點數標籤點進去是商城，直接不顯示
-                              if (!userProvider.isEduStudent)
+                              if (!isEduStudent)
                               GestureDetector(
                               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1))),
                               child: Container(
@@ -325,6 +331,30 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           ],
         ),
       ),
+      // 🌟 新增 FloatingActionButton，且只有在 isEduStudent = true 時才顯示
+      floatingActionButton: isEduStudent && userProvider.userId != null
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final success = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => JoinClassroomDialog(
+                    studentId: userProvider.userId!,
+                  ),
+                );
+
+                if (success == true) {
+                  // 如果加入成功，可以選擇刷新畫面
+                  _syncHomeData();
+                }
+              },
+              icon: const Icon(Icons.add_home_work_outlined, color: Colors.white),
+              label: const Text(
+                '加入教室',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: const Color(0xFF4A90E2), // 教育版的專屬藍色
+            )
+          : null,
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (i) {

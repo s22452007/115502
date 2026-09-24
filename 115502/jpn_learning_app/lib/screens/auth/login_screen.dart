@@ -343,7 +343,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         // 替換點：將 LOGO 放進來，並保留你原本的 Icon 樣式作為防呆
                         Image.asset(
-                          'assets/images/logo.png',
+                          'assets/images/logo_snaptolearn-removebg-preview.png',
                           width: 120, // 調整到適合的大小
                           errorBuilder: (context, error, stackTrace) => Container(
                             padding: const EdgeInsets.all(18),

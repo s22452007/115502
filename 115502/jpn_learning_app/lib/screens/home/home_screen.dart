@@ -213,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           ),
         ),
         title: Image.asset(
-          'assets/images/logo.png', 
+          'assets/images/logo_snaptolearn-removebg-preview.png',
           height: 35, 
           errorBuilder: (c,e,s) => Text("Snap to Learn", style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900))
         ),

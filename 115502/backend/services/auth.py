@@ -33,12 +33,14 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "這個 Email 已經註冊過囉！"}), 400
 
-    # 帳號類型由前端在註冊時指定：一般版送 'general'（或不送），
-    # 校園教育版的註冊畫面送 'student'。
-    # 只接受這兩種 —— 'teacher' 不能由使用者自己選，必須由老師端後台建立，
-    # 否則任何人都能把自己變成老師去建教室、看學生資料。
+    # 自行註冊只能建立一般版帳號：
+    #   - 'teacher' 必須由後台建立，否則任何人都能把自己變成老師去建教室、看學生資料
+    #   - 'student' 由老師在後台班級名冊貼上學生名單建立（帳號、密碼＝學號），
+    #     學生不能自己註冊，才能確保只有老師名單上的學生登得進校園教育版
     account_type = (data.get('account_type') or AccountType.GENERAL).strip().lower()
-    if account_type not in (AccountType.GENERAL, AccountType.STUDENT):
+    if account_type == AccountType.STUDENT:
+        return jsonify({"error": "校園教育版帳號由老師建立，請向老師確認你的帳號"}), 403
+    if account_type != AccountType.GENERAL:
         return jsonify({"error": "帳號類型不正確"}), 400
 
     # 將密碼加密後，存入資料庫

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:jpn_learning_app/utils/api_client.dart';
 
 class JoinClassroomDialog extends StatefulWidget {
   final int studentId; // ⚠️ 注意：根據後端邏輯，ID 通常是整數 (int) 或字串，請依照你專案的型別調整
@@ -27,8 +28,8 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
     setState(() => _isLoading = true);
 
     try {
-      // 假設你的 Flask 跑在 5050 port，且 blueprint 註冊在 /api/classroom
-      final url = Uri.parse('http://127.0.0.1:5050/api/classroom/join'); 
+      // 後端網址統一用 ApiClient.baseUrl：Android 模擬器要連 10.0.2.2，寫死 127.0.0.1 會連到模擬器自己
+      final url = Uri.parse('${ApiClient.baseUrl}/classroom/join');
       
       final response = await http.post(
         url,

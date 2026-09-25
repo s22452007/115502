@@ -95,7 +95,7 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
     final level = result['japanese_level'];
     if (level != null) {
       provider.setJapaneseLevel(level.toString());
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
     } else {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
     }

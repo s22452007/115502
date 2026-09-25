@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
         } else {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
         }
@@ -303,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
       try { await NotificationService.recordLogin(); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('登入成功！歡迎回來，${result['username'] ?? email.split('@')[0]}')));
       if (result['japanese_level'] != null) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
       } else {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
       }
@@ -489,7 +489,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 24),
 
                         GestureDetector(
-                          onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
+                          onTap: () => Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false),
                           child: const Text(
                             '以訪客身分繼續',
                             style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),

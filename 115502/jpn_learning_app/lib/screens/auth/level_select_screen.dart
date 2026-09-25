@@ -35,7 +35,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
       context.read<UserProvider>().setJapaneseLevel('N5');
       await LevelUpDialog.show(context, badgeId: 'level_01', level: 1);
       if (context.mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
       }
     } else if (_selectedIndex == 1) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const QuickTestScreen()));

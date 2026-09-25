@@ -533,6 +533,7 @@ def admin_dashboard():
     weekly_max = max(list(weekly.values()) + [1])
 
     return render_template('index.html',
+                           lan_url=_lan_url(request.host),
                            dashboard_todo=todo, weekly=weekly, content=content, edu=edu,
                            todo_count=todo_count, weekly_max=weekly_max,
                            daily_chart=daily_chart,
@@ -2685,7 +2686,73 @@ def admin_account_toggle_role(admin_id):
     return redirect(url_for('admin_account_list'))
 
 
+_lan_ip_cache = {'ip': None, 'at': 0.0}
+
+
+def _lan_ip():
+    """這台電腦目前在區網（Wi-Fi）的 IP；換網路就會變，所以快取 60 秒後重查。
+    在 Docker 容器裡查到的是容器內部 IP，組員連不到，回傳 None。"""
+    import time as _time
+    if os.path.exists('/.dockerenv'):
+        return None
+    if _time.time() - _lan_ip_cache['at'] < 60:
+        return _lan_ip_cache['ip']
+    import socket
+    ip = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))      # UDP 的 connect 不會真的送出封包，只是讓系統選出對外用的網卡
+        ip = s.getsockname()[0]
+        s.close()
+        if ip.startswith('127.'):
+            ip = None
+    except OSError:
+        ip = None
+    _lan_ip_cache.update(ip=ip, at=_time.time())
+    return ip
+
+
+@app.before_request
+def _prefer_localhost():
+    """在後台所在的同一台電腦上，不管開 127.0.0.1 還是自己的區網 IP，都轉到 localhost：
+    瀏覽器記住的密碼、登入狀態都綁在網址上，統一用 localhost 才不會「換個網址就登不進去」，
+    Google 登入也只接受 localhost。從別台電腦連進來的組員維持原本的 IP，不會被轉走。"""
+    if request.method != 'GET':
+        return None
+    host, _, port = request.host.partition(':')
+    lan = _lan_ip()
+    same_machine = host == '127.0.0.1' or (lan and host == lan and request.remote_addr in ('127.0.0.1', lan))
+    if not same_machine:
+        return None
+    target = request.url.replace(f'//{request.host}', f'//localhost{":" + port if port else ""}', 1)
+    return redirect(target)
+
+
+def _lan_url(host=None):
+    """給同一個 Wi-Fi 的組員用的後台登入網址，例如 http://192.168.0.111:5001/login"""
+    ip = _lan_ip()
+    if not ip:
+        return None
+    port = (host or '').rsplit(':', 1)[-1] if host and ':' in host else '5001'
+    return f'http://{ip}:{port}/login'
+
+
+def _print_login_hint():
+    url = _lan_url()
+    print('\n' + '=' * 60)
+    print('  ↑ 上面兩個網址都能用，在這台電腦開會自動轉到 localhost')
+    print('  自己登入請開：http://localhost:5001/login')
+    if url:
+        print(f'  同一個 Wi-Fi 的組員（用別台電腦）請開：{url}')
+    print('=' * 60 + '\n', flush=True)
+
+
 if __name__ == '__main__':
+    # debug 模式會啟動兩次（監看程式＋真正的伺服器）；在真正的伺服器裡、Flask 印完
+    # 「Running on ...」之後再印提示，讓終端機最後看到的是這段說明
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        import threading
+        threading.Timer(1.5, _print_login_hint).start()
     # host='0.0.0.0'：容器內要綁全介面，外面才連得到（本機直接跑也不影響）
     app.run(host='0.0.0.0', debug=True, port=5001)
 

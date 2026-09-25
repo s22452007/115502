@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+        /* 換頁不跳動：固定保留捲軸空間（有些頁面一個畫面放得下、沒有捲軸，換頁時整頁會左右位移） */
+        html { scrollbar-gutter: stable; }
         :root {
             --green-dark: #4a7a54;
             --green-mid: #6a9e72;
@@ -33,6 +35,11 @@
 
         /* ===== Main ===== */
         .main-content { flex: 1; overflow-x: hidden; }
+        .lan-url { font-size: 0.85rem; color: #666; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .lan-url code { background: #f1f4f1; color: #333; padding: 2px 8px; border-radius: 6px; font-size: 0.85rem; }
+        .lan-copy { border: 1px solid #cfd8cf; background: white; color: #555; border-radius: 6px; font-size: 0.78rem; padding: 1px 10px; }
+        .lan-copy:hover { background: #f1f4f1; }
+        .lan-note { color: #aaa; font-size: 0.75rem; }
 
         /* ===== Page Header ===== */
         .page-header {
@@ -243,10 +250,19 @@
             <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
         </ul>
     </aside>
-    <script src="{{ url_for('static', filename='admin/sidebar.js') }}"></script>
+    {% include 'admin/_sidebar_scroll.html' %}
 
     <main class="main-content">
         <div class="dash">
+
+            {% if lan_url %}
+            <div class="lan-url">
+                <i class="bi bi-wifi"></i>
+                同一個 Wi-Fi 的組員請連：<code id="lanUrl">{{ lan_url }}</code>
+                <button type="button" class="lan-copy" onclick="navigator.clipboard.writeText(document.getElementById('lanUrl').textContent).then(() => { this.textContent = '已複製'; setTimeout(() => this.textContent = '複製', 1500); })">複製</button>
+                <span class="lan-note">換網路後網址會變，以這裡顯示的為準</span>
+            </div>
+            {% endif %}
 
             <div class="panel">
                 <div class="panel-body figures-body">

@@ -8,7 +8,11 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/widgets/common/staged_progress_overlay.dart';
 
 class SentencePracticeScreen extends StatefulWidget {
-  const SentencePracticeScreen({Key? key}) : super(key: key);
+  // 🌟 新增這一行：讓畫面可以接收從作業清單傳來的 ID
+  final int? assignmentId; 
+
+  // 🌟 修改建構子：加上 this.assignmentId
+  const SentencePracticeScreen({Key? key, this.assignmentId}) : super(key: key);
 
   @override
   State<SentencePracticeScreen> createState() => _SentencePracticeScreenState();

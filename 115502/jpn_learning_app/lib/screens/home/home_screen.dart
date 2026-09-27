@@ -28,8 +28,11 @@ import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
 import 'package:jpn_learning_app/screens/sentence/sentence_practice_screen.dart';
 
-// 🌟 引入剛剛建立的加入教室彈窗 (請確認路徑是否正確，如果放在對話框資料夾就改一下)
+// 🌟 引入剛剛建立的加入教室彈窗
 import 'package:jpn_learning_app/widgets/dialogs/join_classroom_dialog.dart'; 
+
+// 🌟 引入剛剛建立的作業清單畫面 (請確認路徑是否正確)
+import 'package:jpn_learning_app/screens/edu/assignment_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -201,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final streakDays = userProvider.streakDays;
     final avatarUrl = userProvider.avatar;
     
-    // 🌟 判斷是否為教育版學生，用來決定要不要顯示加入教室按鈕
+    // 🌟 判斷是否為教育版學生
     final isEduStudent = userProvider.accountType == 'student';
 
     return Scaffold(
@@ -267,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                   ],
                                 ),
                               ),
-                              // 教育版學生沒有付費機制，點數標籤點進去是商城，直接不顯示
+                              // 教育版學生沒有付費機制，點數標籤直接不顯示
                               if (!isEduStudent)
                               GestureDetector(
                               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1))),
@@ -294,6 +297,34 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             ),
 
             _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
+
+            // 🌟 只有教育版學生才顯示「我的作業」按鈕 (Point 4 入口)
+            if (isEduStudent)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.assignment_outlined),
+                    label: const Text('我的作業', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A90E2), // 教育版專屬藍色
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AssignmentListScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ),
 
             const SizedBox(height: 10),
             
@@ -331,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           ],
         ),
       ),
-      // 🌟 新增 FloatingActionButton，且只有在 isEduStudent = true 時才顯示
+      // 🌟 FloatingActionButton，只有在 isEduStudent = true 時才顯示加入教室
       floatingActionButton: isEduStudent && userProvider.userId != null
           ? FloatingActionButton.extended(
               onPressed: () async {
@@ -343,7 +374,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 );
 
                 if (success == true) {
-                  // 如果加入成功，可以選擇刷新畫面
                   _syncHomeData();
                 }
               },
@@ -352,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 '加入教室',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-              backgroundColor: const Color(0xFF4A90E2), // 教育版的專屬藍色
+              backgroundColor: const Color(0xFF4A90E2), 
             )
           : null,
       bottomNavigationBar: AppBottomNavBar(
@@ -365,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           } else if (i == 2) {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())).then((_) => _syncHomeData());
           } else if (i == 3) {
-             // 「紀錄」改為選單頁：單字探險 / AI 對話紀錄
+             // 「紀錄」改為選單頁
              Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryMenuScreen())).then((_) => _syncHomeData());
           } else if (i == 4) {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _syncHomeData());
@@ -375,7 +405,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  // 🌟 造句挑戰專屬卡片 Widget
   Widget _buildSentencePracticeCard(BuildContext context) {
     const Color _cardGreen = Color(0xFF6AA86B);
     return Padding(
@@ -385,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const SentencePracticeScreen()),
-          ).then((_) => _syncHomeData()); // 返回時刷新首頁點數
+          ).then((_) => _syncHomeData()); 
         },
         child: Container(
           width: double.infinity,
@@ -537,7 +566,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
           if (hasGalleryLink)
             GestureDetector(
-              // 「最近解鎖場景」的全部＝單字探險的照片清單；主題收集冊改由單字探險頁進入
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData()),
               child: const Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
             ),

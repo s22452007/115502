@@ -1189,5 +1189,20 @@ class ApiClient {
       return false;
     }
   }
+  // 在 lib/utils/api_client.dart 中新增：
+
+  /// 獲取學生的作業清單 (對應 Point 4)
+  static Future<List<dynamic>> getStudentAssignments(int userId) async {
+    // ⚠️ 請確認組員後端實際的 API 路徑 (例如可能是 /api/assignment/my/$userId)
+    final url = Uri.parse('$baseUrl/api/assignment/student/$userId');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['assignments'] ?? []; // 根據後端實際回傳的 JSON 結構調整
+    } else {
+      throw Exception('無法載入作業清單');
+    }
+  }
 }
 

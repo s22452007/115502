@@ -12,7 +12,11 @@ import 'package:jpn_learning_app/utils/face_privacy.dart';
 import 'package:jpn_learning_app/main.dart'; // import cameras
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({Key? key}) : super(key: key);
+  // 🌟 新增這一行
+  final int? assignmentId;
+
+  // 🌟 修改建構子：加上 this.assignmentId
+  const CameraScreen({Key? key, this.assignmentId}) : super(key: key);
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();

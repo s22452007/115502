@@ -251,6 +251,7 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
         case 'vocab_expand': return '單字收藏擴充';
         case 'vocab_expand_premium': return '單字收藏擴充 (會員優惠)';
         case 'group_deposit': return '學習小組押金';
+        case 'article_unlock': return '解鎖閱讀文章';
         default: return featureId ?? '未知功能';
       }
     }

@@ -12,10 +12,9 @@ import 'package:jpn_learning_app/utils/face_privacy.dart';
 import 'package:jpn_learning_app/main.dart'; // import cameras
 
 class CameraScreen extends StatefulWidget {
-  // 🌟 新增這一行
+  /// 從「我的作業」進來時帶入作業 ID，會一路傳到辨識 API，後端辨識完自動繳交。
   final int? assignmentId;
 
-  // 🌟 修改建構子：加上 this.assignmentId
   const CameraScreen({Key? key, this.assignmentId}) : super(key: key);
 
   @override
@@ -461,6 +460,7 @@ class _CameraScreenState extends State<CameraScreen>
               contextDescription != null && contextDescription.isNotEmpty
               ? contextDescription
               : null,
+          assignmentId: widget.assignmentId,
         ),
       ),
     );

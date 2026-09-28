@@ -456,6 +456,21 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       MaterialPageRoute(builder: (context) => ArticleResultScreen(resultData: evaluateResult))
     );
 
+    // 從作業進來的：先告訴學生這次有沒有交到作業
+    final assignmentResult = (submitResult['assignment_result'] as Map?)?.cast<String, dynamic>();
+    if (assignmentResult != null && mounted) {
+      final submitted = assignmentResult['submitted'] == true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(submitted
+              ? '已繳交作業！'
+              : '尚未交到作業：${assignmentResult['error'] ?? '請再試一次'}'),
+          backgroundColor: submitted ? const Color(0xFF10B981) : Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
     // 從結果報告頁面返回後，顯示點數與成就動畫
     if (submitResult['status'] == 'success' && submitResult['is_new_record'] == true) {
       final pointsEarned = submitResult['points_earned'] ?? 0;

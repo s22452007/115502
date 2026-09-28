@@ -1107,11 +1107,14 @@ class ApiClient {
     int userId, {
     String? customTitle,
     String? contextDescription,
+    int? assignmentId, // 從作業進來時帶上，後端辨識完會自動繳交
   }) async {
     final url = Uri.parse('$baseUrl/scenario/analyze');
     try {
       var request = http.MultipartRequest('POST', url);
       request.fields['user_id'] = userId.toString();
+      if (assignmentId != null)
+        request.fields['assignment_id'] = assignmentId.toString();
       if (customTitle != null && customTitle.isNotEmpty)
         request.fields['custom_title'] = customTitle;
       if (contextDescription != null && contextDescription.isNotEmpty)
@@ -1568,6 +1571,7 @@ class ApiClient {
     required List<String> selectedVocabs,
     required String userSentence,
     bool payWithPoints = false,
+    int? assignmentId, // 從作業進來時帶上，後端批改完會自動繳交
   }) async {
     final url = Uri.parse('$baseUrl/sentence/evaluate');
     try {
@@ -1580,6 +1584,7 @@ class ApiClient {
           'selected_vocabs': selectedVocabs,
           'user_sentence': userSentence,
           'pay_with_points': payWithPoints,
+          if (assignmentId != null) 'assignment_id': assignmentId,
         }),
       );
       return jsonDecode(utf8.decode(response.bodyBytes));
@@ -1617,19 +1622,62 @@ class ApiClient {
       return false;
     }
   }
-  // 在 lib/utils/api_client.dart 中新增：
+  // ==========================================
+  // 🌟 教育版：學生作業
+  // ==========================================
 
-  /// 獲取學生的作業清單 (對應 Point 4)
+  /// 學生所有教室的作業清單，後端已排序（未交的在前、截止日近的優先）。
+  /// 每筆欄位：assignment_id / classroom_name / title / task_type / due_at /
+  /// is_overdue / submission{status, score, ...}
   static Future<List<dynamic>> getStudentAssignments(int userId) async {
-    // ⚠️ 請確認組員後端實際的 API 路徑 (例如可能是 /api/assignment/my/$userId)
-    final url = Uri.parse('$baseUrl/api/assignment/student/$userId');
+    final url = Uri.parse('$baseUrl/assignment/my/$userId');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['assignments'] ?? []; // 根據後端實際回傳的 JSON 結構調整
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data['assignments'] ?? [];
     } else {
       throw Exception('無法載入作業清單');
+    }
+  }
+
+  /// 文章閱讀作業的測驗作答，後端自動閱卷並繳交。
+  /// [answers] 的 key 是題號（字串 "0", "1"…），value 是 A～D 或 O / X。
+  static Future<Map<String, dynamic>> submitAssignmentQuiz({
+    required int userId,
+    required int assignmentId,
+    required Map<String, String> answers,
+  }) async {
+    final url = Uri.parse('$baseUrl/assignment/submit_quiz');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'assignment_id': assignmentId,
+          'answers': answers,
+        }),
+      );
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 測驗繳交連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
+    }
+  }
+
+  /// 單筆作業詳情，含老師說明與題目參數（config）；文章作業另附 article。
+  static Future<Map<String, dynamic>> getAssignmentDetail(
+    int assignmentId,
+    int userId,
+  ) async {
+    final url = Uri.parse('$baseUrl/assignment/$assignmentId?user_id=$userId');
+    try {
+      final response = await http.get(url);
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 作業詳情連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
     }
   }
 

@@ -19,12 +19,15 @@ class SceneResultScreen extends StatefulWidget {
   final Map<String, dynamic>? analysisData;
   // 主題里程碑：這次拍照若跨過「過半/集滿」門檻，後端會帶回此資料；null 代表沒跨過
   final Map<String, dynamic>? milestone;
+  // 作業模式：後端自動繳交的結果（submitted / error），一般拍照為 null
+  final Map<String, dynamic>? assignmentResult;
 
   const SceneResultScreen({
     Key? key,
     required this.imagePath,
     this.analysisData,
     this.milestone,
+    this.assignmentResult,
   }) : super(key: key);
 
   @override
@@ -39,6 +42,23 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     if (widget.milestone != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showMilestoneCelebration(widget.milestone!);
+      });
+    }
+    // 從作業進來的拍照：告訴學生這張有沒有交到作業
+    if (widget.assignmentResult != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final r = widget.assignmentResult!;
+        final bool submitted = r['submitted'] == true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              submitted ? '已繳交作業！' : '尚未交到作業：${r['error'] ?? '請再拍一次'}',
+            ),
+            backgroundColor: submitted ? const Color(0xFF10B981) : Colors.orange,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       });
     }
   }

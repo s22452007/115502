@@ -8,10 +8,10 @@ import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/widgets/common/staged_progress_overlay.dart';
 
 class SentencePracticeScreen extends StatefulWidget {
-  // 🌟 新增這一行：讓畫面可以接收從作業清單傳來的 ID
-  final int? assignmentId; 
+  /// 從「我的作業」進來時帶入作業 ID：題目改用老師指定的文法與單字，
+  /// 批改完成後後端會自動繳交。一般練習為 null。
+  final int? assignmentId;
 
-  // 🌟 修改建構子：加上 this.assignmentId
   const SentencePracticeScreen({Key? key, this.assignmentId}) : super(key: key);
 
   @override
@@ -25,6 +25,11 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
   String _grammarPoint = '';
   String _grammarMeaning = '';
   List<String> _examples = [];
+
+  // 作業模式：老師指定的必用單字與作業標題
+  bool get _isAssignment => widget.assignmentId != null;
+  List<String> _requiredVocabs = [];
+  String _assignmentTitle = '';
 
   List<Map<String, dynamic>> _allMyVocabs = [];
   List<String> _selectedVocabWords = [];
@@ -58,17 +63,46 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
 
     // ==========================================
     // 任務 1：先安全地獲取文法題目 (獨立 Try-Catch)
+    //   作業模式：文法與必用單字來自老師設定，不抽隨機題
+    //   一般模式：向後端抽今日題目
     // ==========================================
     try {
-      final taskResult = await ApiClient.getSentenceTask(userId);
-      if (taskResult['status'] == 'success') {
-        if (mounted) {
+      if (_isAssignment) {
+        final detail = await ApiClient.getAssignmentDetail(
+          widget.assignmentId!,
+          userId,
+        );
+        if (detail['status'] == 'success' && mounted) {
+          final a = Map<String, dynamic>.from(detail['assignment'] ?? {});
+          final config = Map<String, dynamic>.from(a['config'] ?? {});
+          final required = List<String>.from(config['required_vocabs'] ?? []);
           setState(() {
-            _grammarPoint = taskResult['data']['grammar'] ?? '';
-            _grammarMeaning = taskResult['data']['meaning'] ?? '';
-            _examples = List<String>.from(taskResult['data']['examples'] ?? []);
-            _todayCount = taskResult['today_count'] ?? 0;
+            _assignmentTitle = a['title'] ?? '';
+            _grammarPoint = config['grammar_point'] ?? '';
+            _grammarMeaning = (a['instructions'] ?? '').toString().isNotEmpty
+                ? a['instructions']
+                : '請用這個文法造一個句子';
+            _examples = [];
+            _requiredVocabs = required;
+            // 必用單字預先勾選，學生不用再自己找
+            _selectedVocabWords = List<String>.from(required);
           });
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('載入作業失敗：${detail['error'] ?? '未知錯誤'}')),
+          );
+        }
+      } else {
+        final taskResult = await ApiClient.getSentenceTask(userId);
+        if (taskResult['status'] == 'success') {
+          if (mounted) {
+            setState(() {
+              _grammarPoint = taskResult['data']['grammar'] ?? '';
+              _grammarMeaning = taskResult['data']['meaning'] ?? '';
+              _examples = List<String>.from(taskResult['data']['examples'] ?? []);
+              _todayCount = taskResult['today_count'] ?? 0;
+            });
+          }
         }
       }
     } catch (e) {
@@ -102,6 +136,13 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
               }
             }
           }
+        }
+      }
+
+      // 作業指定的單字可能不在學生收藏裡，補進清單讓它能被顯示與勾選
+      for (final w in _requiredVocabs) {
+        if (!allVocabs.any((e) => e['word'] == w)) {
+          allVocabs.insert(0, {'word': w, 'meaning': '作業指定單字'});
         }
       }
 
@@ -149,6 +190,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       selectedVocabs: _selectedVocabWords,
       userSentence: sentence,
       payWithPoints: payWithPoints,
+      assignmentId: widget.assignmentId,
     );
 
     if (!mounted) return;
@@ -371,6 +413,9 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     final correctedSentence = result['corrected_sentence'] ?? '';
     final feedback = result['strict_feedback'] ?? '';
     final isCorrect = result['is_grammar_correct'] ?? false;
+    // 作業模式才有：後端自動繳交的結果
+    final Map<String, dynamic>? assignmentResult =
+        (result['assignment_result'] as Map?)?.cast<String, dynamic>();
 
     showDialog(
       context: context,
@@ -401,6 +446,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
+                  if (assignmentResult != null) ...[
+                    const SizedBox(height: 12),
+                    _buildAssignmentResultBanner(assignmentResult),
+                  ],
                   const SizedBox(height: 24),
 
                   Row(
@@ -509,9 +558,9 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                             _sentenceController.clear();
                             _selectedVocabWords.clear();
                           },
-                          child: const Text(
-                            '下一題',
-                            style: TextStyle(
+                          child: Text(
+                            _isAssignment ? '再試一次' : '下一題',
+                            style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
                             ),
@@ -559,6 +608,40 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     );
   }
 
+  /// 作業繳交結果的提示條：交成功是綠色，沒交到（例如少用指定單字）是橘色並說明原因
+  Widget _buildAssignmentResultBanner(Map<String, dynamic> r) {
+    final bool submitted = r['submitted'] == true;
+    final String text = submitted
+        ? '已繳交作業${_assignmentTitle.isNotEmpty ? '「$_assignmentTitle」' : ''}'
+        : '尚未交到作業：${r['error'] ?? '請再試一次'}';
+    final Color color = submitted ? const Color(0xFF10B981) : Colors.orange;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            submitted ? Icons.assignment_turned_in_rounded : Icons.info_outline,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -566,9 +649,9 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF4F7F5),
         elevation: 0,
-        title: const Text(
-          '造句挑戰',
-          style: TextStyle(
+        title: Text(
+          _isAssignment ? '作業：造句挑戰' : '造句挑戰',
+          style: const TextStyle(
             color: Color(0xFF2C3E50),
             fontWeight: FontWeight.w900,
           ),

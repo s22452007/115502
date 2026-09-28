@@ -697,8 +697,14 @@ def plan_toggle(plan_id):
     conn = get_db_connection()
     row = conn.execute('SELECT is_active FROM subscription_plan WHERE id=?', (plan_id,)).fetchone()
     if row:
-        conn.execute('UPDATE subscription_plan SET is_active=? WHERE id=?',
-                     (0 if row['is_active'] else 1, plan_id))
+        new_active = 0 if row['is_active'] else 1
+        conn.execute('UPDATE subscription_plan SET is_active=? WHERE id=?', (new_active, plan_id))
+        # 下架／上架也記一筆操作紀錄（跟新增、修改方案一樣寫入 system_log）
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, old_value, new_value, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)',
+            (session.get('admin_id'), 'UPDATE', 'subscription_plan', plan_id,
+             json.dumps({'is_active': row['is_active']}), json.dumps({'is_active': new_active}),
+             datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
     conn.close()
     return redirect(url_for('plan_list', tab='subscription'))
@@ -759,7 +765,14 @@ def package_toggle(pkg_id):
     conn = get_db_connection()
     row = conn.execute('SELECT is_active FROM point_package WHERE id=?', (pkg_id,)).fetchone()
     if row:
-        conn.execute('UPDATE point_package SET is_active=? WHERE id=?', (0 if row['is_active'] else 1, pkg_id))
+        new_active = 0 if row['is_active'] else 1
+        conn.execute('UPDATE point_package SET is_active=? WHERE id=?', (new_active, pkg_id))
+        # 下架／上架也記一筆操作紀錄（跟新增、修改方案一樣寫入 system_log）
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, old_value, new_value, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)',
+            (session.get('admin_id'), 'UPDATE', 'point_package', pkg_id,
+             json.dumps({'is_active': row['is_active']}), json.dumps({'is_active': new_active}),
+             datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
     conn.close()
     return redirect(url_for('plan_list', tab='package'))

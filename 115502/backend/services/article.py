@@ -11,7 +11,7 @@ from utils import gemini_client
 from flask import Blueprint, request, jsonify
 from models import db, User, Article, UnlockedArticle
 from datetime import datetime
-from models import db, User, Article, ArticleProgress, ScoreRecord, ReadingEvaluation
+from models import db, User, Article, ArticleProgress, ScoreRecord, ReadingEvaluation, PointTransaction, TransactionType
 from utils.group_helper import add_group_progress_and_check_reward
 from utils.account_helper import is_payment_free
 
@@ -324,6 +324,16 @@ def unlock_article():
         user.j_pts = (user.j_pts or 0) - cost
         new_unlock = UnlockedArticle(user_id=user_id, article_id=article_id)
         db.session.add(new_unlock)
+        # 扣點也要記一筆交易紀錄，App 交易紀錄與後台使用者詳細頁才看得到
+        if cost > 0:
+            db.session.add(PointTransaction(
+                user_id=user_id,
+                points=-cost,
+                price=0,
+                payment_method='points',
+                transaction_type=TransactionType.SPEND,
+                related_feature='article_unlock',
+            ))
         db.session.commit()
 
         return jsonify({
@@ -391,6 +401,15 @@ def submit_score():
         user = User.query.get(user_id)
         if user:
             user.j_pts = (user.j_pts or 0) + points_earned
+            # 得到的點數也記一筆交易紀錄（跟每日任務獎勵一樣）
+            db.session.add(PointTransaction(
+                user_id=user_id,
+                points=points_earned,
+                price=0,
+                payment_method='reading_reward',
+                transaction_type=TransactionType.REWARD,
+                related_feature='reading_score_reward',
+            ))
 
         # 5. 📊 更新小組閱讀進度（分數 >= 60 才算完成）
         if score >= 60:

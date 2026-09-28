@@ -382,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 '加入教室',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-              backgroundColor: const Color(0xFF4A90E2), 
+              backgroundColor: AppColors.primaryLight2,
             )
           : null,
       bottomNavigationBar: AppBottomNavBar(

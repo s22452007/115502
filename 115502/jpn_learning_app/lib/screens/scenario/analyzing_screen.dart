@@ -16,12 +16,14 @@ class AnalyzingScreen extends StatefulWidget {
   final String imagePath; // 接收圖片路徑
   final String? customTitle; // 新增自訂標題
   final String? contextDescription; // 使用者描述的當下情境（選填）
+  final int? assignmentId; // 從作業進來才有，後端辨識完會自動繳交
 
   const AnalyzingScreen({
     Key? key,
     required this.imagePath,
     this.customTitle,
     this.contextDescription,
+    this.assignmentId,
   }) : super(key: key);
 
   @override
@@ -104,6 +106,7 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
         userId,
         customTitle: widget.customTitle,
         contextDescription: widget.contextDescription,
+        assignmentId: widget.assignmentId,
       );
 
       if (!mounted) return;
@@ -116,6 +119,8 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
               imagePath: widget.imagePath,
               analysisData: result['result'],
               milestone: (result['milestone'] as Map?)?.cast<String, dynamic>(),
+              assignmentResult:
+                  (result['assignment_result'] as Map?)?.cast<String, dynamic>(),
             ),
           ),
         );

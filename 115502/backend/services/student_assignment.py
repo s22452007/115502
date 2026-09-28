@@ -23,6 +23,7 @@ from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
     TaskType, SubmissionStatus,
     SentencePracticeRecord, UserPhoto, ChatSession, ChatMessage, ArticleProgress,
+    Article,
 )
 
 student_assignment_bp = Blueprint('student_assignment', __name__)
@@ -196,6 +197,24 @@ def _assignment_json(assignment, submission=None, include_config=False):
         # 詳情頁才需要題目參數與老師說明，列表頁不帶以減少傳輸量
         data["instructions"] = assignment.instructions
         data["config"] = assignment.config or {}
+        # 文章作業：把指定文章一併帶回，前端才能直接開啟閱讀頁。
+        # 老師指定的文章不一定符合學生等級，也可能是付費文章，
+        # 所以不能靠 /articles/dashboard 撈，且作業指定的一律視為已解鎖。
+        if assignment.task_type == TaskType.ARTICLE:
+            article_id = (assignment.config or {}).get('article_id')
+            article = Article.query.get(int(article_id)) if article_id else None
+            data["article"] = None if article is None else {
+                "id": article.id,
+                "theme": article.theme,
+                "level": article.level,
+                "title": article.title,
+                "content": article.content,
+                "translation": article.translation,
+                "grammar_points": article.grammar_points,
+                "is_free": True,
+                "unlock_cost": 0,
+                "is_unlocked": True,
+            }
     return data
 
 

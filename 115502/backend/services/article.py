@@ -1,17 +1,15 @@
 import os
-import tempfile
 import json
 import traceback
 import re
-import random
-import time
-import google.generativeai as genai
+from google.genai import types
 
 from utils import gemini_client
+from utils.ai_helper import JSON_CONFIG, parse_gemini_json
 from flask import Blueprint, request, jsonify
 from models import db, User, Article, UnlockedArticle
 from datetime import datetime
-from models import db, User, Article, ArticleProgress, ScoreRecord, ReadingEvaluation
+from models import db, User, Article, ArticleProgress, ScoreRecord, ReadingEvaluation, PointTransaction, TransactionType
 from utils.group_helper import add_group_progress_and_check_reward
 from utils.account_helper import is_payment_free
 
@@ -106,36 +104,25 @@ def evaluate_audio():
     if eval_article and eval_article.content:
         article_text = eval_article.content
 
-    temp_dir = tempfile.gettempdir()
-    temp_path = os.path.join(temp_dir, "temp_reading.m4a")
-    audio_file.save(temp_path)
-    audio_upload = None
+    # 音檔直接讀進記憶體、以 bytes 內嵌送給 Gemini（新版 SDK）。
+    # 不再存成固定檔名的暫存檔再 upload_file：
+    #   1. 固定檔名 temp_reading.m4a 會讓兩位學生同時錄音時互相覆蓋
+    #   2. 舊版 upload_file 走的是已停止維護的 google.generativeai SDK，
+    #      沒有其他功能都有的「金鑰／模型備援、塞車重試」，一出錯就直接失敗
+    audio_bytes = audio_file.read()
+    if not audio_bytes:
+        return jsonify({"status": "error", "message": "錄音檔是空的，請再錄一次。"}), 200
+    mime_type = _detect_audio_mime(audio_bytes, audio_file.filename or '', audio_file.mimetype or '')
+    print(f"DEBUG: 收到錄音 {len(audio_bytes)} bytes，格式判定為 {mime_type}")
 
-    # 實際的分析流程。抽成函式後交由 gemini_client 執行，
-    # 主金鑰額度用完時會自動改用備用金鑰重跑一次。
     def _analyze():
-        nonlocal audio_upload
+        audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
 
-        print("DEBUG: [階段 0] 正在將錄音檔上傳至 Google 伺服器...")
-        audio_upload = genai.upload_file(temp_path)
-
-        while getattr(audio_upload.state, 'name', '') == 'PROCESSING' or audio_upload.state == 1:
-            print("...", end="", flush=True)
-            time.sleep(1)
-            audio_upload = genai.get_file(audio_upload.name)
-        print(f"\nDEBUG: 音檔處理完成！狀態: {getattr(audio_upload.state, 'name', audio_upload.state)}")
-
-        # 直接使用共用的預設模型（latest 別名，會自動指向最新版本）。
-        # 不再從 list_models() 動態挑選：列表會列出新金鑰其實無權使用的舊型號
-        # （例如 gemini-2.5-flash 對新使用者會回 404）。
-        model = genai.GenerativeModel(gemini_client.DEFAULT_MODEL)
-
-        print(f"DEBUG: [階段 1] 正在聆聽真實錄音，進行轉錄...")
+        print("DEBUG: [階段 1] 正在聆聽真實錄音，進行轉錄...")
         stt_prompt = "請仔細聆聽這段日文錄音，『一字不漏』地寫下你聽到的日文。如果發音含糊、唸錯或有口音，請直接寫出你實際聽到的『錯誤發音』，絕對不要自動修正為正確的日文。請只輸出日文文字。"
-        
-        stt_response = model.generate_content([stt_prompt, audio_upload])
-        stt_response.resolve()
-        transcript = stt_response.text.strip()
+
+        stt_response = gemini_client.generate_content('article', [audio_part, stt_prompt])
+        transcript = (stt_response.text or '').strip()
 
         if not transcript or len(transcript) < 2:
             return None  # 交由外層回覆「聽不清楚」的訊息
@@ -145,11 +132,11 @@ def evaluate_audio():
         你是一位極度專業的日語發音家教。
         【標準答案】：{article_text}
         【學生真實唸出】：{transcript}
-        
+
         【重要指令】：
         1. 請嚴格執行比對規則。
         2. 所有的評語、糾正與解釋，請務必全部使用「繁體中文」撰寫，絕對不可以使用日文給予評語。
-        
+
         請以純 JSON 格式回傳（請不要加上 ```json 等 Markdown 標記，只要 JSON 本身）：
         {{
             "score": 100,
@@ -157,16 +144,15 @@ def evaluate_audio():
             "overall_feedback": "請在這裡使用繁體中文撰寫評語"
         }}
         """
-        
-        feedback_response = model.generate_content(feedback_prompt)
-        feedback_response.resolve()
 
-        raw_text = feedback_response.text.strip()
+        feedback_response = gemini_client.generate_content('article', feedback_prompt, config=JSON_CONFIG)
+
+        raw_text = (feedback_response.text or '').strip()
         match = re.search(r'\{.*\}', raw_text, re.DOTALL)
         if not match:
-            raise ValueError(f"Gemini 沒有回傳標準的 JSON 格式。")
-            
-        feedback_data = json.loads(match.group(0))
+            raise ValueError(f"Gemini 沒有回傳標準的 JSON 格式：{raw_text[:200]}")
+
+        feedback_data = parse_gemini_json(match.group(0))
         final_score = feedback_data.get("score", 0)
 
         return {
@@ -179,7 +165,7 @@ def evaluate_audio():
         }
 
     try:
-        result = gemini_client.run_with_legacy_keys('article', _analyze)
+        result = _analyze()
         if result is None:
             return jsonify({
                 "status": "error",
@@ -214,18 +200,38 @@ def evaluate_audio():
 
     except Exception as e:
         traceback.print_exc()
+        print(f"🚨 [article] 語音評分失敗：{type(e).__name__}: {e}")
         if gemini_client.is_overloaded_error(e):
             return jsonify({"status": "error", "message": "AI 服務目前使用人數較多，請稍等幾秒再試一次。"}), 200
         return jsonify({"status": "error", "message": "語音評分失敗了，請確認網路連線後再錄一次。"}), 200
 
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        if audio_upload:
-            try:
-                genai.delete_file(audio_upload.name)
-            except:
-                pass
+
+def _detect_audio_mime(data, filename='', declared=''):
+    """
+    依檔案開頭的位元組判斷錄音格式。
+    前端手機端存的是 .m4a，但網頁版錄出來的其實是 webm/ogg，卻同樣取名 web_audio.m4a，
+    照副檔名送給 Gemini 會被拒絕，所以以實際內容為準。
+    """
+    head = data[:16]
+    if len(data) >= 12 and data[4:8] == b'ftyp':
+        return 'audio/mp4'                      # m4a / mp4 容器（iOS、Android 的 record 套件）
+    if head.startswith(b'\x1a\x45\xdf\xa3'):
+        return 'audio/webm'                     # Chrome 網頁版 MediaRecorder
+    if head.startswith(b'OggS'):
+        return 'audio/ogg'                      # Firefox 網頁版
+    if head.startswith(b'RIFF') and data[8:12] == b'WAVE':
+        return 'audio/wav'
+    if head.startswith(b'fLaC'):
+        return 'audio/flac'
+    if head.startswith(b'ID3') or (len(head) >= 2 and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0):
+        return 'audio/mpeg'                     # mp3
+    # 認不出來：用前端宣告的 mimetype，再不然依副檔名猜
+    if declared.startswith('audio/'):
+        return declared
+    ext = os.path.splitext(filename)[1].lower()
+    return {'.m4a': 'audio/mp4', '.mp4': 'audio/mp4', '.aac': 'audio/aac',
+            '.webm': 'audio/webm', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
+            '.mp3': 'audio/mpeg'}.get(ext, 'audio/mp4')
 
 
 # ==========================================
@@ -324,6 +330,16 @@ def unlock_article():
         user.j_pts = (user.j_pts or 0) - cost
         new_unlock = UnlockedArticle(user_id=user_id, article_id=article_id)
         db.session.add(new_unlock)
+        # 扣點也要記一筆交易紀錄，App 交易紀錄與後台使用者詳細頁才看得到
+        if cost > 0:
+            db.session.add(PointTransaction(
+                user_id=user_id,
+                points=-cost,
+                price=0,
+                payment_method='points',
+                transaction_type=TransactionType.SPEND,
+                related_feature='article_unlock',
+            ))
         db.session.commit()
 
         return jsonify({
@@ -391,6 +407,15 @@ def submit_score():
         user = User.query.get(user_id)
         if user:
             user.j_pts = (user.j_pts or 0) + points_earned
+            # 得到的點數也記一筆交易紀錄（跟每日任務獎勵一樣）
+            db.session.add(PointTransaction(
+                user_id=user_id,
+                points=points_earned,
+                price=0,
+                payment_method='reading_reward',
+                transaction_type=TransactionType.REWARD,
+                related_feature='reading_score_reward',
+            ))
 
         # 5. 📊 更新小組閱讀進度（分數 >= 60 才算完成）
         if score >= 60:

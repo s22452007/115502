@@ -12,7 +12,10 @@ import 'package:jpn_learning_app/utils/face_privacy.dart';
 import 'package:jpn_learning_app/main.dart'; // import cameras
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({Key? key}) : super(key: key);
+  /// 從「我的作業」進來時帶入作業 ID，會一路傳到辨識 API，後端辨識完自動繳交。
+  final int? assignmentId;
+
+  const CameraScreen({Key? key, this.assignmentId}) : super(key: key);
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -46,7 +49,8 @@ class _CameraScreenState extends State<CameraScreen>
     if (!mounted) return;
     final provider = context.read<UserProvider>();
     setState(() {
-      _photoDailyLimit = provider.isPremium ? 10 : 2;
+      _photoDailyLimit = (res['photo_daily_limit'] as num?)?.toInt()
+          ?? (res['is_premium'] == true ? 10 : 2);
       _photoCountToday = (res['photo_count_today'] as num?)?.toInt() ?? 0;
       _photoExtraCount = (res['photo_extra_count'] as num?)?.toInt() ?? 0;
     });
@@ -56,6 +60,10 @@ class _CameraScreenState extends State<CameraScreen>
       aiCountToday: (res['ai_count_today'] as num?)?.toInt() ?? 0,
       aiExtraCount: (res['ai_extra_count'] as num?)?.toInt() ?? 0,
       vocabSlot: (res['vocab_slot'] as num?)?.toInt() ?? 50,
+      photoDailyLimit: (res['photo_daily_limit'] as num?)?.toInt(),
+      aiDailyLimit: (res['ai_daily_limit'] as num?)?.toInt(),
+      isPremium: res['is_premium'] == true,
+      accountType: res['account_type']?.toString(),
     );
   }
 
@@ -452,6 +460,7 @@ class _CameraScreenState extends State<CameraScreen>
               contextDescription != null && contextDescription.isNotEmpty
               ? contextDescription
               : null,
+          assignmentId: widget.assignmentId,
         ),
       ),
     );

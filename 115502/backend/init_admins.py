@@ -28,7 +28,7 @@ def init_default_admins():
         print("✅ 成功為 admin 資料表加入 'created_at' 時間欄位！")
     except sqlite3.OperationalError:
         pass
-    for col in ("is_active BOOLEAN DEFAULT 1", "must_change_password BOOLEAN DEFAULT 0"):
+    for col in ("is_active BOOLEAN DEFAULT 1", "must_change_password BOOLEAN DEFAULT 0", "last_login_at DATETIME"):
         try:
             cursor.execute(f"ALTER TABLE admin ADD COLUMN {col}")
         except sqlite3.OperationalError:

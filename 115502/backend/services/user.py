@@ -725,6 +725,11 @@ def get_usage_status(user_id):
         # unlimited 為 true 時整個次數 UI 都不該出現
         "account_type": getattr(user, 'account_type', 'general'),
         "unlimited": has_unlimited_usage(user),
+        # 每日上限由後端計算後直接回傳。先前只在後端內部使用，前端各畫面
+        # 自己用 is_premium 推算，結果首頁拿舊的會員狀態、對話頁拿新的，
+        # 兩邊顯示的剩餘次數不一致。
+        "photo_daily_limit": photo_limit,
+        "ai_daily_limit": ai_limit,
         "photo_count_today": getattr(user, 'photo_count_today', 0) or 0,
         "photo_extra_count": getattr(user, 'photo_extra_count', 0) or 0,
         "ai_count_today": getattr(user, 'ai_count_today', 0) or 0,

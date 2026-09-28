@@ -10,6 +10,7 @@ import sqlite3
 import os
 import json
 import re
+import unicodedata
 import base64
 import binascii
 from datetime import datetime, timedelta
@@ -17,7 +18,7 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 from flask import session, flash, redirect, url_for, render_template, request, jsonify
 from functools import wraps
-from utils.db import db
+from utils.db import db, ensure_model_columns
 from models import Admin, Vocab, SystemLog, Article, Achievement, User, AccountType
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func
@@ -57,6 +58,8 @@ TEACHER_GOOGLE_DOMAINS = [d.strip().lower().lstrip('@') for d in (os.getenv('TEA
 # TEACHER_GOOGLE_STUDENT_PATTERN：Email @ 前面符合這個正規式的視為學生帳號、不能登入老師後台。
 #   預設 ^\d+$（帳號全是數字＝學號，例如 11156047@ntub.edu.tw）。設成空字串則不過濾。
 TEACHER_GOOGLE_STUDENT_PATTERN = os.getenv('TEACHER_GOOGLE_STUDENT_PATTERN', r'^\d+$').strip()
+# TEACHER_GOOGLE_ALLOWED_EMAILS：例外名單（逗號分隔），列在這裡的 Email 即使 @ 前是學號也能登入老師後台
+TEACHER_GOOGLE_ALLOWED_EMAILS = {e.strip().lower() for e in (os.getenv('TEACHER_GOOGLE_ALLOWED_EMAILS') or '').split(',') if e.strip()}
 
 path1 = os.path.join(BASE_DIR, 'instance', 'jlens.db')
 path2 = os.path.join(BASE_DIR, 'jlens.db')
@@ -71,6 +74,16 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'timeout': 15},
 }
 db.init_app(app)
+
+# jlens.db 不進 git、每位組員電腦上都是自己的資料庫；模型新增欄位後（例如 admin.last_login_at）
+# 舊資料庫一查就 no such column 而 500。啟動時自動建缺少的表、補缺少的欄位，pull 完直接能跑。
+with app.app_context():
+    try:
+        db.create_all()
+        for _table, _column in ensure_model_columns(db):
+            print(f'[DB] 自動補上缺少的欄位 {_table}.{_column}')
+    except Exception as _e:
+        print(f'[DB] 自動補欄位失敗（請手動執行 upgrade_db.py 或聯繫負責人）：{_e}')
 
 
 @app.context_processor
@@ -219,9 +232,10 @@ def admin_login():
         if request.form.get('login_as') == 'teacher':
             return _teacher_login()
 
-        # 現在 username 會接收到我們下拉選單選到的學號 (例如 "11156001")
-        username = request.form.get('username')
-        password = request.form.get('password')
+        # 帳號是手動輸入的學號（例如 "11156001"）：去掉前後空白，並把中文輸入法打出的全形數字轉成半形
+        # 密碼不做任何轉換，必須一字不差
+        username = unicodedata.normalize('NFKC', request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
         
         # 增加終端機的登入紀錄 (方便您增加 Commit 內容)
         print(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] 登入嘗試: 管理員 {username}")
@@ -247,8 +261,9 @@ def admin_login():
             print(f"[OK] 登入成功: {username} (權限: {admin.role})")
             return redirect(url_for('admin_dashboard')) # 密碼正確去儀表板
         else:
-            print(f"[FAIL] 登入失敗: {username} (密碼錯誤)")
-            return render_template('admin_login.html', error="密碼錯誤，請重新輸入")
+            # 終端機分開記錄原因方便除錯；畫面上不說明是哪一個錯，避免被拿來試出有哪些帳號
+            print(f"[FAIL] 登入失敗: {username!r} ({'密碼錯誤' if admin else '沒有這個帳號'})")
+            return render_template('admin_login.html', error="帳號或密碼錯誤，請重新輸入")
             
     return render_template('admin_login.html')
 
@@ -302,9 +317,13 @@ def _unique_teacher_username(preferred, email):
     return email
 
 
-@app.route('/login/google', methods=['POST'])
+@app.route('/login/google', methods=['GET', 'POST'])
 def teacher_google_login():
     """老師用學校 Google 帳號登入：第一次登入自動建立老師帳號，之後直接登入"""
+    if request.method == 'GET':
+        # 直接打開這個網址（例如網址列自動完成）時導回登入頁，不要顯示 405
+        return redirect(url_for('admin_login'))
+
     def fail(msg):
         print(f"[FAIL] 老師 Google 登入失敗: {msg}")
         return render_template('admin_login.html', login_as='teacher', error=msg)
@@ -327,7 +346,8 @@ def teacher_google_login():
     if TEACHER_GOOGLE_DOMAINS and not _teacher_domain_allowed(domain):
         allowed = '、'.join(_teacher_domain_labels())
         return fail(f'請使用學校配發的 Google 帳號（{allowed}）登入，一般 Gmail 無法作為老師帳號')
-    if TEACHER_GOOGLE_STUDENT_PATTERN and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0]):
+    if (TEACHER_GOOGLE_STUDENT_PATTERN and email.lower() not in TEACHER_GOOGLE_ALLOWED_EMAILS
+            and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0])):
         return fail(f'「{email}」是學生帳號（帳號為學號），無法登入老師後台；老師請改用學校配發的教職員帳號')
 
     user = User.query.filter_by(email=email).first()
@@ -523,6 +543,7 @@ def admin_dashboard():
     weekly_max = max(list(weekly.values()) + [1])
 
     return render_template('index.html',
+                           lan_url=_lan_url(request.host),
                            dashboard_todo=todo, weekly=weekly, content=content, edu=edu,
                            todo_count=todo_count, weekly_max=weekly_max,
                            daily_chart=daily_chart,
@@ -686,8 +707,14 @@ def plan_toggle(plan_id):
     conn = get_db_connection()
     row = conn.execute('SELECT is_active FROM subscription_plan WHERE id=?', (plan_id,)).fetchone()
     if row:
-        conn.execute('UPDATE subscription_plan SET is_active=? WHERE id=?',
-                     (0 if row['is_active'] else 1, plan_id))
+        new_active = 0 if row['is_active'] else 1
+        conn.execute('UPDATE subscription_plan SET is_active=? WHERE id=?', (new_active, plan_id))
+        # 下架／上架也記一筆操作紀錄（跟新增、修改方案一樣寫入 system_log）
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, old_value, new_value, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)',
+            (session.get('admin_id'), 'UPDATE', 'subscription_plan', plan_id,
+             json.dumps({'is_active': row['is_active']}), json.dumps({'is_active': new_active}),
+             datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
     conn.close()
     return redirect(url_for('plan_list', tab='subscription'))
@@ -748,7 +775,14 @@ def package_toggle(pkg_id):
     conn = get_db_connection()
     row = conn.execute('SELECT is_active FROM point_package WHERE id=?', (pkg_id,)).fetchone()
     if row:
-        conn.execute('UPDATE point_package SET is_active=? WHERE id=?', (0 if row['is_active'] else 1, pkg_id))
+        new_active = 0 if row['is_active'] else 1
+        conn.execute('UPDATE point_package SET is_active=? WHERE id=?', (new_active, pkg_id))
+        # 下架／上架也記一筆操作紀錄（跟新增、修改方案一樣寫入 system_log）
+        conn.execute(
+            'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, old_value, new_value, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)',
+            (session.get('admin_id'), 'UPDATE', 'point_package', pkg_id,
+             json.dumps({'is_active': row['is_active']}), json.dumps({'is_active': new_active}),
+             datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
     conn.close()
     return redirect(url_for('plan_list', tab='package'))
@@ -1929,9 +1963,10 @@ from services.teacher_service import (
     create_classroom, regenerate_join_code,
     toggle_classroom_open, get_classroom_list, get_classroom_student_stats,
     get_student_detail, create_sentence_assignment, create_article_assignment,
+    create_photo_assignment, create_chat_assignment,
     get_assignment_submissions_list, grade_submission
 )
-from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission
+from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene
 
 
 def _own_classroom(classroom_id):
@@ -2061,13 +2096,18 @@ def teacher_classroom_assignments(classroom_id):
 @app.route('/teacher/classroom/<int:classroom_id>/assignment/create', methods=['GET', 'POST'])
 @teacher_required
 def teacher_assignment_create(classroom_id):
-    """出題新作業：造句挑戰 vs 文章閱讀（支援上傳文章、選擇題、是非題）"""
+    """出題新作業：造句挑戰、文章閱讀（支援上傳文章、選擇題、是非題）、拍照學習、AI 情境對話"""
     classroom = _own_classroom(classroom_id)
     if not classroom:
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
 
     if request.method == 'POST':
+        # 出題是老師的教學行為；super_admin 可以檢視、下架、刪除，但不能代替老師出題（與建班級、加學生一致）
+        if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+            flash("管理者無法代替老師出題，請由班級老師登入後新增作業", "danger")
+            return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
+
         task_type = request.form.get('task_type', 'sentence')
         title = request.form.get('title', '').strip()
         instructions = request.form.get('instructions', '').strip()
@@ -2124,10 +2164,34 @@ def teacher_assignment_create(classroom_id):
             )
             flash(f"文章閱讀作業「{title}」發布成功！", "success")
 
+        elif task_type == 'photo':
+            theme = request.form.get('photo_theme', '').strip()
+            min_vocab_count = request.form.get('min_vocab_count', 3)
+            create_photo_assignment(classroom_id, title, instructions, theme, min_vocab_count, due_at)
+            flash(f"拍照學習作業「{title}」發布成功！", "success")
+
+        elif task_type == 'chat':
+            topic = request.form.get('chat_topic', '').strip()
+            if not topic:
+                flash("對話作業必須填寫情境主題！", "danger")
+                return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
+            dialect_id = request.form.get('dialect_id', type=int)
+            min_turns = request.form.get('min_turns', 6)
+            create_chat_assignment(classroom_id, title, instructions, topic, dialect_id, min_turns, due_at)
+            flash(f"情境對話作業「{title}」發布成功！", "success")
+
+        else:
+            flash("未知的作業題型", "danger")
+            return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
+
         return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
     existing_articles = Article.query.filter(Article.is_published.isnot(False)).order_by(Article.level, Article.id).all()
-    return render_template('teacher/assignment_create.html', classroom=classroom, existing_articles=existing_articles)
+    # 對話作業可選腔調；拍照作業的主題提示用現有場景名稱當建議選項（老師仍可自由輸入）
+    dialects = Dialect.query.filter_by(is_active=True).order_by(Dialect.id).all()
+    scene_names = [sc.name for sc in Scene.query.order_by(Scene.id).all()]
+    return render_template('teacher/assignment_create.html', classroom=classroom,
+                           existing_articles=existing_articles, dialects=dialects, scene_names=scene_names)
 
 
 @app.route('/teacher/assignment/<int:assignment_id>/submissions')
@@ -2235,6 +2299,104 @@ def teacher_student_remove(classroom_id, student_id):
     return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
 
+# ---- 學生名冊：老師貼上名單建立學生帳號 ----
+# 教育版學生不能自己註冊，一律由老師在班級名冊加入：帳號與初始密碼都是學號，建立後自動加入該班級
+STUDENT_ID_RE = re.compile(r'^[A-Za-z0-9_.\-]{2,30}$')
+ROSTER_MAX_LINES = 200
+
+
+def _parse_roster(text):
+    """把貼上的名單拆成 [(學號, 姓名或 None)]；每行「學號 姓名」，空白、Tab、逗號都可以分隔，姓名可省略"""
+    rows, bad = [], []
+    for line in (text or '').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = re.split(r'[\s,，、]+', line, maxsplit=1)
+        student_no = parts[0].strip()
+        name = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
+        if not STUDENT_ID_RE.match(student_no):
+            bad.append(line)
+            continue
+        rows.append((student_no, name[:50] if name else None))
+    return rows, bad
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/students/add', methods=['POST'])
+@teacher_required
+def teacher_students_add(classroom_id):
+    """貼上名單批次加入學生：沒有帳號的建立學生帳號（帳號、密碼＝學號），已有學生帳號的直接加入班級"""
+    from utils.auth_helper import generate_friend_id
+    classroom = _own_classroom(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    # 名冊由班級老師負責；super_admin 可以檢視所有班級，但和建立班級一樣不能代替老師加學生
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        flash("管理者無法代替老師新增學生，請由班級老師登入後加入", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+    rows, bad = _parse_roster(request.form.get('roster'))
+    if not rows and not bad:
+        flash("請貼上學生名單，每行一位：學號 姓名", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+    if len(rows) > ROSTER_MAX_LINES:
+        flash(f"一次最多加入 {ROSTER_MAX_LINES} 位學生，請分批貼上", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+    created, joined, already, conflicts = [], [], [], []
+    seen = set()
+    for student_no, name in rows:
+        if student_no in seen:
+            continue
+        seen.add(student_no)
+        user = User.query.filter_by(email=student_no).first()
+        if user is None:
+            user = User(
+                email=student_no,
+                password_hash=generate_password_hash(student_no),
+                friend_id=generate_friend_id(),
+                account_type=AccountType.STUDENT,
+            )
+            db.session.add(user)
+            db.session.flush()
+            db.session.add(SystemLog(
+                admin_id=session.get('admin_id'), user_id=user.id,
+                action='CREATE', target_table='user', target_id=user.id,
+                new_value={'email': student_no, 'account_type': AccountType.STUDENT,
+                           'via': 'teacher_roster', 'classroom_id': classroom_id}
+            ))
+            created.append(student_no)
+        elif (user.account_type or AccountType.GENERAL) != AccountType.STUDENT:
+            conflicts.append(student_no)   # 已是一般版或老師帳號，不能拿來當學生帳號
+            continue
+
+        if ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=user.id).first():
+            if student_no not in created:
+                already.append(student_no)
+            continue
+        db.session.add(ClassroomMember(classroom_id=classroom_id, student_id=user.id, display_name=name))
+        if student_no not in created:
+            joined.append(student_no)
+    db.session.commit()
+
+    parts = []
+    if created:
+        parts.append(f"新建立 {len(created)} 個學生帳號")
+    if joined:
+        parts.append(f"{len(joined)} 位已有帳號的學生加入班級")
+    if already:
+        parts.append(f"{len(already)} 位原本就在班上")
+    if parts:
+        flash("、".join(parts) + "。學生用學號當帳號與密碼，從 App 的「校園教育版」登入", "success")
+    if conflicts:
+        flash("以下帳號已是一般版或老師帳號，無法加入：" + "、".join(conflicts), "danger")
+    if bad:
+        flash("以下幾行的學號格式不正確（只能是英數字，2～30 字），已略過：" + "、".join(bad[:10])
+              + (" …" if len(bad) > 10 else ""), "danger")
+    return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+
 # ---- 作業：編輯、發布／下架、刪除 ----
 @app.route('/teacher/assignment/<int:assignment_id>/edit', methods=['POST'])
 @teacher_required
@@ -2244,6 +2406,9 @@ def teacher_assignment_edit(assignment_id):
     if not assignment:
         flash("找不到該作業", "danger")
         return redirect(url_for('teacher_classrooms'))
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        flash("管理者無法代替老師編輯作業，請由班級老師登入後修改", "danger")
+        return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
     title = request.form.get('title', '').strip()
     if not title:
         flash("請填寫作業標題", "danger")
@@ -2294,7 +2459,8 @@ def teacher_assignment_delete(assignment_id):
     ))
     db.session.delete(assignment)
     db.session.commit()
-    flash(f"作業「{title}」已刪除（含 {submission_count} 份繳交紀錄）", "success")
+    note = f"，學生的 {submission_count} 份繳交紀錄一併移除" if submission_count else ""
+    flash(f"作業「{title}」已刪除{note}", "success")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
 
@@ -2577,7 +2743,73 @@ def admin_account_toggle_role(admin_id):
     return redirect(url_for('admin_account_list'))
 
 
+_lan_ip_cache = {'ip': None, 'at': 0.0}
+
+
+def _lan_ip():
+    """這台電腦目前在區網（Wi-Fi）的 IP；換網路就會變，所以快取 60 秒後重查。
+    在 Docker 容器裡查到的是容器內部 IP，組員連不到，回傳 None。"""
+    import time as _time
+    if os.path.exists('/.dockerenv'):
+        return None
+    if _time.time() - _lan_ip_cache['at'] < 60:
+        return _lan_ip_cache['ip']
+    import socket
+    ip = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))      # UDP 的 connect 不會真的送出封包，只是讓系統選出對外用的網卡
+        ip = s.getsockname()[0]
+        s.close()
+        if ip.startswith('127.'):
+            ip = None
+    except OSError:
+        ip = None
+    _lan_ip_cache.update(ip=ip, at=_time.time())
+    return ip
+
+
+@app.before_request
+def _prefer_localhost():
+    """在後台所在的同一台電腦上，不管開 127.0.0.1 還是自己的區網 IP，都轉到 localhost：
+    瀏覽器記住的密碼、登入狀態都綁在網址上，統一用 localhost 才不會「換個網址就登不進去」，
+    Google 登入也只接受 localhost。從別台電腦連進來的組員維持原本的 IP，不會被轉走。"""
+    if request.method != 'GET':
+        return None
+    host, _, port = request.host.partition(':')
+    lan = _lan_ip()
+    same_machine = host == '127.0.0.1' or (lan and host == lan and request.remote_addr in ('127.0.0.1', lan))
+    if not same_machine:
+        return None
+    target = request.url.replace(f'//{request.host}', f'//localhost{":" + port if port else ""}', 1)
+    return redirect(target)
+
+
+def _lan_url(host=None):
+    """給同一個 Wi-Fi 的組員用的後台登入網址，例如 http://192.168.0.111:5001/login"""
+    ip = _lan_ip()
+    if not ip:
+        return None
+    port = (host or '').rsplit(':', 1)[-1] if host and ':' in host else '5001'
+    return f'http://{ip}:{port}/login'
+
+
+def _print_login_hint():
+    url = _lan_url()
+    print('\n' + '=' * 60)
+    print('  ↑ 上面兩個網址都能用，在這台電腦開會自動轉到 localhost')
+    print('  自己登入請開：http://localhost:5001/login')
+    if url:
+        print(f'  同一個 Wi-Fi 的組員（用別台電腦）請開：{url}')
+    print('=' * 60 + '\n', flush=True)
+
+
 if __name__ == '__main__':
+    # debug 模式會啟動兩次（監看程式＋真正的伺服器）；在真正的伺服器裡、Flask 印完
+    # 「Running on ...」之後再印提示，讓終端機最後看到的是這段說明
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        import threading
+        threading.Timer(1.5, _print_login_hint).start()
     # host='0.0.0.0'：容器內要綁全介面，外面才連得到（本機直接跑也不影響）
     app.run(host='0.0.0.0', debug=True, port=5001)
 

@@ -65,8 +65,12 @@ class UserProvider extends ChangeNotifier {
   int get aiExtraCount => _aiExtraCount;
   int get vocabSlot => _vocabSlot;
 
-  int get photoDailyLimit => _isPremium ? 10 : 2;
-  int get aiDailyLimit => _isPremium ? 10 : 3;
+  // 每日上限以後端回傳為準；還沒載入時才退回用會員狀態推算，
+  // 避免各畫面自己算出不同的數字。
+  int? _photoDailyLimitApi;
+  int? _aiDailyLimitApi;
+  int get photoDailyLimit => _photoDailyLimitApi ?? (_isPremium ? 10 : 2);
+  int get aiDailyLimit => _aiDailyLimitApi ?? (_isPremium ? 10 : 3);
 
   // 每日任務狀態
   bool _dailyPhotoDone = false;
@@ -111,12 +115,22 @@ class UserProvider extends ChangeNotifier {
     int aiCountToday = 0,
     int aiExtraCount = 0,
     int vocabSlot = 50,
+    int? photoDailyLimit,
+    int? aiDailyLimit,
+    bool? isPremium,
+    String? accountType,
   }) {
     _photoCountToday = photoCountToday;
     _photoExtraCount = photoExtraCount;
     _aiCountToday = aiCountToday;
     _aiExtraCount = aiExtraCount;
     _vocabSlot = vocabSlot;
+    // 順便把會員狀態與帳號類型一起更新：查詢使用量的 API 本來就會回傳這些，
+    // 不更新的話首頁會一直拿登入當下的舊值去算上限。
+    if (photoDailyLimit != null) _photoDailyLimitApi = photoDailyLimit;
+    if (aiDailyLimit != null) _aiDailyLimitApi = aiDailyLimit;
+    if (isPremium != null) _isPremium = isPremium;
+    if (accountType != null && accountType.isNotEmpty) _accountType = accountType;
     notifyListeners();
   }
 
@@ -236,6 +250,8 @@ class UserProvider extends ChangeNotifier {
   void logout() {
     _userId = null;
     _accountType = 'general';
+    _photoDailyLimitApi = null;
+    _aiDailyLimitApi = null;
     _email = null;
     _username = null;
     _japaneseLevel = '';

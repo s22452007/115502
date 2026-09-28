@@ -14,10 +14,13 @@ python-dotenv==1.2.2
 
 # --- AI（兩個 SDK 都有用到）---
 google-genai            # utils/ai_helper.py: from google import genai（新版 SDK）
-google-generativeai     # services/tutor.py, services/article.py: import google.generativeai
+google-generativeai     # 舊版 SDK，正式功能已全部改用 google-genai；只剩 test_models.py、utils/test.py 測試腳本還在用
 
 # --- 語音 ---
 gTTS
+
+# --- 圖片 ---
+Pillow                  # utils/ai_helper.py: 照片送 Gemini 前先縮圖
 
 # --- MySQL 驅動（目前用 SQLite 不需要，之後要換 MySQL 時已備好）---
 PyMySQL==1.1.2

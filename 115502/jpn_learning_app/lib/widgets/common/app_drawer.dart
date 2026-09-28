@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/screens/profile/system_settings_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
+import 'package:jpn_learning_app/screens/edu/classroom_list_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -131,6 +132,19 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (userProvider.isEduStudent)
+                    _buildPillItem(
+                      context,
+                      Icons.school_outlined,
+                      '我的教室',
+                      iconColor: AppColors.primary,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ClassroomListScreen(),
+                        ),
+                      ),
+                    ),
                   // 教育版學生沒有付費機制，不顯示商城入口
                   if (!userProvider.isEduStudent)
                   _buildPillItem(

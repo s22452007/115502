@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from utils.db import db
+from utils.db import db, ensure_model_columns
 
 # 匯入各個模組的 Blueprint
 from services.quiz import quiz_bp
@@ -86,6 +86,12 @@ app.register_blueprint(student_assignment_bp, url_prefix='/api/assignment')
 # 啟動時自動建立資料表與執行遷移
 with app.app_context():
     db.create_all()  # 建立所有新表
+    # 模型有、舊資料庫沒有的欄位自動補上（各組員的 jlens.db 不進 git）
+    try:
+        for _table, _column in ensure_model_columns(db):
+            print(f'[DB] 自動補上缺少的欄位 {_table}.{_column}')
+    except Exception as _e:
+        print(f'[DB] 自動補欄位失敗：{_e}')
 
     from models import SubscriptionPlan, PointPackage
     from utils.db import db as _db

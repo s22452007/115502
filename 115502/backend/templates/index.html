@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        /* 換頁不跳動：固定保留捲軸空間（有些頁面一個畫面放得下、沒有捲軸，換頁時整頁會左右位移） */
+        html { scrollbar-gutter: stable; }
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f2f4f3;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+
+        /* ===== Sidebar ===== */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; padding: 14px 20px 5px; list-style: none; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        /* ===== Main ===== */
+        .main-content { flex: 1; overflow-x: hidden; }
+        .lan-url { font-size: 0.85rem; color: #666; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .lan-url code { background: #f1f4f1; color: #333; padding: 2px 8px; border-radius: 6px; font-size: 0.85rem; }
+        .lan-copy { border: 1px solid #cfd8cf; background: white; color: #555; border-radius: 6px; font-size: 0.78rem; padding: 1px 10px; }
+        .lan-copy:hover { background: #f1f4f1; }
+        .lan-note { color: #aaa; font-size: 0.75rem; }
+
+        /* ===== Page Header ===== */
+        .page-header {
+            padding: 32px 48px 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+        }
+        .page-header h1 {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #222;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        .page-header .sub {
+            font-size: 0.82rem;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        /* ===== Stat Cards ===== */
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 24px 48px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+        .stat-card .icon-wrap {
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.35rem;
+        }
+        .stat-card .num {
+            font-size: 2.4rem;
+            font-weight: 900;
+            color: #1a1a1a;
+            line-height: 1;
+        }
+        .stat-card .lbl {
+            font-size: 0.8rem;
+            color: #999;
+            font-weight: 500;
+            margin-top: -8px;
+        }
+        .ic-green  { background: #e8f5e9; color: #388e3c; }
+        .ic-blue   { background: #e3f2fd; color: #1976d2; }
+        .ic-amber  { background: #fff8e1; color: #f57c00; }
+        .ic-pink   { background: #fce4ec; color: #c2185b; }
+
+        /* ===== Body area ===== */
+        .body-area { padding: 0 48px 32px; }
+
+        /* ===== Panels ===== */
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 18px; }
+        .panel-header { padding: 16px 22px 12px; font-weight: 800; font-size: 0.95rem; color: #2a352e; border-bottom: 1px solid #f0f3f1; display: flex; align-items: center; gap: 8px; }
+        .panel-header i { color: var(--green-accent); font-size: 1rem; }
+        .panel-header .hdr-note { margin-left: auto; font-weight: 500; font-size: 0.78rem; color: #9aa79f; }
+        .panel-header .badge-count { margin-left: auto; background: #fde8e8; color: #b50a0a; border-radius: 50px; padding: 2px 10px; font-size: 0.76rem; font-weight: 700; }
+        /* 面板內的小節 */
+        .sub-title { font-size: 0.7rem; font-weight: 800; letter-spacing: 1.4px; color: #a3b0a8; margin: 0 0 8px; display: flex; align-items: center; gap: 10px; }
+        .sub-title::after { content: ''; flex: 1; height: 1px; background: #eef2ef; }
+        .sub-block + .sub-block { margin-top: 26px; }
+        .panel-body { padding: 14px 22px 16px; }
+
+        /* ===== 首頁：少一點框，多一點留白 ===== */
+        .dash { padding: 22px 40px 16px; max-width: 1200px; }
+        .figures-body { padding: 18px 26px 16px; }
+        .figures { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 24px; padding: 0; }
+        .figure .n { font-size: 1.9rem; font-weight: 800; color: #23312a; line-height: 1; letter-spacing: -1px; }
+        .figure .n small { font-size: 0.95rem; color: #9aa79f; font-weight: 600; letter-spacing: 0; margin-left: 3px; }
+        .figure .l { font-size: 0.78rem; color: #9aa79f; margin-top: 7px; }
+        .todo-row { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #e3e9e5; text-decoration: none; color: #34423a; font-size: 0.9rem; }
+        .todo-row:last-of-type { border-bottom: none; }
+        .todo-row .n { font-weight: 800; color: #c47f2c; font-size: 1.15rem; min-width: 1.6em; letter-spacing: -0.5px; }
+        .todo-row .t { flex: 1; }
+        .todo-row .go { color: var(--green-accent); font-size: 0.82rem; white-space: nowrap; opacity: 0.75; }
+        .todo-row:hover .t, .todo-row:hover .go { color: var(--green-accent); opacity: 1; }
+        .bar-row { display: grid; grid-template-columns: 92px 1fr 56px; align-items: center; gap: 10px; padding: 5px 0; font-size: 0.86rem; color: #5b6a61; }
+        .bar-row .bar { height: 6px; background: #edf1ee; border-radius: 99px; overflow: hidden; }
+        .bar-row .bar > i { display: block; height: 100%; background: var(--green-accent); border-radius: 99px; min-width: 0; }
+        .bar-row .v { text-align: right; font-weight: 800; color: #23312a; white-space: nowrap; }
+        .bar-row .v small { font-weight: 500; color: #9aa79f; font-size: 0.74rem; margin-left: 3px; }
+        .all-clear { color: #9aa79f; font-size: 0.9rem; padding: 6px 0; }
+        .more-link { display: inline-block; margin-top: 10px; font-size: 0.85rem; color: var(--green-accent); text-decoration: none; }
+        .copyright { font-size: 0.75rem; color: #c5cdc8; margin-top: 12px; }
+
+        /* 折線圖：SVG 只畫線（可拉伸），點、數字、日期用一般文字定位，不會變形 */
+        .sec-note { font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: #9aa79f; margin-left: 4px; }
+        .chart-wrap { position: relative; height: 96px; margin: 6px 6px 22px; }
+        .chart-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
+        .chart .grid { stroke: #e3e9e5; stroke-width: 1; vector-effect: non-scaling-stroke; }
+        .chart .area { fill: var(--green-accent); opacity: 0.08; }
+        .chart .line { fill: none; stroke: var(--green-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+        .chart-wrap .day { position: absolute; top: 0; bottom: 0; width: 7.6%; transform: translateX(-50%); }
+        .chart-wrap .pt { position: absolute; transform: translate(-50%, -50%); pointer-events: none; text-align: center; }
+        .chart-wrap .pt i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--green-accent); border: 1.5px solid white; box-shadow: 0 0 0 1px var(--green-accent); margin: 0 auto; }
+        .chart-wrap .pt b { display: block; font-size: 11px; font-weight: 700; color: #23312a; line-height: 1; margin-bottom: 4px; }
+        .chart-wrap .xaxis { position: absolute; left: 0; right: 0; top: 100%; height: 18px; }
+        .chart-wrap .xaxis span { position: absolute; top: 5px; transform: translateX(-50%); font-size: 11px; color: #9aa79f; white-space: nowrap; }
+
+        /* 數字清單：一列一項，左標籤右數字，不加圖示 */
+        .kv-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f3f5f3; font-size: 0.9rem; color: #555; }
+        .kv-row:last-child { border-bottom: none; }
+        .kv-row .v { font-weight: 800; color: #333; font-size: 1.05rem; white-space: nowrap; }
+        .kv-row .v small { font-weight: 500; color: #aaa; font-size: 0.76rem; margin-left: 4px; }
+        .kv-row.hot .v { color: #c47f2c; }
+        .kv-row a { color: inherit; text-decoration: none; }
+        .kv-row a:hover { color: var(--green-accent); }
+        .kv-row .go { font-size: 0.78rem; color: var(--green-accent); margin-left: 8px; white-space: nowrap; }
+        .kv-sub { font-size: 0.74rem; color: #bbb; margin-top: 2px; }
+        .all-clear { color: #aaa; font-size: 0.88rem; padding: 8px 0; }
+
+        /* ===== Timeline ===== */
+        .timeline { position: relative; padding: 4px 0; }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 17px;
+            top: 0; bottom: 0;
+            width: 2px;
+            background: #f0f0f0;
+        }
+        .tl-item { display: flex; align-items: flex-start; gap: 14px; padding: 8px 0; position: relative; }
+        .tl-dot {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+            position: relative; z-index: 1;
+        }
+        .tl-dot.login { background: #e8f5e9; color: #388e3c; font-size: 0.85rem; font-weight: 800; }
+        .tl-info { flex: 1; min-width: 0; padding-top: 4px; }
+        .tl-name { font-weight: 700; font-size: 0.88rem; color: #222; }
+        .tl-desc { font-size: 0.76rem; color: #bbb; margin-top: 2px; }
+
+        /* ===== Feedback list ===== */
+        .activity-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-info { flex: 1; min-width: 0; }
+        .activity-name { font-weight: 700; font-size: 0.88rem; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .activity-excerpt { font-size: 0.76rem; color: #bbb; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .activity-time { font-size: 0.72rem; color: #ccc; margin-top: 2px; }
+        .reply-btn {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: var(--green-accent);
+            text-decoration: none;
+            font-weight: 700;
+            background: var(--green-light);
+            padding: 4px 10px;
+            border-radius: 50px;
+        }
+        .reply-btn:hover { background: var(--green-accent); color: white; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">管理者</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard" class="active"><i class="bi bi-house-door-fill"></i> 首頁</a></li>
+            <li class="sidebar-section-title">使用者</li>
+            <li><a href="/user/list"><i class="bi bi-person-fill"></i> 使用者資料</a></li>
+            <li><a href="/purchase/list"><i class="bi bi-cart-fill"></i> 購買紀錄</a></li>
+            {% if session.get('role') == 'super_admin' %}
+            <li class="sidebar-section-title">營運</li>
+            <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
+            <li class="sidebar-section-title">校園教育版</li>
+            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
+            <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
+            <li class="sidebar-section-title">系統</li>
+            <li><a href="/admin_account/list"><i class="bi bi-shield-lock-fill"></i> 管理員帳號管理</a></li>
+            {% endif %}
+            <li class="sidebar-section-title">內容管理</li>
+            <li><a href="/photo/list"><i class="bi bi-image"></i> 照片管控</a></li>
+            <li><a href="/vocab/list"><i class="bi bi-book-half"></i> 教材單字管理</a></li>
+            <li><a href="/quiz/list"><i class="bi bi-pencil-square"></i> 測驗題目管理</a></li>
+            <li><a href="/article/list"><i class="bi bi-file-earmark-text"></i> 閱讀文章管理</a></li>
+            <li class="sidebar-section-title">學習成果</li>
+            <li><a href="/group/list"><i class="bi bi-people-fill"></i> 學習小組總覽</a></li>
+            <li><a href="/record/list"><i class="bi bi-clipboard-data"></i> 造句與朗讀紀錄</a></li>
+            <li><a href="/achievement/list"><i class="bi bi-award-fill"></i> 成就徽章</a></li>
+            <li class="sidebar-section-title">互動</li>
+            <li><a href="/feedback/list"><i class="bi bi-chat-dots-fill"></i> 意見回饋{% if sidebar_feedback_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_feedback_pending }}</span>{% endif %}</a></li>
+            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+            <li><a href="/admin/change_password"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+    {% include 'admin/_sidebar_scroll.html' %}
+
+    <main class="main-content">
+        <div class="dash">
+
+            {% if lan_url %}
+            <div class="lan-url">
+                <i class="bi bi-wifi"></i>
+                同一個 Wi-Fi 的組員請連：<code id="lanUrl">{{ lan_url }}</code>
+                <button type="button" class="lan-copy" onclick="navigator.clipboard.writeText(document.getElementById('lanUrl').textContent).then(() => { this.textContent = '已複製'; setTimeout(() => this.textContent = '複製', 1500); })">複製</button>
+                <span class="lan-note">換網路後網址會變，以這裡顯示的為準</span>
+            </div>
+            {% endif %}
+
+            <div class="panel">
+                <div class="panel-body figures-body">
+            <div class="figures">
+                <div class="figure"><div class="n">{{ user_count }}</div><div class="l">總使用者</div></div>
+                <div class="figure"><div class="n">{{ today_active }}</div><div class="l">今日活躍</div></div>
+                <div class="figure"><div class="n">{{ new_users_today }}</div><div class="l">今日新註冊</div></div>
+                <div class="figure"><div class="n">{{ content.premium_users }}</div><div class="l">Premium 訂閱中</div></div>
+                <div class="figure"><div class="n">{{ edu.classrooms }}</div><div class="l">教育版班級</div></div>
+                <div class="figure"><div class="n">{{ content.articles_published }}<small>/ {{ content.articles_total }}</small></div><div class="l">上架文章</div></div>
+            </div>
+
+                </div>
+            </div>
+
+            <div class="panel chart">
+                <div class="panel-header"><i class="bi bi-graph-up"></i> 最近 14 天的每日活躍使用者<span class="hdr-note">當天做過拍照、AI 對話、造句或朗讀任一項的人數；14 天內共 {{ daily_chart.total }} 位使用者活躍</span></div>
+                <div class="panel-body">
+                <div class="chart-wrap">
+                    <svg viewBox="0 0 {{ daily_chart.w }} {{ daily_chart.h }}" preserveAspectRatio="none" role="img" aria-label="最近 14 天每日活躍使用者折線圖">
+                        <line class="grid" x1="0" y1="{{ daily_chart.base }}" x2="{{ daily_chart.w }}" y2="{{ daily_chart.base }}"></line>
+                        <path class="area" d="{{ daily_chart.area }}"></path>
+                        <polyline class="line" points="{{ daily_chart.polyline }}"></polyline>
+                    </svg>
+                    {% for p in daily_chart.points %}
+                    <span class="day" style="left: {{ (p.x / daily_chart.w * 100) | round(2) }}%;" title="{{ p.date }}：{{ p.v }} 位活躍"></span>
+                    {% if p.v or loop.last %}
+                    <span class="pt" style="left: {{ (p.x / daily_chart.w * 100) | round(2) }}%; top: {{ (p.y / daily_chart.h * 100) | round(2) }}%;"><b>{{ p.v }}</b><i></i></span>
+                    {% endif %}
+                    {% endfor %}
+                    <div class="xaxis">
+                        {% for p in daily_chart.points %}{% if loop.index0 % 2 == 1 or loop.last %}<span style="left: {{ (p.x / daily_chart.w * 100) | round(2) }}%;">{{ p.label }}</span>{% endif %}{% endfor %}
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <div class="panel">
+                        <div class="panel-header"><i class="bi bi-list-check"></i> 需要處理</div>
+                        <div class="panel-body">
+                        {% set t = dashboard_todo %}
+                        {% if t.pending_teachers %}
+                        <a class="todo-row" href="/teacher_account/list"><span class="n">{{ t.pending_teachers }}</span><span class="t">位老師等待審核身分</span><span class="go">去審核 →</span></a>
+                        {% endif %}
+                        {% if t.feedback_pending %}
+                        <a class="todo-row" href="/feedback/list"><span class="n">{{ t.feedback_pending }}</span><span class="t">筆意見回饋還沒回覆</span><span class="go">去回覆 →</span></a>
+                        {% endif %}
+                        {% if t.expired_groups %}
+                        <a class="todo-row" href="/group/list?status=expired"><span class="n">{{ t.expired_groups }}</span><span class="t">個學習小組已過週、尚未結算</span><span class="go">查看 →</span></a>
+                        {% endif %}
+                        {% if t.default_password_admins %}
+                        <a class="todo-row" href="/admin_account/list"><span class="n">{{ t.default_password_admins }}</span><span class="t">位管理員還在用預設密碼</span><span class="go">查看 →</span></a>
+                        {% endif %}
+                        {% if not todo_count %}
+                        <div class="all-clear"><i class="bi bi-check2 me-1"></i>都處理完了</div>
+                        {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="panel">
+                        <div class="panel-header"><i class="bi bi-bar-chart-line"></i> 最近 7 天的使用量</div>
+                        <div class="panel-body">
+                        {% for label, key, unit in [('拍照辨識', 'photos', '次'), ('AI 對話', 'chats', '場'), ('造句挑戰', 'sentences', '次'), ('文章朗讀', 'readings', '次'), ('付費解鎖文章', 'unlocks', '篇'), ('新成立小組', 'groups', '組')] %}
+                        <div class="bar-row">
+                            <span>{{ label }}</span>
+                            <span class="bar"><i style="width: {{ (weekly[key] * 100 / weekly_max) | round | int }}%;"></i></span>
+                            <span class="v">{{ weekly[key] }}<small>{{ unit }}</small></span>
+                        </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="panel">
+                        <div class="panel-header"><i class="bi bi-clock-history"></i> 最近登入</div>
+                        <div class="panel-body">
+                        {% if recent_users %}
+                        <div class="timeline">
+                            {% for u in recent_users %}
+                            <div class="tl-item">
+                                {% set av = avatar_info(u.avatar) %}
+                                {% if av and av.type == 'image' %}
+                                <img src="{{ av.src }}" class="tl-dot" style="object-fit:cover;">
+                                {% elif av %}
+                                <div class="tl-dot" style="background:{{ av.bg }}; font-size:1.2rem;">{{ av.emoji }}</div>
+                                {% else %}
+                                <div class="tl-dot login">{{ (u.username or u.email)[0]|upper }}</div>
+                                {% endif %}
+                                <div class="tl-info">
+                                    <div class="tl-name">{{ u.username or '未設定暱稱' }}</div>
+                                    <div class="tl-desc">{{ u.email }} · {{ u.last_seen_at }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="all-clear">還沒有登入紀錄</div>
+                        {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="copyright">© 2026 JLens Project Team. All rights reserved.</p>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+
+
+

@@ -15,7 +15,7 @@ import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/result_gallery_v2_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/history_menu_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
-import 'package:jpn_learning_app/screens/article/article_list_screen.dart'; 
+import 'package:jpn_learning_app/screens/article/article_list_screen.dart';
 
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
@@ -28,6 +28,10 @@ import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
 import 'package:jpn_learning_app/screens/sentence/sentence_practice_screen.dart';
 
+// 🌟 引入剛剛建立的作業清單畫面 (請確認路徑是否正確)
+import 'package:jpn_learning_app/screens/edu/assignment_list_screen.dart';
+import 'package:jpn_learning_app/screens/edu/classroom_list_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -36,12 +40,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with RouteAware {
-  int _currentIndex = 0; 
-  int? _lastUserId; 
+  int _currentIndex = 0;
+  int? _lastUserId;
   List<dynamic> _recentScenes = [];
+  List<Map<String, dynamic>> _myClassrooms = [];
   bool _isLoadingScenes = true;
 
-  final Color _textColor = const Color(0xFF2C3E50); 
+  final Color _textColor = const Color(0xFF2C3E50);
   final Color _subTextColor = const Color(0xFF8E9AAB);
   final Color _flatCanvasColor = const Color(0xFFF4F7F5);
   final Color _brandColor = const Color(0xFF006D3E);
@@ -49,7 +54,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) { _syncHomeData(); });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncHomeData();
+    });
   }
 
   @override
@@ -59,14 +66,22 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final currentUserId = Provider.of<UserProvider>(context).userId;
     if (_lastUserId != currentUserId) {
       _lastUserId = currentUserId;
-      WidgetsBinding.instance.addPostFrameCallback((_) { _syncHomeData(); });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _syncHomeData();
+      });
     }
   }
 
   @override
-  void dispose() { routeObserver.unsubscribe(this); super.dispose(); }
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
   @override
-  void didPopNext() { _syncHomeData(); }
+  void didPopNext() {
+    _syncHomeData();
+  }
 
   Future<void> _syncHomeData() async {
     if (!mounted) return;
@@ -74,17 +89,33 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final userId = userProvider.userId;
     if (userId == null) {
       if (!mounted) return;
-      setState(() { _recentScenes = []; _isLoadingScenes = false; });
+      setState(() {
+        _recentScenes = [];
+        _isLoadingScenes = false;
+      });
       return;
     }
     if (!mounted) return;
-    setState(() { _isLoadingScenes = true; });
+    setState(() {
+      _isLoadingScenes = true;
+    });
     NotificationService.recordUserActive();
     await _checkPendingFriendRequests(userId);
     await _fetchRecentScenes(userId);
     await _fetchAndCheckBadgeProgress(userId);
     await _fetchUsageStatus(userId);
     await _fetchDailyStatus(userId);
+    await _fetchMyClassrooms(userId);
+  }
+
+  Future<void> _fetchMyClassrooms(int userId) async {
+    try {
+      final classrooms = await ApiClient.getMyClassrooms(userId);
+      if (!mounted) return;
+      setState(() => _myClassrooms = classrooms);
+    } catch (e) {
+      debugPrint('教室清單載入失敗: $e');
+    }
   }
 
   Future<void> _fetchAndCheckBadgeProgress(int userId) async {
@@ -94,7 +125,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       final result = await ApiClient.fetchProfileData(userId);
       if (!mounted) return;
       if (result.containsKey('badge_progress')) {
-        userProvider.setBadgeProgress(result['badge_progress'] as Map<String, dynamic>);
+        userProvider.setBadgeProgress(
+          result['badge_progress'] as Map<String, dynamic>,
+        );
       }
       if (result.containsKey('j_pts')) {
         userProvider.setJPts((result['j_pts'] as num).toInt());
@@ -108,14 +141,19 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       if (result.containsKey('username') && result['username'] != null) {
         userProvider.setUsername(result['username'].toString());
       }
-    } catch (e) { debugPrint('資料同步錯誤: $e'); }
+    } catch (e) {
+      debugPrint('資料同步錯誤: $e');
+    }
   }
 
   Future<void> _fetchRecentScenes(int userId) async {
     try {
       final scenes = await ApiClient.getUnlockedScenes(userId, limit: 3);
       if (!mounted) return;
-      setState(() { _recentScenes = scenes; _isLoadingScenes = false; });
+      setState(() {
+        _recentScenes = scenes;
+        _isLoadingScenes = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingScenes = false);
@@ -128,7 +166,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     try {
       final result = await ApiClient.getPendingRequests(userId);
       if (result.containsKey('pending_requests')) {
-        userProvider.setPendingFriendRequests((result['pending_requests'] as List).length);
+        userProvider.setPendingFriendRequests(
+          (result['pending_requests'] as List).length,
+        );
       }
     } catch (e) {}
   }
@@ -145,6 +185,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         aiCountToday: (res['ai_count_today'] as num?)?.toInt() ?? 0,
         aiExtraCount: (res['ai_extra_count'] as num?)?.toInt() ?? 0,
         vocabSlot: (res['vocab_slot'] as num?)?.toInt() ?? 50,
+        photoDailyLimit: (res['photo_daily_limit'] as num?)?.toInt(),
+        aiDailyLimit: (res['ai_daily_limit'] as num?)?.toInt(),
+        isPremium: res['is_premium'] == true,
+        accountType: res['account_type']?.toString(),
       );
     } catch (e) {
       debugPrint('使用量載入失敗: $e');
@@ -184,7 +228,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    List<DateTime> weekDates = List.generate(7, (i) => firstDayOfWeek.add(Duration(days: i)));
+    List<DateTime> weekDates = List.generate(
+      7,
+      (i) => firstDayOfWeek.add(Duration(days: i)),
+    );
     List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
 
     final userProvider = context.watch<UserProvider>();
@@ -194,24 +241,31 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final streakDays = userProvider.streakDays;
     final avatarUrl = userProvider.avatar;
 
+    // 🌟 判斷是否為教育版學生
+    final isEduStudent = userProvider.accountType == 'student';
+    final hasClassrooms = _myClassrooms.isNotEmpty;
+
     return Scaffold(
       backgroundColor: _flatCanvasColor,
       drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: _flatCanvasColor,
         elevation: 0,
-        scrolledUnderElevation: 0, 
+        scrolledUnderElevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu_rounded, size: 30),
-            color:  AppColors.primary,
+            color: AppColors.primary,
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
         title: Image.asset(
-          'assets/images/logo.png', 
-          height: 35, 
-          errorBuilder: (c,e,s) => Text("Snap to Learn", style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900))
+          'assets/images/logo_snaptolearn-removebg-preview.png',
+          height: 35,
+          errorBuilder: (c, e, s) => Text(
+            "Snap to Learn",
+            style: TextStyle(color: _brandColor, fontWeight: FontWeight.w900),
+          ),
         ),
         centerTitle: true,
       ),
@@ -235,45 +289,102 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_getGreeting(), style: TextStyle(fontSize: 14, color: _subTextColor, fontWeight: FontWeight.w600)),
+                        Text(
+                          _getGreeting(),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _subTextColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text('$userName!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
-                        
+                        Text(
+                          '$userName!',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: _textColor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+
                         const SizedBox(height: 10),
-                        if (!isGuest) 
+                        if (!isGuest)
                           Wrap(
-                            spacing: 8, 
-                            runSpacing: 6, 
+                            spacing: 8,
+                            runSpacing: 6,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                                    const Icon(
+                                      Icons.local_fire_department,
+                                      color: Colors.orange,
+                                      size: 16,
+                                    ),
                                     const SizedBox(width: 4),
-                                    Text('已連續登入 $streakDays 天', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                                    Text(
+                                      '已連續登入 $streakDays 天',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              // 教育版學生沒有付費機制，點數標籤點進去是商城，直接不顯示
-                              if (!userProvider.isEduStudent)
-                              GestureDetector(
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1))),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.monetization_on_outlined, color: Colors.blue, size: 16),
-                                      const SizedBox(width: 4),
-                                      Text('$jPts Pts', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.blue)),
-                                    ],
+                              // 教育版學生沒有付費機制，點數標籤直接不顯示
+                              if (!isEduStudent)
+                                GestureDetector(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const StoreDashboardScreen(
+                                            initialIndex: 1,
+                                          ),
+                                    ),
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.monetization_on_outlined,
+                                          color: Colors.blue,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '$jPts Pts',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                       ],
@@ -285,13 +396,57 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
             _buildCheckInCalendarCard(weekDates, weekDayNames, streakDays),
 
+            // 🌟 只有教育版學生才顯示「我的作業」按鈕 (Point 4 入口)
+            if (isEduStudent)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 10,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.assignment_outlined),
+                    label: const Text(
+                      '我的作業',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A90E2), // 教育版專屬藍色
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AssignmentListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
             const SizedBox(height: 10),
-            
+
             _buildSectionHeader('今日學習目標'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: isGuest
-                  ? PremiumLockedOverlay(message: '登入啟用今日目標', child: DailyGoalCard(onReturnFromCamera: () => _syncHomeData()))
+                  ? PremiumLockedOverlay(
+                      message: '登入啟用今日目標',
+                      child: DailyGoalCard(
+                        onReturnFromCamera: () => _syncHomeData(),
+                      ),
+                    )
                   : DailyGoalCard(onReturnFromCamera: () => _syncHomeData()),
             ),
 
@@ -314,34 +469,70 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               child: RecentScenesList(
                 recentScenes: _recentScenes,
                 isLoadingScenes: _isLoadingScenes,
-                onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(context, scene, userProvider.userId?.toString()),
+                onShowVocabularyBottomSheet: (scene) => VocabBottomSheet.show(
+                  context,
+                  scene,
+                  userProvider.userId?.toString(),
+                ),
               ),
             ),
             const SizedBox(height: 40),
           ],
         ),
       ),
+      // 教育版學生可查看已加入的教室，或前往加入教室。
+      floatingActionButton: isEduStudent && userProvider.userId != null
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ClassroomListScreen()),
+              ).then((_) => _syncHomeData()),
+              icon: const Icon(
+                Icons.add_home_work_outlined,
+                color: Colors.white,
+              ),
+              label: Text(
+                hasClassrooms ? '我的教室' : '加入教室',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor: AppColors.primaryLight2,
+            )
+          : null,
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (i) {
           if (i == 0) {
-             // 已經在主頁
+            // 已經在主頁
           } else if (i == 1) {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScreen())).then((_) => _syncHomeData());
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            ).then((_) => _syncHomeData());
           } else if (i == 2) {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualSearchScreen())).then((_) => _syncHomeData());
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManualSearchScreen()),
+            ).then((_) => _syncHomeData());
           } else if (i == 3) {
-             // 「紀錄」改為選單頁：單字探險 / AI 對話紀錄
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryMenuScreen())).then((_) => _syncHomeData());
+            // 「紀錄」改為選單頁
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HistoryMenuScreen()),
+            ).then((_) => _syncHomeData());
           } else if (i == 4) {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _syncHomeData());
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ).then((_) => _syncHomeData());
           }
         },
       ),
     );
   }
 
-  // 🌟 造句挑戰專屬卡片 Widget
   Widget _buildSentencePracticeCard(BuildContext context) {
     const Color _cardGreen = Color(0xFF6AA86B);
     return Padding(
@@ -350,8 +541,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const SentencePracticeScreen()),
-          ).then((_) => _syncHomeData()); // 返回時刷新首頁點數
+            MaterialPageRoute(
+              builder: (context) => const SentencePracticeScreen(),
+            ),
+          ).then((_) => _syncHomeData());
         },
         child: Container(
           width: double.infinity,
@@ -375,20 +568,42 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                   color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 32),
+                child: const Icon(
+                  Icons.edit_note_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    Text('AI 造句挑戰', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text(
+                      'AI 造句挑戰',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                     SizedBox(height: 4),
-                    Text('活化單字本，賺取 J-pts！', style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600)),
+                    Text(
+                      '活化單字本，賺取 J-pts！',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
             ],
           ),
         ),
@@ -401,7 +616,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: GestureDetector(
         onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const ArticleListScreen())).then((_) => _syncHomeData());
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ArticleListScreen()),
+          ).then((_) => _syncHomeData());
         },
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -409,28 +627,57 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
-                child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 28),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('閱讀文章', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
+                    Text(
+                      '閱讀文章',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
                     SizedBox(height: 4),
-                    Text('透過閱讀提升語感與單字量', style: TextStyle(fontSize: 13, color: Color(0xFF8E9AAB), fontWeight: FontWeight.w600)),
+                    Text(
+                      '透過閱讀提升語感與單字量',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF8E9AAB),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, color: const Color(0xFF8E9AAB).withOpacity(0.5), size: 18),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: const Color(0xFF8E9AAB).withOpacity(0.5),
+                size: 18,
+              ),
             ],
           ),
         ),
@@ -438,7 +685,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  Widget _buildCheckInCalendarCard(List<DateTime> weekDates, List<String> weekDayNames, int streakDays) {
+  Widget _buildCheckInCalendarCard(
+    List<DateTime> weekDates,
+    List<String> weekDayNames,
+    int streakDays,
+  ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -446,11 +697,21 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
       padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('本週打卡', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor)),
+          Text(
+            '本週打卡',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: _textColor,
+            ),
+          ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -463,26 +724,40 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
               return Column(
                 children: [
-                  Text(weekDayNames[index], style: TextStyle(fontSize: 12, color: _subTextColor, fontWeight: FontWeight.w700)),
+                  Text(
+                    weekDayNames[index],
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _subTextColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Container(
-                    width: 38, height: 38,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: isToday 
-                        ? AppColors.primary 
-                        : (isCompleted ? AppColors.primary.withOpacity(0.6) : Colors.grey.withOpacity(0.1)), 
-                      shape: BoxShape.circle
+                      color: isToday
+                          ? AppColors.primary
+                          : (isCompleted
+                                ? AppColors.primary.withOpacity(0.6)
+                                : Colors.grey.withOpacity(0.1)),
+                      shape: BoxShape.circle,
                     ),
                     child: Center(
-                      child: isCompleted 
-                        ? const Icon(Icons.check, color: Colors.white, size: 20) 
-                        : Text(
-                            date.day.toString(), 
-                            style: TextStyle(
-                              color: isToday ? Colors.white : _textColor, 
-                              fontWeight: FontWeight.w900
+                      child: isCompleted
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 20,
                             )
-                          )
+                          : Text(
+                              date.day.toString(),
+                              style: TextStyle(
+                                color: isToday ? Colors.white : _textColor,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -500,12 +775,31 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: 0.5)),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: _textColor,
+              letterSpacing: 0.5,
+            ),
+          ),
           if (hasGalleryLink)
             GestureDetector(
-              // 「最近解鎖場景」的全部＝單字探險的照片清單；主題收集冊改由單字探險頁進入
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultGalleryV2Screen())).then((_) => _syncHomeData()),
-              child: const Text('查看全部 >', style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w800)),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ResultGalleryV2Screen(),
+                ),
+              ).then((_) => _syncHomeData()),
+              child: const Text(
+                '查看全部 >',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
         ],
       ),

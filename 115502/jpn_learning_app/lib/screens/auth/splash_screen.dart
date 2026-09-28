@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final userProvider = context.read<UserProvider>();
     
     if (userProvider.isLoggedIn) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
     } else {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
     }
@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
             children: [
               // 圖片找不到時自動顯示相機 Icon
               Image.asset(
-                'assets/images/logo.png',
+                'assets/images/logo_snaptolearn-removebg-preview.png',
                 width: 180,
                 errorBuilder: (context, error, stackTrace) => 
                   // 🌟 將顏色改為與按鈕一致的 AppColors.primary

@@ -5,13 +5,13 @@ import re
 import random
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-import google.generativeai as genai
 from datetime import datetime, date
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from models import db, User, SentencePracticeRecord
 from utils import gemini_client
+from utils.ai_helper import JSON_CONFIG, parse_gemini_json
 from utils.group_helper import add_group_progress_and_check_reward
 from utils.account_helper import is_payment_free
 
@@ -161,8 +161,9 @@ def evaluate_sentence():
 
     level = user.japanese_level if user and user.japanese_level else 'N3'
     
+    # 改走新版 SDK（gemini_client.generate_content）：金鑰與備援模型自動切換、塞車自動重試，
+    # 與拍照辨識、AI 對話一致；舊版 google.generativeai 已停止維護且沒有備援。
     def _analyze():
-        model = genai.GenerativeModel(gemini_client.DEFAULT_MODEL)
         vocab_str = ", ".join(selected_vocabs) if selected_vocabs else "未選用單字"
         
         prompt = f"""
@@ -182,15 +183,14 @@ def evaluate_sentence():
             "strict_feedback": "1. 助詞錯誤：に 應改為 で\\n2. 變形錯誤：食べる 應改為 食べて"
         }}
         """
-        response = model.generate_content(prompt)
-        response.resolve()
-        match = re.search(r'\{.*\}', response.text, re.DOTALL)
-        if match: return json.loads(match.group(0))
+        response = gemini_client.generate_content('article', prompt, config=JSON_CONFIG)
+        match = re.search(r'\{.*\}', response.text or '', re.DOTALL)
+        if match: return parse_gemini_json(match.group(0))
         raise ValueError("AI 回傳格式錯誤")
 
     try:
         # 交由 Gemini 批改
-        result = gemini_client.run_with_legacy_keys('article', _analyze)
+        result = _analyze()
         score = result.get('score', 0)
         points_earned = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
 

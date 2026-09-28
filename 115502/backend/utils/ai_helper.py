@@ -15,6 +15,14 @@ load_dotenv(env_path, override=True)
 # 要求 Gemini 以 JSON 模式輸出（結構性保證，大幅降低格式錯誤）
 JSON_CONFIG = types.GenerateContentConfig(response_mime_type='application/json')
 
+# 拍照辨識專用：再加上「低思考」。Gemini 3 系列預設會先長時間思考才回答，
+# 看圖找物品、造例句用不到那麼多推理，調低可以明顯縮短等待時間。
+# 不支援 thinking_level 的模型，gemini_client 會自動拿掉這個設定重送。
+CAMERA_CONFIG = types.GenerateContentConfig(
+    response_mime_type='application/json',
+    thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW),
+)
+
 
 def parse_gemini_json(raw_text):
     """
@@ -45,6 +53,33 @@ def parse_gemini_json(raw_text):
     cleaned = re.sub(r',(\s*[}\]])', r'\1', text)
     return json.loads(cleaned)
 
+
+# 送給 Gemini 的照片長邊上限（像素）。辨識 3~5 個物品用這個大小就很夠，
+# 手機原圖動輒數 MB，照原圖送會讓請求變慢、在 Gemini 尖峰時更容易被拒絕（503）。
+AI_IMAGE_MAX_SIDE = 1280
+
+
+def shrink_image_for_ai(image_bytes, mime_type):
+    """把照片縮到長邊 AI_IMAGE_MAX_SIDE 以內並轉成 JPEG，只用在送 AI；存檔的照片仍是原圖。
+    Pillow 沒安裝或圖片解不開（例如 HEIC）時原樣回傳，不影響辨識。"""
+    try:
+        from io import BytesIO
+        from PIL import Image, ImageOps
+        img = Image.open(BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)          # 依照相機的方向資訊轉正，縮圖後方向資訊會消失
+        if max(img.size) <= AI_IMAGE_MAX_SIDE and mime_type == 'image/jpeg' and len(image_bytes) <= 1024 * 1024:
+            return image_bytes, mime_type           # 本來就夠小，不必重新壓縮
+        img.thumbnail((AI_IMAGE_MAX_SIDE, AI_IMAGE_MAX_SIDE))
+        if img.mode != 'RGB':
+            img = img.convert('RGB')                # PNG 透明背景、WebP 等轉成 JPEG 可用的格式
+        out = BytesIO()
+        img.save(out, format='JPEG', quality=85)
+        return out.getvalue(), 'image/jpeg'
+    except Exception as e:
+        print(f"⚠️ 照片縮圖失敗，改用原圖送出：{e}")
+        return image_bytes, mime_type
+
+
 def analyze_image_from_path(file_path):
     """
     使用 Google Gemini API 進行圖像分析與文字辨識。
@@ -59,6 +94,7 @@ def analyze_image_from_path(file_path):
         mime_type = mime_map.get(ext, 'image/jpeg')
         with open(file_path, 'rb') as f:
             image_bytes = f.read()
+        image_bytes, mime_type = shrink_image_for_ai(image_bytes, mime_type)
         image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
 
         # 3. 定義 prompt：嚴格要求回傳符合前端格式的 JSON
@@ -124,7 +160,7 @@ def analyze_image_from_path(file_path):
 
         # 4. 呼叫 Gemini 解析圖片（指定 JSON 輸出模式）
         response = gemini_client.generate_content(
-            'camera', [image_part, prompt], config=JSON_CONFIG)
+            'camera', [image_part, prompt], config=CAMERA_CONFIG)
         result_text = response.text
 
         # 5~6. 解析 JSON（自動處理 markdown 標籤與多餘逗號）
@@ -135,7 +171,7 @@ def analyze_image_from_path(file_path):
             print("⚠️ Gemini 回傳格式有誤，正在重試一次...")
             try:
                 retry = gemini_client.generate_content(
-                    'camera', [image_part, prompt], config=JSON_CONFIG)
+                    'camera', [image_part, prompt], config=CAMERA_CONFIG)
                 result_data = parse_gemini_json(retry.text)
             except json.JSONDecodeError as decode_err:
                 print("Gemini 回傳的格式不是正確的 JSON:", result_text)

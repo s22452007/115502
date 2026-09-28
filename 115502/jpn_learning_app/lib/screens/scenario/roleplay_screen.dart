@@ -19,11 +19,20 @@ class RoleplayScreen extends StatefulWidget {
   /// 從歷史紀錄接續對話時傳入既有場次 id；新對話則留 null
   final int? resumeSessionId;
 
+  /// 從「我的作業」進來時帶入：每一輪後端都會檢查輪數，達標自動繳交。
+  /// [minTurns] 只用來顯示進度；[dialectId] 是老師指定的腔調（可為 null）。
+  final int? assignmentId;
+  final int? minTurns;
+  final int? dialectId;
+
   const RoleplayScreen({
     Key? key,
     required this.topicTitle,
     required this.characterName,
     this.resumeSessionId,
+    this.assignmentId,
+    this.minTurns,
+    this.dialectId,
   }) : super(key: key);
 
   @override
@@ -37,6 +46,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   bool _isTyping = false;
   bool _showFurigana = false;
   List<String> _quickReplies = [];
+
+  // 作業模式：目前輪數與是否已繳交（由後端每輪回報）
+  bool get _isAssignment => widget.assignmentId != null;
+  int _assignmentTurns = 0;
+  bool _assignmentSubmitted = false;
 
   int _aiUsed = 0;
   int _aiMax = 3;
@@ -250,7 +264,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       setState(() {
         _aiUsed = (res['ai_count_today'] as num?)?.toInt() ?? 0;
         _aiExtra = (res['ai_extra_count'] as num?)?.toInt() ?? 0;
-        _aiMax = res['is_premium'] == true ? 10 : 3;
+        _aiMax = (res['ai_daily_limit'] as num?)?.toInt()
+            ?? (res['is_premium'] == true ? 10 : 3);
       });
     }
   }
@@ -431,6 +446,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       userId: userId,
       topic: widget.topicTitle,
       characterName: widget.characterName,
+      dialectId: widget.dialectId,
     );
 
     final id = await _sessionCreation;
@@ -537,12 +553,14 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
           'session_id': (sessionId ?? '').toString(),
           'history': _buildChatHistory(), // 中途再按開場時，讓 AI 知道前面聊過什麼
+          if (widget.dialectId != null) 'dialect_id': widget.dialectId.toString(),
+          if (_isAssignment) 'assignment_id': widget.assignmentId.toString(),
         },
       );
 
       if (response.statusCode == 200 && mounted) {
         setState(() {
-          _messages.add({'text': response.body, 'isUserMessage': false});
+          _messages.add({'text': _unwrapReply(response.body), 'isUserMessage': false});
         });
         _scrollToBottom();
 
@@ -605,6 +623,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
           'session_id': (sessionId ?? '').toString(),
           'history': history, // 帶入最近的對話，讓 AI 記得前文
+          if (widget.dialectId != null) 'dialect_id': widget.dialectId.toString(),
+          if (_isAssignment) 'assignment_id': widget.assignmentId.toString(),
         },
       );
 
@@ -612,7 +632,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
       if (response.statusCode == 200) {
         // AI 會在回覆最前面附上文法訂正（有錯才有），把它拆出來單獨顯示
-        final parsed = _extractCorrection(response.body);
+        final parsed = _extractCorrection(_unwrapReply(response.body));
         setState(() {
           _messages.add({
             'text': parsed.reply,
@@ -703,6 +723,73 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   //    [訂正]錯誤說法 → 正確說法（說明）
   //    這裡把它拆出來，讓它顯示在專屬的提示卡片而不是混在對話裡。
   // ==========================================
+  /// 一般對話後端回純文字；作業模式回 JSON {reply, assignment_result}。
+  /// 這裡把 AI 回覆取出來，並順手更新作業進度。
+  String _unwrapReply(String body) {
+    if (!_isAssignment) return body;
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) {
+        final result = decoded['assignment_result'];
+        if (result is Map) _applyAssignmentResult(result.cast<String, dynamic>());
+        return (decoded['reply'] ?? '').toString();
+      }
+    } catch (_) {
+      // 後端沒回 JSON（例如舊版），就當純文字處理
+    }
+    return body;
+  }
+
+  void _applyAssignmentResult(Map<String, dynamic> r) {
+    final turns = (r['turns'] as num?)?.toInt();
+    final submitted = r['submitted'] == true;
+    final justSubmitted = submitted && !_assignmentSubmitted;
+    setState(() {
+      if (turns != null) _assignmentTurns = turns;
+      if (submitted) _assignmentSubmitted = true;
+    });
+    // 第一次達標時提示一次；不符合要求（例如情境不對）也要讓學生知道
+    String? text;
+    if (justSubmitted) {
+      text = '已繳交作業！';
+    } else if (!submitted && r['error'] != null && r['status'] != 'in_progress') {
+      text = '尚未交到作業：${r['error']}';
+    }
+    if (text != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(text),
+          backgroundColor: justSubmitted ? const Color(0xFF10B981) : Colors.orange,
+        ),
+      );
+    }
+  }
+
+  /// 作業進度條：顯示「已對話 n / 需要 m 輪」，交完變綠色
+  Widget _buildAssignmentBanner() {
+    final need = widget.minTurns ?? 0;
+    final done = _assignmentSubmitted;
+    final color = done ? const Color(0xFF10B981) : const Color(0xFF4A90E2);
+    final text = done
+        ? '作業已繳交，可以繼續練習'
+        : need > 0
+            ? '作業進度：已對話 $_assignmentTurns / $need 輪'
+            : '作業模式';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: color.withValues(alpha: 0.12),
+      child: Row(
+        children: [
+          Icon(done ? Icons.assignment_turned_in_rounded : Icons.assignment_outlined,
+              size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(text, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
   ({String reply, String? correction}) _extractCorrection(String raw) {
     final lines = raw.split('\n');
     final index = lines.indexWhere((l) => l.trim().startsWith('[訂正]'));
@@ -915,6 +1002,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       ),
       body: Column(
         children: [
+          if (_isAssignment) _buildAssignmentBanner(),
           Builder(
             builder: (_) {
               // 教育版學生不限次數：只顯示今天對話幾次，不顯示上限，也不會變紅

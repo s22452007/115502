@@ -18,7 +18,7 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 from flask import session, flash, redirect, url_for, render_template, request, jsonify
 from functools import wraps
-from utils.db import db
+from utils.db import db, ensure_model_columns
 from models import Admin, Vocab, SystemLog, Article, Achievement, User, AccountType
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func
@@ -74,6 +74,16 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'timeout': 15},
 }
 db.init_app(app)
+
+# jlens.db 不進 git、每位組員電腦上都是自己的資料庫；模型新增欄位後（例如 admin.last_login_at）
+# 舊資料庫一查就 no such column 而 500。啟動時自動建缺少的表、補缺少的欄位，pull 完直接能跑。
+with app.app_context():
+    try:
+        db.create_all()
+        for _table, _column in ensure_model_columns(db):
+            print(f'[DB] 自動補上缺少的欄位 {_table}.{_column}')
+    except Exception as _e:
+        print(f'[DB] 自動補欄位失敗（請手動執行 upgrade_db.py 或聯繫負責人）：{_e}')
 
 
 @app.context_processor

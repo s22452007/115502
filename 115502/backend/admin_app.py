@@ -2102,6 +2102,11 @@ def teacher_assignment_create(classroom_id):
         return redirect(url_for('teacher_classrooms'))
 
     if request.method == 'POST':
+        # 出題是老師的教學行為；super_admin 可以檢視、下架、刪除，但不能代替老師出題（與建班級、加學生一致）
+        if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+            flash("管理者無法代替老師出題，請由班級老師登入後新增作業", "danger")
+            return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
+
         task_type = request.form.get('task_type', 'sentence')
         title = request.form.get('title', '').strip()
         instructions = request.form.get('instructions', '').strip()
@@ -2376,6 +2381,9 @@ def teacher_assignment_edit(assignment_id):
     if not assignment:
         flash("找不到該作業", "danger")
         return redirect(url_for('teacher_classrooms'))
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        flash("管理者無法代替老師編輯作業，請由班級老師登入後修改", "danger")
+        return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
     title = request.form.get('title', '').strip()
     if not title:
         flash("請填寫作業標題", "danger")
@@ -2426,7 +2434,8 @@ def teacher_assignment_delete(assignment_id):
     ))
     db.session.delete(assignment)
     db.session.commit()
-    flash(f"作業「{title}」已刪除（含 {submission_count} 份繳交紀錄）", "success")
+    note = f"，學生的 {submission_count} 份繳交紀錄一併移除" if submission_count else ""
+    flash(f"作業「{title}」已刪除{note}", "success")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
 

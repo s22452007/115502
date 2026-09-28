@@ -1695,4 +1695,57 @@ class ApiClient {
 
     throw Exception(data['error'] ?? '無法載入教室清單');
   }
+
+  /// 輸入代碼後、真正加入前，先查這是哪一班、哪位老師。
+  static Future<Map<String, dynamic>> previewClassroom(String joinCode) async {
+    final url = Uri.parse('$baseUrl/classroom/preview?join_code=${Uri.encodeQueryComponent(joinCode)}');
+    try {
+      final response = await http.get(url);
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 教室預覽連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
+    }
+  }
+
+  /// 加入教室。回傳 {statusCode, data}：201 新加入、200 原本就在、其他為錯誤（data.error）。
+  static Future<Map<String, dynamic>> joinClassroom({
+    required int userId,
+    required String joinCode,
+  }) async {
+    final url = Uri.parse('$baseUrl/classroom/join');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'join_code': joinCode}),
+      );
+      return {
+        'statusCode': response.statusCode,
+        'data': jsonDecode(utf8.decode(response.bodyBytes)),
+      };
+    } catch (e) {
+      debugPrint('❌ 加入教室連線失敗: $e');
+      return {'statusCode': 0, 'data': {'error': '網路發生錯誤，請檢查後端伺服器是否開啟'}};
+    }
+  }
+
+  /// 退出教室。只移除成員關聯，作業成績與學習紀錄都保留。
+  static Future<Map<String, dynamic>> leaveClassroom({
+    required int userId,
+    required int classroomId,
+  }) async {
+    final url = Uri.parse('$baseUrl/classroom/leave');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'classroom_id': classroomId}),
+      );
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 退出教室連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
+    }
+  }
 }

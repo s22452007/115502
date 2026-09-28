@@ -125,7 +125,7 @@
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% for category, message in messages %}
-            <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+            <div data-flash class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert" style="border-radius: 12px;">
               {{ message }}
               <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
@@ -351,5 +351,6 @@ function viewStudentDetail(studentId, studentName) {
         });
 }
 </script>
+{% include 'admin/_flash_autohide.html' %}
 </body>
 </html>

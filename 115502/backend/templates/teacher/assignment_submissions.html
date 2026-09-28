@@ -89,6 +89,10 @@
                         <h4 class="fw-bold mb-0 text-dark">{{ data.assignment.title }}</h4>
                         {% if data.assignment.task_type == 'sentence' %}
                             <span class="badge bg-primary-subtle text-primary border">造句挑戰</span>
+                        {% elif data.assignment.task_type == 'photo' %}
+                            <span class="badge bg-warning-subtle text-warning border">拍照學習</span>
+                        {% elif data.assignment.task_type == 'chat' %}
+                            <span class="badge bg-danger-subtle text-danger border">AI 情境對話</span>
                         {% else %}
                             <span class="badge bg-success-subtle text-success border">文章閱讀</span>
                         {% endif %}
@@ -100,6 +104,19 @@
                             {% if data.assignment.config.get('required_vocabs') %}
                                 ｜ 指定單字：{{ data.assignment.config.get('required_vocabs')|join(', ') }}
                             {% endif %}
+                        </div>
+                    {% endif %}
+                    {% if data.assignment.task_type == 'photo' and data.assignment.config %}
+                        <div class="small text-secondary mt-1">
+                            拍攝主題：<strong>{{ data.assignment.config.get('theme') or '不限' }}</strong>
+                            ｜ 最少辨識單字：{{ data.assignment.config.get('min_vocab_count', 0) }} 個
+                        </div>
+                    {% endif %}
+                    {% if data.assignment.task_type == 'chat' and data.assignment.config %}
+                        <div class="small text-secondary mt-1">
+                            對話情境：<strong>{{ data.assignment.config.get('topic') }}</strong>
+                            ｜ 腔調：{{ data.assignment.dialect_name or '標準語' }}
+                            ｜ 最少輪數：{{ data.assignment.config.get('min_turns', 0) }} 輪
                         </div>
                     {% endif %}
                 </div>
@@ -176,6 +193,32 @@
                                         <div>
                                             <i class="bi bi-check-circle-fill text-success"></i> 已完成文章閱讀
                                         </div>
+                                    {% elif s.detail.type == 'photo' %}
+                                        <div class="d-flex gap-3 align-items-start">
+                                            <a href="{{ s.detail.image_path }}" target="_blank" title="開啟原圖">
+                                                <img src="{{ s.detail.image_path }}" alt="學生照片" class="rounded border" style="width: 96px; height: 96px; object-fit: cover;">
+                                            </a>
+                                            <div class="small">
+                                                {% if s.detail.scene_name %}<div><strong>場景：</strong>{{ s.detail.scene_name }}</div>{% endif %}
+                                                {% if s.detail.custom_title %}<div><strong>標題：</strong>{{ s.detail.custom_title }}</div>{% endif %}
+                                                {% if s.detail.context_description %}<div class="text-muted"><strong>情境：</strong>{{ s.detail.context_description }}</div>{% endif %}
+                                                <div class="mt-1"><strong>辨識單字 ({{ s.detail.vocabs|length }})：</strong>
+                                                    {% for v in s.detail.vocabs %}
+                                                        <span class="badge bg-light text-dark border" title="{{ v.meaning }}">{{ v.word }}{% if v.kana and v.kana != v.word %}（{{ v.kana }}）{% endif %}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">無</span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% elif s.detail.type == 'chat' %}
+                                        <div class="small">
+                                            <div><strong>情境：</strong>{{ s.detail.topic }}{% if s.detail.character_name %} ｜ 角色：{{ s.detail.character_name }}{% endif %}</div>
+                                            <div><strong>學生發言：</strong>{{ s.detail.user_turns }} 輪</div>
+                                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold mt-1" data-bs-toggle="modal" data-bs-target="#chatModal{{ s.submission_id }}">
+                                                <i class="bi bi-chat-left-text me-1"></i>查看對話紀錄
+                                            </button>
+                                        </div>
                                     {% endif %}
                                 {% else %}
                                     <span class="text-muted small">尚無作答紀錄</span>
@@ -209,6 +252,33 @@
 </div>
 
 <!-- 文章預覽 Modal -->
+{% for s in data.submissions %}
+{% if s.detail and s.detail.type == 'chat' %}
+<div class="modal fade" id="chatModal{{ s.submission_id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-chat-dots me-2"></i>{{ s.display_name }}：{{ s.detail.topic }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        {% for m in s.detail.messages %}
+          <div class="d-flex mb-2 {{ 'justify-content-end' if m.role == 'user' else 'justify-content-start' }}">
+            <div class="p-2 px-3 rounded-3 {{ 'bg-success-subtle' if m.role == 'user' else 'bg-light border' }}" style="max-width: 80%; white-space: pre-wrap;">
+              <div class="small text-muted mb-1">{{ '學生' if m.role == 'user' else 'AI' }}</div>
+              {{ m.content }}
+            </div>
+          </div>
+        {% else %}
+          <div class="text-muted">尚無對話內容</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
 {% if data.article_info %}
 <div class="modal fade" id="articlePreviewModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">

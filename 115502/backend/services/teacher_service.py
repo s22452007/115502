@@ -1,3 +1,4 @@
+import re
 import secrets
 import string
 from datetime import datetime
@@ -5,8 +6,17 @@ from utils.db import db
 from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
     TaskType, SubmissionStatus, AccountType,
-    Article, SentencePracticeRecord, ArticleProgress, ScoreRecord
+    Article, SentencePracticeRecord, ArticleProgress, ScoreRecord,
+    UserPhoto, ChatSession, ChatMessage, Dialect
 )
+
+# 對話內容存的是 App 用的標音格式 [漢字|かな]，老師後台改成「漢字（かな）」比較好讀
+_FURIGANA_RE = re.compile(r'\[([^\[\]|]+)\|([^\[\]]+)\]')
+
+
+def strip_furigana(text):
+    return _FURIGANA_RE.sub(r'\1（\2）', text or '')
+
 
 # 排除易看錯字元：0, O, 1, I, L
 SAFE_CODE_CHARS = ''.join(c for c in string.ascii_uppercase + string.digits if c not in '01OIL')
@@ -317,6 +327,60 @@ def create_article_assignment(classroom_id, title, instructions, article_id=None
     return assignment
 
 
+def create_photo_assignment(classroom_id, title, instructions, theme='', min_vocab_count=3, due_at=None):
+    """建立拍照學習作業。學生拍一張照片，AI 辨識出的單字數要達到門檻才算繳交。"""
+    try:
+        min_vocab_count = int(min_vocab_count or 0)
+    except (TypeError, ValueError):
+        min_vocab_count = 0
+    config = {
+        'theme': (theme or '').strip(),
+        'min_vocab_count': max(min_vocab_count, 0),
+    }
+    assignment = Assignment(
+        classroom_id=classroom_id,
+        title=title.strip(),
+        instructions=instructions.strip() if instructions else '',
+        task_type=TaskType.PHOTO,
+        config=config,
+        due_at=due_at,
+        is_published=True,
+        created_at=datetime.utcnow()
+    )
+    db.session.add(assignment)
+    db.session.commit()
+    return assignment
+
+
+def create_chat_assignment(classroom_id, title, instructions, topic, dialect_id=None, min_turns=6, due_at=None):
+    """建立 AI 情境對話作業。App 會直接用 config['topic'] 開對話，所以繳交時 topic 一定對得上。"""
+    topic = (topic or '').strip()
+    if not topic:
+        raise ValueError("對話作業必須指定情境主題")
+    try:
+        min_turns = int(min_turns or 0)
+    except (TypeError, ValueError):
+        min_turns = 0
+    config = {
+        'topic': topic,
+        'dialect_id': int(dialect_id) if dialect_id else None,
+        'min_turns': max(min_turns, 0),
+    }
+    assignment = Assignment(
+        classroom_id=classroom_id,
+        title=title.strip(),
+        instructions=instructions.strip() if instructions else '',
+        task_type=TaskType.CHAT,
+        config=config,
+        due_at=due_at,
+        is_published=True,
+        created_at=datetime.utcnow()
+    )
+    db.session.add(assignment)
+    db.session.commit()
+    return assignment
+
+
 def get_assignment_submissions_list(assignment_id):
     """取得指定作業在該班級的學生繳交與批閱名單。"""
     assignment = Assignment.query.get(assignment_id)
@@ -361,6 +425,36 @@ def get_assignment_submissions_list(assignment_id):
                     'type': 'article',
                     'is_completed': ap.is_completed if ap else True,
                 }
+            elif assignment.task_type == TaskType.PHOTO:
+                photo = UserPhoto.query.get(sub.result_ref_id)
+                if photo:
+                    vocabs = []
+                    for pv in photo.photo_vocabs:
+                        if pv.vocab:
+                            vocabs.append({
+                                'word': pv.vocab.word,
+                                'kana': pv.vocab.kana,
+                                'meaning': pv.vocab.meaning,
+                            })
+                    submission_detail = {
+                        'type': 'photo',
+                        'image_path': photo.image_path,
+                        'custom_title': photo.custom_title or '',
+                        'scene_name': photo.scene.name if photo.scene else '',
+                        'context_description': photo.context_description or '',
+                        'vocabs': vocabs,
+                    }
+            elif assignment.task_type == TaskType.CHAT:
+                chat = ChatSession.query.get(sub.result_ref_id)
+                if chat:
+                    messages = ChatMessage.query.filter_by(session_id=chat.id).order_by(ChatMessage.created_at, ChatMessage.id).all()
+                    submission_detail = {
+                        'type': 'chat',
+                        'topic': chat.topic,
+                        'character_name': chat.character_name or '',
+                        'user_turns': sum(1 for m in messages if m.role == 'user'),
+                        'messages': [{'role': m.role, 'content': strip_furigana(m.content)} for m in messages],
+                    }
 
         students_submissions.append({
             'student_id': student.id,
@@ -375,6 +469,11 @@ def get_assignment_submissions_list(assignment_id):
             'submitted_at': sub.submitted_at.strftime('%Y-%m-%d %H:%M') if sub and sub.submitted_at else '尚未繳交',
             'detail': submission_detail
         })
+
+    dialect_name = None
+    if assignment.task_type == TaskType.CHAT and assignment.config and assignment.config.get('dialect_id'):
+        d = Dialect.query.get(assignment.config.get('dialect_id'))
+        dialect_name = d.name if d else None
 
     article_info = None
     if assignment.task_type == TaskType.ARTICLE and assignment.config:
@@ -401,6 +500,7 @@ def get_assignment_submissions_list(assignment_id):
             'config': assignment.config or {},
             'due_at': assignment.due_at.strftime('%Y-%m-%d %H:%M') if assignment.due_at else '無截止日',
             'created_at': assignment.created_at.strftime('%Y-%m-%d %H:%M') if assignment.created_at else '',
+            'dialect_name': dialect_name,
         },
         'stats': {
             'total_students': len(members),

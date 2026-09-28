@@ -1963,9 +1963,10 @@ from services.teacher_service import (
     create_classroom, regenerate_join_code,
     toggle_classroom_open, get_classroom_list, get_classroom_student_stats,
     get_student_detail, create_sentence_assignment, create_article_assignment,
+    create_photo_assignment, create_chat_assignment,
     get_assignment_submissions_list, grade_submission
 )
-from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission
+from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene
 
 
 def _own_classroom(classroom_id):
@@ -2095,7 +2096,7 @@ def teacher_classroom_assignments(classroom_id):
 @app.route('/teacher/classroom/<int:classroom_id>/assignment/create', methods=['GET', 'POST'])
 @teacher_required
 def teacher_assignment_create(classroom_id):
-    """出題新作業：造句挑戰 vs 文章閱讀（支援上傳文章、選擇題、是非題）"""
+    """出題新作業：造句挑戰、文章閱讀（支援上傳文章、選擇題、是非題）、拍照學習、AI 情境對話"""
     classroom = _own_classroom(classroom_id)
     if not classroom:
         flash("找不到該班級", "danger")
@@ -2163,10 +2164,34 @@ def teacher_assignment_create(classroom_id):
             )
             flash(f"文章閱讀作業「{title}」發布成功！", "success")
 
+        elif task_type == 'photo':
+            theme = request.form.get('photo_theme', '').strip()
+            min_vocab_count = request.form.get('min_vocab_count', 3)
+            create_photo_assignment(classroom_id, title, instructions, theme, min_vocab_count, due_at)
+            flash(f"拍照學習作業「{title}」發布成功！", "success")
+
+        elif task_type == 'chat':
+            topic = request.form.get('chat_topic', '').strip()
+            if not topic:
+                flash("對話作業必須填寫情境主題！", "danger")
+                return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
+            dialect_id = request.form.get('dialect_id', type=int)
+            min_turns = request.form.get('min_turns', 6)
+            create_chat_assignment(classroom_id, title, instructions, topic, dialect_id, min_turns, due_at)
+            flash(f"情境對話作業「{title}」發布成功！", "success")
+
+        else:
+            flash("未知的作業題型", "danger")
+            return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
+
         return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
     existing_articles = Article.query.filter(Article.is_published.isnot(False)).order_by(Article.level, Article.id).all()
-    return render_template('teacher/assignment_create.html', classroom=classroom, existing_articles=existing_articles)
+    # 對話作業可選腔調；拍照作業的主題提示用現有場景名稱當建議選項（老師仍可自由輸入）
+    dialects = Dialect.query.filter_by(is_active=True).order_by(Dialect.id).all()
+    scene_names = [sc.name for sc in Scene.query.order_by(Scene.id).all()]
+    return render_template('teacher/assignment_create.html', classroom=classroom,
+                           existing_articles=existing_articles, dialects=dialects, scene_names=scene_names)
 
 
 @app.route('/teacher/assignment/<int:assignment_id>/submissions')

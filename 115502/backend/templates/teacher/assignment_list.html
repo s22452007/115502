@@ -128,6 +128,14 @@
                                 {% else %}
                                     <span class="badge bg-secondary-subtle text-secondary border">純閱讀</span>
                                 {% endif %}
+                            {% elif a.task_type == 'photo' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                    <i class="bi bi-camera"></i> 拍照學習
+                                </span>
+                            {% elif a.task_type == 'chat' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                    <i class="bi bi-chat-dots"></i> AI 情境對話
+                                </span>
                             {% endif %}
                         </div>
                         <div class="text-muted small mt-1">{{ a.instructions if a.instructions else '（無特殊說明）' }}</div>
@@ -138,6 +146,18 @@
                                     ｜ 指定單字：<span class="badge bg-light text-dark border">{{ a.config.get('required_vocabs')|join(', ') }}</span>
                                 {% endif %}
                                 ｜ 及格門檻：{{ a.config.get('pass_score', 60) }} 分
+                            </div>
+                        {% endif %}
+                        {% if a.task_type == 'photo' and a.config %}
+                            <div class="mt-2 text-secondary small">
+                                拍攝主題：<strong class="text-dark">{{ a.config.get('theme') or '不限' }}</strong>
+                                ｜ 最少辨識單字：{{ a.config.get('min_vocab_count', 0) }} 個
+                            </div>
+                        {% endif %}
+                        {% if a.task_type == 'chat' and a.config %}
+                            <div class="mt-2 text-secondary small">
+                                對話情境：<strong class="text-dark">{{ a.config.get('topic', '') }}</strong>
+                                ｜ 最少輪數：{{ a.config.get('min_turns', 0) }} 輪
                             </div>
                         {% endif %}
                     </div>

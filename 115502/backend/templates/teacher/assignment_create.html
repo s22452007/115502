@@ -39,9 +39,9 @@
         .form-card { background: white; border-radius: 16px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 24px; }
         .section-title { font-size: 1.05rem; font-weight: 800; color: var(--green-dark); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid var(--green-light); padding-bottom: 8px; }
 
-        .type-selector { display: flex; gap: 16px; margin-bottom: 24px; }
+        .type-selector { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
         .type-option {
-            flex: 1;
+            flex: 1 1 200px;
             border: 2px solid #e0e6e2;
             border-radius: 12px;
             padding: 16px;
@@ -90,7 +90,7 @@
 
         <div class="page-header">
             <h1 class="page-title"><i class="bi bi-pencil-square me-2"></i>{{ classroom.name }} - 出題新作業</h1>
-            <div class="page-sub">支援「造句挑戰」與「文章閱讀（上傳文章、選擇題、是非題）」</div>
+            <div class="page-sub">支援「造句挑戰」、「文章閱讀（上傳文章、選擇題、是非題）」、「拍照學習」與「AI 情境對話」</div>
         </div>
 
         <form id="assignmentForm" action="/teacher/classroom/{{ classroom.id }}/assignment/create" method="POST">
@@ -111,6 +111,16 @@
                         <div class="type-icon text-success"><i class="bi bi-book-half"></i></div>
                         <div class="fw-bold">文章閱讀</div>
                         <div class="text-muted small mt-1">挑選或上傳新文章，可自由選擇是否出選擇題/是非題</div>
+                    </div>
+                    <div class="type-option" id="optPhoto" onclick="selectType('photo')">
+                        <div class="type-icon text-warning"><i class="bi bi-camera-fill"></i></div>
+                        <div class="fw-bold">拍照學習</div>
+                        <div class="text-muted small mt-1">學生拍一張照片，AI 辨識場景單字並生成例句，由老師批閱</div>
+                    </div>
+                    <div class="type-option" id="optChat" onclick="selectType('chat')">
+                        <div class="type-icon text-danger"><i class="bi bi-chat-dots-fill"></i></div>
+                        <div class="fw-bold">AI 情境對話</div>
+                        <div class="text-muted small mt-1">指定情境與最少輪數，學生和 AI 用日文對話，老師看對話紀錄批閱</div>
                     </div>
                 </div>
 
@@ -236,6 +246,58 @@
                 </div>
             </div>
 
+            <!-- 4. 拍照學習專屬區塊 -->
+            <div class="form-card" id="photoSection" style="display: none;">
+                <div class="section-title"><i class="bi bi-camera"></i>步驟二：拍照任務設定</div>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">拍攝主題 (選填)</label>
+                        <input type="text" name="photo_theme" class="form-control" list="sceneNameList" placeholder="例如：廚房裡的東西、你的書桌、便利商店">
+                        <datalist id="sceneNameList">
+                            {% for name in scene_names %}<option value="{{ name }}">{% endfor %}
+                        </datalist>
+                        <div class="form-text">會顯示在學生的作業說明上，提醒學生要拍什麼。可從既有場景挑，也可自由輸入。</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">最少辨識單字數</label>
+                        <input type="number" name="min_vocab_count" class="form-control" value="3" min="0" max="20">
+                        <div class="form-text">照片辨識出的單字少於此數，學生必須換一張重拍。</div>
+                    </div>
+                </div>
+                <div class="alert alert-light border small mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i>拍照作業不會自動評分，學生交出後請到批閱頁查看照片與辨識結果再給分。
+                </div>
+            </div>
+
+            <!-- 5. AI 情境對話專屬區塊 -->
+            <div class="form-card" id="chatSection" style="display: none;">
+                <div class="section-title"><i class="bi bi-chat-dots"></i>步驟二：對話情境設定</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">對話情境主題 <span class="text-danger">*</span></label>
+                        <input type="text" name="chat_topic" id="chatTopicInput" class="form-control" placeholder="例如：在餐廳點餐、向店員問路、自我介紹">
+                        <div class="form-text">App 會用這個主題開啟 AI 角色扮演，學生只能在此情境下對話才算繳交。</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">指定腔調</label>
+                        <select name="dialect_id" class="form-select">
+                            <option value="">標準語（不指定）</option>
+                            {% for d in dialects %}
+                            <option value="{{ d.id }}">{{ d.name }}（{{ d.jp_name }}）</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">最少對話輪數</label>
+                        <input type="number" name="min_turns" class="form-control" value="6" min="1" max="50">
+                        <div class="form-text">只計算學生自己說的句數。</div>
+                    </div>
+                </div>
+                <div class="alert alert-light border small mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i>對話作業不會自動評分，達到輪數後系統自動送出，老師可在批閱頁逐句檢視對話紀錄再給分。
+                </div>
+            </div>
+
             <!-- 送出按鈕 -->
             <div class="text-end mb-5">
                 <a href="/teacher/classroom/{{ classroom.id }}/assignments" class="btn btn-light px-4 py-2 me-2 border">取消</a>
@@ -251,25 +313,25 @@
 let currentType = 'sentence';
 let questions = [];
 
+const TYPE_META = {
+    sentence: { opt: 'optSentence', section: 'sentenceSection', defaultTitle: '造句挑戰練習' },
+    article:  { opt: 'optArticle',  section: 'articleSection',  defaultTitle: '閱讀測驗練習' },
+    photo:    { opt: 'optPhoto',    section: 'photoSection',    defaultTitle: '拍照學習任務' },
+    chat:     { opt: 'optChat',     section: 'chatSection',     defaultTitle: '情境對話練習' },
+};
+
 function selectType(type) {
     currentType = type;
     document.getElementById('taskTypeInput').value = type;
-    if (type === 'sentence') {
-        document.getElementById('optSentence').classList.add('active');
-        document.getElementById('optArticle').classList.remove('active');
-        document.getElementById('sentenceSection').style.display = 'block';
-        document.getElementById('articleSection').style.display = 'none';
-        if (!document.getElementById('assignmentTitle').value) {
-            document.getElementById('assignmentTitle').value = '造句挑戰練習';
-        }
-    } else {
-        document.getElementById('optArticle').classList.add('active');
-        document.getElementById('optSentence').classList.remove('active');
-        document.getElementById('sentenceSection').style.display = 'none';
-        document.getElementById('articleSection').style.display = 'block';
-        if (!document.getElementById('assignmentTitle').value) {
-            document.getElementById('assignmentTitle').value = '閱讀測驗練習';
-        }
+    const titleInput = document.getElementById('assignmentTitle');
+    const wasDefault = Object.values(TYPE_META).some(m => m.defaultTitle === titleInput.value);
+    for (const [key, meta] of Object.entries(TYPE_META)) {
+        document.getElementById(meta.opt).classList.toggle('active', key === type);
+        document.getElementById(meta.section).style.display = key === type ? 'block' : 'none';
+    }
+    // 只在標題還是空白或仍是上一個題型的預設值時才自動帶入，避免蓋掉老師打的字
+    if (!titleInput.value || wasDefault) {
+        titleInput.value = TYPE_META[type].defaultTitle;
     }
 }
 
@@ -375,6 +437,11 @@ function renderQuestions() {
 }
 
 document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+    if (currentType === 'chat' && !document.getElementById('chatTopicInput').value.trim()) {
+        alert('對話作業必須填寫情境主題！');
+        e.preventDefault();
+        return;
+    }
     if (currentType === 'article' && document.getElementById('hasQuizCheck').checked) {
         if (questions.length === 0) {
             alert('您勾選了出題測驗，請至少新增一題選擇題或是非題！');

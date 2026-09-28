@@ -100,7 +100,7 @@
         </a>
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% for category, message in messages %}
-          <div class="alert {{ 'alert-danger' if category == 'error' else 'alert-success' }} py-2" style="border-radius:10px; font-size:0.9rem;">{{ message }}</div>
+          <div data-flash class="alert {{ 'alert-danger' if category == 'error' else 'alert-success' }} py-2" style="border-radius:10px; font-size:0.9rem;">{{ message }}</div>
           {% endfor %}
         {% endwith %}
 
@@ -459,6 +459,7 @@
 
     </main>
 </div>
+{% include 'admin/_flash_autohide.html' %}
 </body>
 </html>
 

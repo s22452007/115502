@@ -1,0 +1,24 @@
+{# 後台提示訊息自動收起（各頁在 </body> 前面 include 這個檔案）
+
+   flash 的成功訊息看過就好，不該要人自己去按叉叉；
+   錯誤與警告則留著，直到使用者按掉或換頁，避免還沒看清楚就消失。
+   只處理有 data-flash 標記的提示，頁面上固定的說明框（alert-info 之類）不受影響。
+   用 Bootstrap 自己的 Alert.close()，收起的動畫跟按叉叉一樣。 #}
+<script>
+(function () {
+  var DELAY_MS = 4000;
+  var alerts = document.querySelectorAll('[data-flash].alert-success, [data-flash].alert-info');
+  if (!alerts.length) return;
+  alerts.forEach(function (el) {
+    el.classList.add('fade', 'show'); // 沒有叉叉的舊寫法也能有淡出動畫
+    setTimeout(function () {
+      if (!document.body.contains(el)) return; // 已被手動關掉
+      if (window.bootstrap && bootstrap.Alert) {
+        bootstrap.Alert.getOrCreateInstance(el).close();
+      } else {
+        el.remove();
+      }
+    }, DELAY_MS);
+  });
+})();
+</script>

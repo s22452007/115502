@@ -2,16 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/screens/sentence/sentence_practice_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
-import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
-import 'package:jpn_learning_app/screens/article/article_detail_screen.dart';
-import 'package:jpn_learning_app/screens/edu/article_quiz_screen.dart';
-import 'package:jpn_learning_app/models/article_model.dart';
+import 'package:jpn_learning_app/screens/edu/assignment_detail_screen.dart';
 
-/// 教育版學生的「我的作業」清單。
+/// 教育版學生的「我的作業」清單。點任一筆進作業詳情，再從詳情「開始作答」。
 ///
-/// 資料來源：GET /api/assignment/my/<user_id>
+/// 資料來源：GET /api/assignment/my/<user_id>（後端已排序：未交在前、截止近的優先）
 /// 每筆欄位（見後端 student_assignment._assignment_json）：
 ///   assignment_id, classroom_name, title, task_type, due_at, is_overdue,
 ///   submission: { status: pending/submitted/graded, score, teacher_comment, ... }
@@ -64,86 +59,11 @@ class _AssignmentListScreenState extends State<AssignmentListScreen> {
     }
   }
 
-  // 依作業題型導向對應的練習畫面，並帶上 assignment_id；
-  // 練習完成後後端會自動繳交，回到這裡再重新整理清單。
-  Future<void> _navigateToPractice(Map<String, dynamic> assignment) async {
-    final type = assignment['task_type'];
-    final int? assignmentId = assignment['assignment_id'];
-    if (assignmentId == null) return;
-
-    Widget? nextScreen;
-    switch (type) {
-      case 'sentence':
-        nextScreen = SentencePracticeScreen(assignmentId: assignmentId);
-        break;
-      case 'photo':
-        nextScreen = CameraScreen(assignmentId: assignmentId);
-        break;
-      case 'chat':
-      case 'article':
-        // 這兩種需要老師設定的參數（對話情境 / 指定文章），先抓詳情
-        nextScreen = await _buildDetailBasedScreen(type, assignmentId);
-        break;
-      default:
-        _showHint('此題型尚未支援');
-        return;
-    }
-    if (nextScreen == null || !mounted) return;
-
+  void _openDetail(int assignmentId) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => nextScreen!),
+      MaterialPageRoute(builder: (_) => AssignmentDetailScreen(assignmentId: assignmentId)),
     ).then((_) => _fetchAssignments());
-  }
-
-  Future<Widget?> _buildDetailBasedScreen(String type, int assignmentId) async {
-    final userId = context.read<UserProvider>().userId;
-    if (userId == null) return null;
-
-    final detail = await ApiClient.getAssignmentDetail(assignmentId, userId);
-    if (detail['status'] != 'success') {
-      _showHint('載入作業失敗：${detail['error'] ?? '未知錯誤'}');
-      return null;
-    }
-    final a = Map<String, dynamic>.from(detail['assignment'] ?? {});
-    final config = Map<String, dynamic>.from(a['config'] ?? {});
-
-    if (type == 'chat') {
-      final topic = (config['topic'] ?? '').toString();
-      if (topic.isEmpty) {
-        _showHint('這份作業沒有設定對話情境，請聯絡老師');
-        return null;
-      }
-      return RoleplayScreen(
-        topicTitle: topic,
-        characterName: '預設老師',
-        assignmentId: assignmentId,
-        minTurns: (config['min_turns'] as num?)?.toInt(),
-        dialectId: (config['dialect_id'] as num?)?.toInt(),
-      );
-    }
-
-    // article
-    if (a['article'] == null) {
-      _showHint('找不到這份作業指定的文章，請聯絡老師');
-      return null;
-    }
-    final hasQuiz = config['has_quiz'] == true &&
-        (config['questions'] as List?)?.isNotEmpty == true;
-    if (hasQuiz) {
-      // 附測驗：讀文章 + 作答，送出後自動閱卷繳交
-      return ArticleQuizScreen(assignment: a);
-    }
-    // 沒測驗：走一般朗讀流程，結算時自動繳交
-    return ArticleDetailScreen(
-      article: Article.fromJson(Map<String, dynamic>.from(a['article'])),
-      assignmentId: assignmentId,
-    );
-  }
-
-  void _showHint(String text) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   // ---------- 顯示用小工具 ----------
@@ -225,10 +145,12 @@ class _AssignmentListScreenState extends State<AssignmentListScreen> {
         final bool isOverdue = task['is_overdue'] == true;
         final score = submission['score'];
         final String type = task['task_type'] ?? '';
+        final int? assignmentId = task['assignment_id'];
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
+            onTap: assignmentId == null ? null : () => _openDetail(assignmentId),
             leading: Icon(
               isPending
                   ? (_typeIcons[type] ?? Icons.pending_actions)
@@ -254,12 +176,8 @@ class _AssignmentListScreenState extends State<AssignmentListScreen> {
                 color: isPending && isOverdue ? Colors.red : null,
               ),
             ),
-            isThreeLine: false,
             trailing: isPending
-                ? ElevatedButton(
-                    onPressed: () => _navigateToPractice(task),
-                    child: const Text('前往作答'),
-                  )
+                ? const Icon(Icons.chevron_right, color: Colors.grey)
                 : Text(
                     score != null
                         ? '$score 分'

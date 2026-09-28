@@ -65,6 +65,45 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
     if (joined == true) _loadClassrooms();
   }
 
+  Future<void> _confirmLeave(Map<String, dynamic> classroom) async {
+    final userId = context.read<UserProvider>().userId;
+    final int? classroomId = (classroom['classroom_id'] as num?)?.toInt();
+    if (userId == null || classroomId == null) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('退出教室'),
+        content: Text(
+          '確定要退出「${classroom['name'] ?? ''}」嗎？\n\n退出後看不到這個教室的作業；已經交過的作業成績會保留，老師仍然查得到。',
+          style: const TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('退出', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final res = await ApiClient.leaveClassroom(userId: userId, classroomId: classroomId);
+    if (!mounted) return;
+    if (res['status'] == 'success') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['message'] ?? '已退出教室')),
+      );
+      _loadClassrooms();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['error'] ?? '退出失敗，請稍後再試'), backgroundColor: Colors.redAccent),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -186,10 +225,24 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.check_circle_rounded,
-                color: Colors.white,
-                size: 24,
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onSelected: (v) {
+                  if (v == 'leave') _confirmLeave(classroom);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'leave',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout_rounded, size: 18, color: Colors.redAccent),
+                        SizedBox(width: 8),
+                        Text('退出教室', style: TextStyle(color: Colors.redAccent)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

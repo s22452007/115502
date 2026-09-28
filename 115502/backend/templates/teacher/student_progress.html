@@ -86,6 +86,9 @@
                     <i class="bi bi-person-plus me-1"></i>新增學生
                 </button>
                 {% endif %}
+                <a href="/teacher/classroom/{{ data.classroom.id }}/gradebook" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
+                    <i class="bi bi-table me-1"></i>成績總表
+                </a>
                 <a href="/teacher/classroom/{{ data.classroom.id }}/assignments" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
                     <i class="bi bi-pencil-square me-1"></i>班級出題與批閱
                 </a>

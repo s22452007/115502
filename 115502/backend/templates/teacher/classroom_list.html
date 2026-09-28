@@ -190,23 +190,41 @@
                                 <span class="stat-pill"><i class="bi bi-clock text-muted"></i> 建立於 {{ c.created_at }}</span>
                             </div>
 
-                            <div class="d-flex gap-2">
-                                <form action="/teacher/classroom/{{ c.id }}/toggle_open" method="POST" style="display:inline;">
-                                    <button type="submit" class="btn btn-sm {{ 'btn-outline-secondary' if c.is_open else 'btn-outline-success' }}" style="border-radius: 8px;">
-                                        <i class="bi {{ 'bi-lock' if c.is_open else 'bi-unlock' }}"></i> {{ '關閉加入' if c.is_open else '開放加入' }}
+                            <div class="d-flex gap-2 align-items-center">
+                                <!-- 管理動作收在「⋯」裡，卡片上只留三個常用入口 -->
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="班級管理">
+                                        <i class="bi bi-three-dots"></i>
                                     </button>
-                                </form>
-                                <button class="btn btn-sm btn-outline-secondary fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#editClass{{ c.id }}">
-                                    <i class="bi bi-pencil"></i> 編輯
-                                </button>
-                                <form action="/teacher/classroom/{{ c.id }}/archive" method="POST" style="display:inline;"
-                                      onsubmit="return confirm('{{ '取消封存「' + c.name + '」？' if c.is_archived else '封存「' + c.name + '」？封存後學生在 App 看不到這個班級與作業，資料會保留，之後可以取消封存。' }}');">
-                                    <button type="submit" class="btn btn-sm {{ 'btn-outline-success' if c.is_archived else 'btn-outline-warning' }} fw-bold" style="border-radius: 8px;">
-                                        <i class="bi {{ 'bi-box-arrow-up' if c.is_archived else 'bi-archive' }}"></i> {{ '取消封存' if c.is_archived else '封存' }}
-                                    </button>
-                                </form>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 10px; min-width: 180px;">
+                                        <li>
+                                            <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editClass{{ c.id }}">
+                                                <i class="bi bi-pencil me-2 text-secondary"></i>編輯名稱與說明
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <form action="/teacher/classroom/{{ c.id }}/toggle_open" method="POST">
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="bi {{ 'bi-lock' if c.is_open else 'bi-unlock' }} me-2 text-secondary"></i>{{ '關閉加入' if c.is_open else '開放加入' }}
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form action="/teacher/classroom/{{ c.id }}/archive" method="POST"
+                                                  onsubmit="return confirm('{{ '取消封存「' + c.name + '」？' if c.is_archived else '封存「' + c.name + '」？封存後學生在 App 看不到這個班級與作業，資料會保留，之後可以取消封存。' }}');">
+                                                <button type="submit" class="dropdown-item {{ 'text-success' if c.is_archived else 'text-warning' }}">
+                                                    <i class="bi {{ 'bi-box-arrow-up' if c.is_archived else 'bi-archive' }} me-2"></i>{{ '取消封存' if c.is_archived else '封存班級' }}
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
                                 <a href="/teacher/classroom/{{ c.id }}/students" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;">
                                     <i class="bi bi-bar-chart-line"></i> 學生學習狀況
+                                </a>
+                                <a href="/teacher/classroom/{{ c.id }}/gradebook" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;">
+                                    <i class="bi bi-table"></i> 成績總表
                                 </a>
                                 <a href="/teacher/classroom/{{ c.id }}/assignments" class="btn btn-sm btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
                                     <i class="bi bi-pencil-square"></i> 作業出題與批閱

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 校園教育版 - 成績總表</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        html { scrollbar-gutter: stable; }
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 32px 48px; overflow-x: hidden; min-width: 0; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; }
+        .page-title { color: var(--green-dark); font-weight: 900; margin: 0; font-size: 1.6rem; }
+        .page-sub { font-size: 0.85rem; color: #888; margin-top: 4px; }
+
+        /* 計分方式與班級概況：一條文字列，不做卡片 */
+        .scheme-bar { background: white; border-radius: 12px; padding: 14px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; font-size: 0.9rem; }
+        .scheme-bar .k { color: #888; margin-right: 6px; }
+        .scheme-bar .v { font-weight: 800; color: #222; }
+        .scheme-bar .v.bad { color: #c9302c; }
+
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; margin-top: 20px; }
+        .panel-header { padding: 16px 24px; background-color: var(--green-dark); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+
+        .gradebook-wrap { overflow-x: auto; }
+        table.gradebook { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 640px; font-size: 0.9rem; }
+        table.gradebook th, table.gradebook td { padding: 10px 12px; border-bottom: 1px solid #eef1ef; white-space: nowrap; vertical-align: middle; }
+        table.gradebook thead th { background: #f8faf8; font-weight: 700; color: #555; border-bottom: 2px solid #e2e8e3; vertical-align: bottom; }
+        table.gradebook th.sticky, table.gradebook td.sticky { position: sticky; left: 0; background: white; z-index: 2; box-shadow: 4px 0 8px -6px rgba(0,0,0,0.12); }
+        table.gradebook thead th.sticky { background: #f8faf8; z-index: 3; }
+        table.gradebook tbody tr:hover td { background: #fbfcfb; }
+        table.gradebook tbody tr:hover td.sticky { background: #fbfcfb; }
+        table.gradebook tfoot td { background: #f8faf8; font-weight: 700; color: #555; border-top: 2px solid #e2e8e3; }
+        table.gradebook tfoot td.sticky { background: #f8faf8; }
+        .assign-th { min-width: 96px; max-width: 150px; }
+        .assign-th .t { display: block; overflow: hidden; text-overflow: ellipsis; color: #333; max-width: 150px; }
+        .assign-th .m { display: block; font-size: 0.72rem; color: #999; font-weight: 600; margin-top: 2px; }
+        .type-chip { display: inline-block; font-size: 0.68rem; padding: 0 6px; border-radius: 4px; background: var(--green-light); color: var(--green-dark); margin-right: 4px; }
+        .col-num { text-align: right; }
+        .stu-name { font-weight: 700; color: #222; }
+        .stu-id { font-size: 0.75rem; color: #999; }
+
+        .score-input { width: 62px; text-align: center; border: 1px solid #dfe5e0; border-radius: 6px; padding: 4px 6px; font-size: 0.9rem; font-weight: 600; color: #222; background: white; transition: border-color .15s, background .15s; }
+        .score-input:focus { outline: none; border-color: var(--green-accent); box-shadow: 0 0 0 3px rgba(92,131,100,0.15); }
+        .score-input.missing { background: #fbf4f4; border-color: #ecd6d6; color: #b94a48; }
+        .score-input.missing::placeholder { color: #c98b8b; }
+        .score-input.ungraded { background: #f3f6fb; border-color: #d3dcea; }
+        .score-input.ungraded::placeholder { color: #7f92b3; }
+        .score-input.saved { border-color: #5c8364; background: #eef5ef; }
+        .score-input.error { border-color: #c9302c; background: #fbeaea; }
+        .avg-cell { font-weight: 700; }
+        .final-cell { font-weight: 900; font-size: 1rem; color: var(--green-dark); }
+        .final-cell.bad { color: #c9302c; }
+        .muted-dash { color: #bbb; }
+        .legend { font-size: 0.78rem; color: #888; padding: 12px 24px 16px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; border: 1px solid #ddd; }
+
+        .cfg-table td { vertical-align: middle; }
+        .cfg-table input[type=number] { width: 90px; }
+        .pct-input { width: 90px; display: inline-block; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            {% if session.get('role') == 'super_admin' %}
+            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
+            {% endif %}
+            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
+            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="mb-3">
+            <a href="/teacher/classrooms" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
+                <i class="bi bi-arrow-left"></i> 返回班級列表
+            </a>
+        </div>
+
+        {% set cfg = data.config %}
+        <div class="page-header">
+            <div>
+                <h1 class="page-title"><i class="bi bi-table me-2"></i>{{ data.classroom.name }} - 成績總表</h1>
+                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 每位學生各作業分數與學期成績，分數可直接在表格上修改</div>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <a href="/teacher/classroom/{{ data.classroom.id }}/students" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
+                    <i class="bi bi-bar-chart-line me-1"></i>學生學習狀況
+                </a>
+                <button type="button" class="btn btn-outline-success fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#gradeConfigModal">
+                    <i class="bi bi-sliders me-1"></i>計分方式
+                </button>
+                <a href="/teacher/classroom/{{ data.classroom.id }}/gradebook/export.csv" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
+                    <i class="bi bi-download me-1"></i>匯出 CSV
+                </a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div data-flash class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endwith %}
+
+        <div class="scheme-bar">
+            <span><span class="k">計分方式</span><span class="v">作業 {{ data.assignment_pct }}%</span>{% if cfg.sentence_pct %} <span class="v">＋ 造句 {{ cfg.sentence_pct }}%</span>{% endif %}{% if cfg.quiz_pct %} <span class="v">＋ 文章測驗 {{ cfg.quiz_pct }}%</span>{% endif %}</span>
+            <span><span class="k">缺交</span><span class="v">{{ '算 0 分' if cfg.missing_as_zero else '不列入平均' }}</span></span>
+            <span><span class="k">學生</span><span class="v" id="sumStudents">{{ data.summary.student_count }}</span> 位</span>
+            <span><span class="k">全班學期平均</span><span class="v" id="sumAvg">{{ data.summary.class_final_avg if data.summary.class_final_avg is not none else '—' }}</span></span>
+            <span><span class="k">及格</span><span class="v" id="sumPass">{{ data.summary.pass_count }}</span><span class="k ms-2">不及格</span><span class="v {{ 'bad' if data.summary.fail_count else '' }}" id="sumFail">{{ data.summary.fail_count }}</span></span>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <div><i class="bi bi-grid-3x3 me-2"></i>成績矩陣</div>
+                <div class="badge bg-light text-dark">{{ data.assignments|length }} 份作業</div>
+            </div>
+
+            {% if not data.students %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-person-x" style="font-size: 2.5rem;"></i>
+                    <p class="mt-2 mb-0">目前尚無學生加入本班級，還沒有成績可以顯示。</p>
+                </div>
+            {% else %}
+            <div class="gradebook-wrap">
+                <table class="gradebook">
+                    <thead>
+                        <tr>
+                            <th class="sticky">學生</th>
+                            {% for a in data.assignments %}
+                            <th class="assign-th col-num" id="th-a-{{ a.id }}" title="{{ a.title }}">
+                                <span class="t">{{ a.title }}</span>
+                                <span class="m"><span class="type-chip">{{ a.type_label }}</span>權重 {{ '%g' % a.weight }}{% if a.due_at %} · 截止 {{ a.due_at }}{% endif %}</span>
+                            </th>
+                            {% endfor %}
+                            <th class="col-num">作業平均</th>
+                            {% if cfg.sentence_pct %}<th class="col-num">造句均分</th>{% endif %}
+                            {% if cfg.quiz_pct %}<th class="col-num">文章測驗</th>{% endif %}
+                            <th class="col-num">學期成績</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in data.students %}
+                        <tr id="row-{{ s.student_id }}">
+                            <td class="sticky">
+                                <div class="stu-name">{{ s.display_name }}</div>
+                                {% if s.username and s.username != s.display_name %}<div class="stu-id">{{ s.username }}</div>{% endif %}
+                            </td>
+                            {% for a in data.assignments %}
+                            {% set cell = s.cells[a.id] %}
+                            <td class="col-num">
+                                <input type="number" min="0" max="100" step="1"
+                                       class="score-input {{ cell.status if cell.status != 'graded' else '' }}"
+                                       value="{{ cell.score if cell.score is not none else '' }}"
+                                       placeholder="{{ '缺' if cell.status == 'missing' else ('待批' if cell.status == 'ungraded' else '') }}"
+                                       data-student="{{ s.student_id }}" data-assignment="{{ a.id }}"
+                                       title="{{ s.display_name }}／{{ a.title }}{% if cell.status == 'ungraded' %}（已繳交，尚未評分）{% elif cell.status == 'missing' %}（缺交，可直接補分）{% endif %}">
+                            </td>
+                            {% endfor %}
+                            <td class="col-num avg-cell" data-field="assignment_avg">{{ s.assignment_avg if s.assignment_avg is not none else '—' }}</td>
+                            {% if cfg.sentence_pct %}
+                            <td class="col-num" data-field="sentence_avg">{% if s.sentence_avg is not none %}{{ s.sentence_avg }} <span class="stu-id">({{ s.sentence_count }} 篇)</span>{% else %}<span class="muted-dash">—</span>{% endif %}</td>
+                            {% endif %}
+                            {% if cfg.quiz_pct %}
+                            <td class="col-num" data-field="quiz_avg">{% if s.quiz_avg is not none %}{{ s.quiz_avg }} <span class="stu-id">({{ s.quiz_count }} 次)</span>{% else %}<span class="muted-dash">—</span>{% endif %}</td>
+                            {% endif %}
+                            <td class="col-num final-cell {{ 'bad' if s.final is not none and s.final < 60 else '' }}" data-field="final">{{ s.final if s.final is not none else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="sticky">班平均</td>
+                            {% for a in data.assignments %}
+                            <td class="col-num" id="avg-a-{{ a.id }}" title="已評分 {{ a.graded_count }} 人，缺交 {{ a.missing_count }} 人">{{ a.class_avg if a.class_avg is not none else '—' }}</td>
+                            {% endfor %}
+                            <td></td>
+                            {% if cfg.sentence_pct %}<td></td>{% endif %}
+                            {% if cfg.quiz_pct %}<td></td>{% endif %}
+                            <td class="col-num" id="avg-final">{{ data.summary.class_final_avg if data.summary.class_final_avg is not none else '—' }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="legend">
+                <span><span class="sw" style="background:#fbf4f4; border-color:#ecd6d6;"></span>缺交（可直接補分）</span>
+                <span><span class="sw" style="background:#f3f6fb; border-color:#d3dcea;"></span>已繳交、尚未評分（不列入平均）</span>
+                <span><i class="bi bi-info-circle me-1"></i>改完分數按 Enter 或點別處即自動儲存；清空欄位可收回分數</span>
+                <span><i class="bi bi-clock-history me-1"></i>造句與文章測驗只計入學生加入本班之後的紀錄</span>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+
+<!-- 計分方式設定 -->
+<div class="modal fade" id="gradeConfigModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-sliders me-2"></i>學期成績計分方式</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/teacher/classroom/{{ data.classroom.id }}/gradebook/config" method="POST" id="cfgForm">
+        <div class="modal-body p-4">
+
+          <h6 class="fw-bold text-success mb-2"><i class="bi bi-pie-chart me-1"></i>成績組成</h6>
+          <div class="row g-3 align-items-end mb-2">
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1">作業</label>
+              <div class="form-control bg-light fw-bold" id="assignPctView">{{ data.assignment_pct }}%</div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1">造句練習均分</label>
+              <div class="input-group">
+                <input type="number" name="sentence_pct" class="form-control pct-input" min="0" max="100" step="1" value="{{ cfg.sentence_pct }}">
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1">文章測驗均分</label>
+              <div class="input-group">
+                <input type="number" name="quiz_pct" class="form-control pct-input" min="0" max="100" step="1" value="{{ cfg.quiz_pct }}">
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-text mb-4" id="pctHint">造句、文章測驗是學生在 App 自主練習的成績，預設不計分；填 0 以上的比例才會納入，剩下的百分比自動歸給作業。</div>
+
+          <h6 class="fw-bold text-success mb-2"><i class="bi bi-journal-check me-1"></i>各作業權重</h6>
+          {% if not data.assignments %}
+            <p class="text-muted small">本班還沒有已發布的作業。</p>
+          {% else %}
+          <table class="table table-sm cfg-table mb-2">
+            <thead class="table-light"><tr><th>作業</th><th>類型</th><th style="width:130px;">權重</th></tr></thead>
+            <tbody>
+              {% for a in data.assignments %}
+              <tr>
+                <td>{{ a.title }}</td>
+                <td><span class="type-chip">{{ a.type_label }}</span></td>
+                <td><input type="number" name="weight_{{ a.id }}" class="form-control form-control-sm" min="0" step="0.5" value="{{ '%g' % a.weight }}"></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div class="form-text mb-4">權重是相對值：全部填 1 就是每份作業同樣重要，把期末作業填 3 就等於三份平時作業。填 0 代表這份作業不計分。</div>
+          {% endif %}
+
+          <h6 class="fw-bold text-success mb-2"><i class="bi bi-exclamation-circle me-1"></i>缺交處理</h6>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="missingAsZero" name="missing_as_zero" value="1" {{ 'checked' if cfg.missing_as_zero }}>
+            <label class="form-check-label" for="missingAsZero">缺交的作業算 0 分</label>
+          </div>
+          <div class="form-text">關掉的話缺交作業不列入平均，學生只用有交的作業算成績。</div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none;">儲存並重新計算</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+    const classroomId = {{ data.classroom.id }};
+    const hasSentence = {{ 'true' if cfg.sentence_pct else 'false' }};
+    const hasQuiz = {{ 'true' if cfg.quiz_pct else 'false' }};
+
+    function fmt(v) { return (v === null || v === undefined) ? '—' : v; }
+
+    function applyStudent(row, s) {
+        const avg = row.querySelector('[data-field="assignment_avg"]');
+        if (avg) avg.textContent = fmt(s.assignment_avg);
+        const fin = row.querySelector('[data-field="final"]');
+        if (fin) {
+            fin.textContent = fmt(s.final);
+            fin.classList.toggle('bad', s.final !== null && s.final < 60);
+        }
+        // 每一格的狀態也同步（例如清空分數後變回缺交）
+        row.querySelectorAll('.score-input').forEach(inp => {
+            const cell = s.cells[inp.dataset.assignment];
+            if (!cell) return;
+            inp.classList.remove('missing', 'ungraded');
+            if (cell.status !== 'graded') inp.classList.add(cell.status);
+            inp.placeholder = cell.status === 'missing' ? '缺' : (cell.status === 'ungraded' ? '待批' : '');
+            inp.value = cell.score === null ? '' : cell.score;
+        });
+    }
+
+    function applySummary(sum) {
+        document.getElementById('sumAvg').textContent = fmt(sum.class_final_avg);
+        document.getElementById('avg-final').textContent = fmt(sum.class_final_avg);
+        document.getElementById('sumPass').textContent = sum.pass_count;
+        const fail = document.getElementById('sumFail');
+        fail.textContent = sum.fail_count;
+        fail.classList.toggle('bad', sum.fail_count > 0);
+    }
+
+    function save(inp) {
+        const original = inp.dataset.last !== undefined ? inp.dataset.last : inp.defaultValue;
+        if (inp.value === original) return;
+        inp.classList.remove('saved', 'error');
+        fetch('/teacher/classroom/' + classroomId + '/gradebook/score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                assignment_id: parseInt(inp.dataset.assignment, 10),
+                student_id: parseInt(inp.dataset.student, 10),
+                score: inp.value
+            })
+        })
+        .then(r => r.json().then(j => ({ ok: r.ok, j })))
+        .then(({ ok, j }) => {
+            if (!ok) throw new Error(j.error || '儲存失敗');
+            inp.dataset.last = inp.value;
+            inp.classList.add('saved');
+            setTimeout(() => inp.classList.remove('saved'), 1200);
+            const row = document.getElementById('row-' + j.student.student_id);
+            if (row) applyStudent(row, j.student);
+            if (j.assignment) {
+                const avgCell = document.getElementById('avg-a-' + j.assignment.id);
+                if (avgCell) {
+                    avgCell.textContent = fmt(j.assignment.class_avg);
+                    avgCell.title = '已評分 ' + j.assignment.graded_count + ' 人，缺交 ' + j.assignment.missing_count + ' 人';
+                }
+            }
+            applySummary(j.summary);
+        })
+        .catch(err => {
+            inp.classList.add('error');
+            inp.value = original;
+            alert(err.message || '儲存失敗，請再試一次');
+        });
+    }
+
+    document.querySelectorAll('.score-input').forEach(inp => {
+        inp.dataset.last = inp.value;
+        inp.addEventListener('change', () => save(inp));
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+        });
+        inp.addEventListener('focus', () => inp.select());
+    });
+
+    // 計分方式：即時顯示作業剩下的占比
+    const form = document.getElementById('cfgForm');
+    const sInp = form.querySelector('[name="sentence_pct"]');
+    const qInp = form.querySelector('[name="quiz_pct"]');
+    const view = document.getElementById('assignPctView');
+    function refreshPct() {
+        const s = parseInt(sInp.value || '0', 10) || 0;
+        const q = parseInt(qInp.value || '0', 10) || 0;
+        const a = 100 - s - q;
+        view.textContent = a + '%';
+        view.classList.toggle('text-danger', a < 0);
+    }
+    sInp.addEventListener('input', refreshPct);
+    qInp.addEventListener('input', refreshPct);
+    form.addEventListener('submit', e => {
+        const s = parseInt(sInp.value || '0', 10) || 0;
+        const q = parseInt(qInp.value || '0', 10) || 0;
+        if (s + q > 100) { e.preventDefault(); alert('造句與文章測驗的占比加起來不能超過 100%'); }
+    });
+})();
+</script>
+{% include 'admin/_flash_autohide.html' %}
+</body>
+</html>

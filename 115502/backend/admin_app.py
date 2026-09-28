@@ -1964,7 +1964,8 @@ from services.teacher_service import (
     toggle_classroom_open, get_classroom_list, get_classroom_student_stats,
     get_student_detail, create_sentence_assignment, create_article_assignment,
     create_photo_assignment, create_chat_assignment,
-    get_assignment_submissions_list, grade_submission
+    get_assignment_submissions_list, grade_submission,
+    get_gradebook, save_grade_config, set_assignment_score, gradebook_csv
 )
 from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene
 
@@ -2219,6 +2220,79 @@ def teacher_submission_grade(submission_id):
     grade_submission(submission_id, score, teacher_comment)
     flash("批閱成績與教師評語已成功儲存！", "success")
     return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+
+
+# ---- 班級成績總表 / 學期成績 ----
+@app.route('/teacher/classroom/<int:classroom_id>/gradebook')
+@teacher_required
+def teacher_gradebook(classroom_id):
+    """學生 × 作業的成績矩陣，加上依權重算出的學期成績"""
+    data = get_gradebook(classroom_id) if _own_classroom(classroom_id) else None
+    if not data:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    return render_template('teacher/gradebook.html', data=data)
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/gradebook/config', methods=['POST'])
+@teacher_required
+def teacher_gradebook_config(classroom_id):
+    """儲存作業權重、缺交處理、自主練習占比"""
+    if not _own_classroom(classroom_id):
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    error = save_grade_config(classroom_id, request.form)
+    if error:
+        flash(error, "danger")
+    else:
+        flash("計分方式已儲存，學期成績已重新計算", "success")
+    return redirect(url_for('teacher_gradebook', classroom_id=classroom_id))
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/gradebook/score', methods=['POST'])
+@teacher_required
+def teacher_gradebook_score(classroom_id):
+    """在總表上直接改一格分數（AJAX）。回傳該學生重算後的整列與該作業的班平均。"""
+    if not _own_classroom(classroom_id):
+        return jsonify({'error': '找不到該班級'}), 404
+    payload = request.get_json(silent=True) or {}
+    assignment_id = payload.get('assignment_id')
+    student_id = payload.get('student_id')
+    assignment = Assignment.query.get(assignment_id or 0)
+    if not assignment or assignment.classroom_id != classroom_id:
+        return jsonify({'error': '找不到該作業'}), 404
+
+    ok, error = set_assignment_score(assignment_id, student_id, str(payload.get('score', '')))
+    if not ok:
+        return jsonify({'error': error}), 400
+
+    data = get_gradebook(classroom_id)
+    student = next((s for s in data['students'] if s['student_id'] == student_id), None)
+    assignment_row = next((a for a in data['assignments'] if a['id'] == assignment_id), None)
+    return jsonify({
+        'student': student,
+        'assignment': assignment_row,
+        'summary': data['summary'],
+    })
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/gradebook/export.csv')
+@teacher_required
+def teacher_gradebook_export(classroom_id):
+    """成績總表下載成 CSV，老師拿去貼學校成績系統"""
+    classroom = _own_classroom(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    from flask import Response
+    from urllib.parse import quote
+    csv_text = gradebook_csv(classroom_id)
+    filename = f"{classroom.name}_成績總表_{datetime.now().strftime('%Y%m%d')}.csv"
+    return Response(
+        csv_text,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(filename)}"},
+    )
 
 
 # ---- 班級：改名、封存 ----

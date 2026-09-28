@@ -579,6 +579,13 @@ class Classroom(db.Model):
     is_archived = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # 學期成績設定（老師在「班級成績總表」調整），用 JSON 存一份就好，不另外開表。欄位約定：
+    #   {"assignment_weights": {"<assignment_id>": 1.0},   # 各作業相對權重，沒設的作業視為 1
+    #    "missing_as_zero": true,                          # 缺交算 0 分；false 則不列入平均
+    #    "sentence_pct": 0, "quiz_pct": 0}                 # 自主練習（造句／文章測驗）占學期成績的百分比，其餘歸作業
+    # None 代表老師還沒調過，全部用預設值（作業等權重、缺交算 0、自主練習不計）
+    grade_config = db.Column(db.JSON, nullable=True)
+
     @staticmethod
     def generate_code():
         import secrets, string

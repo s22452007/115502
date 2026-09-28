@@ -524,3 +524,288 @@ def grade_submission(submission_id, score, teacher_comment=''):
     sub.updated_at = datetime.utcnow()
     db.session.commit()
     return True
+
+
+# ==========================================
+# 班級成績總表 / 學期成績
+# ==========================================
+TASK_TYPE_LABELS = {
+    TaskType.SENTENCE: '造句',
+    TaskType.PHOTO: '拍照',
+    TaskType.CHAT: '對話',
+    TaskType.ARTICLE: '閱讀',
+}
+
+DEFAULT_GRADE_CONFIG = {
+    'assignment_weights': {},   # {"<assignment_id>": 權重}，沒設的作業視為 1
+    'missing_as_zero': True,    # 缺交算 0 分；False 則缺交不列入平均
+    'sentence_pct': 0,          # 造句練習均分占學期成績的 %
+    'quiz_pct': 0,              # 文章測驗均分占學期成績的 %
+}
+
+
+def get_grade_config(classroom):
+    """把 Classroom.grade_config 補上預設值，保證每個欄位都有、型別正確。"""
+    raw = classroom.grade_config if isinstance(classroom.grade_config, dict) else {}
+    cfg = {
+        'assignment_weights': {},
+        'missing_as_zero': bool(raw.get('missing_as_zero', DEFAULT_GRADE_CONFIG['missing_as_zero'])),
+        'sentence_pct': _clamp_pct(raw.get('sentence_pct', 0)),
+        'quiz_pct': _clamp_pct(raw.get('quiz_pct', 0)),
+    }
+    for key, value in (raw.get('assignment_weights') or {}).items():
+        try:
+            w = float(value)
+        except (TypeError, ValueError):
+            continue
+        if w >= 0:
+            cfg['assignment_weights'][str(key)] = w
+    # 兩個自主練習加起來超過 100 就把後者砍到剩下的空間
+    if cfg['sentence_pct'] + cfg['quiz_pct'] > 100:
+        cfg['quiz_pct'] = 100 - cfg['sentence_pct']
+    return cfg
+
+
+def _clamp_pct(value):
+    try:
+        v = int(round(float(value)))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(100, v))
+
+
+def _weighted_avg(pairs, missing_as_zero):
+    """pairs：[(分數或 None, 權重)]。權重 <= 0 的不算；None 依 missing_as_zero 決定算 0 還是跳過。"""
+    acc = 0.0
+    total_w = 0.0
+    for score, weight in pairs:
+        if weight is None or weight <= 0:
+            continue
+        if score is None:
+            if not missing_as_zero:
+                continue
+            score = 0
+        acc += score * weight
+        total_w += weight
+    return round(acc / total_w, 1) if total_w else None
+
+
+def _self_practice_avgs(student_id, since):
+    """學生加入班級之後的造句、文章測驗均分。since 為 None 就全部計入。"""
+    sq = SentencePracticeRecord.query.filter_by(user_id=student_id)
+    qq = ScoreRecord.query.filter_by(user_id=student_id)
+    if since:
+        sq = sq.filter(SentencePracticeRecord.created_at >= since)
+        qq = qq.filter(ScoreRecord.created_at >= since)
+    s_scores = [r.score for r in sq.all() if r.score is not None]
+    q_scores = [r.score for r in qq.all() if r.score is not None]
+    return {
+        'sentence_avg': round(sum(s_scores) / len(s_scores), 1) if s_scores else None,
+        'sentence_count': len(s_scores),
+        'quiz_avg': round(sum(q_scores) / len(q_scores), 1) if q_scores else None,
+        'quiz_count': len(q_scores),
+    }
+
+
+def _cell_for(sub):
+    """一格作業成績。status：missing 缺交 / ungraded 已交待批 / graded 有分數。"""
+    if sub is None or sub.status == SubmissionStatus.PENDING:
+        return {'score': None, 'status': 'missing', 'submission_id': sub.id if sub else None}
+    if sub.score is None:
+        return {'score': None, 'status': 'ungraded', 'submission_id': sub.id}
+    return {'score': sub.score, 'status': 'graded', 'submission_id': sub.id}
+
+
+def _compute_grades(assignments, cells, cfg, practice):
+    """回傳 (作業加權平均, 學期成績)。
+    已交但還沒分數的作業不算缺交、不列入平均；真正缺交才依 missing_as_zero 處理。"""
+    pairs = []
+    for a in assignments:
+        cell = cells.get(a.id) or {'score': None, 'status': 'missing'}
+        weight = cfg['assignment_weights'].get(str(a.id), 1.0)
+        if cell['status'] == 'ungraded':
+            continue
+        pairs.append((cell['score'], weight))
+    assignment_avg = _weighted_avg(pairs, cfg['missing_as_zero'])
+
+    a_pct = 100 - cfg['sentence_pct'] - cfg['quiz_pct']
+    parts = [
+        (practice['sentence_avg'], cfg['sentence_pct']),
+        (practice['quiz_avg'], cfg['quiz_pct']),
+    ]
+    # 班上還沒有任何作業時，作業這塊不佔分，避免全班學期成績被算成 0
+    if assignments:
+        parts.insert(0, (assignment_avg, a_pct))
+    final = _weighted_avg(parts, cfg['missing_as_zero'])
+    return assignment_avg, final
+
+
+def get_gradebook(classroom_id):
+    """班級成績總表：每位學生 × 每份作業的分數，加上自主練習均分與依權重算出的學期成績。"""
+    classroom = Classroom.query.get(classroom_id)
+    if not classroom:
+        return None
+    cfg = get_grade_config(classroom)
+
+    assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True) \
+        .order_by(Assignment.created_at.asc()).all()
+    assignment_ids = [a.id for a in assignments]
+    members = ClassroomMember.query.filter_by(classroom_id=classroom_id).all()
+
+    subs = AssignmentSubmission.query.filter(AssignmentSubmission.assignment_id.in_(assignment_ids)).all() \
+        if assignment_ids else []
+    sub_map = {(s.assignment_id, s.student_id): s for s in subs}
+
+    students = []
+    for m in members:
+        student = User.query.get(m.student_id)
+        if not student:
+            continue
+        cells = {a.id: _cell_for(sub_map.get((a.id, student.id))) for a in assignments}
+        practice = _self_practice_avgs(student.id, m.joined_at)
+        assignment_avg, final = _compute_grades(assignments, cells, cfg, practice)
+        students.append({
+            'student_id': student.id,
+            'display_name': m.display_name or student.username or '學生',
+            'username': student.username or '',
+            'cells': cells,
+            'assignment_avg': assignment_avg,
+            'final': final,
+            **practice,
+        })
+    students.sort(key=lambda s: s['display_name'])
+
+    assignment_rows = []
+    for a in assignments:
+        graded = [s['cells'][a.id]['score'] for s in students if s['cells'][a.id]['status'] == 'graded']
+        missing = sum(1 for s in students if s['cells'][a.id]['status'] == 'missing')
+        assignment_rows.append({
+            'id': a.id,
+            'title': a.title,
+            'task_type': a.task_type,
+            'type_label': TASK_TYPE_LABELS.get(a.task_type, a.task_type),
+            'weight': cfg['assignment_weights'].get(str(a.id), 1.0),
+            'due_at': a.due_at.strftime('%m/%d') if a.due_at else '',
+            'class_avg': round(sum(graded) / len(graded), 1) if graded else None,
+            'graded_count': len(graded),
+            'missing_count': missing,
+        })
+
+    finals = [s['final'] for s in students if s['final'] is not None]
+    return {
+        'classroom': {'id': classroom.id, 'name': classroom.name, 'join_code': classroom.join_code},
+        'config': cfg,
+        'assignment_pct': 100 - cfg['sentence_pct'] - cfg['quiz_pct'],
+        'assignments': assignment_rows,
+        'students': students,
+        'summary': {
+            'student_count': len(students),
+            'class_final_avg': round(sum(finals) / len(finals), 1) if finals else None,
+            'pass_count': sum(1 for f in finals if f >= 60),
+            'fail_count': sum(1 for f in finals if f < 60),
+        },
+    }
+
+
+def save_grade_config(classroom_id, form):
+    """存學期成績設定。form 是 request.form。回傳錯誤訊息，成功回 None。"""
+    classroom = Classroom.query.get(classroom_id)
+    if not classroom:
+        return '找不到該班級'
+
+    assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True).all()
+    weights = {}
+    for a in assignments:
+        raw = (form.get(f'weight_{a.id}') or '').strip()
+        if raw == '':
+            continue
+        try:
+            w = float(raw)
+        except ValueError:
+            return f'「{a.title}」的權重不是數字'
+        if w < 0:
+            return f'「{a.title}」的權重不能是負數'
+        weights[str(a.id)] = w
+    if assignments and all(weights.get(str(a.id), 1.0) <= 0 for a in assignments):
+        return '至少要有一份作業的權重大於 0'
+
+    sentence_pct = _clamp_pct(form.get('sentence_pct', 0))
+    quiz_pct = _clamp_pct(form.get('quiz_pct', 0))
+    if sentence_pct + quiz_pct > 100:
+        return '造句與文章測驗的占比加起來不能超過 100%'
+
+    classroom.grade_config = {
+        'assignment_weights': weights,
+        'missing_as_zero': form.get('missing_as_zero') == '1',
+        'sentence_pct': sentence_pct,
+        'quiz_pct': quiz_pct,
+    }
+    db.session.commit()
+    return None
+
+
+def set_assignment_score(assignment_id, student_id, raw_score):
+    """老師在成績總表直接改一格分數。空字串代表清除分數。回傳 (成功, 錯誤訊息)。"""
+    assignment = Assignment.query.get(assignment_id)
+    if not assignment:
+        return False, '找不到該作業'
+    if not ClassroomMember.query.filter_by(classroom_id=assignment.classroom_id, student_id=student_id).first():
+        return False, '該學生不在這個班級'
+
+    raw = (raw_score if raw_score is not None else '').strip()
+    score = None
+    if raw != '':
+        try:
+            score = int(round(float(raw)))
+        except ValueError:
+            return False, '分數要是 0～100 的數字'
+        if not 0 <= score <= 100:
+            return False, '分數要在 0～100 之間'
+
+    sub = AssignmentSubmission.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
+    if score is None:
+        if sub:
+            sub.score = None
+            # 學生有交東西就退回待批閱；老師手動補的空殼就回到未繳
+            sub.status = SubmissionStatus.SUBMITTED if sub.submitted_at else SubmissionStatus.PENDING
+            sub.updated_at = datetime.utcnow()
+    else:
+        if not sub:
+            sub = AssignmentSubmission(assignment_id=assignment_id, student_id=student_id)
+            db.session.add(sub)
+        sub.score = score
+        sub.status = SubmissionStatus.GRADED
+        sub.updated_at = datetime.utcnow()
+    db.session.commit()
+    return True, None
+
+
+def gradebook_csv(classroom_id):
+    """成績總表轉成 CSV 文字（含 BOM，Excel 直接開中文不會亂碼）。"""
+    import csv
+    import io
+    data = get_gradebook(classroom_id)
+    if not data:
+        return None
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    header = ['帳號／學號', '姓名'] + [f"{a['title']}（權重 {a['weight']:g}）" for a in data['assignments']]
+    header += ['作業平均', '造句均分', '文章測驗均分', '學期成績']
+    writer.writerow(header)
+
+    def fmt(v):
+        return '' if v is None else v
+
+    for s in data['students']:
+        row = [s['username'], s['display_name']]
+        for a in data['assignments']:
+            cell = s['cells'][a['id']]
+            row.append(fmt(cell['score']) if cell['status'] == 'graded' else ('待批閱' if cell['status'] == 'ungraded' else '缺交'))
+        row += [fmt(s['assignment_avg']), fmt(s['sentence_avg']), fmt(s['quiz_avg']), fmt(s['final'])]
+        writer.writerow(row)
+
+    cfg = data['config']
+    writer.writerow([])
+    writer.writerow(['計分方式', f"作業 {data['assignment_pct']}%、造句 {cfg['sentence_pct']}%、文章測驗 {cfg['quiz_pct']}%",
+                     '缺交算 0 分' if cfg['missing_as_zero'] else '缺交不列入平均'])
+    return '﻿' + buf.getvalue()

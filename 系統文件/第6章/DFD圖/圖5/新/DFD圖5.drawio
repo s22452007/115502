@@ -1,0 +1,354 @@
+<mxfile host="app.diagrams.net"><diagram id="9BEp3PZ7-5OR5AC9OAOg" name="圖5">
+    <mxGraphModel dx="1191" dy="765" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ok4059o9PcJvlQgkTyEc-1" edge="1" parent="1" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;fontFamily=標楷體;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="936.2499999999998" y="1550" as="sourcePoint" />
+            <mxPoint x="933.7499999999998" y="1694" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-2" connectable="0" parent="ok4059o9PcJvlQgkTyEc-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=12;fontFamily=標楷體;" value="獲得的徽章" vertex="1">
+          <mxGeometry relative="1" x="-0.2079" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-4" edge="1" parent="1" source="ok4059o9PcJvlQgkTyEc-14" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;exitX=0;exitY=0.5;exitDx=0;exitDy=0;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="870" y="1340" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-5" connectable="0" parent="ok4059o9PcJvlQgkTyEc-4" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="使用者資料" vertex="1">
+          <mxGeometry relative="1" x="-0.1639" y="-4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-6" edge="1" parent="1" source="ok4059o9PcJvlQgkTyEc-11" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;entryX=0.089;entryY=0.706;entryDx=0;entryDy=0;entryPerimeter=0;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-14">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="673.0380592228773" y="1619.0380592228767" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-7" connectable="0" parent="ok4059o9PcJvlQgkTyEc-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="查詢/修改請求" vertex="1">
+          <mxGeometry relative="1" x="0.1342" y="-1" as="geometry">
+            <mxPoint y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-8" edge="1" parent="1" source="ok4059o9PcJvlQgkTyEc-10" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;entryX=1;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-15">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1300" y="1269.9999999999998" as="sourcePoint" />
+            <mxPoint x="990.0000000000018" y="1485" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5-rZR2pfVMoFXG-qazVd-3" connectable="0" parent="ok4059o9PcJvlQgkTyEc-8" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=12;fontFamily=標楷體;" value="系統成就定義" vertex="1">
+          <mxGeometry relative="1" x="-0.019" y="-4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-10" parent="1" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=0;right=0;fontFamily=標楷體;" value="&lt;span lang=&quot;EN-US&quot; style=&quot;font-size: 12pt;&quot;&gt;T15&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 12pt;&quot;&gt;系統成就表&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="1130" y="1370" as="geometry" />
+        </mxCell>
+        <mxCell id="l596cCplZDD8301iDNKJ-4" edge="1" parent="1" source="ok4059o9PcJvlQgkTyEc-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="570" y="1480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zVuVi9onFctIsytMjGp0-2" connectable="0" parent="l596cCplZDD8301iDNKJ-4" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="查看成就徽章請求" vertex="1">
+          <mxGeometry relative="1" x="0.2035" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-11" parent="1" style="whiteSpace=wrap;strokeWidth=2;fontFamily=標楷體;" value="一般使用者" vertex="1">
+          <mxGeometry height="54" width="140" x="500" y="1260" as="geometry" />
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-13" parent="1" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=0;right=0;fontFamily=標楷體;" value="&lt;span lang=&quot;EN-US&quot; style=&quot;font-size: 12pt;&quot;&gt;T16&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 12pt;&quot;&gt;使用者成就解鎖紀錄表&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="250" x="860" y="1694" as="geometry" />
+        </mxCell>
+        <mxCell id="l596cCplZDD8301iDNKJ-2" edge="1" parent="1" source="l_XYXK2puLG1gqxunsOy-1" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;fontFamily=標楷體;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="1222" as="sourcePoint" />
+            <mxPoint x="1000" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-14" parent="1" style="ellipse;aspect=fixed;strokeWidth=2;whiteSpace=wrap;fontFamily=標楷體;" value="A05.1 個人資料" vertex="1">
+          <mxGeometry height="130" width="130" x="870" y="1222" as="geometry" />
+        </mxCell>
+        <mxCell id="l596cCplZDD8301iDNKJ-3" edge="1" parent="1" source="ok4059o9PcJvlQgkTyEc-15" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;edgeStyle=orthogonalEdgeStyle;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c5DW2r_LoxFMJUAsLudD-1" connectable="0" parent="l596cCplZDD8301iDNKJ-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=12;fontFamily=標楷體;" value="&lt;span style=&quot;font-size: 11px;&quot;&gt;成就徽章清單&lt;/span&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.011" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ok4059o9PcJvlQgkTyEc-15" parent="1" style="ellipse;aspect=fixed;strokeWidth=2;whiteSpace=wrap;fontFamily=標楷體;" value="A05.2 成就徽章" vertex="1">
+          <mxGeometry height="130" width="130" x="870" y="1420" as="geometry" />
+        </mxCell>
+        <mxCell id="suT-fMXPHVWTgeIeHrsN-3" edge="1" parent="1" source="l_XYXK2puLG1gqxunsOy-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1070" y="1050" />
+              <mxPoint x="1070" y="1439" />
+            </Array>
+            <mxPoint x="965.4099999999997" y="1418.5" as="sourcePoint" />
+            <mxPoint x="1120" y="1290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="suT-fMXPHVWTgeIeHrsN-4" connectable="0" parent="suT-fMXPHVWTgeIeHrsN-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="使用者學習數據" vertex="1">
+          <mxGeometry relative="1" x="0.1425" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="suT-fMXPHVWTgeIeHrsN-5" edge="1" parent="1" source="ok4059o9PcJvlQgkTyEc-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=1;entryDx=0;entryDy=0;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="1630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="suT-fMXPHVWTgeIeHrsN-6" connectable="0" parent="suT-fMXPHVWTgeIeHrsN-5" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="已解鎖的徽章" vertex="1">
+          <mxGeometry relative="1" x="-0.429" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="suT-fMXPHVWTgeIeHrsN-9" edge="1" parent="1" source="l_XYXK2puLG1gqxunsOy-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.236;entryY=0.083;entryDx=0;entryDy=0;entryPerimeter=0;fontFamily=標楷體;" target="ok4059o9PcJvlQgkTyEc-14">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="901" y="1080" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pashbFi4af8i6Ra35mNy-3" connectable="0" parent="suT-fMXPHVWTgeIeHrsN-9" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="個人資訊" vertex="1">
+          <mxGeometry relative="1" x="0.193" y="-1" as="geometry">
+            <mxPoint y="19" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pashbFi4af8i6Ra35mNy-1" edge="1" parent="1" source="ok4059o9PcJvlQgkTyEc-14" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0.712;entryY=1;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;entryPerimeter=0;fontFamily=標楷體;" target="l_XYXK2puLG1gqxunsOy-1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="981" y="1241" as="sourcePoint" />
+            <mxPoint x="1000" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pashbFi4af8i6Ra35mNy-2" connectable="0" parent="pashbFi4af8i6Ra35mNy-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="已修改的資訊" vertex="1">
+          <mxGeometry relative="1" x="-0.0261" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_XYXK2puLG1gqxunsOy-1" parent="1" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=0;right=0;fontFamily=標楷體;" value="&lt;span lang=&quot;EN-US&quot; style=&quot;font-size: 12pt;&quot;&gt;T01&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 12pt;&quot;&gt;使用者資料表&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="860" y="1020" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="2qDKaguM_ceOWPYHYp--" name="圖5-1">
+    <mxGraphModel dx="774" dy="497" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="5AkFnZ3bKUVvkMB9efpt-1" parent="1" style="ellipse;aspect=fixed;strokeWidth=2;whiteSpace=wrap;fontFamily=標楷體;" value="A05.1.1 修改個人資料" vertex="1">
+          <mxGeometry height="130" width="130" x="540" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="ldGHjRDXNEMX4b9QtnJU-6" edge="1" parent="1" source="5AkFnZ3bKUVvkMB9efpt-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="TUMy3d0QgeyjPZJZMgUR-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="165" y="330" />
+              <mxPoint x="165" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ZRIMZAexa6NUUZka3Pbh-1" connectable="0" parent="ldGHjRDXNEMX4b9QtnJU-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="個人資訊" vertex="1">
+          <mxGeometry relative="1" x="-0.2875" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ZRIMZAexa6NUUZka3Pbh-2" edge="1" parent="1" source="TUMy3d0QgeyjPZJZMgUR-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="5AkFnZ3bKUVvkMB9efpt-2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="580" y="60" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ZRIMZAexa6NUUZka3Pbh-3" connectable="0" parent="ZRIMZAexa6NUUZka3Pbh-2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="個人資訊" vertex="1">
+          <mxGeometry relative="1" x="0.2964" y="5" as="geometry">
+            <mxPoint x="17" y="-5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5AkFnZ3bKUVvkMB9efpt-2" parent="1" style="ellipse;aspect=fixed;strokeWidth=2;whiteSpace=wrap;fontFamily=標楷體;" value="A05.1.2 查詢個人資料" vertex="1">
+          <mxGeometry height="130" width="130" x="135" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="TUMy3d0QgeyjPZJZMgUR-1" edge="1" parent="1" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;" target="TUMy3d0QgeyjPZJZMgUR-5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="487" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wIoDs0e51WoGZLAMVKPZ-2" connectable="0" parent="TUMy3d0QgeyjPZJZMgUR-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=12;fontFamily=標楷體;" value="&lt;span style=&quot;font-size: 11px;&quot;&gt;個人資訊&lt;/span&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.1249" y="-2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="TUMy3d0QgeyjPZJZMgUR-3" edge="1" parent="1" source="TUMy3d0QgeyjPZJZMgUR-5" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="514" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="TUMy3d0QgeyjPZJZMgUR-4" connectable="0" parent="TUMy3d0QgeyjPZJZMgUR-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="修改請求" vertex="1">
+          <mxGeometry relative="1" x="0.1342" y="-1" as="geometry">
+            <mxPoint y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ldGHjRDXNEMX4b9QtnJU-3" edge="1" parent="1" source="TUMy3d0QgeyjPZJZMgUR-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="5AkFnZ3bKUVvkMB9efpt-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="310" />
+              <mxPoint x="200" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ldGHjRDXNEMX4b9QtnJU-5" connectable="0" parent="ldGHjRDXNEMX4b9QtnJU-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="查詢請求" vertex="1">
+          <mxGeometry relative="1" x="0.5585" y="2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="TUMy3d0QgeyjPZJZMgUR-5" parent="1" style="whiteSpace=wrap;strokeWidth=2;fontFamily=標楷體;" value="一般使用者" vertex="1">
+          <mxGeometry height="54" width="140" x="130" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="TUMy3d0QgeyjPZJZMgUR-6" edge="1" parent="1" source="5AkFnZ3bKUVvkMB9efpt-1" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="TUMy3d0QgeyjPZJZMgUR-9">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="600.4000000000001" y="429.87" as="sourcePoint" />
+            <mxPoint x="600" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mHdIUrtaiYSDEqO-n1cP-3" connectable="0" parent="TUMy3d0QgeyjPZJZMgUR-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="已修改的資訊" vertex="1">
+          <mxGeometry relative="1" x="-0.3409" y="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="TUMy3d0QgeyjPZJZMgUR-9" parent="1" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=0;right=0;fontFamily=標楷體;" value="&lt;span lang=&quot;EN-US&quot; style=&quot;font-size: 12pt;&quot;&gt;T01&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 12pt;&quot;&gt;使用者資料表&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="520" y="230" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="6neyPKb0Gd4yUogaZn4k" name="圖5-2">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="GdFFE3snI51vpRzwIU_c-1" parent="1" style="ellipse;aspect=fixed;strokeWidth=2;whiteSpace=wrap;fontFamily=標楷體;" value="A05.2.1 新增成就徽章" vertex="1">
+          <mxGeometry height="130" width="130" x="520" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-1" edge="1" parent="1" source="GdFFE3snI51vpRzwIU_c-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="3P6KESc5bGbHbg89i41t-9">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="652" y="780" as="sourcePoint" />
+            <mxPoint x="693.7499999999998" y="854" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-2" connectable="0" parent="3P6KESc5bGbHbg89i41t-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=12;fontFamily=標楷體;" value="獲得的徽章" vertex="1">
+          <mxGeometry relative="1" x="-0.2079" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-3" edge="1" parent="1" source="3P6KESc5bGbHbg89i41t-5" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;entryX=0.29;entryY=0.955;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;entryPerimeter=0;" target="GdFFE3snI51vpRzwIU_c-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="429.9999999999998" as="sourcePoint" />
+            <mxPoint x="760" y="645" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-4" connectable="0" parent="3P6KESc5bGbHbg89i41t-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=12;fontFamily=標楷體;" value="系統成就" vertex="1">
+          <mxGeometry relative="1" x="-0.0325" y="-5" as="geometry">
+            <mxPoint x="-27" y="-5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-5" parent="1" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=0;right=0;fontFamily=標楷體;" value="&lt;span lang=&quot;EN-US&quot; style=&quot;font-size: 12pt;&quot;&gt;T15&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 12pt;&quot;&gt;系統成就表&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="220" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-6" edge="1" parent="1" source="3P6KESc5bGbHbg89i41t-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;entryX=0;entryY=1;entryDx=0;entryDy=0;" target="GdFFE3snI51vpRzwIU_c-2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="630.1925930159214" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-7" connectable="0" parent="3P6KESc5bGbHbg89i41t-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="查看成就徽章請求" vertex="1">
+          <mxGeometry relative="1" x="0.2035" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-8" parent="1" style="whiteSpace=wrap;strokeWidth=2;fontFamily=標楷體;" value="一般使用者" vertex="1">
+          <mxGeometry height="54" width="140" x="260" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-9" parent="1" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=0;right=0;fontFamily=標楷體;" value="&lt;span lang=&quot;EN-US&quot; style=&quot;font-size: 12pt;&quot;&gt;T16&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 12pt;&quot;&gt;使用者成就解鎖紀錄表&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="250" x="550" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-10" edge="1" parent="1" source="GdFFE3snI51vpRzwIU_c-2" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;edgeStyle=orthogonalEdgeStyle;" target="3P6KESc5bGbHbg89i41t-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="649.0380592228744" y="599.0380592228744" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-11" connectable="0" parent="3P6KESc5bGbHbg89i41t-10" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="成就徽章" vertex="1">
+          <mxGeometry relative="1" x="-0.0332" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-13" parent="1" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=0;right=0;fontFamily=標楷體;" value="&lt;span lang=&quot;EN-US&quot; style=&quot;font-size: 12pt;&quot;&gt;T01&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 12pt;&quot;&gt;使用者資料表&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="220" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-14" edge="1" parent="1" source="3P6KESc5bGbHbg89i41t-13" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" target="GdFFE3snI51vpRzwIU_c-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="539" y="760" />
+            </Array>
+            <mxPoint x="725.4099999999999" y="578.5" as="sourcePoint" />
+            <mxPoint x="740.9619407771254" y="599.0380592228746" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-15" connectable="0" parent="3P6KESc5bGbHbg89i41t-14" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="日語程度/&lt;div&gt;探險單字量&lt;br&gt;&lt;div&gt;單字收藏量/&lt;/div&gt;&lt;div&gt;連續/累積使用天數&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.1425" y="1" as="geometry">
+            <mxPoint x="-16" y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-16" edge="1" parent="1" source="3P6KESc5bGbHbg89i41t-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.75;exitY=0;exitDx=0;exitDy=0;" target="GdFFE3snI51vpRzwIU_c-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="740" y="900" />
+              <mxPoint x="740" y="525" />
+            </Array>
+            <mxPoint x="740.9619407771254" y="690.9619407771254" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3P6KESc5bGbHbg89i41t-17" connectable="0" parent="3P6KESc5bGbHbg89i41t-16" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="已擁有徽章" vertex="1">
+          <mxGeometry relative="1" x="-0.429" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GdFFE3snI51vpRzwIU_c-2" parent="1" style="ellipse;aspect=fixed;strokeWidth=2;whiteSpace=wrap;fontFamily=標楷體;" value="A05.2.2 查詢成就徽章" vertex="1">
+          <mxGeometry height="130" width="130" x="520" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="d6vOEDZxr12iUDA_OYgu-1" edge="1" parent="1" source="3P6KESc5bGbHbg89i41t-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="GdFFE3snI51vpRzwIU_c-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="270" y="474" />
+              <mxPoint x="270" y="695" />
+            </Array>
+            <mxPoint x="220" y="646.5" as="sourcePoint" />
+            <mxPoint x="429" y="743.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d6vOEDZxr12iUDA_OYgu-2" connectable="0" parent="d6vOEDZxr12iUDA_OYgu-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="任務達成" vertex="1">
+          <mxGeometry relative="1" x="0.2035" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d6vOEDZxr12iUDA_OYgu-3" edge="1" parent="1" source="GdFFE3snI51vpRzwIU_c-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;edgeStyle=orthogonalEdgeStyle;" target="3P6KESc5bGbHbg89i41t-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="410" y="697.5" as="sourcePoint" />
+            <mxPoint x="255" y="646.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d6vOEDZxr12iUDA_OYgu-4" connectable="0" parent="d6vOEDZxr12iUDA_OYgu-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=標楷體;" value="成就徽章" vertex="1">
+          <mxGeometry relative="1" x="-0.0332" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  </mxfile>

@@ -77,26 +77,18 @@
 
         <div class="page-header">
             <div>
-                <h1 class="page-title"><i class="bi bi-bar-chart-line me-2"></i>{{ data.classroom.name }} - 學生學習狀況</h1>
-                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 查看班級全體學生作業繳交與自學成效</div>
+                <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ data.classroom.name }}</h1>
+                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 學生名冊、作業繳交與自學狀況</div>
             </div>
             <div class="d-flex gap-2">
                 {% if session.get('role') == 'teacher' %}
-                <button type="button" class="btn btn-outline-success fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
+                <button type="button" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
                     <i class="bi bi-person-plus me-1"></i>新增學生
                 </button>
                 {% endif %}
-                <a href="/teacher/classroom/{{ data.classroom.id }}/report" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
-                    <i class="bi bi-graph-up me-1"></i>班級報表
-                </a>
-                <a href="/teacher/classroom/{{ data.classroom.id }}/gradebook" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
-                    <i class="bi bi-table me-1"></i>成績總表
-                </a>
-                <a href="/teacher/classroom/{{ data.classroom.id }}/assignments" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
-                    <i class="bi bi-pencil-square me-1"></i>班級出題與批閱
-                </a>
             </div>
         </div>
+        {% with cid=data.classroom.id, active='students' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %}
 
         <!-- 統計指標卡片 -->
         <div class="row g-3">

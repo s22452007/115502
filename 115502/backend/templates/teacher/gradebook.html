@@ -111,13 +111,10 @@
         {% set cfg = data.config %}
         <div class="page-header">
             <div>
-                <h1 class="page-title"><i class="bi bi-table me-2"></i>{{ data.classroom.name }} - 成績總表</h1>
-                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 每位學生各作業分數與學期成績，分數可直接在表格上修改</div>
+                <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ data.classroom.name }}</h1>
+                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 各作業分數與學期成績，分數可直接在表格上修改</div>
             </div>
             <div class="d-flex gap-2 flex-shrink-0">
-                <a href="/teacher/classroom/{{ data.classroom.id }}/report" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
-                    <i class="bi bi-graph-up me-1"></i>班級報表
-                </a>
                 <button type="button" class="btn btn-outline-success fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#gradeConfigModal">
                     <i class="bi bi-sliders me-1"></i>計分方式
                 </button>
@@ -126,6 +123,7 @@
                 </a>
             </div>
         </div>
+        {% with cid=data.classroom.id, active='gradebook' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %}
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% for category, message in messages %}

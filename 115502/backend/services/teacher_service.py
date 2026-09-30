@@ -7,7 +7,7 @@ from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
     TaskType, SubmissionStatus, AccountType,
     Article, SentencePracticeRecord, ArticleProgress, ScoreRecord,
-    UserPhoto, ChatSession, ChatMessage, Dialect
+    UserPhoto, UserPhotoVocab, ChatSession, ChatMessage, Dialect
 )
 
 # 對話內容存的是 App 用的標音格式 [漢字|かな]，老師後台改成「漢字（かな）」比較好讀
@@ -780,6 +780,9 @@ def set_assignment_score(assignment_id, student_id, raw_score):
     return True, None
 
 
+CSV_BOM = '\ufeff'   # Excel 用 BOM 判斷 UTF-8，中文才不會亂碼
+
+
 def gradebook_csv(classroom_id):
     """成績總表轉成 CSV 文字（含 BOM，Excel 直接開中文不會亂碼）。"""
     import csv
@@ -808,4 +811,370 @@ def gradebook_csv(classroom_id):
     writer.writerow([])
     writer.writerow(['計分方式', f"作業 {data['assignment_pct']}%、造句 {cfg['sentence_pct']}%、文章測驗 {cfg['quiz_pct']}%",
                      '缺交算 0 分' if cfg['missing_as_zero'] else '缺交不列入平均'])
-    return '﻿' + buf.getvalue()
+    return CSV_BOM + buf.getvalue()
+
+
+# ==========================================
+# 班級報表 / 學生詳細成果
+# ==========================================
+SCORE_BUCKETS = [(0, 59, '0–59'), (60, 69, '60–69'), (70, 79, '70–79'), (80, 89, '80–89'), (90, 100, '90–100')]
+
+
+def _distribution(values):
+    """一組分數的分布與統計量。values 裡的 None 會先剔除。"""
+    import statistics
+    vals = [v for v in values if v is not None]
+    buckets = []
+    for lo, hi, label in SCORE_BUCKETS:
+        n = sum(1 for v in vals if lo <= v <= hi)
+        buckets.append({'label': label, 'count': n, 'pct': round(n / len(vals) * 100) if vals else 0})
+    if not vals:
+        return {'n': 0, 'buckets': buckets, 'mean': None, 'median': None, 'min': None, 'max': None, 'std': None, 'pass_rate': None}
+    return {
+        'n': len(vals),
+        'buckets': buckets,
+        'mean': round(statistics.mean(vals), 1),
+        'median': round(statistics.median(vals), 1),
+        'min': min(vals),
+        'max': max(vals),
+        'std': round(statistics.pstdev(vals), 1) if len(vals) > 1 else 0.0,
+        'pass_rate': round(sum(1 for v in vals if v >= 60) / len(vals) * 100),
+    }
+
+
+def _member_joined_map(classroom_id):
+    """{student_id: joined_at}，只計學生加入班級之後的自主練習。"""
+    return {m.student_id: m.joined_at for m in ClassroomMember.query.filter_by(classroom_id=classroom_id).all()}
+
+
+def _sentence_records_for_class(joined):
+    """全班加入班級後的造句紀錄。"""
+    if not joined:
+        return []
+    rows = SentencePracticeRecord.query.filter(SentencePracticeRecord.user_id.in_(list(joined.keys()))).all()
+    return [r for r in rows if r.score is not None
+            and (not joined.get(r.user_id) or not r.created_at or r.created_at >= joined[r.user_id])]
+
+
+def _grammar_stats(records):
+    """依文法點統計：平均、練習次數、低於 60 分的比例、練過的人數。由弱到強排序。"""
+    by_point = {}
+    for r in records:
+        p = by_point.setdefault(r.grammar_point or '（未標文法）', {'scores': [], 'students': set()})
+        p['scores'].append(r.score)
+        p['students'].add(r.user_id)
+    out = []
+    for point, p in by_point.items():
+        s = p['scores']
+        out.append({
+            'point': point,
+            'count': len(s),
+            'students': len(p['students']),
+            'avg': round(sum(s) / len(s), 1),
+            'low_rate': round(sum(1 for v in s if v < 60) / len(s) * 100),
+        })
+    out.sort(key=lambda x: (x['avg'], -x['count']))
+    return out
+
+
+def _quiz_question_stats(assignment, submissions):
+    """一份文章測驗作業的每題答對率與選項分布。submissions 要是同一份作業的繳交紀錄。"""
+    questions = (assignment.config or {}).get('questions') or []
+    if not questions:
+        return None
+    details = [s.answer_detail for s in submissions if isinstance(s.answer_detail, list) and s.answer_detail]
+    rows = []
+    for idx, q in enumerate(questions):
+        is_choice = q.get('type') == 'single_choice'
+        option_labels = ['A', 'B', 'C', 'D'] if is_choice else ['O', 'X']
+        options = {label: 0 for label in option_labels}
+        answered = correct = 0
+        for d in details:
+            item = next((x for x in d if x.get('question_index') == idx), None)
+            if not item:
+                continue
+            answered += 1
+            ans = str(item.get('your_answer') or '').strip().upper()
+            if ans in options:
+                options[ans] += 1
+            if item.get('is_correct'):
+                correct += 1
+        rows.append({
+            'index': idx + 1,
+            'type': q.get('type'),
+            'question': q.get('question') or '',
+            'option_texts': q.get('options') or [],
+            'correct_answer': str(q.get('answer') or '').upper(),
+            'explanation': q.get('explanation') or '',
+            'answered': answered,
+            'correct_count': correct,
+            'correct_rate': round(correct / answered * 100) if answered else None,
+            'options': options,
+        })
+    return {
+        'assignment_id': assignment.id,
+        'title': assignment.title,
+        'question_count': len(questions),
+        'answered_students': len(details),
+        'questions': rows,
+        'hardest': sorted([r for r in rows if r['correct_rate'] is not None], key=lambda r: r['correct_rate'])[:3],
+    }
+
+
+def _activity_events(student_ids, since=None):
+    """全班的學習活動事件：(student_id, 時間, 類型)。"""
+    if not student_ids:
+        return []
+    events = []
+    q = SentencePracticeRecord.query.filter(SentencePracticeRecord.user_id.in_(student_ids))
+    if since:
+        q = q.filter(SentencePracticeRecord.created_at >= since)
+    events += [(r.user_id, r.created_at, 'sentence') for r in q.all() if r.created_at]
+    q = ArticleProgress.query.filter(ArticleProgress.user_id.in_(student_ids))
+    if since:
+        q = q.filter(ArticleProgress.completed_at >= since)
+    events += [(r.user_id, r.completed_at, 'article') for r in q.all() if r.completed_at]
+    q = UserPhoto.query.filter(UserPhoto.user_id.in_(student_ids))
+    if since:
+        q = q.filter(UserPhoto.created_at >= since)
+    events += [(r.user_id, r.created_at, 'photo') for r in q.all() if r.created_at]
+    q = ChatSession.query.filter(ChatSession.user_id.in_(student_ids))
+    if since:
+        q = q.filter(ChatSession.started_at >= since)
+    events += [(r.user_id, r.started_at, 'chat') for r in q.all() if r.started_at]
+    return events
+
+
+def get_classroom_report(classroom_id, weeks=8, inactive_days=14):
+    """班級報表：成績分布、作業比較、文法弱點、測驗錯題、學習活躍度。"""
+    from datetime import timedelta
+    import statistics
+    gb = get_gradebook(classroom_id)
+    if not gb:
+        return None
+    students = gb['students']
+    assignments = gb['assignments']
+
+    # 1. 成績分布：學期成績 + 每份作業
+    distributions = {'final': _distribution([s['final'] for s in students])}
+    for a in assignments:
+        distributions[str(a['id'])] = _distribution(
+            [s['cells'][a['id']]['score'] for s in students if s['cells'][a['id']]['status'] == 'graded'])
+
+    # 2. 各作業比較
+    n = len(students)
+    assignment_rows = []
+    for a in assignments:
+        cells = [s['cells'][a['id']] for s in students]
+        graded = [c['score'] for c in cells if c['status'] == 'graded']
+        submitted = sum(1 for c in cells if c['status'] != 'missing')
+        assignment_rows.append({
+            **a,
+            'median': round(statistics.median(graded), 1) if graded else None,
+            'submit_rate': round(submitted / n * 100) if n else 0,
+            'submitted': submitted,
+            'pass_rate': round(sum(1 for v in graded if v >= 60) / len(graded) * 100) if graded else None,
+        })
+
+    # 3. 文法弱點（造句）
+    joined = _member_joined_map(classroom_id)
+    grammar = _grammar_stats(_sentence_records_for_class(joined))
+
+    # 4. 文章測驗錯題
+    quiz_reports = []
+    article_assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True, task_type=TaskType.ARTICLE) \
+        .order_by(Assignment.created_at.asc()).all()
+    for a in article_assignments:
+        subs = AssignmentSubmission.query.filter_by(assignment_id=a.id).all()
+        stats = _quiz_question_stats(a, subs)
+        if stats:
+            quiz_reports.append(stats)
+
+    # 5. 學習活躍度：最近 N 週每週有活動的人數與次數；很久沒動的學生名單
+    now = datetime.utcnow()
+    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    first_week = week_start - timedelta(weeks=weeks - 1)
+    student_ids = list(joined.keys())
+    recent = _activity_events(student_ids, since=first_week)
+    weekly = []
+    for i in range(weeks):
+        ws = first_week + timedelta(weeks=i)
+        we = ws + timedelta(weeks=1)
+        in_week = [e for e in recent if ws <= e[1] < we]
+        weekly.append({
+            'label': ws.strftime('%m/%d'),
+            'active_students': len({e[0] for e in in_week}),
+            'events': len(in_week),
+            'by_type': {t: sum(1 for e in in_week if e[2] == t) for t in ('sentence', 'article', 'photo', 'chat')},
+        })
+    last_seen = {}
+    for sid, ts, _ in _activity_events(student_ids):
+        if sid not in last_seen or ts > last_seen[sid]:
+            last_seen[sid] = ts
+    inactive = []
+    for s in students:
+        ts = last_seen.get(s['student_id'])
+        days = (now - ts).days if ts else None
+        if ts is None or days >= inactive_days:
+            inactive.append({'student_id': s['student_id'], 'display_name': s['display_name'],
+                             'last_seen': ts.strftime('%Y-%m-%d') if ts else None, 'days': days})
+    inactive.sort(key=lambda x: (x['days'] is not None, -(x['days'] or 0)))
+
+    return {
+        'classroom': gb['classroom'],
+        'config': gb['config'],
+        'summary': gb['summary'],
+        'student_count': n,
+        'distributions': distributions,
+        'assignments': assignment_rows,
+        'grammar': grammar,
+        'grammar_weakest': grammar[:5],
+        'quiz_reports': quiz_reports,
+        'weekly': weekly,
+        'inactive': inactive,
+        'inactive_days': inactive_days,
+        'active_this_week': weekly[-1]['active_students'] if weekly else 0,
+    }
+
+
+def get_student_report(classroom_id, student_id):
+    """單一學生在班級裡的詳細成果：成績與排名、各作業對照班平均、文法弱點、錯題、學習歷程。"""
+    gb = get_gradebook(classroom_id)
+    if not gb:
+        return None
+    me = next((s for s in gb['students'] if s['student_id'] == student_id), None)
+    if not me:
+        return None
+    member = ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=student_id).first()
+    since = member.joined_at if member else None
+
+    ranked = sorted([s for s in gb['students'] if s['final'] is not None], key=lambda s: -s['final'])
+    rank = next((i + 1 for i, s in enumerate(ranked) if s['student_id'] == student_id), None)
+
+    # 各作業：自己的分數 vs 班平均
+    assignment_series = []
+    for a in gb['assignments']:
+        cell = me['cells'][a['id']]
+        assignment_series.append({
+            'id': a['id'], 'title': a['title'], 'type_label': a['type_label'], 'task_type': a['task_type'],
+            'due_at': a['due_at'], 'score': cell['score'], 'status': cell['status'], 'class_avg': a['class_avg'],
+            'diff': round(cell['score'] - a['class_avg'], 1) if cell['score'] is not None and a['class_avg'] is not None else None,
+        })
+
+    # 文法：自己 vs 班上
+    joined = _member_joined_map(classroom_id)
+    class_records = _sentence_records_for_class(joined)
+    class_grammar = {g['point']: g for g in _grammar_stats(class_records)}
+    my_grammar = _grammar_stats([r for r in class_records if r.user_id == student_id])
+    for g in my_grammar:
+        g['class_avg'] = class_grammar.get(g['point'], {}).get('avg')
+        g['diff'] = round(g['avg'] - g['class_avg'], 1) if g['class_avg'] is not None else None
+
+    # 錯題：文章測驗有逐題作答的
+    wrong = []
+    quiz_total = quiz_correct = 0
+    for a in Assignment.query.filter_by(classroom_id=classroom_id, is_published=True, task_type=TaskType.ARTICLE).all():
+        sub = AssignmentSubmission.query.filter_by(assignment_id=a.id, student_id=student_id).first()
+        if not sub or not isinstance(sub.answer_detail, list):
+            continue
+        for item in sub.answer_detail:
+            quiz_total += 1
+            if item.get('is_correct'):
+                quiz_correct += 1
+            else:
+                wrong.append({
+                    'assignment_title': a.title, 'question': item.get('question') or '',
+                    'your_answer': item.get('your_answer') or '—', 'correct_answer': item.get('correct_answer') or '',
+                    'explanation': item.get('explanation') or '',
+                })
+
+    # 學習歷程時間軸（加入班級後，最新 60 筆）
+    timeline = []
+    sq = SentencePracticeRecord.query.filter_by(user_id=student_id)
+    aq = ArticleProgress.query.filter_by(user_id=student_id)
+    pq = UserPhoto.query.filter_by(user_id=student_id)
+    cq = ChatSession.query.filter_by(user_id=student_id)
+    if since:
+        sq = sq.filter(SentencePracticeRecord.created_at >= since)
+        aq = aq.filter(ArticleProgress.completed_at >= since)
+        pq = pq.filter(UserPhoto.created_at >= since)
+        cq = cq.filter(ChatSession.started_at >= since)
+    for r in sq.all():
+        timeline.append({'type': 'sentence', 'label': '造句', 'at': r.created_at, 'title': r.grammar_point or '',
+                         'detail': r.user_sentence or '', 'sub': r.corrected_sentence or '', 'score': r.score})
+    for r in aq.all():
+        art = Article.query.get(r.article_id)
+        timeline.append({'type': 'article', 'label': '閱讀', 'at': r.completed_at, 'title': art.title if art else '文章',
+                         'detail': f"程度 {art.level}" if art and art.level else '', 'sub': '', 'score': r.score})
+    for r in pq.all():
+        vocab_n = UserPhotoVocab.query.filter_by(photo_id=r.id).count()
+        timeline.append({'type': 'photo', 'label': '拍照', 'at': r.created_at, 'title': r.custom_title or '拍照學習',
+                         'detail': f'學到 {vocab_n} 個單字', 'sub': '', 'score': None})
+    for r in cq.all():
+        timeline.append({'type': 'chat', 'label': '對話', 'at': r.started_at, 'title': r.topic or '情境對話',
+                         'detail': f'{r.message_count or 0} 則訊息', 'sub': '', 'score': None})
+    timeline = [t for t in timeline if t['at']]
+    timeline.sort(key=lambda t: t['at'], reverse=True)
+    counts = {t: sum(1 for x in timeline if x['type'] == t) for t in ('sentence', 'article', 'photo', 'chat')}
+    for t in timeline:
+        t['at'] = t['at'].strftime('%Y-%m-%d %H:%M')
+
+    user = User.query.get(student_id)
+    return {
+        'classroom': gb['classroom'],
+        'config': gb['config'],
+        'assignment_pct': gb['assignment_pct'],
+        'student': {
+            'id': student_id, 'display_name': me['display_name'], 'username': me['username'],
+            'email': user.email if user else '', 'joined_at': since.strftime('%Y-%m-%d') if since else '',
+        },
+        'grade': {
+            'final': me['final'], 'assignment_avg': me['assignment_avg'],
+            'rank': rank, 'ranked_total': len(ranked),
+            'class_avg': gb['summary']['class_final_avg'],
+            'diff': round(me['final'] - gb['summary']['class_final_avg'], 1)
+                    if me['final'] is not None and gb['summary']['class_final_avg'] is not None else None,
+            'sentence_avg': me['sentence_avg'], 'sentence_count': me['sentence_count'],
+            'quiz_avg': me['quiz_avg'], 'quiz_count': me['quiz_count'],
+        },
+        'assignments': assignment_series,
+        'grammar': my_grammar,
+        'wrong_questions': wrong,
+        'quiz_total': quiz_total,
+        'quiz_correct': quiz_correct,
+        'timeline': timeline[:60],
+        'activity_counts': counts,
+    }
+
+
+def student_report_csv(classroom_id, student_id):
+    """個人成績單 CSV（含 BOM）。"""
+    import csv
+    import io
+    data = get_student_report(classroom_id, student_id)
+    if not data:
+        return None
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    g = data['grade']
+    w.writerow(['班級', data['classroom']['name']])
+    w.writerow(['學生', data['student']['display_name'], data['student']['username']])
+    w.writerow(['學期成績', '' if g['final'] is None else g['final'],
+                '排名', f"{g['rank']}/{g['ranked_total']}" if g['rank'] else '',
+                '班平均', '' if g['class_avg'] is None else g['class_avg']])
+    w.writerow([])
+    w.writerow(['作業', '類型', '分數', '班平均', '狀態'])
+    status_text = {'graded': '已評分', 'ungraded': '待批閱', 'missing': '缺交'}
+    for a in data['assignments']:
+        w.writerow([a['title'], a['type_label'], '' if a['score'] is None else a['score'],
+                    '' if a['class_avg'] is None else a['class_avg'], status_text.get(a['status'], a['status'])])
+    w.writerow([])
+    w.writerow(['文法點', '練習次數', '我的平均', '班平均'])
+    for gr in data['grammar']:
+        w.writerow([gr['point'], gr['count'], gr['avg'], '' if gr['class_avg'] is None else gr['class_avg']])
+    if data['wrong_questions']:
+        w.writerow([])
+        w.writerow(['錯題（作業）', '題目', '我的答案', '正確答案'])
+        for q in data['wrong_questions']:
+            w.writerow([q['assignment_title'], q['question'], q['your_answer'], q['correct_answer']])
+    return CSV_BOM + buf.getvalue()

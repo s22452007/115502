@@ -86,6 +86,9 @@
                     <i class="bi bi-person-plus me-1"></i>新增學生
                 </button>
                 {% endif %}
+                <a href="/teacher/classroom/{{ data.classroom.id }}/report" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
+                    <i class="bi bi-graph-up me-1"></i>班級報表
+                </a>
                 <a href="/teacher/classroom/{{ data.classroom.id }}/gradebook" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
                     <i class="bi bi-table me-1"></i>成績總表
                 </a>
@@ -205,9 +208,9 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-success" style="white-space: nowrap;" onclick="viewStudentDetail({{ s.student_id }}, '{{ s.display_name }}')">
-                                        <i class="bi bi-eye"></i> 查看學習紀錄
-                                    </button>
+                                    <a class="btn btn-sm btn-outline-success" style="white-space: nowrap;" href="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/report">
+                                        <i class="bi bi-person-vcard"></i> 詳細成果
+                                    </a>
                                     <div class="d-flex gap-1 justify-content-center mt-1">
                                         <button class="btn btn-sm btn-outline-secondary" style="white-space: nowrap;" data-bs-toggle="modal" data-bs-target="#renameStu{{ s.student_id }}">改名稱</button>
                                         <form action="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/remove" method="POST"
@@ -251,7 +254,6 @@
 </div>
 {% endfor %}
 
-<!-- 學生詳細學習歷程 Modal -->
 <!-- 新增學生：貼上名單（只有班級老師能用） -->
 {% if session.get('role') == 'teacher' %}
 <div class="modal fade" id="addStudentsModal" tabindex="-1" aria-hidden="true">
@@ -283,77 +285,7 @@
 </div>
 {% endif %}
 
-<div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
-      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
-        <h5 class="modal-title fw-bold" id="detailModalTitle"><i class="bi bi-person-vcard me-2"></i>學生學習歷程</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-4" id="detailModalBody">
-        <div class="text-center py-4"><div class="spinner-border text-success" role="status"></div></div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<script>
-function viewStudentDetail(studentId, studentName) {
-    document.getElementById('detailModalTitle').innerHTML = '<i class="bi bi-person-vcard me-2"></i>' + studentName + ' 的學習歷程';
-    const body = document.getElementById('detailModalBody');
-    body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-success" role="status"></div><div class="mt-2 text-muted">載入數據中...</div></div>';
-    
-    const myModal = new bootstrap.Modal(document.getElementById('studentDetailModal'));
-    myModal.show();
-
-    fetch('/teacher/student/' + studentId + '/detail?classroom_id={{ data.classroom.id }}')
-        .then(res => res.json())
-        .then(data => {
-            let html = '';
-            
-            // 1. 作業狀況
-            html += '<h6 class="fw-bold text-success mb-3"><i class="bi bi-journal-text me-1"></i>班級作業繳交紀錄</h6>';
-            if (!data.assignments || data.assignments.length === 0) {
-                html += '<p class="text-muted small">本班級尚無作業</p>';
-            } else {
-                html += '<div class="list-group mb-4">';
-                data.assignments.forEach(a => {
-                    const statusBadge = a.status === 'graded' 
-                        ? '<span class="badge bg-success">已批閱 (' + a.score + '分)</span>' 
-                        : (a.status === 'submitted' ? '<span class="badge bg-primary">已繳交待批閱</span>' : '<span class="badge bg-secondary">未繳交</span>');
-                    html += '<div class="list-group-item d-flex justify-content-between align-items-center">' +
-                            '<div><strong>' + a.title + '</strong> <span class="text-muted small">(' + (a.task_type === 'sentence' ? '造句' : '閱讀') + ')</span>' +
-                            (a.teacher_comment ? '<div class="small text-muted mt-1">教師評語：' + a.teacher_comment + '</div>' : '') +
-                            '</div>' +
-                            '<div>' + statusBadge + '</div>' +
-                            '</div>';
-                });
-                html += '</div>';
-            }
-
-            // 2. 造句紀錄
-            html += '<h6 class="fw-bold text-success mb-3"><i class="bi bi-pencil-fill me-1"></i>近期造句練習紀錄 (最新 10 筆)</h6>';
-            if (!data.sentences || data.sentences.length === 0) {
-                html += '<p class="text-muted small mb-4">尚未有造句練習紀錄</p>';
-            } else {
-                html += '<div class="table-responsive mb-4"><table class="table table-sm table-bordered">' +
-                        '<thead class="table-light"><tr><th>文法重點</th><th>學生造句</th><th>評分</th><th>時間</th></tr></thead><tbody>';
-                data.sentences.forEach(s => {
-                    html += '<tr><td><strong>' + s.grammar + '</strong></td>' +
-                            '<td>' + s.user_sentence + (s.corrected ? '<div class="small text-muted">AI 潤飾：' + s.corrected + '</div>' : '') + '</td>' +
-                            '<td><span class="badge bg-' + (s.score >= 60 ? 'success' : 'danger') + '">' + s.score + '</span></td>' +
-                            '<td class="small text-muted">' + s.created_at + '</td></tr>';
-                });
-                html += '</tbody></table></div>';
-            }
-
-            body.innerHTML = html;
-        })
-        .catch(err => {
-            body.innerHTML = '<div class="alert alert-danger">載入失敗，請稍候重試</div>';
-        });
-}
-</script>
 {% include 'admin/_flash_autohide.html' %}
 </body>
 </html>

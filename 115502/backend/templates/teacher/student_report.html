@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 校園教育版 - 學生詳細成果</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        html { scrollbar-gutter: stable; }
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 32px 48px; overflow-x: hidden; min-width: 0; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; }
+        .page-title { color: var(--green-dark); font-weight: 900; margin: 0; font-size: 1.6rem; }
+        .page-sub { font-size: 0.85rem; color: #888; margin-top: 4px; }
+
+        .grade-strip { background: white; border-radius: 12px; padding: 16px 22px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 34px; }
+        .grade-strip .k { font-size: 0.75rem; color: #888; font-weight: 700; display: block; margin-bottom: 2px; }
+        .grade-strip .v { font-size: 1.15rem; font-weight: 900; color: #222; }
+        .grade-strip .v.big { font-size: 2rem; color: var(--green-dark); line-height: 1; }
+        .grade-strip .v.big.bad { color: #c9302c; }
+        .grade-strip .diff-up { color: var(--green-dark); font-size: 0.85rem; font-weight: 700; }
+        .grade-strip .diff-down { color: #c9302c; font-size: 0.85rem; font-weight: 700; }
+
+        .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; margin-top: 20px; height: calc(100% - 20px); display: flex; flex-direction: column; }
+        .panel-header { padding: 14px 22px; background-color: var(--green-dark); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .panel-body { padding: 18px 22px; flex: 1; }
+        .panel-body.tight { padding: 0; }
+        .empty { color: #999; text-align: center; padding: 36px 16px; font-size: 0.9rem; }
+        .empty i { font-size: 1.8rem; display: block; margin-bottom: 6px; color: #ccc; }
+
+        table.rpt { width: 100%; font-size: 0.87rem; border-collapse: collapse; }
+        table.rpt th, table.rpt td { padding: 9px 14px; border-bottom: 1px solid #eef1ef; vertical-align: middle; }
+        table.rpt th { background: #f8faf8; color: #666; font-weight: 700; font-size: 0.8rem; white-space: nowrap; }
+        table.rpt td.num, table.rpt th.num { text-align: right; white-space: nowrap; }
+        table.rpt tr:last-child td { border-bottom: none; }
+        .type-chip { display: inline-block; font-size: 0.68rem; padding: 0 6px; border-radius: 4px; background: var(--green-light); color: var(--green-dark); margin-right: 4px; }
+        .chip-sentence { background: #dce7de; color: #4a7a54; }
+        .chip-article { background: #dde6f5; color: #365a9a; }
+        .chip-photo { background: #fbe9d0; color: #9a6a1a; }
+        .chip-chat { background: #ecdff5; color: #6a3f8f; }
+        .diff-pos { color: var(--green-dark); font-weight: 700; }
+        .diff-neg { color: #c9302c; font-weight: 700; }
+        .status-missing { color: #b94a48; font-size: 0.78rem; font-weight: 700; }
+        .status-ungraded { color: #7f92b3; font-size: 0.78rem; font-weight: 700; }
+        .bar-wrap { display: inline-block; width: 80px; height: 8px; background: #eef1ef; border-radius: 4px; vertical-align: middle; margin-right: 8px; overflow: hidden; }
+        .bar-wrap .bar { display: block; height: 8px; border-radius: 4px; background: var(--green-mid); }
+        .bar-wrap .bar.bad { background: #d9534f; }
+        .bar-wrap .bar.warn { background: #e0a13a; }
+        .q-text { white-space: normal; }
+        .ans-wrong { color: #c9302c; font-weight: 700; }
+        .ans-right { color: var(--green-dark); font-weight: 700; }
+
+        .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .filter-chips button { border: 1px solid rgba(255,255,255,0.5); background: transparent; color: white; font-size: 0.75rem; border-radius: 20px; padding: 2px 10px; }
+        .filter-chips button.on { background: white; color: var(--green-dark); font-weight: 700; }
+        .timeline { list-style: none; margin: 0; padding: 0; }
+        .timeline li { display: flex; gap: 14px; padding: 12px 22px; border-bottom: 1px solid #eef1ef; align-items: flex-start; }
+        .timeline li:last-child { border-bottom: none; }
+        .timeline .when { font-size: 0.75rem; color: #999; white-space: nowrap; width: 110px; flex-shrink: 0; padding-top: 3px; }
+        .timeline .body { flex: 1; min-width: 0; font-size: 0.88rem; }
+        .timeline .title { font-weight: 700; color: #222; }
+        .timeline .detail { color: #555; }
+        .timeline .sub { color: #999; font-size: 0.8rem; }
+        .timeline .score { font-weight: 800; white-space: nowrap; }
+        .timeline .score.bad { color: #c9302c; }
+        .timeline .score.ok { color: var(--green-dark); }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-admin">
+            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+            <div class="sidebar-admin-info">
+                <div class="name">{{ session['admin_user'] }}</div>
+                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            {% if session.get('role') == 'super_admin' %}
+            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
+            {% endif %}
+            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
+            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        {% set cid = data.classroom.id %}
+        {% set st = data.student %}
+        {% set g = data.grade %}
+        <div class="mb-3">
+            <a href="/teacher/classroom/{{ cid }}/students" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
+                <i class="bi bi-arrow-left"></i> 返回學生學習狀況
+            </a>
+        </div>
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title"><i class="bi bi-person-vcard me-2"></i>{{ st.display_name }} 的詳細成果</h1>
+                <div class="page-sub">{{ data.classroom.name }}{% if st.username and st.username != st.display_name %} ｜ 帳號 {{ st.username }}{% endif %}{% if st.joined_at %} ｜ {{ st.joined_at }} 加入{% endif %}</div>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <a href="/teacher/classroom/{{ cid }}/report" class="btn btn-outline-success fw-bold" style="border-radius: 8px;">
+                    <i class="bi bi-graph-up me-1"></i>班級報表
+                </a>
+                <a href="/teacher/classroom/{{ cid }}/student/{{ st.id }}/report.csv" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
+                    <i class="bi bi-download me-1"></i>匯出成績單
+                </a>
+            </div>
+        </div>
+
+        <div class="grade-strip">
+            <div>
+                <span class="k">學期成績</span>
+                <span class="v big {{ 'bad' if g.final is not none and g.final < 60 else '' }}">{{ g.final if g.final is not none else '—' }}</span>
+            </div>
+            <div>
+                <span class="k">班排名</span>
+                <span class="v">{{ (g.rank ~ ' / ' ~ g.ranked_total) if g.rank else '—' }}</span>
+            </div>
+            <div>
+                <span class="k">班平均</span>
+                <span class="v">{{ g.class_avg if g.class_avg is not none else '—' }}</span>
+                {% if g.diff is not none %}<span class="{{ 'diff-up' if g.diff >= 0 else 'diff-down' }}">{{ '+' if g.diff >= 0 }}{{ g.diff }}</span>{% endif %}
+            </div>
+            <div>
+                <span class="k">作業平均</span>
+                <span class="v">{{ g.assignment_avg if g.assignment_avg is not none else '—' }}</span>
+            </div>
+            <div>
+                <span class="k">造句均分</span>
+                <span class="v">{{ g.sentence_avg if g.sentence_avg is not none else '—' }}</span>
+                <span class="text-muted small">{{ g.sentence_count }} 篇</span>
+            </div>
+            <div>
+                <span class="k">文章測驗均分</span>
+                <span class="v">{{ g.quiz_avg if g.quiz_avg is not none else '—' }}</span>
+                <span class="text-muted small">{{ g.quiz_count }} 次</span>
+            </div>
+            <div>
+                <span class="k">加入後的練習</span>
+                <span class="v">{{ data.activity_counts.sentence + data.activity_counts.article + data.activity_counts.photo + data.activity_counts.chat }}</span>
+                <span class="text-muted small">造句 {{ data.activity_counts.sentence }} · 閱讀 {{ data.activity_counts.article }} · 拍照 {{ data.activity_counts.photo }} · 對話 {{ data.activity_counts.chat }}</span>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- 各作業 vs 班平均 -->
+            <div class="col-12">
+                <div class="panel">
+                    <div class="panel-header"><div><i class="bi bi-journal-check me-2"></i>各作業成績與班平均對照</div></div>
+                    {% if not data.assignments %}
+                    <div class="empty"><i class="bi bi-journal-x"></i>本班還沒有已發布的作業</div>
+                    {% else %}
+                    <div class="panel-body pb-0"><canvas id="assignChart" height="90"></canvas></div>
+                    <div class="panel-body tight">
+                        <table class="rpt">
+                            <thead><tr><th>作業</th><th class="num">分數</th><th class="num">班平均</th><th class="num">差距</th><th>截止</th></tr></thead>
+                            <tbody>
+                            {% for a in data.assignments %}
+                            <tr>
+                                <td><span class="type-chip chip-{{ a.task_type }}">{{ a.type_label }}</span>{{ a.title }}</td>
+                                <td class="num">
+                                    {% if a.status == 'graded' %}<b class="{{ 'diff-neg' if a.score < 60 else '' }}">{{ a.score }}</b>
+                                    {% elif a.status == 'ungraded' %}<span class="status-ungraded">已交待批</span>
+                                    {% else %}<span class="status-missing">缺交</span>{% endif %}
+                                </td>
+                                <td class="num">{{ a.class_avg if a.class_avg is not none else '—' }}</td>
+                                <td class="num">{% if a.diff is not none %}<span class="{{ 'diff-pos' if a.diff >= 0 else 'diff-neg' }}">{{ '+' if a.diff >= 0 }}{{ a.diff }}</span>{% else %}—{% endif %}</td>
+                                <td class="text-muted small">{{ a.due_at or '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 文法弱點 -->
+            <div class="col-lg-6">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div><i class="bi bi-pencil-fill me-2"></i>文法弱點（對照班平均）</div>
+                        <span class="badge bg-light text-dark">{{ data.grammar|length }} 個文法點</span>
+                    </div>
+                    <div class="panel-body tight">
+                        {% if not data.grammar %}
+                        <div class="empty"><i class="bi bi-pencil"></i>加入班級後還沒有造句紀錄</div>
+                        {% else %}
+                        <table class="rpt">
+                            <thead><tr><th>文法點</th><th class="num">練習</th><th class="num">我的平均</th><th class="num">班平均</th><th class="num">差距</th></tr></thead>
+                            <tbody>
+                            {% for gr in data.grammar %}
+                            <tr>
+                                <td>{{ gr.point }}</td>
+                                <td class="num">{{ gr.count }}</td>
+                                <td class="num"><span class="bar-wrap"><span class="bar {{ 'bad' if gr.avg < 60 else ('warn' if gr.avg < 75 else '') }}" style="width: {{ gr.avg }}%;"></span></span>{{ gr.avg }}</td>
+                                <td class="num">{{ gr.class_avg if gr.class_avg is not none else '—' }}</td>
+                                <td class="num">{% if gr.diff is not none %}<span class="{{ 'diff-pos' if gr.diff >= 0 else 'diff-neg' }}">{{ '+' if gr.diff >= 0 }}{{ gr.diff }}</span>{% else %}—{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 錯題 -->
+            <div class="col-lg-6">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div><i class="bi bi-patch-question-fill me-2"></i>文章測驗錯題</div>
+                        {% if data.quiz_total %}<span class="badge bg-light text-dark">答對 {{ data.quiz_correct }} / {{ data.quiz_total }} 題</span>{% endif %}
+                    </div>
+                    <div class="panel-body tight">
+                        {% if not data.quiz_total %}
+                        <div class="empty"><i class="bi bi-patch-question"></i>還沒有逐題作答紀錄</div>
+                        {% elif not data.wrong_questions %}
+                        <div class="empty text-success"><i class="bi bi-check2-circle" style="color: var(--green-mid);"></i>測驗題目全部答對</div>
+                        {% else %}
+                        <table class="rpt">
+                            <thead><tr><th>題目</th><th>作答</th><th>正解</th></tr></thead>
+                            <tbody>
+                            {% for q in data.wrong_questions %}
+                            <tr>
+                                <td class="q-text"><div class="small text-muted">{{ q.assignment_title }}</div>{{ q.question }}{% if q.explanation %}<div class="small text-muted">解析：{{ q.explanation }}</div>{% endif %}</td>
+                                <td class="ans-wrong">{{ q.your_answer }}</td>
+                                <td class="ans-right">{{ q.correct_answer }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 學習歷程 -->
+            <div class="col-12">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div><i class="bi bi-clock-history me-2"></i>學習歷程（加入班級後，最新 {{ data.timeline|length }} 筆）</div>
+                        <div class="filter-chips">
+                            <button type="button" class="on" data-type="all">全部</button>
+                            <button type="button" data-type="sentence">造句</button>
+                            <button type="button" data-type="article">閱讀</button>
+                            <button type="button" data-type="photo">拍照</button>
+                            <button type="button" data-type="chat">對話</button>
+                        </div>
+                    </div>
+                    <div class="panel-body tight">
+                        {% if not data.timeline %}
+                        <div class="empty"><i class="bi bi-hourglass"></i>加入班級後還沒有任何練習紀錄</div>
+                        {% else %}
+                        <ul class="timeline" id="timeline">
+                            {% for t in data.timeline %}
+                            <li data-type="{{ t.type }}">
+                                <span class="when">{{ t.at }}</span>
+                                <div class="body">
+                                    <span class="type-chip chip-{{ t.type }}">{{ t.label }}</span><span class="title">{{ t.title }}</span>
+                                    {% if t.detail %}<div class="detail">{{ t.detail }}</div>{% endif %}
+                                    {% if t.sub %}<div class="sub">AI 潤飾：{{ t.sub }}</div>{% endif %}
+                                </div>
+                                {% if t.score is not none %}<span class="score {{ 'bad' if t.score < 60 else 'ok' }}">{{ t.score }} 分</span>{% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="empty" id="timelineEmpty" style="display:none;">這個類型沒有紀錄</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+const ASSIGN = {{ data.assignments | tojson }};
+if (ASSIGN.length) {
+    new Chart(document.getElementById('assignChart'), {
+        type: 'line',
+        data: {
+            labels: ASSIGN.map(a => a.title),
+            datasets: [
+                { label: '{{ st.display_name }}', data: ASSIGN.map(a => a.score), borderColor: '#4a7a54', backgroundColor: '#4a7a54', tension: 0.3, pointRadius: 5, spanGaps: true },
+                { label: '班平均', data: ASSIGN.map(a => a.class_avg), borderColor: '#b9c9bc', borderDash: [5, 4], backgroundColor: '#b9c9bc', tension: 0.3, pointRadius: 3, spanGaps: true }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+            scales: { y: { min: 0, max: 100, grid: { color: '#f0f2f0' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+        }
+    });
+}
+
+document.querySelectorAll('.filter-chips button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-chips button').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        const type = btn.dataset.type;
+        let shown = 0;
+        document.querySelectorAll('#timeline li').forEach(li => {
+            const show = type === 'all' || li.dataset.type === type;
+            li.style.display = show ? '' : 'none';
+            if (show) shown++;
+        });
+        const empty = document.getElementById('timelineEmpty');
+        if (empty) empty.style.display = shown ? 'none' : '';
+    });
+});
+</script>
+{% include 'admin/_flash_autohide.html' %}
+</body>
+</html>

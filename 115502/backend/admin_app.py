@@ -1965,7 +1965,8 @@ from services.teacher_service import (
     get_student_detail, create_sentence_assignment, create_article_assignment,
     create_photo_assignment, create_chat_assignment,
     get_assignment_submissions_list, grade_submission,
-    get_gradebook, save_grade_config, set_assignment_score, gradebook_csv
+    get_gradebook, save_grade_config, set_assignment_score, gradebook_csv,
+    get_classroom_report, get_student_report, student_report_csv
 )
 from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene
 
@@ -2284,15 +2285,53 @@ def teacher_gradebook_export(classroom_id):
     if not classroom:
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
+    return _csv_response(gradebook_csv(classroom_id), f"{classroom.name}_成績總表")
+
+
+def _csv_response(csv_text, name):
     from flask import Response
     from urllib.parse import quote
-    csv_text = gradebook_csv(classroom_id)
-    filename = f"{classroom.name}_成績總表_{datetime.now().strftime('%Y%m%d')}.csv"
+    filename = f"{name}_{datetime.now().strftime('%Y%m%d')}.csv"
     return Response(
         csv_text,
         mimetype='text/csv; charset=utf-8',
         headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(filename)}"},
     )
+
+
+# ---- 班級報表 / 學生詳細成果 ----
+@app.route('/teacher/classroom/<int:classroom_id>/report')
+@teacher_required
+def teacher_classroom_report(classroom_id):
+    """成績分布、各作業比較、文法弱點、測驗錯題、學習活躍度"""
+    data = get_classroom_report(classroom_id) if _own_classroom(classroom_id) else None
+    if not data:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    return render_template('teacher/classroom_report.html', data=data)
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/student/<int:student_id>/report')
+@teacher_required
+def teacher_student_report(classroom_id, student_id):
+    """單一學生的詳細成果頁"""
+    data = get_student_report(classroom_id, student_id) if _own_classroom(classroom_id) else None
+    if not data:
+        flash("找不到該學生或班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    return render_template('teacher/student_report.html', data=data)
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/student/<int:student_id>/report.csv')
+@teacher_required
+def teacher_student_report_export(classroom_id, student_id):
+    """個人成績單 CSV"""
+    csv_text = student_report_csv(classroom_id, student_id) if _own_classroom(classroom_id) else None
+    if not csv_text:
+        flash("找不到該學生或班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    data = get_student_report(classroom_id, student_id)
+    return _csv_response(csv_text, f"{data['classroom']['name']}_{data['student']['display_name']}_成績單")
 
 
 # ---- 班級：改名、封存 ----

@@ -580,6 +580,7 @@ def submit_quiz():
             student_id=user_id,
             result_ref_id=progress.id if progress else None,
             score=score,
+            answer_detail=feedback_details,
             status=SubmissionStatus.GRADED,
             attempt_count=1,
             submitted_at=now,
@@ -588,9 +589,10 @@ def submit_quiz():
         db.session.add(submission)
     else:
         submission.attempt_count = (submission.attempt_count or 0) + 1
-        # 保留較高分或最新作答
+        # 保留較高分或最新作答（逐題作答跟著保留下來的那一次）
         if submission.score is None or score >= submission.score:
             submission.score = score
+            submission.answer_detail = feedback_details
             submission.result_ref_id = progress.id if progress else submission.result_ref_id
             submission.submitted_at = now
         submission.status = SubmissionStatus.GRADED

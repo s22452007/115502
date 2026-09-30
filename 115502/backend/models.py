@@ -659,6 +659,11 @@ class AssignmentSubmission(db.Model):
 
     score = db.Column(db.Integer, nullable=True)          # AI 或老師給的分數
     teacher_comment = db.Column(db.Text, nullable=True)
+    # 文章測驗的逐題作答（班級報表算每題答對率、學生成果列錯題用）。格式：
+    #   [{"question_index": 0, "type": "single_choice", "question": "...",
+    #     "your_answer": "B", "correct_answer": "A", "is_correct": false, "explanation": "..."}]
+    # 只有 submit_quiz 會寫；其他題型和舊資料為 None
+    answer_detail = db.Column(db.JSON, nullable=True)
     attempt_count = db.Column(db.Integer, default=0)      # 重做次數，允許學生再挑戰
     submitted_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

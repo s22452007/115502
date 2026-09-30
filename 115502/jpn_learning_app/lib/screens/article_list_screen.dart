@@ -38,7 +38,10 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
         scrolledUnderElevation: 0,
         title: const Text(
           '文章練習',
-          style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF2C3E50)),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2C3E50),
+          ),
         ),
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppColors.primary),
@@ -57,17 +60,24 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
       builder: (context, snapshot) {
         // 載入中狀態 (轉圈圈)
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-        } 
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
         // 發生錯誤
         else if (snapshot.hasError) {
           return Center(
-            child: Text('載入失敗，請確認伺服器已啟動\n${snapshot.error}', textAlign: TextAlign.center),
+            child: Text(
+              '載入失敗，請確認伺服器已啟動\n${snapshot.error}',
+              textAlign: TextAlign.center,
+            ),
           );
-        } 
+        }
         // 沒資料
         else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('目前沒有文章資料', style: TextStyle(color: Colors.grey)));
+          return const Center(
+            child: Text('目前沒有文章資料', style: TextStyle(color: Colors.grey)),
+          );
         }
 
         // 成功取得資料，顯示卡片列表
@@ -107,9 +117,9 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
           borderRadius: BorderRadius.circular(20),
           onTap: () {
             // TODO: 下一步，我們會在這裡跳轉到「文章閱讀與朗讀頁面」
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('即將前往閱讀：${article.title}'))
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('即將前往閱讀：${article.title}')));
           },
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -121,26 +131,40 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                   children: [
                     // 主題標籤
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         article.theme,
-                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     // 等級標籤
                     Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                       decoration: BoxDecoration(
-                         color: Colors.orange.withOpacity(0.15),
-                         borderRadius: BorderRadius.circular(6)
-                       ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                       child: Text(
                         article.level,
-                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w900, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -149,17 +173,36 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                 // 文章標題
                 Text(
                   article.title,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 // 底部提示
                 Row(
                   children: [
-                    const Icon(Icons.menu_book_rounded, size: 16, color: Colors.grey),
+                    const Icon(
+                      Icons.menu_book_rounded,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 6),
-                    Text('點擊開始閱讀與朗讀', style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                    Text(
+                      '點擊開始閱讀與朗讀',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const Spacer(),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey[400]),
+                    const Icon(
+                      AppIcons.forwardSmall,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                   ],
                 ),
               ],

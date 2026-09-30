@@ -23,7 +23,10 @@ class TutorHomeScreen extends StatelessWidget {
         ),
         title: Icon(Icons.camera_alt, color: Colors.white),
         centerTitle: true,
-        actions: [Icon(Icons.person_outline, color: Colors.white), const SizedBox(width: 12)],
+        actions: [
+          Icon(Icons.person_outline, color: Colors.white),
+          const SizedBox(width: 12),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -32,9 +35,15 @@ class TutorHomeScreen extends StatelessWidget {
           children: [
             // Ask a Question 按鈕
             GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AskQuestionScreen())),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AskQuestionScreen()),
+              ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(16),
@@ -42,26 +51,57 @@ class TutorHomeScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(color: AppColors.gold, shape: BoxShape.circle),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.gold,
+                        shape: BoxShape.circle,
+                      ),
                       child: Icon(Icons.monetization_on, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
-                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Ask a Question', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                      const Text('(50 J-Points)', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                    ]),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ask a Question',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const Text(
+                          '(50 J-Points)',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            const Text('My Question History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'My Question History',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 12),
-            _QuestionTile(title: 'Izakaya polite form', status: 'Answered', statusColor: AppColors.primary),
-            _QuestionTile(title: 'Ramen shop particie usage', status: 'Pending', statusColor: AppColors.textGrey),
+            _QuestionTile(
+              title: 'Izakaya polite form',
+              status: 'Answered',
+              statusColor: AppColors.primary,
+            ),
+            _QuestionTile(
+              title: 'Ramen shop particie usage',
+              status: 'Pending',
+              statusColor: AppColors.textGrey,
+            ),
             const SizedBox(height: 20),
-            const Text('Popular FAQS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Popular FAQS',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 12),
             _FaqTile(title: 'Difference between'),
             _FaqTile(title: 'when to use Keigo'),
@@ -76,15 +116,26 @@ class TutorHomeScreen extends StatelessWidget {
 class _QuestionTile extends StatelessWidget {
   final String title, status;
   final Color statusColor;
-  const _QuestionTile({required this.title, required this.status, required this.statusColor});
+  const _QuestionTile({
+    required this.title,
+    required this.status,
+    required this.statusColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title, style: const TextStyle(fontSize: 15)),
-      subtitle: Text(status, style: TextStyle(color: statusColor, fontSize: 13)),
-      trailing: const Icon(Icons.chevron_right),
+      subtitle: Text(
+        status,
+        style: TextStyle(color: statusColor, fontSize: 13),
+      ),
+      trailing: const Icon(
+        AppIcons.forward,
+        size: AppIcons.navSize,
+        color: AppColors.textGrey,
+      ),
     );
   }
 }
@@ -98,7 +149,11 @@ class _FaqTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title, style: const TextStyle(fontSize: 15)),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: const Icon(
+        AppIcons.forward,
+        size: AppIcons.navSize,
+        color: AppColors.textGrey,
+      ),
     );
   }
 }

@@ -2,40 +2,41 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // 主色體系
-  static const Color primary = Color(0xFF4E8B4C);      // 主綠色（按鈕、強調）
+  static const Color primary = Color(0xFF4E8B4C); // 主綠色（按鈕、強調）
   static const Color primaryLight = Color(0xFFEAF4EA); // 淡綠色（背景）
-  static const Color secondary = Color(0xFFC6B13B);    // 金色（次要、標籤）
+  static const Color secondary = Color(0xFFC6B13B); // 金色（次要、標籤）
 
   // 文字色
-  static const Color textDark = Color(0xFF333333);     // 深色文字
-  static const Color textGrey = Color(0xFF777777);     // 灰色文字
-  static const Color textSubtle = Color(0xFF888888);   // 淡灰色文字
+  static const Color textDark = Color(0xFF333333); // 深色文字
+  static const Color textGrey = Color(0xFF777777); // 灰色文字
+  static const Color textSubtle = Color(0xFF888888); // 淡灰色文字
 
   // 額外文字/界面色（article list 專用）
-  static const Color title = Color(0xFF2C3E50);       // 文章標題主色
-  static const Color level = Color(0xFFFF9800);       // 等級標籤橘色（對應 Colors.orange）
-  static const Color muted = Color(0xFF757575);       // 次要文字 / icon 灰色（對應 Colors.grey[600]）
-  static const Color mutedLight = Color(0xFFBDBDBD);  // 淡灰色（對應 Colors.grey[400]）
-  static const Color shadow = Color(0x0A000000);      // 卡片陰影（黑色 4% 透明度）
+  static const Color title = Color(0xFF2C3E50); // 文章標題主色
+  static const Color level = Color(0xFFFF9800); // 等級標籤橘色（對應 Colors.orange）
+  static const Color muted = Color(
+    0xFF757575,
+  ); // 次要文字 / icon 灰色（對應 Colors.grey[600]）
+  static const Color mutedLight = Color(0xFFBDBDBD); // 淡灰色（對應 Colors.grey[400]）
+  static const Color shadow = Color(0x0A000000); // 卡片陰影（黑色 4% 透明度）
 
   // 背景色
-  static const Color background = Color(0xFFF5F5F0);   // 頁面背景
+  static const Color background = Color(0xFFF5F5F0); // 頁面背景
   static const Color cardBackground = Color(0xFFFFFFFF); // 卡片背景
-  static const Color lightBg = Color(0xFFF8F9FA);      // 淡白背景
- 
+  static const Color lightBg = Color(0xFFF8F9FA); // 淡白背景
 
   // 卡片色
-  static const Color cardGreen = Color(0xFFE8F5E9);    // 綠色卡片
-  static const Color cardGold = Color(0xFFFFF8E1);     // 金色卡片
-  static const Color cardBeige = Color(0xFFFCF6EA);    // 米色卡片
+  static const Color cardGreen = Color(0xFFE8F5E9); // 綠色卡片
+  static const Color cardGold = Color(0xFFFFF8E1); // 金色卡片
+  static const Color cardBeige = Color(0xFFFCF6EA); // 米色卡片
 
   // 警告和狀態色
-  static const Color warning = Color(0xFFFFC107);      // 警告色（橘色）
-  static const Color error = Color(0xFFFF6B6B);        // 錯誤色（紅色）
-  static const Color success = Color(0xFF4CAF50);      // 成功色（綠色）
+  static const Color warning = Color(0xFFFFC107); // 警告色（橘色）
+  static const Color error = Color(0xFFFF6B6B); // 錯誤色（紅色）
+  static const Color success = Color(0xFF4CAF50); // 成功色（綠色）
 
   // 邊框色
-  static const Color borderLight = Color(0xFFE0E0E0);  // 淡邊框
+  static const Color borderLight = Color(0xFFE0E0E0); // 淡邊框
   static const Color borderGreen = Color(0xFFA9C5A8); // 綠色邊框
 
   // 舊色彩（相容性）
@@ -70,6 +71,14 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     color: AppColors.textDark,
   );
+}
+
+class AppIcons {
+  static const IconData back = Icons.arrow_back_ios;
+  static const IconData forward = Icons.chevron_right_rounded;
+  static const IconData forwardSmall = Icons.arrow_forward_ios_rounded;
+
+  static const double navSize = 18;
 }
 
 // 日期格式化工具函式

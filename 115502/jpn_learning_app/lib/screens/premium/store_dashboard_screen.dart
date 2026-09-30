@@ -55,7 +55,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
+            Icons.arrow_back_ios,
             color: _textColor,
             size: 20,
           ),

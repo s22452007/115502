@@ -116,7 +116,7 @@ Future<void> _toggleStar() async {
         backgroundColor: Colors.transparent, // 透明 AppBar 讓畫面更一體
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: textColor, size: 20),
+          icon: const Icon(Icons.arrow_back_ios, color: textColor, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [

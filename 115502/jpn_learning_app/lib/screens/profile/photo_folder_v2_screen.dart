@@ -217,7 +217,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: textColor, size: 22),
+          icon: const Icon(Icons.arrow_back_ios, color: textColor, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(

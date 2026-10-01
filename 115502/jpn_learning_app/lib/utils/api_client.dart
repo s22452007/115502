@@ -1696,6 +1696,44 @@ class ApiClient {
     throw Exception(data['error'] ?? '無法載入教室清單');
   }
 
+  /// 登記這支手機的推播 token（Firebase Cloud Messaging），老師發公告、出作業、批改才推得到。
+  /// 登出時帶 logout: true，後端只在帳號記的還是這支手機時才清掉。
+  static Future<bool> registerPushToken({
+    required int userId,
+    required String token,
+    bool logout = false,
+  }) async {
+    final url = Uri.parse('$baseUrl/user/push_token');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'token': token, 'logout': logout}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ 推播 token 登記失敗: $e');
+      return false;
+    }
+  }
+
+  /// 教室公告（新的在前）。呼叫後這班的公告就算已讀，教室清單的 unread_count 會歸零。
+  /// 每筆欄位：announcement_id / title / content / created_at（台灣時間）/ is_new /
+  /// assignment_id（出作業時自動發的公告才有，可直接開作業詳情）
+  static Future<Map<String, dynamic>> getClassroomAnnouncements(
+    int classroomId,
+    int userId,
+  ) async {
+    final url = Uri.parse('$baseUrl/classroom/$classroomId/announcements?user_id=$userId');
+    try {
+      final response = await http.get(url);
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 教室公告連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
+    }
+  }
+
   /// 輸入代碼後、真正加入前，先查這是哪一班、哪位老師。
   static Future<Map<String, dynamic>> previewClassroom(String joinCode) async {
     final url = Uri.parse('$baseUrl/classroom/preview?join_code=${Uri.encodeQueryComponent(joinCode)}');

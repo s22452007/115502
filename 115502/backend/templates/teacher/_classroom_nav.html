@@ -12,6 +12,7 @@
 <nav class="class-tabs">
     <a href="/teacher/classroom/{{ cid }}/students" class="tab {{ 'active' if active == 'students' }}"><i class="bi bi-people-fill"></i>學生</a>
     <a href="/teacher/classroom/{{ cid }}/assignments" class="tab {{ 'active' if active == 'assignments' }}"><i class="bi bi-journal-check"></i>作業</a>
+    <a href="/teacher/classroom/{{ cid }}/announcements" class="tab {{ 'active' if active == 'announcements' }}"><i class="bi bi-megaphone-fill"></i>公告</a>
     <a href="/teacher/classroom/{{ cid }}/gradebook" class="tab {{ 'active' if active == 'gradebook' }}"><i class="bi bi-table"></i>成績</a>
     <a href="/teacher/classroom/{{ cid }}/report" class="tab {{ 'active' if active == 'report' }}"><i class="bi bi-graph-up"></i>報表</a>
     {% if tab_actions %}<div class="tab-actions">{{ tab_actions }}</div>{% endif %}

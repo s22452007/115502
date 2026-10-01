@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/edu/assignment_detail_screen.dart';
+import 'package:jpn_learning_app/services/notification_service.dart';
 
 /// 教育版學生的「我的作業」清單。點任一筆進作業詳情，再從詳情「開始作答」。
 ///
@@ -50,6 +51,8 @@ class _AssignmentListScreenState extends State<AssignmentListScreen> {
         _assignments = data;
         _isLoading = false;
       });
+      // 交了作業回到清單時，那份的截止提醒就會被取消
+      NotificationService.scheduleAssignmentReminders(data);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -143,7 +146,9 @@ class _AssignmentListScreenState extends State<AssignmentListScreen> {
         final String status = submission['status'] ?? 'pending';
         final bool isPending = status == 'pending';
         final bool isOverdue = task['is_overdue'] == true;
-        final score = submission['score'];
+        final bool isClosed = task['is_closed'] == true;
+        // 遲交扣分的作業顯示扣完、真正計入成績的分數
+        final score = submission['effective_score'] ?? submission['score'];
         final String type = task['task_type'] ?? '';
         final int? assignmentId = task['assignment_id'];
 
@@ -170,7 +175,7 @@ class _AssignmentListScreenState extends State<AssignmentListScreen> {
                   task['classroom_name'],
                 _typeLabels[type] ?? type,
                 _formatDue(task['due_at']),
-                if (isPending && isOverdue) '已逾期',
+                if (isPending && isOverdue) isClosed ? '已截止，不收遲交' : '已逾期',
               ].join(' · '),
               style: TextStyle(
                 color: isPending && isOverdue ? Colors.red : null,

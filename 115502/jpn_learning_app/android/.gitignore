@@ -6,6 +6,8 @@ gradle-wrapper.jar
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/
+# Kotlin 編譯快取（build 時自動產生）
+.kotlin/
 
 # Remember to never publicly share your keystore.
 # See https://flutter.dev/to/reference-keystore

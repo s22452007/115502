@@ -18,6 +18,34 @@ from models import (
 
 user_bp = Blueprint('user', __name__)
 
+
+@user_bp.route('/push_token', methods=['POST'])
+def register_push_token():
+    """App 登記這支手機的推播 token（Firebase Cloud Messaging）。
+
+    body：{user_id, token, logout?}
+      - 登入後：帶 token，之後老師發公告、出作業、批改就推到這支手機
+      - 登出時：帶 logout=true 和這支手機的 token，只有帳號記的還是這支手機才清掉，
+        避免在舊手機登出、把新手機的通知也一起關掉
+    同一支手機換別人登入時，token 從前一個帳號移走，通知才不會推錯人。
+    """
+    data = request.get_json() or {}
+    user = User.query.get(data.get('user_id') or 0)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+    token = (data.get('token') or '').strip()[:255] or None
+
+    if data.get('logout'):
+        if token and user.push_token == token:
+            user.push_token = None
+    else:
+        if token:
+            User.query.filter(User.push_token == token, User.id != user.id) \
+                .update({'push_token': None}, synchronize_session=False)
+        user.push_token = token
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
+
 # ==========================================
 # [個人設定與數據]
 # ==========================================

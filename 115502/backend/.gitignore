@@ -1,5 +1,7 @@
 # 環境變數與機密資訊 (絕對不可以上傳！)
 .env
+# Firebase 服務帳戶金鑰等機密（手機推播用），絕對不能進 git
+secrets/
 .env.local
 
 # FastAPI / Flask / Python 產生檔

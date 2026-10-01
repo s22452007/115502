@@ -1971,9 +1971,12 @@ from services.teacher_service import (
     create_photo_assignment, create_chat_assignment,
     get_assignment_submissions_list, grade_submission,
     get_gradebook, save_grade_config, set_assignment_score, gradebook_csv,
-    get_classroom_report, get_student_report, student_report_csv, tw_fmt
+    get_classroom_report, get_student_report, student_report_csv, tw_fmt,
+    set_late_policy, late_policy_text, post_announcement, announce_assignment, get_announcements,
+    copy_assignment, LATE_POLICY_LABELS, push_announcement, push_new_assignment, push_graded
 )
-from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene
+from models import (Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene,
+                    ClassroomAnnouncement)
 
 # 模板裡直接拿 ORM 物件的時間（UTC）顯示時用：{{ a.created_at|tw }}
 app.add_template_filter(tw_fmt, 'tw')
@@ -2117,8 +2120,17 @@ def teacher_classroom_assignments(classroom_id):
         a.submitted_count = AssignmentSubmission.query.filter_by(assignment_id=a.id).filter(
             AssignmentSubmission.status.in_(['submitted', 'graded'])
         ).count()
+        a.late_text = late_policy_text(a)
 
-    return render_template('teacher/assignment_list.html', classroom=classroom, assignments=assignments)
+    # 「複製到其他班」能選的班級：同一位老師、使用中的其他班（super_admin 不能代替老師出題）
+    other_classrooms = []
+    if session.get('role') == 'teacher':
+        other_classrooms = Classroom.query.filter(
+            Classroom.teacher_id == session['teacher_user_id'], Classroom.id != classroom_id,
+            Classroom.is_archived.isnot(True)).order_by(Classroom.created_at.desc()).all()
+
+    return render_template('teacher/assignment_list.html', classroom=classroom, assignments=assignments,
+                           other_classrooms=other_classrooms, late_policy_labels=LATE_POLICY_LABELS)
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/assignment/create', methods=['GET', 'POST'])
@@ -2156,7 +2168,7 @@ def teacher_assignment_create(classroom_id):
             vocabs_raw = request.form.get('required_vocabs', '')
             vocabs = [v.strip() for v in vocabs_raw.replace('，', ',').split(',') if v.strip()]
             pass_score = request.form.get('pass_score', 60)
-            create_sentence_assignment(classroom_id, title, instructions, grammar, vocabs, pass_score, due_at)
+            assignment = create_sentence_assignment(classroom_id, title, instructions, grammar, vocabs, pass_score, due_at)
             flash(f"造句挑戰作業「{title}」發布成功！", "success")
 
         elif task_type == 'article':
@@ -2185,7 +2197,7 @@ def teacher_assignment_create(classroom_id):
             except Exception:
                 questions = []
 
-            create_article_assignment(
+            assignment = create_article_assignment(
                 classroom_id, title, instructions,
                 article_id=art_id, new_article=new_art,
                 has_quiz=has_quiz, questions=questions, due_at=due_at
@@ -2195,7 +2207,7 @@ def teacher_assignment_create(classroom_id):
         elif task_type == 'photo':
             theme = request.form.get('photo_theme', '').strip()
             min_vocab_count = request.form.get('min_vocab_count', 3)
-            create_photo_assignment(classroom_id, title, instructions, theme, min_vocab_count, due_at)
+            assignment = create_photo_assignment(classroom_id, title, instructions, theme, min_vocab_count, due_at)
             flash(f"拍照學習作業「{title}」發布成功！", "success")
 
         elif task_type == 'chat':
@@ -2205,13 +2217,25 @@ def teacher_assignment_create(classroom_id):
                 return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
             dialect_id = request.form.get('dialect_id', type=int)
             min_turns = request.form.get('min_turns', 6)
-            create_chat_assignment(classroom_id, title, instructions, topic, dialect_id, min_turns, due_at)
+            assignment = create_chat_assignment(classroom_id, title, instructions, topic, dialect_id, min_turns, due_at)
             flash(f"情境對話作業「{title}」發布成功！", "success")
 
         else:
             flash("未知的作業題型", "danger")
             return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
 
+        # 遲交規則填錯不擋發布（出題表單很長，退回去會整份重填），先用預設的允許遲交並提醒老師
+        late_error = set_late_policy(assignment, request.form.get('late_policy'), request.form.get('late_penalty'))
+        if late_error:
+            flash(f"{late_error}；這份作業先設為「允許遲交」，可在作業列表按「編輯」修改", "warning")
+        announce = request.form.get('announce') == '1'
+        if announce:
+            announce_assignment(assignment)
+        db.session.commit()
+        if announce:
+            pushed = push_new_assignment(assignment)
+            if pushed:
+                flash(f"已推播通知到 {pushed} 位學生的手機", "info")
         return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
     existing_articles = Article.query.filter(Article.is_published.isnot(False)).order_by(Article.level, Article.id).all()
@@ -2250,6 +2274,7 @@ def teacher_submission_grade(submission_id):
     if not ok:
         flash(error, "danger")
         return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+    push_graded(sub)
     # 存完回到剛剛那一列（不用每批一個人就捲回最上面），那一列會標「已儲存」
     return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id,
                             saved=sub.student_id, _anchor=f'stu-{sub.student_id}'))
@@ -2591,8 +2616,12 @@ def teacher_assignment_edit(assignment_id):
         except ValueError:
             pass
     assignment.is_published = request.form.get('is_published') == 'on'
+    late_error = set_late_policy(assignment, request.form.get('late_policy'), request.form.get('late_penalty'))
     db.session.commit()
-    flash(f"作業「{title}」已更新", "success")
+    if late_error:
+        flash(f"作業「{title}」已更新，但{late_error}，遲交規則維持原本的設定", "warning")
+    else:
+        flash(f"作業「{title}」已更新", "success")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
 
 
@@ -2626,11 +2655,136 @@ def teacher_assignment_delete(assignment_id):
         action='DELETE', target_table='assignment', target_id=assignment_id,
         old_value={'title': title, 'classroom_id': classroom_id, 'submissions': submission_count}
     ))
+    ClassroomAnnouncement.query.filter_by(assignment_id=assignment_id).delete()
     db.session.delete(assignment)
     db.session.commit()
     note = f"，學生的 {submission_count} 份繳交紀錄一併移除" if submission_count else ""
     flash(f"作業「{title}」已刪除{note}", "success")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
+
+
+@app.route('/teacher/assignment/<int:assignment_id>/copy', methods=['POST'])
+@teacher_required
+def teacher_assignment_copy(assignment_id):
+    """把作業複製到老師自己的其他班：同一門課開兩班、或新學期沿用舊班的作業"""
+    assignment = _own_assignment(assignment_id)
+    if not assignment:
+        flash("找不到該作業", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    back = url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id)
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        flash("管理者無法代替老師出題，請由班級老師登入後複製", "danger")
+        return redirect(back)
+
+    targets = Classroom.query.filter(
+        Classroom.id.in_(request.form.getlist('target_classroom_ids', type=int) or [0]),
+        Classroom.teacher_id == session['teacher_user_id'],
+        Classroom.id != assignment.classroom_id,
+        Classroom.is_archived.isnot(True),
+    ).all()
+    if not targets:
+        flash("請勾選要複製到哪個班級", "danger")
+        return redirect(back)
+
+    due_at = None
+    if request.form.get('due_at'):
+        try:
+            due_at = datetime.fromisoformat(request.form['due_at'])
+        except ValueError:
+            flash("截止時間格式不正確", "danger")
+            return redirect(back)
+    publish = request.form.get('publish') == 'on'
+    announce = publish and request.form.get('announce') == 'on'
+    copies = []
+    for c in targets:
+        new = copy_assignment(assignment, c.id, due_at=due_at, publish=publish)
+        if announce:
+            announce_assignment(new)
+        copies.append(new)
+    db.session.commit()
+    if announce:
+        for new in copies:
+            push_new_assignment(new)
+    names = '、'.join(f"「{c.name}」" for c in targets)
+    flash(f"已將「{assignment.title}」複製到 {names}"
+          + ("" if publish else "（尚未發布，到該班的作業列表按「發布」學生才看得到）"), "success")
+    return redirect(back)
+
+
+# ---- 班級公告 ----
+def _own_announcement(announcement_id):
+    a = ClassroomAnnouncement.query.get(announcement_id)
+    return a if a and _own_classroom(a.classroom_id) else None
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/announcements', methods=['GET', 'POST'])
+@teacher_required
+def teacher_announcements(classroom_id):
+    """班級公告：老師發布、學生在 App 教室頁看到（有未讀會顯示紅點）"""
+    classroom = _own_classroom(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    if request.method == 'POST':
+        # 和出題一樣：super_admin 可以檢視、刪除，但不能代替老師發公告
+        if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+            flash("管理者無法代替老師發公告，請由班級老師登入後發布", "danger")
+            return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
+        title = (request.form.get('title') or '').strip()
+        if not title:
+            flash("請填寫公告標題", "danger")
+            return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
+        ann = post_announcement(classroom_id, title, request.form.get('content'))
+        db.session.commit()
+        pushed = push_announcement(ann)
+        flash("公告已發布，學生打開 App 的教室就會看到"
+              + (f"，並已推播到 {pushed} 位學生的手機" if pushed else ""), "success")
+        return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
+    return render_template('teacher/announcements.html', classroom=classroom,
+                           announcements=get_announcements(classroom_id))
+
+
+@app.route('/teacher/announcement/<int:announcement_id>/edit', methods=['POST'])
+@teacher_required
+def teacher_announcement_edit(announcement_id):
+    """修改公告內容。不會重新變成未讀，要提醒學生請另發一則"""
+    a = _own_announcement(announcement_id)
+    if not a:
+        flash("找不到該公告", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    back = url_for('teacher_announcements', classroom_id=a.classroom_id)
+    if session.get('role') != 'teacher':
+        flash("管理者無法代替老師修改公告", "danger")
+        return redirect(back)
+    title = (request.form.get('title') or '').strip()
+    if not title:
+        flash("請填寫公告標題", "danger")
+        return redirect(back)
+    a.title = title[:100]
+    a.content = (request.form.get('content') or '').strip()
+    a.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash("公告已更新", "success")
+    return redirect(back)
+
+
+@app.route('/teacher/announcement/<int:announcement_id>/delete', methods=['POST'])
+@teacher_required
+def teacher_announcement_delete(announcement_id):
+    a = _own_announcement(announcement_id)
+    if not a:
+        flash("找不到該公告", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    classroom_id = a.classroom_id
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=session.get('teacher_user_id'),
+        action='DELETE', target_table='classroom_announcement', target_id=a.id,
+        old_value={'classroom_id': classroom_id, 'title': a.title}
+    ))
+    db.session.delete(a)
+    db.session.commit()
+    flash("公告已刪除", "success")
+    return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
 
 
 # ==========================================

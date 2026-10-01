@@ -16,6 +16,7 @@ services:
       - ./:/app
       - ./instance:/app/instance          # SQLite 資料庫持久化
       - ./static/photos:/app/static/photos # 使用者上傳照片持久化
+      - ./secrets:/app/secrets:ro         # Firebase 推播金鑰（沒有也能啟動，只是不推播）
     restart: unless-stopped
 
   # 後台管理（管理員網頁後台）
@@ -31,6 +32,7 @@ services:
     volumes:
       - ./instance:/app/instance          # 與 api 共用同一個資料庫檔
       - ./static/photos:/app/static/photos
+      - ./secrets:/app/secrets:ro         # 老師發公告、出作業、批改時推播要用
     restart: unless-stopped
 
   # Cloudflare 通道（對外公開網址）

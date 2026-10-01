@@ -163,13 +163,13 @@
                             <tr>
                                 <td><span class="type-chip chip-{{ a.task_type }}">{{ a.type_label }}</span>{{ a.title }}</td>
                                 <td class="num">
-                                    {% if a.status == 'graded' %}<b class="{{ 'diff-neg' if a.score < 60 else '' }}">{{ a.score }}</b>
+                                    {% if a.status == 'graded' %}<b class="{{ 'diff-neg' if a.score < 60 else '' }}">{{ a.score }}</b>{% if a.deduct %}<span class="status-late" title="原始分數 {{ a.raw_score }}，遲交扣 {{ a.deduct }} 分">原 {{ a.raw_score }}</span>{% endif %}
                                     {% elif a.status == 'ungraded' %}<span class="status-ungraded">已交待批</span>
                                     {% else %}<span class="status-missing">缺交</span>{% endif %}
                                 </td>
                                 <td class="num">{{ a.class_avg if a.class_avg is not none else '—' }}</td>
                                 <td class="num">{% if a.diff is not none %}<span class="{{ 'diff-pos' if a.diff >= 0 else 'diff-neg' }}">{{ '+' if a.diff >= 0 }}{{ a.diff }}</span>{% else %}—{% endif %}</td>
-                                <td class="text-muted small">{{ a.due_at or '—' }}{% if a.late %}<span class="status-late">遲交</span>{% endif %}</td>
+                                <td class="text-muted small">{{ a.due_at or '—' }}{% if a.late %}<span class="status-late">遲交{% if a.deduct %} −{{ a.deduct }}{% endif %}</span>{% endif %}</td>
                             </tr>
                             {% endfor %}
                             </tbody>

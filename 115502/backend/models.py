@@ -51,6 +51,9 @@ class User(db.Model):
     # 帳號類型：登入分流與免費判斷的根據，合法值見 AccountType。
     # 舊資料一律是 'general'，行為完全不變。
     account_type = db.Column(db.String(20), default='general', nullable=False)
+    # 手機推播（Firebase Cloud Messaging）的裝置 token。學生登入 App 時登記、登出時清掉；
+    # 同一支手機換人登入會從前一個帳號移走。一個帳號只記最後登入的那支手機
+    push_token = db.Column(db.String(255), nullable=True, index=True)
     # 訂閱與小組狀態
     is_premium = db.Column(db.Boolean, default=False)
     subscription_end_date = db.Column(db.DateTime, nullable=True)
@@ -565,6 +568,14 @@ class SubmissionStatus:
     GRADED = 'graded'         # 老師已批閱（AI 自動給分的也算）
 
 
+class LatePolicy:
+    """Assignment.late_policy 的合法值：截止之後還交不交得進來、怎麼算分。"""
+    ALLOW = 'allow'     # 允許遲交，只標示「遲交」（預設，也是舊作業的行為）
+    REJECT = 'reject'   # 截止後不收，學生端擋下繳交
+    DEDUCT = 'deduct'   # 允許遲交，但算成績時扣 late_penalty 分（原始分數保留，老師改分也照扣）
+    ALL = (ALLOW, REJECT, DEDUCT)
+
+
 # T_classroom: 學習教室。老師建立，學生用 join_code 加入。
 class Classroom(db.Model):
     __tablename__ = 'classroom'
@@ -610,6 +621,9 @@ class ClassroomMember(db.Model):
     # 老師看到的顯示名稱，預設抄 User.username，但老師可以改成座號或真名
     display_name = db.Column(db.String(50), nullable=True)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # 學生上次打開這班公告的時間；比它新的公告算未讀（App 教室卡片上的紅點）。
+    # None 代表還沒打開過，這班所有公告都算未讀
+    notice_seen_at = db.Column(db.DateTime, nullable=True)
 
     # 同一個學生在同一間教室只會有一筆
     __table_args__ = (
@@ -634,6 +648,9 @@ class Assignment(db.Model):
     config = db.Column(db.JSON, nullable=True)
 
     due_at = db.Column(db.DateTime, nullable=True)        # 不設就是沒有截止日
+    # 遲交規則（LatePolicy）：None 視為 allow，舊作業行為不變。沒有截止日的作業不會遲交
+    late_policy = db.Column(db.String(10), nullable=True, default='allow')
+    late_penalty = db.Column(db.Integer, nullable=True, default=0)  # deduct 時每份遲交扣幾分
     is_published = db.Column(db.Boolean, default=True)    # 老師可以先存草稿
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -672,3 +689,17 @@ class AssignmentSubmission(db.Model):
     __table_args__ = (
         db.UniqueConstraint('assignment_id', 'student_id', name='uq_assignment_student'),
     )
+
+
+# T_classroom_announcement: 班級公告。老師在後台「公告」分頁發布，學生在 App 教室頁看到。
+# 出新作業時可以勾選同時發一則，那種公告會記下 assignment_id，App 可以直接點進作業
+class ClassroomAnnouncement(db.Model):
+    __tablename__ = 'classroom_announcement'
+    id = db.Column(db.Integer, primary_key=True)
+    classroom_id = db.Column(db.Integer, db.ForeignKey('classroom.id'), nullable=False, index=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=True)
+    # 出作業時自動發的公告指向那份作業；作業被刪除時這則公告一併刪除。一般公告為 None
+    assignment_id = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True)   # 老師編輯過才有

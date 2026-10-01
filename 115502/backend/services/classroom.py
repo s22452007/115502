@@ -1,7 +1,7 @@
 """校園教育版 —— 學生端的教室 API。
 
 老師端（建立教室、產生 join_code、管理成員）由另一位同學負責，
-這個檔案只處理學生這一側：用代碼加入、看自己加入了哪些教室、退出教室。
+這個檔案只處理學生這一側：用代碼加入、看自己加入了哪些教室、看班級公告、退出教室。
 
 join_code 的產生規則在老師端，這裡不產生、只負責比對，
 但必須容忍學生手動輸入的各種寫法（小寫、前後空白、中間的空格或連字號）。
@@ -13,7 +13,8 @@ from flask import Blueprint, request, jsonify
 
 from utils.db import db
 from utils.account_helper import is_edu_student
-from models import User, Classroom, ClassroomMember, Assignment
+from models import User, Classroom, ClassroomMember, Assignment, ClassroomAnnouncement
+from services.student_assignment import tw_iso
 
 classroom_bp = Blueprint('classroom', __name__)
 
@@ -157,6 +158,7 @@ def my_classrooms(user_id):
         brief["assignment_count"] = Assignment.query.filter_by(
             classroom_id=classroom.id, is_published=True
         ).count()
+        brief["unread_count"] = _unread_announcements(classroom.id, member)
         result.append(brief)
 
     result.sort(key=lambda c: c["joined_at"] or '', reverse=True)
@@ -165,6 +167,66 @@ def my_classrooms(user_id):
         "status": "success",
         "count": len(result),
         "classrooms": result,
+    }), 200
+
+
+def _seen_since(member):
+    """比這個時間新的公告算未讀；還沒打開過公告頁（None）就是全部未讀。
+
+    不從加入班級算起：老師常常先建班、發公告，再從名冊加學生，
+    那些公告學生一則都還沒看過，不能因為發得比較早就當成已讀。
+    """
+    return member.notice_seen_at
+
+
+def _unread_announcements(classroom_id, member):
+    q = ClassroomAnnouncement.query.filter_by(classroom_id=classroom_id)
+    since = _seen_since(member)
+    if since:
+        q = q.filter(ClassroomAnnouncement.created_at > since)
+    return q.count()
+
+
+@classroom_bp.route('/<int:classroom_id>/announcements', methods=['GET'])
+def classroom_announcements(classroom_id):
+    """教室公告，新的在前。學生打開公告頁就算看過，回傳後這班的公告都標成已讀。
+
+    出作業時自動發的公告會帶 assignment_id，前端可以直接點進作業；
+    作業後來被下架的話不給 assignment_id，避免點進去才發現找不到。
+    """
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({"error": "缺少使用者 ID"}), 400
+
+    classroom = Classroom.query.get(classroom_id)
+    member = ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=user_id).first()
+    if not classroom or classroom.is_archived or not member:
+        return jsonify({"error": "找不到這個教室"}), 404
+
+    since = _seen_since(member)
+    rows = ClassroomAnnouncement.query.filter_by(classroom_id=classroom_id) \
+        .order_by(ClassroomAnnouncement.created_at.desc()).limit(100).all()
+    published = {a.id for a in Assignment.query.filter(
+        Assignment.id.in_([r.assignment_id for r in rows if r.assignment_id] or [0]),
+        Assignment.is_published.is_(True),
+    )}
+    announcements = [{
+        "announcement_id": r.id,
+        "title": r.title,
+        "content": r.content or '',
+        "assignment_id": r.assignment_id if r.assignment_id in published else None,
+        "created_at": tw_iso(r.created_at),     # 台灣時間，前端直接顯示
+        "updated_at": tw_iso(r.updated_at),
+        "is_new": since is None or (r.created_at is not None and r.created_at > since),
+    } for r in rows]
+
+    member.notice_seen_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "classroom": _classroom_brief(classroom, member),
+        "announcements": announcements,
     }), 200
 
 

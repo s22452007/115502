@@ -147,7 +147,7 @@
                             <td>
                                 {% if s.status == 'graded' %}
                                     <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                        <i class="bi bi-check-circle"></i> 已批閱 ({{ s.score }}分)
+                                        <i class="bi bi-check-circle"></i> 已批閱 ({{ s.score }}分{% if s.late_deduct and s.score is not none %}，計 {{ [s.score - s.late_deduct, 0]|max }} 分{% endif %})
                                     </span>
                                 {% elif s.status == 'submitted' %}
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
@@ -159,7 +159,7 @@
                                     </span>
                                 {% endif %}
                                 {% if s.is_late %}
-                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" title="超過截止時間才繳交">遲交</span>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" title="超過截止時間才繳交">遲交{% if s.late_deduct %} −{{ s.late_deduct }}{% endif %}</span>
                                 {% endif %}
                             </td>
                             <td class="small text-muted">{{ s.submitted_at }}</td>

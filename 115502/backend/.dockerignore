@@ -6,6 +6,7 @@ __pycache__/
 
 # 機密（金鑰改由 docker-compose 的 env_file 注入，不烤進映像）
 .env
+secrets/                # Firebase 推播金鑰，由 docker-compose 掛載
 
 # 資料庫與上傳照片（改用 volume 掛載到容器外，才能持久化、不被覆蓋）
 instance/

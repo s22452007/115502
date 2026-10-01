@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>JLens 校園教育版 - 班級公告</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        html { scrollbar-gutter: stable; }
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 32px 48px; overflow-x: hidden; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-title { color: var(--green-dark); font-weight: 900; margin: 0; font-size: 1.6rem; }
+        .page-sub { font-size: 0.85rem; color: #888; margin-top: 4px; }
+
+        .compose { background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); padding: 18px 22px; margin-bottom: 20px; }
+        .ann { background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); padding: 18px 22px; margin-bottom: 12px; }
+        .ann-title { font-weight: 800; color: #222; font-size: 1.05rem; }
+        .ann-meta { font-size: 0.78rem; color: #999; margin-top: 2px; }
+        .ann-body { white-space: pre-wrap; color: #444; margin-top: 10px; font-size: 0.93rem; line-height: 1.7; }
+        .ann-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.8rem; color: #888; gap: 10px; flex-wrap: wrap; }
+        .read-bar { display: inline-block; width: 90px; height: 6px; background: #eef1ef; border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+        .read-bar span { display: block; height: 6px; background: var(--green-mid); }
+    </style>
+</head>
+<body>
+<div class="layout">
+    {% include 'teacher/_sidebar.html' %}
+
+    <main class="main-content">
+        {% with crumbs=[(classroom.name, None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %}
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ classroom.name }}</h1>
+                <div class="page-sub">班級代碼：<strong>{{ classroom.join_code }}</strong> ｜ 發布公告，學生在 App 的教室頁看得到，有未讀會顯示紅點</div>
+            </div>
+        </div>
+        {% with cid=classroom.id, active='announcements' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div data-flash class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endwith %}
+
+        {% if session.get('role') == 'teacher' %}
+        <form class="compose" action="/teacher/classroom/{{ classroom.id }}/announcements" method="POST">
+            <input type="text" name="title" class="form-control fw-bold mb-2" placeholder="公告標題，例如：下週三小考範圍" maxlength="100" required>
+            <textarea name="content" class="form-control mb-2" rows="3" placeholder="公告內容（可留空）"></textarea>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>發布後會推播到學生手機；出新作業時勾選「通知學生」就會自動發，不用另外寫</span>
+                <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
+                    <i class="bi bi-megaphone me-1"></i>發布公告
+                </button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if not announcements %}
+            <div class="card p-5 text-center" style="border: 2px dashed #ddd; border-radius: 16px; background: white;">
+                <i class="bi bi-megaphone" style="font-size: 2.5rem; color: #bbb;"></i>
+                <p class="mt-2 mb-0 text-muted">還沒有公告</p>
+            </div>
+        {% else %}
+            {% for n in announcements %}
+            <div class="ann">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div>
+                        <div class="ann-title">{{ n.title }}</div>
+                        <div class="ann-meta">{{ n.created_at }}{% if n.updated_at %} ・ {{ n.updated_at }} 修改過{% endif %}</div>
+                    </div>
+                    <div class="d-flex gap-2 flex-shrink-0">
+                        {% if session.get('role') == 'teacher' %}
+                        <button class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#editAnn{{ n.id }}">
+                            <i class="bi bi-pencil"></i> 編輯
+                        </button>
+                        {% endif %}
+                        <form action="/teacher/announcement/{{ n.id }}/delete" method="POST" onsubmit="return confirm('刪除公告「{{ n.title }}」？學生那邊也會看不到。');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 8px;"><i class="bi bi-trash"></i> 刪除</button>
+                        </form>
+                    </div>
+                </div>
+                {% if n.content %}<div class="ann-body">{{ n.content }}</div>{% endif %}
+                <div class="ann-foot">
+                    <span>
+                        {% set pct = (n.read_count / n.member_count * 100) if n.member_count else 0 %}
+                        <span class="read-bar"><span style="width: {{ pct }}%;"></span></span>{{ n.read_count }} / {{ n.member_count }} 位學生已讀
+                    </span>
+                    {% if n.assignment_id %}
+                        {% if n.assignment_title %}
+                        <a href="/teacher/assignment/{{ n.assignment_id }}/submissions" class="text-secondary"><i class="bi bi-journal-check me-1"></i>作業：{{ n.assignment_title }}</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </main>
+</div>
+
+{% if session.get('role') == 'teacher' %}
+{% for n in announcements %}
+<div class="modal fade" id="editAnn{{ n.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-pencil me-2"></i>編輯公告</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/teacher/announcement/{{ n.id }}/edit" method="POST">
+        <div class="modal-body p-4">
+          <label class="form-label fw-bold">標題 <span class="text-danger">*</span></label>
+          <input type="text" name="title" class="form-control mb-3" value="{{ n.title }}" maxlength="100" required>
+          <label class="form-label fw-bold">內容</label>
+          <textarea name="content" class="form-control" rows="5">{{ n.content }}</textarea>
+          <div class="form-text">修改不會讓學生重新收到紅點；重要的更動建議另發一則公告。</div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none;">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% include 'admin/_flash_autohide.html' %}
+</body>
+</html>

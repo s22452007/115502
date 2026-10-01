@@ -5,11 +5,13 @@ from datetime import datetime, timedelta
 from utils.db import db
 from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
-    TaskType, SubmissionStatus, AccountType,
+    TaskType, SubmissionStatus, AccountType, LatePolicy, ClassroomAnnouncement,
     Article, SentencePracticeRecord, ArticleProgress, ScoreRecord,
     UserPhoto, UserPhotoVocab, ChatSession, ChatMessage, Dialect
 )
-from services.student_assignment import _is_late   # 遲交判斷跟學生端用同一套，才不會兩邊對不起來
+# 遲交判斷、遲交扣分跟學生端用同一套，兩邊看到的分數才會一樣
+from services.student_assignment import _is_late, late_deduction, late_policy_of
+from utils import push
 
 # 資料庫的時間除了作業截止時間 due_at（老師用 datetime-local 輸入的台灣時間）以外，
 # 都是 utcnow() 存的 UTC。老師端顯示前一律用 tw_fmt 換成台灣時間；台灣沒有日光節約，固定 +8 即可。
@@ -308,6 +310,139 @@ def create_chat_assignment(classroom_id, title, instructions, topic, dialect_id=
     return assignment
 
 
+LATE_POLICY_LABELS = {
+    LatePolicy.ALLOW: '允許遲交',
+    LatePolicy.REJECT: '截止後不收',
+    LatePolicy.DEDUCT: '遲交扣分',
+}
+
+
+def set_late_policy(assignment, policy, penalty=0):
+    """設定遲交規則（不 commit）。回傳錯誤訊息，成功回 None。"""
+    policy = (policy or LatePolicy.ALLOW).strip()
+    if policy not in LatePolicy.ALL:
+        return '遲交規則不正確'
+    pen = 0
+    if policy == LatePolicy.DEDUCT:
+        try:
+            pen = int(round(float(penalty)))
+        except (TypeError, ValueError, OverflowError):
+            return '遲交扣分要填 1～100 的數字'
+        if not 1 <= pen <= 100:
+            return '遲交扣分要填 1～100 的數字'
+    assignment.late_policy = policy
+    assignment.late_penalty = pen
+    return None
+
+
+def late_policy_text(assignment):
+    """給人看的遲交規則，例如「遲交扣 10 分」。"""
+    policy = late_policy_of(assignment)
+    if policy == LatePolicy.DEDUCT:
+        return f'遲交扣 {int(assignment.late_penalty or 0)} 分'
+    return LATE_POLICY_LABELS[policy]
+
+
+def post_announcement(classroom_id, title, content='', assignment_id=None):
+    """發一則班級公告（不 commit）。"""
+    a = ClassroomAnnouncement(classroom_id=classroom_id, title=title.strip()[:100],
+                              content=(content or '').strip(), assignment_id=assignment_id,
+                              created_at=datetime.utcnow())
+    db.session.add(a)
+    return a
+
+
+def announce_assignment(assignment):
+    """出作業時順便發的公告：標題「新作業：xxx」，內文放截止時間、遲交規則和老師的說明。"""
+    lines = []
+    if assignment.due_at:
+        lines.append(f"截止時間：{assignment.due_at.strftime('%Y-%m-%d %H:%M')}（{late_policy_text(assignment)}）")
+    if assignment.instructions:
+        lines.append(assignment.instructions)
+    return post_announcement(assignment.classroom_id, f'新作業：{assignment.title}', '\n'.join(lines),
+                             assignment_id=assignment.id)
+
+
+def get_announcements(classroom_id):
+    """老師看的公告列表（新的在前），附上幾位學生已經讀過。"""
+    members = ClassroomMember.query.filter_by(classroom_id=classroom_id).all()
+    rows = ClassroomAnnouncement.query.filter_by(classroom_id=classroom_id) \
+        .order_by(ClassroomAnnouncement.created_at.desc()).all()
+    titles = {a.id: a.title for a in Assignment.query.filter(
+        Assignment.id.in_([r.assignment_id for r in rows if r.assignment_id] or [0]))}
+    return [{
+        'id': r.id,
+        'title': r.title,
+        'content': r.content or '',
+        'assignment_id': r.assignment_id,
+        'assignment_title': titles.get(r.assignment_id),
+        'created_at': tw_fmt(r.created_at),
+        'updated_at': tw_fmt(r.updated_at),
+        # 學生打開過公告頁、而且是在這則公告發出之後打開的，就算讀過
+        'read_count': sum(1 for m in members if m.notice_seen_at and r.created_at and m.notice_seen_at >= r.created_at),
+        'member_count': len(members),
+    } for r in rows]
+
+
+def push_announcement(announcement):
+    """新公告推播給全班。回傳推到幾支手機（沒設定推播時是 0）。"""
+    classroom = Classroom.query.get(announcement.classroom_id)
+    body = (announcement.content or '').strip().replace('\n', ' ')[:80] or '老師發布了一則新公告'
+    return push.notify_classroom(classroom.id, f'{classroom.name}：{announcement.title}', body, {
+        'type': 'announcement', 'classroom_id': classroom.id, 'classroom_name': classroom.name,
+        'announcement_id': announcement.id})
+
+
+def push_new_assignment(assignment):
+    """新作業推播給全班：作業名稱、截止時間、不收遲交的話也講清楚。"""
+    if not assignment.is_published:
+        return 0
+    classroom = Classroom.query.get(assignment.classroom_id)
+    body = assignment.title
+    if assignment.due_at:
+        body += f"，{assignment.due_at.strftime('%m/%d %H:%M')} 截止"
+        if late_policy_of(assignment) != LatePolicy.ALLOW:
+            body += f'（{late_policy_text(assignment)}）'
+    return push.notify_classroom(classroom.id, f'{classroom.name}：新作業', body, {
+        'type': 'assignment', 'assignment_id': assignment.id, 'classroom_id': classroom.id})
+
+
+def push_graded(submission):
+    """老師在批閱頁存好分數，推播給那位學生。成績總表直接改分不推，避免老師調分時學生一直收到通知。"""
+    a = Assignment.query.get(submission.assignment_id)
+    if not a or not a.is_published or submission.score is None:
+        return 0
+    body = f'「{a.title}」老師給了 {submission.score} 分'
+    deduct = late_deduction(a, submission.submitted_at)
+    if deduct:
+        body += f'（遲交扣 {deduct}，計 {max(submission.score - deduct, 0)} 分）'
+    if submission.teacher_comment:
+        body += f'：{submission.teacher_comment[:40]}'
+    return push.notify_users([submission.student_id], '作業已批改', body, {
+        'type': 'assignment', 'assignment_id': a.id, 'classroom_id': a.classroom_id})
+
+
+def copy_assignment(assignment, target_classroom_id, due_at=None, publish=True):
+    """把作業複製到另一個班（不 commit）：題目、說明、遲交規則照抄，截止時間另外指定。
+    文章作業沿用同一篇文章，不會再複製一份文章。"""
+    import copy
+    new = Assignment(
+        classroom_id=target_classroom_id,
+        title=assignment.title,
+        instructions=assignment.instructions or '',
+        task_type=assignment.task_type,
+        config=copy.deepcopy(assignment.config) if assignment.config else {},
+        due_at=due_at,
+        late_policy=late_policy_of(assignment),
+        late_penalty=int(assignment.late_penalty or 0),
+        is_published=bool(publish),
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(new)
+    db.session.flush()
+    return new
+
+
 def _quiz_summary(answer_detail):
     """一位學生的文章測驗：答對幾題、錯了哪些。舊的繳交紀錄沒有逐題作答，回 None。"""
     if not isinstance(answer_detail, list) or not answer_detail:
@@ -410,6 +545,7 @@ def get_assignment_submissions_list(assignment_id):
             'attempt_count': sub.attempt_count if sub else 0,
             'submitted_at': tw_fmt(sub.submitted_at) if sub and sub.submitted_at else '尚未繳交',
             'is_late': bool(sub and sub.submitted_at and _is_late(assignment, sub.submitted_at)),
+            'late_deduct': late_deduction(assignment, sub.submitted_at) if sub else 0,
             'detail': submission_detail
         })
 
@@ -571,13 +707,18 @@ def _self_practice_avgs(student_id, since):
 
 def _cell_for(sub, assignment):
     """一格作業成績。status：missing 缺交 / ungraded 已交待批 / graded 有分數。
-    late：學生超過截止時間才交（老師手動補分、沒有 submitted_at 的不算）。"""
+    late：學生超過截止時間才交（老師手動補分、沒有 submitted_at 的不算）。
+    score 是原始分數（表格上可以改的那個）；effective 是扣完遲交分數、真正拿去算成績的分數。"""
     if sub is None or sub.status == SubmissionStatus.PENDING:
-        return {'score': None, 'status': 'missing', 'submission_id': sub.id if sub else None, 'late': False}
+        return {'score': None, 'effective': None, 'deduct': 0, 'status': 'missing',
+                'submission_id': sub.id if sub else None, 'late': False}
     late = bool(sub.submitted_at and _is_late(assignment, sub.submitted_at))
+    deduct = late_deduction(assignment, sub.submitted_at)
     if sub.score is None:
-        return {'score': None, 'status': 'ungraded', 'submission_id': sub.id, 'late': late}
-    return {'score': sub.score, 'status': 'graded', 'submission_id': sub.id, 'late': late}
+        return {'score': None, 'effective': None, 'deduct': deduct, 'status': 'ungraded',
+                'submission_id': sub.id, 'late': late}
+    return {'score': sub.score, 'effective': max(sub.score - deduct, 0), 'deduct': deduct, 'status': 'graded',
+            'submission_id': sub.id, 'late': late}
 
 
 def _compute_grades(assignments, cells, cfg, practice):
@@ -589,7 +730,7 @@ def _compute_grades(assignments, cells, cfg, practice):
         weight = cfg['assignment_weights'].get(str(a.id), 1.0)
         if cell['status'] == 'ungraded':
             continue
-        pairs.append((cell['score'], weight))
+        pairs.append((cell.get('effective'), weight))
     assignment_avg = _weighted_avg(pairs, cfg['missing_as_zero'])
 
     a_pct = 100 - cfg['sentence_pct'] - cfg['quiz_pct']
@@ -641,7 +782,7 @@ def get_gradebook(classroom_id):
 
     assignment_rows = []
     for a in assignments:
-        graded = [s['cells'][a.id]['score'] for s in students if s['cells'][a.id]['status'] == 'graded']
+        graded = [s['cells'][a.id]['effective'] for s in students if s['cells'][a.id]['status'] == 'graded']
         missing = sum(1 for s in students if s['cells'][a.id]['status'] == 'missing')
         assignment_rows.append({
             'id': a.id,
@@ -649,6 +790,8 @@ def get_gradebook(classroom_id):
             'task_type': a.task_type,
             'type_label': TASK_TYPE_LABELS.get(a.task_type, a.task_type),
             'weight': cfg['assignment_weights'].get(str(a.id), 1.0),
+            'late_policy': late_policy_of(a),
+            'late_penalty': int(a.late_penalty or 0),
             'due_at': a.due_at.strftime('%m/%d') if a.due_at else '',
             'class_avg': round(sum(graded) / len(graded), 1) if graded else None,
             'graded_count': len(graded),
@@ -656,7 +799,8 @@ def get_gradebook(classroom_id):
         })
 
     finals = [s['final'] for s in students if s['final'] is not None]
-    hidden = Assignment.query.filter_by(classroom_id=classroom_id, is_published=False)         .order_by(Assignment.created_at.asc()).all()
+    hidden = Assignment.query.filter_by(classroom_id=classroom_id, is_published=False) \
+        .order_by(Assignment.created_at.asc()).all()
     return {
         'classroom': {'id': classroom.id, 'name': classroom.name, 'join_code': classroom.join_code},
         'config': cfg,
@@ -765,14 +909,15 @@ def gradebook_csv(classroom_id):
         row = [s['username'], s['display_name']]
         for a in data['assignments']:
             cell = s['cells'][a['id']]
-            row.append(fmt(cell['score']) if cell['status'] == 'graded' else ('待批閱' if cell['status'] == 'ungraded' else '缺交'))
+            row.append(fmt(cell['effective']) if cell['status'] == 'graded' else ('待批閱' if cell['status'] == 'ungraded' else '缺交'))
         row += [fmt(s['assignment_avg']), fmt(s['sentence_avg']), fmt(s['quiz_avg']), fmt(s['final'])]
         writer.writerow(row)
 
     cfg = data['config']
     writer.writerow([])
     writer.writerow(['計分方式', f"作業 {data['assignment_pct']}%、造句 {cfg['sentence_pct']}%、文章測驗 {cfg['quiz_pct']}%",
-                     '缺交算 0 分' if cfg['missing_as_zero'] else '缺交不列入平均'])
+                     '缺交算 0 分' if cfg['missing_as_zero'] else '缺交不列入平均']
+                    + (['遲交扣分已算入各作業分數'] if any(a['late_policy'] == LatePolicy.DEDUCT for a in data['assignments']) else []))
     return CSV_BOM + buf.getvalue()
 
 
@@ -921,14 +1066,14 @@ def get_classroom_report(classroom_id, weeks=8, inactive_days=14):
     distributions = {'final': _distribution([s['final'] for s in students])}
     for a in assignments:
         distributions[str(a['id'])] = _distribution(
-            [s['cells'][a['id']]['score'] for s in students if s['cells'][a['id']]['status'] == 'graded'])
+            [s['cells'][a['id']]['effective'] for s in students if s['cells'][a['id']]['status'] == 'graded'])
 
     # 2. 各作業比較
     n = len(students)
     assignment_rows = []
     for a in assignments:
         cells = [s['cells'][a['id']] for s in students]
-        graded = [c['score'] for c in cells if c['status'] == 'graded']
+        graded = [c['effective'] for c in cells if c['status'] == 'graded']
         submitted = sum(1 for c in cells if c['status'] != 'missing')
         assignment_rows.append({
             **a,
@@ -1021,9 +1166,10 @@ def get_student_report(classroom_id, student_id):
         cell = me['cells'][a['id']]
         assignment_series.append({
             'id': a['id'], 'title': a['title'], 'type_label': a['type_label'], 'task_type': a['task_type'],
-            'due_at': a['due_at'], 'score': cell['score'], 'status': cell['status'], 'late': cell['late'],
+            'due_at': a['due_at'], 'score': cell['effective'], 'raw_score': cell['score'], 'deduct': cell['deduct'],
+            'status': cell['status'], 'late': cell['late'],
             'class_avg': a['class_avg'],
-            'diff': round(cell['score'] - a['class_avg'], 1) if cell['score'] is not None and a['class_avg'] is not None else None,
+            'diff': round(cell['effective'] - a['class_avg'], 1) if cell['effective'] is not None and a['class_avg'] is not None else None,
         })
 
     # 文法：自己 vs 班上

@@ -21,7 +21,7 @@ from flask import Blueprint, request, jsonify
 from utils.db import db
 from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
-    TaskType, SubmissionStatus,
+    TaskType, SubmissionStatus, LatePolicy,
     SentencePracticeRecord, UserPhoto, ChatSession, ChatMessage, ArticleProgress,
     Article,
 )
@@ -96,6 +96,43 @@ def _is_late(assignment, when=None):
     return (when or datetime.utcnow()) > due_utc
 
 
+def late_policy_of(assignment):
+    """作業的遲交規則；舊作業欄位是 None，視為允許遲交（原本的行為）。"""
+    policy = getattr(assignment, 'late_policy', None) or LatePolicy.ALLOW
+    return policy if policy in LatePolicy.ALL else LatePolicy.ALLOW
+
+
+def late_deduction(assignment, submitted_at):
+    """這次繳交要扣幾分：只有「遲交扣分」的作業、而且真的遲交才扣。"""
+    if late_policy_of(assignment) != LatePolicy.DEDUCT or not submitted_at:
+        return 0
+    if not _is_late(assignment, submitted_at):
+        return 0
+    return max(int(getattr(assignment, 'late_penalty', 0) or 0), 0)
+
+
+def effective_score(assignment, score, submitted_at):
+    """算成績用的分數：原始分數（AI 或老師給的）扣掉遲交扣分，最低 0。
+    原始分數不改，老師之後改分、或改遲交規則，都會重新照規則算。"""
+    if score is None:
+        return None
+    return max(score - late_deduction(assignment, submitted_at), 0)
+
+
+def _is_closed(assignment, when=None):
+    """截止後不收的作業，現在已經不能交了。"""
+    return late_policy_of(assignment) == LatePolicy.REJECT and _is_late(assignment, when)
+
+
+CLOSED_ERROR = "已超過截止時間，老師設定這份作業不收遲交"
+
+
+def tw_iso(dt):
+    """資料庫的 UTC 時間轉成台灣時間的 ISO 字串，跟 due_at 一樣前端直接顯示即可。"""
+    return (dt.replace(tzinfo=timezone.utc).astimezone(TAIPEI_TZ).replace(tzinfo=None).isoformat()
+            if dt else None)
+
+
 def _check_requirements(assignment, record):
     """檢查作答紀錄有沒有照老師的要求做。回傳 (是否通過, 不通過的原因)。
 
@@ -167,14 +204,18 @@ def _submission_json(submission, assignment):
     if submission.score is not None and pass_score is not None:
         passed = submission.score >= int(pass_score)
 
+    deduction = late_deduction(assignment, submission.submitted_at)
     return {
         "status": submission.status,
         "result_ref_id": submission.result_ref_id,
         "score": submission.score,
+        # 遲交扣分後、真正計入成績的分數；沒扣分時和 score 相同
+        "effective_score": effective_score(assignment, submission.score, submission.submitted_at),
+        "late_deduction": deduction,
         "passed": passed,
         "teacher_comment": submission.teacher_comment,
         "attempt_count": submission.attempt_count or 0,
-        "submitted_at": submission.submitted_at.isoformat() if submission.submitted_at else None,
+        "submitted_at": tw_iso(submission.submitted_at),
         "is_late": _is_late(assignment, submission.submitted_at) if submission.submitted_at else False,
     }
 
@@ -190,7 +231,11 @@ def _assignment_json(assignment, submission=None, include_config=False):
         # 回傳老師設定的台灣時間，前端直接顯示即可；逾期判斷內部已換算成 UTC 再比較
         "due_at": assignment.due_at.isoformat() if assignment.due_at else None,
         "is_overdue": _is_late(assignment) and (submission is None),
-        "created_at": assignment.created_at.isoformat() if assignment.created_at else None,
+        # 遲交規則：allow 允許遲交 / reject 截止後不收 / deduct 遲交扣 late_penalty 分
+        "late_policy": late_policy_of(assignment),
+        "late_penalty": int(getattr(assignment, 'late_penalty', 0) or 0),
+        "is_closed": _is_closed(assignment),   # true 時前端不要讓學生開始作答
+        "created_at": tw_iso(assignment.created_at),
         "submission": _submission_json(submission, assignment),
     }
     if include_config:
@@ -232,6 +277,8 @@ def submit_assignment(student_id, assignment_id, result_ref_id):
     assignment, err, code = _visible_assignment(assignment_id, student_id)
     if err:
         return {"status": "not_found", "error": err}, code
+    if _is_closed(assignment):
+        return {"status": "closed", "error": CLOSED_ERROR}, 403
 
     model = RECORD_MODELS.get(assignment.task_type)
     if model is None:
@@ -274,7 +321,9 @@ def submit_assignment(student_id, assignment_id, result_ref_id):
             # 沒有分數的題型：以最新一次為準，讓老師重新批閱
             kept = True
         else:
-            kept = submission.score is None or new_score > submission.score
+            # 比的是扣完遲交分數之後的成績：準時拿 70、遲交重做拿 75 但扣 10，就保留原本的 70
+            kept = (submission.score is None or effective_score(assignment, new_score, now)
+                    > effective_score(assignment, submission.score, submission.submitted_at))
 
         if kept:
             submission.result_ref_id = record.id
@@ -360,6 +409,8 @@ def auto_submit_chat(student_id, assignment_id, session_id):
             return {"submitted": False, "status": "not_found", "error": err}
         if assignment.task_type != TaskType.CHAT:
             return {"submitted": False, "status": "invalid_task_type", "error": "這份作業不是 AI 對話題"}
+        if _is_closed(assignment):
+            return {"submitted": False, "status": "closed", "error": CLOSED_ERROR}
 
         session = ChatSession.query.get(int(session_id))
         if session is None or session.user_id != student_id:
@@ -515,6 +566,8 @@ def submit_quiz():
     assignment, err, code = _visible_assignment(assignment_id, user_id)
     if err:
         return jsonify({"error": err}), code
+    if _is_closed(assignment):
+        return jsonify({"status": "closed", "error": CLOSED_ERROR}), 403
 
     config = assignment.config or {}
     questions = config.get('questions') or []
@@ -589,8 +642,9 @@ def submit_quiz():
         db.session.add(submission)
     else:
         submission.attempt_count = (submission.attempt_count or 0) + 1
-        # 保留較高分或最新作答（逐題作答跟著保留下來的那一次）
-        if submission.score is None or score >= submission.score:
+        # 保留較高分或最新作答（逐題作答跟著保留下來的那一次）；遲交扣分的作業比扣完之後的成績
+        if submission.score is None or (effective_score(assignment, score, now)
+                                        >= effective_score(assignment, submission.score, submission.submitted_at)):
             submission.score = score
             submission.answer_detail = feedback_details
             submission.result_ref_id = progress.id if progress else submission.result_ref_id
@@ -600,12 +654,17 @@ def submit_quiz():
 
     db.session.commit()
 
+    deduction = late_deduction(assignment, now)
+    message = f"測驗完成！答對 {correct_count}/{total_q} 題，得分：{score} 分"
+    if deduction:
+        message += f"（遲交扣 {deduction} 分，計入 {effective_score(assignment, score, now)} 分）"
     return jsonify({
         "status": "success",
         "score": score,
+        "late_deduction": deduction,
         "correct_count": correct_count,
         "total_questions": total_q,
         "results": feedback_details,
-        "message": f"測驗完成！答對 {correct_count}/{total_q} 題，得分：{score} 分"
+        "message": message
     }), 200
 

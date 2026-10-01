@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
+import 'package:jpn_learning_app/services/push_service.dart';
 
 class UserProvider extends ChangeNotifier {
   int? _userId;
@@ -248,6 +249,12 @@ class UserProvider extends ChangeNotifier {
   }
 
   void logout() {
+    // 校園教育版學生登出：請後端別再推播到這支手機，也取消作業截止提醒（換別人登入不該收到）
+    final uid = _userId;
+    if (uid != null && isEduStudent) {
+      PushService.unregister(uid);
+      NotificationService.cancelAssignmentReminders();
+    }
     _userId = null;
     _accountType = 'general';
     _photoDailyLimitApi = null;

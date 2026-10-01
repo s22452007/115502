@@ -75,6 +75,7 @@ class SystemSettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
+                  const Spacer(),
                   const SizedBox(height: 32),
                   const Padding(
                     padding: EdgeInsets.only(left: 4, bottom: 10),

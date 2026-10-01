@@ -194,7 +194,7 @@
             <div class="section-body" style="padding:0;">
                 {% if teacher_info.classrooms %}
                 <table>
-                    <thead><tr><th>班級</th><th>隨機碼</th><th>學生</th><th>發布中作業</th><th>狀態</th><th>建立時間</th>{% if session.get('role') == 'super_admin' %}<th></th>{% endif %}</tr></thead>
+                    <thead><tr><th>班級</th><th>班級代碼</th><th>學生</th><th>發布中作業</th><th>狀態</th><th>建立時間</th>{% if session.get('role') == 'super_admin' %}<th></th>{% endif %}</tr></thead>
                     <tbody>
                     {% for c in teacher_info.classrooms %}
                     <tr>

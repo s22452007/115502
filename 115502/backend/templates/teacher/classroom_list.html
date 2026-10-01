@@ -84,24 +84,7 @@
 </head>
 <body>
 <div class="layout">
-    <!-- 側邊欄 -->
-    <aside class="sidebar">
-        <div class="sidebar-admin">
-            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
-            <div class="sidebar-admin-info">
-                <div class="name">{{ session['admin_user'] }}</div>
-                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
-            </div>
-        </div>
-        <ul class="sidebar-menu">
-            {% if session.get('role') == 'super_admin' %}
-            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
-            {% endif %}
-            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
-            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
-        </ul>
-    </aside>
+    {% include 'teacher/_sidebar.html' %}
 
     <!-- 主要內容區 -->
     <main class="main-content">
@@ -119,7 +102,7 @@
         <div class="page-header">
             <div>
                 <h1 class="page-title"><i class="bi bi-mortarboard me-2"></i>校園教育版 - 班級管理</h1>
-                <div class="page-sub">管理班級、產出專屬隨機碼提供學生加入，並掌握各班出題與學習進度</div>
+                <div class="page-sub">管理班級、產出專屬班級代碼提供學生加入，並掌握各班出題與學習進度</div>
             </div>
             <div class="d-flex gap-2">
                 <a href="/teacher/classrooms{{ '' if show_archived else '?show=archived' }}" class="btn btn-outline-secondary" style="border-radius: 8px; padding: 10px 18px; font-weight: bold;">
@@ -137,7 +120,7 @@
             <div class="card p-5 text-center" style="border: 2px dashed #ddd; border-radius: 16px; background: white;">
                 <i class="bi bi-people" style="font-size: 3rem; color: #bbb;"></i>
                 <h5 class="mt-3 text-muted">目前尚未建立任何班級</h5>
-                <p class="text-secondary mb-4">點擊右上角「建立新班級」，系統將自動生成專屬隨機碼供學生輸入加入！</p>
+                <p class="text-secondary mb-4">點擊右上角「建立新班級」，系統將自動生成專屬班級代碼供學生輸入加入！</p>
                 <div>
                     <button class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#createClassModal" style="background-color: var(--green-accent); border: none;">
                         立即建立班級
@@ -164,17 +147,17 @@
                                 <div class="text-muted mt-1 small">{{ c.description if c.description else '（無班級說明）' }}</div>
                             </div>
 
-                            <!-- 隨機碼展示與一鍵複製 -->
+                            <!-- 班級代碼展示與一鍵複製 -->
                             <div class="code-box">
                                 <div class="text-start">
-                                    <div style="font-size: 0.68rem; color: #888; font-weight: 700; text-transform: uppercase;">學生加入隨機碼</div>
+                                    <div style="font-size: 0.68rem; color: #888; font-weight: 700; text-transform: uppercase;">班級代碼</div>
                                     <div class="code-text" id="code-{{ c.id }}">{{ c.join_code }}</div>
                                 </div>
                                 <button class="btn-copy" onclick="copyCode('{{ c.join_code }}')">
                                     <i class="bi bi-clipboard"></i> 複製
                                 </button>
-                                <form action="/teacher/classroom/{{ c.id }}/regenerate_code" method="POST" style="display:inline;" onsubmit="return confirm('確定要重新產生隨機碼嗎？舊代碼將會立即失效！');">
-                                    <button type="submit" class="btn btn-link text-secondary p-0 ms-1" title="重產隨機碼">
+                                <form action="/teacher/classroom/{{ c.id }}/regenerate_code" method="POST" style="display:inline;" onsubmit="return confirm('確定要重新產生班級代碼嗎？舊代碼將會立即失效！');">
+                                    <button type="submit" class="btn btn-link text-secondary p-0 ms-1" title="重新產生班級代碼">
                                         <i class="bi bi-arrow-clockwise"></i>
                                     </button>
                                 </form>
@@ -191,7 +174,7 @@
                             </div>
 
                             <div class="d-flex gap-2 align-items-center">
-                                <!-- 管理動作收在「⋯」裡，卡片上只留三個常用入口 -->
+                                <!-- 管理動作收在「⋯」裡，卡片上只留「進入班級」 -->
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="班級管理">
                                         <i class="bi bi-three-dots"></i>
@@ -282,7 +265,7 @@
             <textarea name="description" class="form-control" rows="3" placeholder="例如：授課教師 Emily、週三第 3-4 節、學習教材範圍等"></textarea>
           </div>
           <div class="alert alert-success d-flex align-items-center p-2 mb-0" style="font-size: 0.85rem;">
-            <i class="bi bi-info-circle-fill me-2"></i>建立後系統將自動生成唯一的 6 碼大寫英數隨機碼。
+            <i class="bi bi-info-circle-fill me-2"></i>建立後系統將自動生成唯一的 6 碼大寫英數班級代碼。
           </div>
         </div>
         <div class="modal-footer bg-light">
@@ -297,9 +280,9 @@
 <script>
 function copyCode(code) {
     navigator.clipboard.writeText(code).then(() => {
-        alert("隨機碼已複製至剪貼簿：" + code);
+        alert("班級代碼已複製至剪貼簿：" + code);
     }).catch(err => {
-        prompt("請手動複製班級隨機碼：", code);
+        prompt("請手動複製班級代碼：", code);
     });
 }
 </script>

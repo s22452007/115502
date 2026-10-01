@@ -201,7 +201,12 @@ def teacher_required(f):
                 return redirect(url_for('teacher_pending'))
             return f(*args, **kwargs)
         if session.get('role') == 'super_admin':
-            return f(*args, **kwargs)
+            # 和管理者頁面一樣每次重查：被停用或降成 admin 之後要立刻進不來
+            blocked = _refresh_admin_session()
+            if blocked:
+                return blocked
+            if session.get('role') == 'super_admin':
+                return f(*args, **kwargs)
         if 'admin_user' in session:
             return redirect(url_for('admin_dashboard'))
         return redirect(url_for('admin_login'))
@@ -1962,13 +1967,16 @@ def photo_src(image_path):
 from services.teacher_service import (
     create_classroom, regenerate_join_code,
     toggle_classroom_open, get_classroom_list, get_classroom_student_stats,
-    get_student_detail, create_sentence_assignment, create_article_assignment,
+    create_sentence_assignment, create_article_assignment,
     create_photo_assignment, create_chat_assignment,
     get_assignment_submissions_list, grade_submission,
     get_gradebook, save_grade_config, set_assignment_score, gradebook_csv,
-    get_classroom_report, get_student_report, student_report_csv
+    get_classroom_report, get_student_report, student_report_csv, tw_fmt
 )
 from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene
+
+# 模板裡直接拿 ORM 物件的時間（UTC）顯示時用：{{ a.created_at|tw }}
+app.add_template_filter(tw_fmt, 'tw')
 
 
 def _own_classroom(classroom_id):
@@ -2005,6 +2013,39 @@ def teacher_pending():
     return render_template('teacher/pending.html', teacher=teacher)
 
 
+@app.route('/teacher/change_password', methods=['GET', 'POST'])
+@teacher_required
+def teacher_change_password():
+    """老師改自己的密碼。管理者的 /admin/change_password 只認 admin 表，老師進不去"""
+    if session.get('role') != 'teacher':
+        return redirect(url_for('change_password'))
+    teacher = User.query.get(session['teacher_user_id'])
+    error = success = None
+    if request.method == 'POST':
+        current = request.form.get('current_password', '')
+        new_pw = request.form.get('new_password', '')
+        confirm = request.form.get('confirm_password', '')
+        if not check_password_hash(teacher.password_hash, current):
+            error = '目前密碼錯誤'
+        elif new_pw != confirm:
+            error = '新密碼與確認密碼不一致'
+        elif _validate_password(new_pw):
+            error = _validate_password(new_pw)
+        elif new_pw == current:
+            error = '新密碼不可與目前密碼相同'
+        else:
+            teacher.password_hash = generate_password_hash(new_pw)
+            db.session.add(SystemLog(
+                admin_id=None, user_id=teacher.id,
+                action='UPDATE', target_table='user', target_id=teacher.id,
+                new_value={'password': 'changed_by_self'}
+            ))
+            db.session.commit()
+            success = '密碼已更新，下次登入請使用新密碼'
+    return render_template('teacher/change_password.html', teacher=teacher, error=error, success=success,
+                           active_menu='password')
+
+
 @app.route('/teacher/classroom/create', methods=['POST'])
 @teacher_required
 def teacher_classroom_create():
@@ -2019,7 +2060,7 @@ def teacher_classroom_create():
         return redirect(url_for('teacher_classrooms'))
 
     c = create_classroom(session['teacher_user_id'], name, description)
-    flash(f"班級「{c.name}」建立成功！學生加入隨機碼為：{c.join_code}", "success")
+    flash(f"班級「{c.name}」建立成功！班級代碼為：{c.join_code}", "success")
     return redirect(url_for('teacher_classrooms'))
 
 
@@ -2031,7 +2072,7 @@ def teacher_classroom_regenerate_code(classroom_id):
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
     new_code = regenerate_join_code(classroom_id)
-    flash(f"班級隨機碼已更新為：{new_code}", "success")
+    flash(f"班級代碼已更新為：{new_code}", "success")
     return redirect(url_for('teacher_classrooms'))
 
 
@@ -2057,21 +2098,6 @@ def teacher_classroom_students(classroom_id):
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
     return render_template('teacher/student_progress.html', data=data)
-
-
-@app.route('/teacher/student/<int:student_id>/detail')
-@teacher_required
-def teacher_student_detail(student_id):
-    """取得單一學生的詳細學習紀錄 (AJAX)"""
-    classroom_id = request.args.get('classroom_id', type=int)
-    if not classroom_id:
-        return jsonify({"error": "缺少 classroom_id"}), 400
-    if not _own_classroom(classroom_id):
-        return jsonify({"error": "找不到該班級"}), 404
-    detail = get_student_detail(student_id, classroom_id)
-    if not detail:
-        return jsonify({"error": "找不到學生資料"}), 404
-    return jsonify(detail)
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/assignments')
@@ -2204,7 +2230,9 @@ def teacher_assignment_submissions(assignment_id):
     if not data:
         flash("找不到該作業", "danger")
         return redirect(url_for('teacher_classrooms'))
-    return render_template('teacher/assignment_submissions.html', data=data)
+    # saved：剛批完的學生 id，那一列會標「已儲存」
+    return render_template('teacher/assignment_submissions.html', data=data,
+                           saved_id=request.args.get('saved', type=int))
 
 
 @app.route('/teacher/submission/<int:submission_id>/grade', methods=['POST'])
@@ -2218,9 +2246,13 @@ def teacher_submission_grade(submission_id):
         flash("找不到該繳交紀錄", "danger")
         return redirect(url_for('teacher_classrooms'))
 
-    grade_submission(submission_id, score, teacher_comment)
-    flash("批閱成績與教師評語已成功儲存！", "success")
-    return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+    ok, error = grade_submission(submission_id, score, teacher_comment)
+    if not ok:
+        flash(error, "danger")
+        return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+    # 存完回到剛剛那一列（不用每批一個人就捲回最上面），那一列會標「已儲存」
+    return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id,
+                            saved=sub.student_id, _anchor=f'stu-{sub.student_id}'))
 
 
 # ---- 班級成績總表 / 學期成績 ----
@@ -2412,6 +2444,29 @@ def teacher_student_remove(classroom_id, student_id):
     return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
 
+@app.route('/teacher/classroom/<int:classroom_id>/student/<int:student_id>/reset_password', methods=['POST'])
+@teacher_required
+def teacher_student_reset_password(classroom_id, student_id):
+    """學生忘記密碼：重設回學號（學生帳號的 email 欄位存的就是學號）。App 的忘記密碼不開放學生帳號用"""
+    member = _own_member(classroom_id, student_id)
+    student = User.query.get(student_id) if member else None
+    if not student:
+        flash("找不到該學生", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    if (student.account_type or AccountType.GENERAL) != AccountType.STUDENT:
+        flash("這不是校園教育版的學生帳號，無法在這裡重設密碼", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+    student.password_hash = generate_password_hash(student.email)
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=student.id,
+        action='UPDATE', target_table='user', target_id=student.id,
+        new_value={'password': 'reset_to_student_no', 'classroom_id': classroom_id}
+    ))
+    db.session.commit()
+    flash(f"已將「{member.display_name or student.username or student.email}」的密碼重設為學號 {student.email}，請學生登入後自行修改", "success")
+    return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+
 # ---- 學生名冊：老師貼上名單建立學生帳號 ----
 # 教育版學生不能自己註冊，一律由老師在班級名冊加入：帳號與初始密碼都是學號，建立後自動加入該班級
 STUDENT_ID_RE = re.compile(r'^[A-Za-z0-9_.\-]{2,30}$')
@@ -2551,7 +2606,8 @@ def teacher_assignment_toggle_publish(assignment_id):
         return redirect(url_for('teacher_classrooms'))
     assignment.is_published = not bool(assignment.is_published)
     db.session.commit()
-    flash(("作業「%s」已發布，學生現在看得到" if assignment.is_published else "作業「%s」已下架，學生看不到了") % assignment.title, "info")
+    flash(("作業「%s」已發布，學生看得到，也計入學期成績" if assignment.is_published
+           else "作業「%s」已下架：學生看不到，也不計入學期成績；已繳交的紀錄保留，重新發布就恢復") % assignment.title, "info")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
 
 

@@ -198,6 +198,15 @@ def reset_password():
     if not user:
         return jsonify({"error": "找不到此 Email，請確認是否輸入正確"}), 404
 
+    # 這支 API 沒有驗證身分（不寄信、不驗證碼），只要知道帳號就能改密碼。
+    # 老師帳號同時是後台登入帳號、學生帳號就是學號，被改掉就能看到全班成績，
+    # 所以這兩種帳號一律不開放，改由老師在班級名冊、或 super_admin 在教師帳號管理重設。
+    account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
+    if account_type == AccountType.STUDENT:
+        return jsonify({"error": "校園教育版帳號無法在這裡重設密碼，請老師在班級名冊幫你重設"}), 403
+    if account_type != AccountType.GENERAL:
+        return jsonify({"error": "這個帳號無法在 App 重設密碼，請聯繫系統管理員"}), 403
+
     # 將新密碼加密後，覆蓋掉舊密碼
     user.password_hash = generate_password_hash(new_password)
     db.session.commit()

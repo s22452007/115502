@@ -40,28 +40,16 @@
         .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
         .panel-header { padding: 16px 24px; background-color: var(--green-dark); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .table > :not(caption) > * > * { padding: 14px 20px; vertical-align: middle; }
+        /* 存完分數會帶 #stu-學生id 回來，捲到那一列時上方留點空間 */
+        tr[id^="stu-"] { scroll-margin-top: 80px; }
+        .quiz-wrong { font-size: 0.8rem; margin-top: 4px; }
+        .quiz-wrong summary { color: #c9302c; font-weight: 700; cursor: pointer; }
+        .quiz-wrong .item { margin-top: 4px; padding-left: 8px; border-left: 2px solid #f0d0d0; }
     </style>
 </head>
 <body>
 <div class="layout">
-    <!-- 側邊欄 -->
-    <aside class="sidebar">
-        <div class="sidebar-admin">
-            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
-            <div class="sidebar-admin-info">
-                <div class="name">{{ session['admin_user'] }}</div>
-                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
-            </div>
-        </div>
-        <ul class="sidebar-menu">
-            {% if session.get('role') == 'super_admin' %}
-            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
-            {% endif %}
-            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
-            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
-        </ul>
-    </aside>
+    {% include 'teacher/_sidebar.html' %}
 
     <!-- 主要內容區 -->
     <main class="main-content">
@@ -76,11 +64,7 @@
           {% endif %}
         {% endwith %}
 
-        <div class="mb-3">
-            <a href="/teacher/classroom/{{ data.assignment.classroom_id }}/assignments" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
-                <i class="bi bi-arrow-left"></i> 返回作業列表
-            </a>
-        </div>
+        {% with cid=data.assignment.classroom_id %}{% with crumbs=[(data.assignment.classroom_name, '/teacher/classroom/%d/students' % cid), ('作業', '/teacher/classroom/%d/assignments' % cid), (data.assignment.title, None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %}{% endwith %}
 
         <div class="info-card">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -155,7 +139,7 @@
                     </thead>
                     <tbody>
                         {% for s in data.submissions %}
-                        <tr>
+                        <tr id="stu-{{ s.student_id }}" class="{{ 'table-success' if saved_id == s.student_id }}">
                             <td>
                                 <div class="fw-bold">{{ s.display_name }}</div>
                                 <div class="text-muted small">{{ s.email }}</div>
@@ -173,6 +157,9 @@
                                     <span class="badge bg-secondary-subtle text-secondary border">
                                         尚未繳交
                                     </span>
+                                {% endif %}
+                                {% if s.is_late %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" title="超過截止時間才繳交">遲交</span>
                                 {% endif %}
                             </td>
                             <td class="small text-muted">{{ s.submitted_at }}</td>
@@ -193,6 +180,23 @@
                                         <div>
                                             <i class="bi bi-check-circle-fill text-success"></i> 已完成文章閱讀
                                         </div>
+                                        {% set q = s.detail.quiz %}
+                                        {% if q %}
+                                            <div class="small"><strong>測驗：</strong>答對 {{ q.correct }} / {{ q.total }} 題</div>
+                                            {% if q.wrong %}
+                                            <details class="quiz-wrong">
+                                                <summary>錯 {{ q.wrong|length }} 題</summary>
+                                                {% for w in q.wrong %}
+                                                <div class="item">
+                                                    <strong>Q{{ w.index }}</strong> {{ w.question }}<br>
+                                                    <span class="text-danger">作答 {{ w.your_answer }}</span> ｜ 正解 {{ w.correct_answer }}
+                                                </div>
+                                                {% endfor %}
+                                            </details>
+                                            {% endif %}
+                                        {% elif data.assignment.config.get('has_quiz') %}
+                                            <div class="small text-muted">這筆是較早的繳交，沒有逐題作答紀錄</div>
+                                        {% endif %}
                                     {% elif s.detail.type == 'photo' %}
                                         <div class="d-flex gap-3 align-items-start">
                                             <a href="{{ s.detail.image_path }}" target="_blank" title="開啟原圖">
@@ -235,6 +239,9 @@
                                         <button type="submit" class="btn btn-sm btn-success fw-bold flex-shrink-0" style="background-color: var(--green-accent); border: none;">
                                             <i class="bi bi-check2"></i> 儲存批閱
                                         </button>
+                                        {% if saved_id == s.student_id %}
+                                        <span class="small text-success fw-bold flex-shrink-0"><i class="bi bi-check-circle-fill"></i> 已儲存</span>
+                                        {% endif %}
                                     </div>
                                     <input type="text" name="teacher_comment" class="form-control form-control-sm" placeholder="輸入給學生的評語/指導建議..." value="{{ s.teacher_comment }}">
                                 </form>

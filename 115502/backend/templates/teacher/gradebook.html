@@ -69,6 +69,8 @@
         .score-input.ungraded::placeholder { color: #7f92b3; }
         .score-input.saved { border-color: #5c8364; background: #eef5ef; }
         .score-input.error { border-color: #c9302c; background: #fbeaea; }
+        td.late-cell { position: relative; }
+        td.late-cell::after { content: '遲'; position: absolute; top: 2px; right: 3px; font-size: 0.6rem; font-weight: 800; color: #b7791f; }
         .avg-cell { font-weight: 700; }
         .final-cell { font-weight: 900; font-size: 1rem; color: var(--green-dark); }
         .final-cell.bad { color: #c9302c; }
@@ -83,30 +85,10 @@
 </head>
 <body>
 <div class="layout">
-    <aside class="sidebar">
-        <div class="sidebar-admin">
-            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
-            <div class="sidebar-admin-info">
-                <div class="name">{{ session['admin_user'] }}</div>
-                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
-            </div>
-        </div>
-        <ul class="sidebar-menu">
-            {% if session.get('role') == 'super_admin' %}
-            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
-            {% endif %}
-            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
-            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
-        </ul>
-    </aside>
+    {% include 'teacher/_sidebar.html' %}
 
     <main class="main-content">
-        <div class="mb-3">
-            <a href="/teacher/classrooms" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
-                <i class="bi bi-arrow-left"></i> 返回班級列表
-            </a>
-        </div>
+        {% with crumbs=[(data.classroom.name, None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %}
 
         {% set cfg = data.config %}
         <div class="page-header">
@@ -114,15 +96,15 @@
                 <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ data.classroom.name }}</h1>
                 <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 各作業分數與學期成績，分數可直接在表格上修改</div>
             </div>
-            <div class="d-flex gap-2 flex-shrink-0">
-                <button type="button" class="btn btn-outline-success fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#gradeConfigModal">
-                    <i class="bi bi-sliders me-1"></i>計分方式
-                </button>
-                <a href="/teacher/classroom/{{ data.classroom.id }}/gradebook/export.csv" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
-                    <i class="bi bi-download me-1"></i>匯出 CSV
-                </a>
-            </div>
         </div>
+        {% set tab_actions %}
+        <button type="button" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#gradeConfigModal">
+            <i class="bi bi-sliders me-1"></i>計分方式
+        </button>
+        <a href="/teacher/classroom/{{ data.classroom.id }}/gradebook/export.csv" class="btn btn-sm btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
+            <i class="bi bi-download me-1"></i>匯出 CSV
+        </a>
+        {% endset %}
         {% with cid=data.classroom.id, active='gradebook' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %}
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -141,6 +123,12 @@
             <span><span class="k">全班學期平均</span><span class="v" id="sumAvg">{{ data.summary.class_final_avg if data.summary.class_final_avg is not none else '—' }}</span></span>
             <span><span class="k">及格</span><span class="v" id="sumPass">{{ data.summary.pass_count }}</span><span class="k ms-2">不及格</span><span class="v {{ 'bad' if data.summary.fail_count else '' }}" id="sumFail">{{ data.summary.fail_count }}</span></span>
         </div>
+        {% if data.hidden_assignments %}
+        <div class="small text-muted mt-2 ms-1">
+            <i class="bi bi-eye-slash me-1"></i>已下架、不計入學期成績：{% for h in data.hidden_assignments %}「{{ h.title }}」{% if not loop.last %}、{% endif %}{% endfor %}
+            （到<a href="/teacher/classroom/{{ data.classroom.id }}/assignments" class="text-secondary">作業</a>重新發布就會算進來）
+        </div>
+        {% endif %}
 
         <div class="panel">
             <div class="panel-header">
@@ -180,13 +168,13 @@
                             </td>
                             {% for a in data.assignments %}
                             {% set cell = s.cells[a.id] %}
-                            <td class="col-num">
+                            <td class="col-num{{ ' late-cell' if cell.late }}">
                                 <input type="number" min="0" max="100" step="1"
                                        class="score-input {{ cell.status if cell.status != 'graded' else '' }}"
                                        value="{{ cell.score if cell.score is not none else '' }}"
                                        placeholder="{{ '缺' if cell.status == 'missing' else ('待批' if cell.status == 'ungraded' else '') }}"
                                        data-student="{{ s.student_id }}" data-assignment="{{ a.id }}"
-                                       title="{{ s.display_name }}／{{ a.title }}{% if cell.status == 'ungraded' %}（已繳交，尚未評分）{% elif cell.status == 'missing' %}（缺交，可直接補分）{% endif %}">
+                                       title="{{ s.display_name }}／{{ a.title }}{% if cell.status == 'ungraded' %}（已繳交，尚未評分）{% elif cell.status == 'missing' %}（缺交，可直接補分）{% endif %}{% if cell.late %}（遲交）{% endif %}">
                             </td>
                             {% endfor %}
                             <td class="col-num avg-cell" data-field="assignment_avg">{{ s.assignment_avg if s.assignment_avg is not none else '—' }}</td>
@@ -217,6 +205,7 @@
             <div class="legend">
                 <span><span class="sw" style="background:#fbf4f4; border-color:#ecd6d6;"></span>缺交（可直接補分）</span>
                 <span><span class="sw" style="background:#f3f6fb; border-color:#d3dcea;"></span>已繳交、尚未評分（不列入平均）</span>
+                <span><b style="color:#b7791f; font-size:0.7rem;">遲</b> 超過截止時間才繳交</span>
                 <span><i class="bi bi-info-circle me-1"></i>改完分數按 Enter 或點別處即自動儲存；清空欄位可收回分數</span>
                 <span><i class="bi bi-clock-history me-1"></i>造句與文章測驗只計入學生加入本班之後的紀錄</span>
             </div>

@@ -1,0 +1,9 @@
+{# 老師端麵包屑：開頭固定是「我的班級／所有班級」，後面接 crumbs = [(文字, 網址或 None), ...]，最後一個是目前這頁 #}
+{# 用法：{% with crumbs=[(班名, None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %} #}
+<div class="mb-3 fw-bold" style="font-size: 0.9rem; color: #888;">
+    <a href="/teacher/classrooms" class="text-decoration-none text-secondary">{{ '所有班級' if session.get('role') == 'super_admin' else '我的班級' }}</a>
+    {% for label, url in crumbs %}
+    <span class="mx-1">›</span>
+    {% if url %}<a href="{{ url }}" class="text-decoration-none text-secondary">{{ label }}</a>{% else %}<span style="color: var(--green-dark);">{{ label }}</span>{% endif %}
+    {% endfor %}
+</div>

@@ -1,7 +1,7 @@
 import re
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils.db import db
 from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
@@ -9,6 +9,17 @@ from models import (
     Article, SentencePracticeRecord, ArticleProgress, ScoreRecord,
     UserPhoto, UserPhotoVocab, ChatSession, ChatMessage, Dialect
 )
+from services.student_assignment import _is_late   # 遲交判斷跟學生端用同一套，才不會兩邊對不起來
+
+# 資料庫的時間除了作業截止時間 due_at（老師用 datetime-local 輸入的台灣時間）以外，
+# 都是 utcnow() 存的 UTC。老師端顯示前一律用 tw_fmt 換成台灣時間；台灣沒有日光節約，固定 +8 即可。
+TW_OFFSET = timedelta(hours=8)
+
+
+def tw_fmt(dt, fmt='%Y-%m-%d %H:%M'):
+    """UTC 的 naive datetime → 台灣時間字串；None 回空字串。也註冊成模板的 |tw 過濾器。"""
+    return (dt + TW_OFFSET).strftime(fmt) if dt else ''
+
 
 # 對話內容存的是 App 用的標音格式 [漢字|かな]，老師後台改成「漢字（かな）」比較好讀
 _FURIGANA_RE = re.compile(r'\[([^\[\]|]+)\|([^\[\]]+)\]')
@@ -114,72 +125,49 @@ def get_classroom_list(teacher_id=None, archived=False):
             'teacher_name': teacher.username if teacher else '教師',
             'member_count': member_count,
             'assignment_count': assignment_count,
-            'created_at': c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else ''
+            'created_at': tw_fmt(c.created_at)
         })
     return result
 
 
 def get_classroom_student_stats(classroom_id):
-    """依班級統計所有學生的學習狀況與作業完成情形。"""
-    classroom = Classroom.query.get(classroom_id)
-    if not classroom:
+    """學生名冊與學習狀況。作業平均、造句、文章測驗直接沿用成績總表的結果
+    （依權重與缺交設定、只算加入班級之後的自主練習），兩頁的數字才會一致。"""
+    gb = get_gradebook(classroom_id)
+    if not gb:
         return None
-
-    members = ClassroomMember.query.filter_by(classroom_id=classroom_id).all()
-    assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True).all()
-    total_assignments = len(assignments)
-    assignment_ids = [a.id for a in assignments]
+    classroom = Classroom.query.get(classroom_id)
+    members = {m.student_id: m for m in ClassroomMember.query.filter_by(classroom_id=classroom_id).all()}
+    total_assignments = len(gb['assignments'])
 
     student_stats = []
     total_completed_all = 0
-
-    for m in members:
-        student = User.query.get(m.student_id)
-        if not student:
-            continue
-
-        # 1. 班級作業繳交狀況
-        submissions = AssignmentSubmission.query.filter(
-            AssignmentSubmission.assignment_id.in_(assignment_ids),
-            AssignmentSubmission.student_id == student.id
-        ).all() if assignment_ids else []
-
-        completed_count = sum(1 for s in submissions if s.status in (SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED))
+    for row in gb['students']:
+        m = members[row['student_id']]
+        student = User.query.get(row['student_id'])
+        completed_count = sum(1 for c in row['cells'].values() if c['status'] != 'missing')
         total_completed_all += completed_count
-
-        scores = [s.score for s in submissions if s.score is not None]
-        avg_score = round(sum(scores) / len(scores), 1) if scores else None
-
-        # 2. 造句練習統計 (SentencePracticeRecord)
-        sentence_records = SentencePracticeRecord.query.filter_by(user_id=student.id).all()
-        sentence_count = len(sentence_records)
-        sentence_scores = [r.score for r in sentence_records if r.score is not None]
-        sentence_avg = round(sum(sentence_scores) / len(sentence_scores), 1) if sentence_scores else None
-
-        # 3. 文章閱讀與測驗統計 (ArticleProgress & ScoreRecord)
-        article_records = ArticleProgress.query.filter_by(user_id=student.id).all()
-        article_count = len(article_records)
-        score_records = ScoreRecord.query.filter_by(user_id=student.id).all()
-        quiz_scores = [r.score for r in score_records if r.score is not None]
-        quiz_avg = round(sum(quiz_scores) / len(quiz_scores), 1) if quiz_scores else None
+        aq = ArticleProgress.query.filter_by(user_id=student.id)
+        if m.joined_at:
+            aq = aq.filter(ArticleProgress.completed_at >= m.joined_at)
 
         student_stats.append({
             'student_id': student.id,
             'username': student.username or '未命名',
-            'display_name': m.display_name or student.username or '學生',
+            'display_name': row['display_name'],
             'email': student.email or '',
-            'joined_at': m.joined_at.strftime('%Y-%m-%d') if m.joined_at else '',
+            'joined_at': tw_fmt(m.joined_at, '%Y-%m-%d'),
             'completed_assignments': completed_count,
             'total_assignments': total_assignments,
             'completion_rate': round(completed_count / total_assignments * 100, 1) if total_assignments > 0 else 0,
-            'avg_assignment_score': avg_score,
-            'sentence_count': sentence_count,
-            'sentence_avg_score': sentence_avg,
-            'article_count': article_count,
-            'quiz_avg_score': quiz_avg,
+            'avg_assignment_score': row['assignment_avg'],
+            'sentence_count': row['sentence_count'],
+            'sentence_avg_score': row['sentence_avg'],
+            'article_count': aq.count(),
+            'quiz_avg_score': row['quiz_avg'],
         })
 
-    # 班級整體大數據
+    # 班級整體
     total_students = len(student_stats)
     total_possible = total_students * total_assignments if total_students and total_assignments else 0
     overall_completion_rate = round(total_completed_all / total_possible * 100, 1) if total_possible > 0 else 0
@@ -198,67 +186,6 @@ def get_classroom_student_stats(classroom_id):
             'overall_completion_rate': overall_completion_rate,
         },
         'students': student_stats
-    }
-
-
-def get_student_detail(student_id, classroom_id):
-    """查詢單一學生在指定班級的詳細學習與作業歷程。"""
-    student = User.query.get(student_id)
-    if not student:
-        return None
-
-    assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True).all()
-    assignments_data = []
-
-    for a in assignments:
-        sub = AssignmentSubmission.query.filter_by(assignment_id=a.id, student_id=student_id).first()
-        assignments_data.append({
-            'assignment_id': a.id,
-            'title': a.title,
-            'task_type': a.task_type,
-            'due_at': a.due_at.strftime('%Y-%m-%d %H:%M') if a.due_at else '無截止日',
-            'status': sub.status if sub else 'pending',
-            'score': sub.score if sub else None,
-            'teacher_comment': sub.teacher_comment if sub else None,
-            'submitted_at': sub.submitted_at.strftime('%Y-%m-%d %H:%M') if sub and sub.submitted_at else None,
-        })
-
-    # 最新 10 筆造句
-    sentences = SentencePracticeRecord.query.filter_by(user_id=student_id).order_by(
-        SentencePracticeRecord.created_at.desc()
-    ).limit(10).all()
-    sentence_list = [{
-        'grammar': s.grammar_point,
-        'user_sentence': s.user_sentence,
-        'corrected': s.corrected_sentence,
-        'score': s.score,
-        'feedback': s.ai_feedback,
-        'created_at': s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else ''
-    } for s in sentences]
-
-    # 最新 10 筆文章閱讀
-    article_progress = ArticleProgress.query.filter_by(user_id=student_id).order_by(
-        ArticleProgress.completed_at.desc()
-    ).limit(10).all()
-    article_list = []
-    for ap in article_progress:
-        art = Article.query.get(ap.article_id)
-        article_list.append({
-            'title': art.title if art else '未知文章',
-            'level': art.level if art else '',
-            'is_completed': ap.is_completed,
-            'completed_at': ap.completed_at.strftime('%Y-%m-%d %H:%M') if ap.completed_at else ''
-        })
-
-    return {
-        'student': {
-            'id': student.id,
-            'username': student.username,
-            'email': student.email,
-        },
-        'assignments': assignments_data,
-        'sentences': sentence_list,
-        'articles': article_list
     }
 
 
@@ -381,6 +308,19 @@ def create_chat_assignment(classroom_id, title, instructions, topic, dialect_id=
     return assignment
 
 
+def _quiz_summary(answer_detail):
+    """一位學生的文章測驗：答對幾題、錯了哪些。舊的繳交紀錄沒有逐題作答，回 None。"""
+    if not isinstance(answer_detail, list) or not answer_detail:
+        return None
+    wrong = [{
+        'index': (item.get('question_index') or 0) + 1,
+        'question': item.get('question') or '',
+        'your_answer': item.get('your_answer') or '—',
+        'correct_answer': item.get('correct_answer') or '',
+    } for item in answer_detail if not item.get('is_correct')]
+    return {'total': len(answer_detail), 'correct': len(answer_detail) - len(wrong), 'wrong': wrong}
+
+
 def get_assignment_submissions_list(assignment_id):
     """取得指定作業在該班級的學生繳交與批閱名單。"""
     assignment = Assignment.query.get(assignment_id)
@@ -408,7 +348,15 @@ def get_assignment_submissions_list(assignment_id):
             submitted_count += 1
 
         submission_detail = None
-        if sub and sub.result_ref_id:
+        if sub and assignment.task_type == TaskType.ARTICLE and sub.status in (SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED):
+            # 文章測驗的逐題作答存在繳交紀錄本身（answer_detail），不在 ArticleProgress
+            ap = ArticleProgress.query.get(sub.result_ref_id) if sub.result_ref_id else None
+            submission_detail = {
+                'type': 'article',
+                'is_completed': ap.is_completed if ap else True,
+                'quiz': _quiz_summary(sub.answer_detail),
+            }
+        elif sub and sub.result_ref_id:
             if assignment.task_type == TaskType.SENTENCE:
                 record = SentencePracticeRecord.query.get(sub.result_ref_id)
                 if record:
@@ -419,12 +367,6 @@ def get_assignment_submissions_list(assignment_id):
                         'ai_feedback': record.ai_feedback,
                         'ai_score': record.score,
                     }
-            elif assignment.task_type == TaskType.ARTICLE:
-                ap = ArticleProgress.query.get(sub.result_ref_id)
-                submission_detail = {
-                    'type': 'article',
-                    'is_completed': ap.is_completed if ap else True,
-                }
             elif assignment.task_type == TaskType.PHOTO:
                 photo = UserPhoto.query.get(sub.result_ref_id)
                 if photo:
@@ -466,7 +408,8 @@ def get_assignment_submissions_list(assignment_id):
             'score': sub.score if sub else None,
             'teacher_comment': sub.teacher_comment if sub else '',
             'attempt_count': sub.attempt_count if sub else 0,
-            'submitted_at': sub.submitted_at.strftime('%Y-%m-%d %H:%M') if sub and sub.submitted_at else '尚未繳交',
+            'submitted_at': tw_fmt(sub.submitted_at) if sub and sub.submitted_at else '尚未繳交',
+            'is_late': bool(sub and sub.submitted_at and _is_late(assignment, sub.submitted_at)),
             'detail': submission_detail
         })
 
@@ -499,7 +442,7 @@ def get_assignment_submissions_list(assignment_id):
             'task_type': assignment.task_type,
             'config': assignment.config or {},
             'due_at': assignment.due_at.strftime('%Y-%m-%d %H:%M') if assignment.due_at else '無截止日',
-            'created_at': assignment.created_at.strftime('%Y-%m-%d %H:%M') if assignment.created_at else '',
+            'created_at': tw_fmt(assignment.created_at),
             'dialect_name': dialect_name,
         },
         'stats': {
@@ -512,18 +455,37 @@ def get_assignment_submissions_list(assignment_id):
     }
 
 
+def parse_score(raw):
+    """老師輸入的分數 → (0～100 的整數，空白則 None, 錯誤訊息)。小數四捨五入。
+    批閱頁和成績總表共用，兩邊擋的規則才一樣。"""
+    raw = '' if raw is None else str(raw).strip()
+    if raw == '':
+        return None, None
+    try:
+        score = int(round(float(raw)))
+    except (ValueError, OverflowError):   # 'abc'、'nan' 是 ValueError，'inf' 是 OverflowError
+        return None, '分數要是 0～100 的數字'
+    if not 0 <= score <= 100:
+        return None, '分數要在 0～100 之間'
+    return score, None
+
+
 def grade_submission(submission_id, score, teacher_comment=''):
-    """批閱作業：儲存分數與教師評語。"""
+    """批閱作業：儲存分數與教師評語。回傳 (成功, 錯誤訊息)。"""
     sub = AssignmentSubmission.query.get(submission_id)
     if not sub:
-        return False
-    if score is not None and str(score).strip() != '':
-        sub.score = int(score)
+        return False, '找不到該繳交紀錄'
+    value, error = parse_score(score)
+    if error:
+        return False, error
+    if value is None:
+        return False, '請輸入分數'
+    sub.score = value
     sub.teacher_comment = teacher_comment.strip() if teacher_comment else ''
     sub.status = SubmissionStatus.GRADED
     sub.updated_at = datetime.utcnow()
     db.session.commit()
-    return True
+    return True, None
 
 
 # ==========================================
@@ -607,13 +569,15 @@ def _self_practice_avgs(student_id, since):
     }
 
 
-def _cell_for(sub):
-    """一格作業成績。status：missing 缺交 / ungraded 已交待批 / graded 有分數。"""
+def _cell_for(sub, assignment):
+    """一格作業成績。status：missing 缺交 / ungraded 已交待批 / graded 有分數。
+    late：學生超過截止時間才交（老師手動補分、沒有 submitted_at 的不算）。"""
     if sub is None or sub.status == SubmissionStatus.PENDING:
-        return {'score': None, 'status': 'missing', 'submission_id': sub.id if sub else None}
+        return {'score': None, 'status': 'missing', 'submission_id': sub.id if sub else None, 'late': False}
+    late = bool(sub.submitted_at and _is_late(assignment, sub.submitted_at))
     if sub.score is None:
-        return {'score': None, 'status': 'ungraded', 'submission_id': sub.id}
-    return {'score': sub.score, 'status': 'graded', 'submission_id': sub.id}
+        return {'score': None, 'status': 'ungraded', 'submission_id': sub.id, 'late': late}
+    return {'score': sub.score, 'status': 'graded', 'submission_id': sub.id, 'late': late}
 
 
 def _compute_grades(assignments, cells, cfg, practice):
@@ -661,7 +625,7 @@ def get_gradebook(classroom_id):
         student = User.query.get(m.student_id)
         if not student:
             continue
-        cells = {a.id: _cell_for(sub_map.get((a.id, student.id))) for a in assignments}
+        cells = {a.id: _cell_for(sub_map.get((a.id, student.id)), a) for a in assignments}
         practice = _self_practice_avgs(student.id, m.joined_at)
         assignment_avg, final = _compute_grades(assignments, cells, cfg, practice)
         students.append({
@@ -692,9 +656,11 @@ def get_gradebook(classroom_id):
         })
 
     finals = [s['final'] for s in students if s['final'] is not None]
+    hidden = Assignment.query.filter_by(classroom_id=classroom_id, is_published=False)         .order_by(Assignment.created_at.asc()).all()
     return {
         'classroom': {'id': classroom.id, 'name': classroom.name, 'join_code': classroom.join_code},
         'config': cfg,
+        'hidden_assignments': [{'id': a.id, 'title': a.title} for a in hidden],
         'assignment_pct': 100 - cfg['sentence_pct'] - cfg['quiz_pct'],
         'assignments': assignment_rows,
         'students': students,
@@ -714,7 +680,9 @@ def save_grade_config(classroom_id, form):
         return '找不到該班級'
 
     assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True).all()
-    weights = {}
+    # 表單只有發布中的作業；下架中的作業沿用原本的權重，重新發布後才不會被重設回 1
+    hidden_ids = {str(a.id) for a in Assignment.query.filter_by(classroom_id=classroom_id, is_published=False)}
+    weights = {k: v for k, v in get_grade_config(classroom)['assignment_weights'].items() if k in hidden_ids}
     for a in assignments:
         raw = (form.get(f'weight_{a.id}') or '').strip()
         if raw == '':
@@ -752,15 +720,9 @@ def set_assignment_score(assignment_id, student_id, raw_score):
     if not ClassroomMember.query.filter_by(classroom_id=assignment.classroom_id, student_id=student_id).first():
         return False, '該學生不在這個班級'
 
-    raw = (raw_score if raw_score is not None else '').strip()
-    score = None
-    if raw != '':
-        try:
-            score = int(round(float(raw)))
-        except ValueError:
-            return False, '分數要是 0～100 的數字'
-        if not 0 <= score <= 100:
-            return False, '分數要在 0～100 之間'
+    score, error = parse_score(raw_score)
+    if error:
+        return False, error
 
     sub = AssignmentSubmission.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
     if score is None:
@@ -991,11 +953,13 @@ def get_classroom_report(classroom_id, weeks=8, inactive_days=14):
             quiz_reports.append(stats)
 
     # 5. 學習活躍度：最近 N 週每週有活動的人數與次數；很久沒動的學生名單
+    # 週次以台灣時間的週一 0 點切；資料庫是 UTC，查詢時再換回 UTC，事件時間換成台灣時間再分週
     now = datetime.utcnow()
-    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    now_tw = now + TW_OFFSET
+    week_start = (now_tw - timedelta(days=now_tw.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     first_week = week_start - timedelta(weeks=weeks - 1)
     student_ids = list(joined.keys())
-    recent = _activity_events(student_ids, since=first_week)
+    recent = [(sid, ts + TW_OFFSET, kind) for sid, ts, kind in _activity_events(student_ids, since=first_week - TW_OFFSET)]
     weekly = []
     for i in range(weeks):
         ws = first_week + timedelta(weeks=i)
@@ -1017,7 +981,7 @@ def get_classroom_report(classroom_id, weeks=8, inactive_days=14):
         days = (now - ts).days if ts else None
         if ts is None or days >= inactive_days:
             inactive.append({'student_id': s['student_id'], 'display_name': s['display_name'],
-                             'last_seen': ts.strftime('%Y-%m-%d') if ts else None, 'days': days})
+                             'last_seen': tw_fmt(ts, '%Y-%m-%d') or None, 'days': days})
     inactive.sort(key=lambda x: (x['days'] is not None, -(x['days'] or 0)))
 
     return {
@@ -1057,7 +1021,8 @@ def get_student_report(classroom_id, student_id):
         cell = me['cells'][a['id']]
         assignment_series.append({
             'id': a['id'], 'title': a['title'], 'type_label': a['type_label'], 'task_type': a['task_type'],
-            'due_at': a['due_at'], 'score': cell['score'], 'status': cell['status'], 'class_avg': a['class_avg'],
+            'due_at': a['due_at'], 'score': cell['score'], 'status': cell['status'], 'late': cell['late'],
+            'class_avg': a['class_avg'],
             'diff': round(cell['score'] - a['class_avg'], 1) if cell['score'] is not None and a['class_avg'] is not None else None,
         })
 
@@ -1117,7 +1082,7 @@ def get_student_report(classroom_id, student_id):
     timeline.sort(key=lambda t: t['at'], reverse=True)
     counts = {t: sum(1 for x in timeline if x['type'] == t) for t in ('sentence', 'article', 'photo', 'chat')}
     for t in timeline:
-        t['at'] = t['at'].strftime('%Y-%m-%d %H:%M')
+        t['at'] = tw_fmt(t['at'])
 
     user = User.query.get(student_id)
     return {
@@ -1126,7 +1091,7 @@ def get_student_report(classroom_id, student_id):
         'assignment_pct': gb['assignment_pct'],
         'student': {
             'id': student_id, 'display_name': me['display_name'], 'username': me['username'],
-            'email': user.email if user else '', 'joined_at': since.strftime('%Y-%m-%d') if since else '',
+            'email': user.email if user else '', 'joined_at': tw_fmt(since, '%Y-%m-%d'),
         },
         'grade': {
             'final': me['final'], 'assignment_avg': me['assignment_avg'],

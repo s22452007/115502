@@ -42,24 +42,7 @@
 </head>
 <body>
 <div class="layout">
-    <!-- 側邊欄 -->
-    <aside class="sidebar">
-        <div class="sidebar-admin">
-            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
-            <div class="sidebar-admin-info">
-                <div class="name">{{ session['admin_user'] }}</div>
-                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
-            </div>
-        </div>
-        <ul class="sidebar-menu">
-            {% if session.get('role') == 'super_admin' %}
-            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
-            {% endif %}
-            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
-            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
-        </ul>
-    </aside>
+    {% include 'teacher/_sidebar.html' %}
 
     <!-- 主內容區 -->
     <main class="main-content">
@@ -74,23 +57,19 @@
           {% endif %}
         {% endwith %}
 
-        <div class="mb-3">
-            <a href="/teacher/classrooms" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
-                <i class="bi bi-arrow-left"></i> 返回班級列表
-            </a>
-        </div>
+        {% with crumbs=[(classroom.name, None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %}
 
         <div class="page-header">
             <div>
                 <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ classroom.name }}</h1>
                 <div class="page-sub">班級代碼：<strong>{{ classroom.join_code }}</strong> ｜ 出題、查看繳交與批閱評分</div>
             </div>
-            <div class="d-flex gap-2">
-                <a href="/teacher/classroom/{{ classroom.id }}/assignment/create" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
-                    <i class="bi bi-plus-lg me-1"></i>出題新作業
-                </a>
-            </div>
         </div>
+        {% set tab_actions %}
+        <a href="/teacher/classroom/{{ classroom.id }}/assignment/create" class="btn btn-sm btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
+            <i class="bi bi-plus-lg me-1"></i>出題新作業
+        </a>
+        {% endset %}
         {% with cid=classroom.id, active='assignments' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %}
 
         {% if not assignments %}
@@ -171,7 +150,8 @@
                             <button class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#editAssign{{ a.id }}">
                                 <i class="bi bi-pencil"></i> 編輯
                             </button>
-                            <form action="/teacher/assignment/{{ a.id }}/toggle_publish" method="POST" style="display:inline;">
+                            <form action="/teacher/assignment/{{ a.id }}/toggle_publish" method="POST" style="display:inline;"
+                                  {% if a.is_published %}onsubmit="return confirm('下架「{{ a.title }}」？學生在 App 看不到，這份作業也不計入學期成績。已繳交的紀錄會保留，重新發布就恢復。');"{% endif %}>
                                 <button type="submit" class="btn btn-sm {{ 'btn-outline-warning' if a.is_published else 'btn-outline-success' }}" style="border-radius: 8px;">
                                     <i class="bi {{ 'bi-eye-slash' if a.is_published else 'bi-eye' }}"></i> {{ '下架' if a.is_published else '發布' }}
                                 </button>
@@ -192,7 +172,7 @@
                         <strong class="text-dark">{{ a.due_at.strftime('%Y-%m-%d %H:%M') if a.due_at else '無截止日期' }}</strong>
                     </div>
                     <div>
-                        出題時間：{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '' }}
+                        出題時間：{{ a.created_at|tw }}
                     </div>
                 </div>
             </div>
@@ -227,7 +207,7 @@
           </div>
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" name="is_published" id="pub{{ a.id }}" {{ 'checked' if a.is_published }}>
-            <label class="form-check-label" for="pub{{ a.id }}">已發布（學生看得到）</label>
+            <label class="form-check-label" for="pub{{ a.id }}">已發布（學生看得到，計入學期成績）</label>
           </div>
           <div class="alert alert-light border mt-3 mb-0 small text-muted">
             題目內容（文法、文章、測驗題）不開放修改，避免已作答的學生被改題；要換題目請刪除後重新出題。

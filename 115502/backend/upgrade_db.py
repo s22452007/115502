@@ -885,6 +885,13 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ admin 欄位升級警告：{e}")
 
+# ==========================================
+# 校園教育版：班級評分設定與作業作答明細
+# ==========================================
+add_column("classroom", "grade_config JSON")
+add_column("assignment_submission", "answer_detail JSON")
+print("✅ classroom.grade_config / assignment_submission.answer_detail 欄位確認完畢")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

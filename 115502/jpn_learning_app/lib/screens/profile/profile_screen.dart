@@ -335,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (!userProvider.isEduStudent)
                           _buildListItem(icon: Icons.monetization_on_rounded, title: 'J-Points', trailingText: '$jPts', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))),
                         _buildListItem(icon: Icons.folder_special_rounded, title: '我的收藏', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))),
-                        _buildListItem(icon: Icons.people_alt_rounded, title: '好友綁定', iconColor: AppColors.primary, trailingText: friendId, onTap: () => isGuest ? _handleGuestClick('好友綁定') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
+                        _buildListItem(icon: Icons.people_alt_rounded, title: '我的好友', iconColor: AppColors.primary, trailingText: friendId, onTap: () => isGuest ? _handleGuestClick('我的好友') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
                         _buildListItem(icon: Icons.military_tech_rounded, title: '成就徽章', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('成就徽章') : Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()))),
                         const SizedBox(height: 8),
                         _buildFlatInfoTile(

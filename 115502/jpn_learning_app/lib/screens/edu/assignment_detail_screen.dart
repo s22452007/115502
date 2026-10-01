@@ -129,6 +129,19 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => next!)).then((_) => _load());
   }
 
+  /// 遲交規則給學生看的說明；沒有截止時間就不顯示
+  String _latePolicyText(Map<String, dynamic> a) {
+    if ((a['due_at'] ?? '').toString().isEmpty) return '';
+    switch (a['late_policy']) {
+      case 'reject':
+        return '截止後不收遲交';
+      case 'deduct':
+        return '遲交扣 ${a['late_penalty'] ?? 0} 分';
+      default:
+        return '可以遲交，但會標示「遲交」';
+    }
+  }
+
   void _hint(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
@@ -221,6 +234,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     final instructions = (a['instructions'] ?? '').toString();
     final reqs = _requirements(type, config, article);
     final due = _formatDateTime(a['due_at']);
+    final latePolicy = _latePolicyText(a);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -263,6 +277,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                         fontWeight: isPending && isOverdue ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
+                    if (latePolicy.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(latePolicy, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                    ],
                   ],
                 ),
               ),
@@ -316,12 +334,16 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     final attempts = (s['attempt_count'] as num?)?.toInt() ?? 0;
     final submittedAt = _formatDateTime(s['submitted_at']);
     final bool isLate = s['is_late'] == true;
+    final deduction = (s['late_deduction'] as num?)?.toInt() ?? 0;
 
     String label;
     Color color;
     switch (status) {
       case 'graded':
         label = score != null ? '已批閱：$score 分' : '已批閱';
+        if (score != null && deduction > 0) {
+          label += '（遲交扣 $deduction 分，計入 ${s['effective_score']} 分）';
+        }
         color = const Color(0xFF10B981);
         break;
       case 'submitted':
@@ -374,6 +396,27 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   Widget _buildBottomButton() {
     final status = (_a!['submission'] ?? const {})['status'] ?? 'pending';
     final bool isPending = status == 'pending';
+    // 老師設定截止後不收：後端也會擋，這裡先不讓學生開始作答，免得做完才發現交不出去
+    if (_a!['is_closed'] == true) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.lock_clock_outlined),
+              label: const Text('已截止，老師設定不收遲交',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),

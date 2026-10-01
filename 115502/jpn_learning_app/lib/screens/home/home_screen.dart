@@ -19,6 +19,7 @@ import 'package:jpn_learning_app/screens/article/article_list_screen.dart';
 
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
+import 'package:jpn_learning_app/services/push_service.dart';
 import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart';
@@ -115,6 +116,16 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       setState(() => _myClassrooms = classrooms);
     } catch (e) {
       debugPrint('教室清單載入失敗: $e');
+    }
+    if (!mounted || !context.read<UserProvider>().isEduStudent) return;
+    // 校園教育版學生：登記推播、排作業截止提醒、打開從通知點進來的頁面
+    PushService.register(userId);
+    PushService.openPending();
+    try {
+      final assignments = await ApiClient.getStudentAssignments(userId);
+      await NotificationService.scheduleAssignmentReminders(assignments);
+    } catch (e) {
+      debugPrint('作業截止提醒排程失敗: $e');
     }
   }
 
@@ -244,6 +255,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     // 🌟 判斷是否為教育版學生
     final isEduStudent = userProvider.accountType == 'student';
     final hasClassrooms = _myClassrooms.isNotEmpty;
+    // 各教室未讀公告加總，「我的教室」按鈕上顯示紅色數字
+    final unreadNotices = _myClassrooms.fold<int>(
+        0, (sum, c) => sum + ((c['unread_count'] as num?)?.toInt() ?? 0));
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
@@ -482,23 +496,55 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       ),
       // 教育版學生可查看已加入的教室，或前往加入教室。
       floatingActionButton: isEduStudent && userProvider.userId != null
-          ? FloatingActionButton.extended(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ClassroomListScreen()),
-              ).then((_) => _syncHomeData()),
-              icon: const Icon(
-                Icons.add_home_work_outlined,
-                color: Colors.white,
-              ),
-              label: Text(
-                hasClassrooms ? '我的教室' : '加入教室',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          ? Stack(
+              clipBehavior: Clip.none,
+              children: [
+                FloatingActionButton.extended(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ClassroomListScreen()),
+                  ).then((_) => _syncHomeData()),
+                  icon: const Icon(
+                    Icons.add_home_work_outlined,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    hasClassrooms ? '我的教室' : '加入教室',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  backgroundColor: AppColors.primaryLight2,
                 ),
-              ),
-              backgroundColor: AppColors.primaryLight2,
+                // 未讀公告數：貼在整顆按鈕的右上角，像一般 App 的通知標記
+                if (unreadNotices > 0)
+                  Positioned(
+                    right: -4,
+                    top: -6,
+                    child: IgnorePointer(
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 22),
+                        height: 22,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Text(
+                          unreadNotices > 99 ? '99+' : '$unreadNotices',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             )
           : null,
       bottomNavigationBar: AppBottomNavBar(

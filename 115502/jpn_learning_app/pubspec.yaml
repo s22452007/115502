@@ -35,6 +35,7 @@ dependencies:
   record: ^6.2.1
   path_provider: ^2.1.6
   permission_handler: ^12.0.3
+  firebase_messaging: ^16.4.3   # 要跟 firebase_core / firebase_auth 同一批版本；單獨升級會讓 firebase_auth 編譯失敗
 
 dev_dependencies:
   flutter_test:

@@ -150,6 +150,11 @@
                             <button class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#editAssign{{ a.id }}">
                                 <i class="bi bi-pencil"></i> 編輯
                             </button>
+                            {% if other_classrooms %}
+                            <button class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#copyAssign{{ a.id }}" title="同一門課的其他班、或新學期的班級">
+                                <i class="bi bi-copy"></i> 複製到其他班
+                            </button>
+                            {% endif %}
                             <form action="/teacher/assignment/{{ a.id }}/toggle_publish" method="POST" style="display:inline;"
                                   {% if a.is_published %}onsubmit="return confirm('下架「{{ a.title }}」？學生在 App 看不到，這份作業也不計入學期成績。已繳交的紀錄會保留，重新發布就恢復。');"{% endif %}>
                                 <button type="submit" class="btn btn-sm {{ 'btn-outline-warning' if a.is_published else 'btn-outline-success' }}" style="border-radius: 8px;">
@@ -170,6 +175,7 @@
                     <div>
                         <i class="bi bi-calendar-event me-1"></i>截止日期：
                         <strong class="text-dark">{{ a.due_at.strftime('%Y-%m-%d %H:%M') if a.due_at else '無截止日期' }}</strong>
+                        {% if a.due_at %}<span class="ms-2">｜ {{ a.late_text }}</span>{% endif %}
                     </div>
                     <div>
                         出題時間：{{ a.created_at|tw }}
@@ -181,7 +187,7 @@
     </main>
 </div>
 
-<!-- 編輯作業 Modal（每份作業一個）：只改標題、說明、截止日與發布狀態 -->
+<!-- 編輯作業 Modal（每份作業一個）：只改標題、說明、截止日、遲交規則與發布狀態 -->
 {% for a in assignments %}
 <div class="modal fade" id="editAssign{{ a.id }}" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -205,6 +211,9 @@
             <input type="datetime-local" name="due_at" class="form-control" value="{{ a.due_at.strftime('%Y-%m-%dT%H:%M') if a.due_at else '' }}">
             <div class="form-text">留空表示沒有截止日</div>
           </div>
+          <div class="mb-3">
+            {% with lp_id=a.id, lp_policy=a.late_policy, lp_penalty=a.late_penalty %}{% include 'teacher/_late_policy_fields.html' %}{% endwith %}
+          </div>
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" name="is_published" id="pub{{ a.id }}" {{ 'checked' if a.is_published }}>
             <label class="form-check-label" for="pub{{ a.id }}">已發布（學生看得到，計入學期成績）</label>
@@ -222,6 +231,55 @@
   </div>
 </div>
 {% endfor %}
+
+<!-- 複製到其他班 Modal（每份作業一個）：題目、說明、遲交規則照抄，截止時間可以重設 -->
+{% if other_classrooms %}
+{% for a in assignments %}
+<div class="modal fade" id="copyAssign{{ a.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-copy me-2"></i>複製「{{ a.title }}」</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/teacher/assignment/{{ a.id }}/copy" method="POST">
+        <div class="modal-body p-4">
+          <label class="form-label fw-bold">複製到哪些班級 <span class="text-danger">*</span></label>
+          <div class="border rounded-3 p-2 mb-3" style="max-height: 180px; overflow-y: auto;">
+            {% for c in other_classrooms %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="target_classroom_ids" value="{{ c.id }}" id="cp{{ a.id }}_{{ c.id }}">
+              <label class="form-check-label" for="cp{{ a.id }}_{{ c.id }}">{{ c.name }}</label>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">截止時間</label>
+            <input type="datetime-local" name="due_at" class="form-control" value="{{ a.due_at.strftime('%Y-%m-%dT%H:%M') if a.due_at else '' }}">
+            <div class="form-text">預設和原本的作業一樣，不同班的進度不同可以在這裡改；留空表示沒有截止日</div>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="publish" id="cpPub{{ a.id }}" checked>
+            <label class="form-check-label" for="cpPub{{ a.id }}">複製後立即發布</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="announce" id="cpAnn{{ a.id }}" checked>
+            <label class="form-check-label" for="cpAnn{{ a.id }}">通知學生：發公告並推播到手機（立即發布時才會發）</label>
+          </div>
+          <div class="alert alert-light border mt-3 mb-0 small text-muted">
+            題目、老師的說明、遲交規則會照抄；學生的繳交紀錄不會複製。文章作業沿用同一篇文章。
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none;">複製</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
 {% include 'admin/_flash_autohide.html' %}
 </body>
 </html>

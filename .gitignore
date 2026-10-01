@@ -37,3 +37,8 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 115502/openrouter..env
+
+### Local machine settings (per-user, should not be committed)
+# 用 **/ 前綴以匹配巢狀子資料夾（例如 115502/.claude/...）
+**/.claude/settings.local.json
+**/.vscode/settings.json

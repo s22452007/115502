@@ -577,9 +577,9 @@ class _NotificationSettingsScreenState
     final dayOptions = [
       (1, '1 天（溫和提醒）'),
       (2, '2 天（善意叮嚀）'),
-      (3, '3 天（戲劇化整活 建議）'),
-      (5, '5 天（戲劇化整活）'),
-      (7, '7 天（戲劇化整活）'),
+      (3, '3 天（戲劇化情勒 建議）'),
+      (5, '5 天（戲劇化情勒）'),
+      (7, '7 天（戲劇化情勒）'),
       (0, '漸進式 (1/3/7天)'),
     ];
 
@@ -603,7 +603,7 @@ class _NotificationSettingsScreenState
           SwitchListTile(
             contentPadding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
             title: const Text(
-              '久未登入提醒（戲劇化整活）',
+              '久未登入提醒（戲劇化情勒）',
               style: TextStyle(
                 color: textColor,
                 fontSize: 16,

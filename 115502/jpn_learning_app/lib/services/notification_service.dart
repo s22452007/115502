@@ -56,7 +56,7 @@ class NotificationService {
   // 每週社交/排行榜通知（2-3次/週）
   static const _keySocial = 'notif_social';
 
-  // 久未登入提醒（戲劇化整活）
+  // 久未登入提醒（戲劇化情勒）
   static const _keyInactive = 'notif_inactive';
   static const _keyInactiveDays = 'notif_inactive_days';
   static const _keyInactiveHour = 'notif_inactive_hour';
@@ -352,12 +352,12 @@ class NotificationService {
   }
 
   // ==========================================
-  // 🎭 久未登入召回文案（3-7天啟動《戲劇化整活》）
+  // 🎭 久未登入召回文案（3-7天啟動《戲劇化情勒》）
   // ==========================================
 
   /// 根據未登入天數取得對應的通知文案
   /// - 1~2 天：溫和鼓勵、善意提醒保持手感
-  /// - 3~7 天：《戲劇化整活》登場！情緒勒索、幽默懸疑、Duolingo 風格搞笑召回
+  /// - 3~7 天：《戲劇化情勒》登場！情緒勒索、幽默懸疑、Duolingo 風格搞笑召回
   /// - > 7 天：溫暖隨時回歸，無壓力重啟
   static NotificationContent getInactiveNotificationContent(int days) {
     switch (days) {
@@ -371,7 +371,7 @@ class NotificationService {
           title: '⏳ 已經 2 天沒登入了',
           body: '趁著單字記憶猶新，快回來複習一下保持節奏～',
         );
-      // ── 3-7 天：《戲劇化整活》文案 ──
+      // ── 3-7 天：《戲劇化情勒》文案 ──
       case 3:
         return const NotificationContent(
           title: '🦉 你已經 3 天沒理我了...',
@@ -400,7 +400,7 @@ class NotificationService {
       case 0:
         return const NotificationContent(
           title: '📈 漸進式多階段提醒',
-          body: '未登入第 1-2 天溫和提醒，第 3-7 天開啟戲劇化整活召回！',
+          body: '未登入第 1-2 天溫和提醒，第 3-7 天開啟戲劇化情勒召回！',
         );
       default:
         if (days > 7) {
@@ -611,7 +611,7 @@ class NotificationService {
         await _scheduleWeeklySocial();
       }
 
-      // 4. 斷記錄超過 3-7 天《戲劇化整活》文案
+      // 4. 斷記錄超過 3-7 天《戲劇化情勒》文案
       if (inactiveEnabled) {
         await _scheduleInactiveNotification(
           days: inactiveDays,
@@ -791,7 +791,7 @@ class NotificationService {
     );
   }
 
-  /// 排程久未登入提醒（支援指定天數與 1/3/7 漸進式整活召回）
+  /// 排程久未登入提醒（支援指定天數與 1/3/7 漸進式情勒召回）
   static Future<void> _scheduleInactiveNotification({
     required int days,
     required int hour,
@@ -803,7 +803,7 @@ class NotificationService {
     final lastLogin = DateTime.fromMillisecondsSinceEpoch(lastLoginMs);
     final nowTz = tz.TZDateTime.now(tz.local);
 
-    // 若選擇 0，代表漸進式提醒（第 1 天溫和、第 3 天整活、第 7 天戲劇化）
+    // 若選擇 0，代表漸進式提醒（第 1 天溫和、第 3 天情勒、第 7 天戲劇化）
     if (days == 0) {
       final milestones = [
         (1, idInactiveDay1),

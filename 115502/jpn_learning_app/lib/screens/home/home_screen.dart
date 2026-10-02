@@ -261,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
+      extendBody: true,
       drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: _flatCanvasColor,

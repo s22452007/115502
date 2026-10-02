@@ -9,13 +9,28 @@ from datetime import datetime, date
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from models import db, User, SentencePracticeRecord
+from datetime import timedelta, timezone
+
+from models import db, User, SentencePracticeRecord, PointTransaction, TransactionType
 from utils import gemini_client
 from utils.ai_helper import JSON_CONFIG, parse_gemini_json
 from utils.group_helper import add_group_progress_and_check_reward
 from utils.account_helper import is_payment_free
 
 sentence_bp = Blueprint('sentence', __name__)
+
+PAID_SENTENCE_COST = 10   # 超過每日免費次數後，每次造句的點數
+
+
+def _today_start_utc():
+    """台灣時間今天 00:00 換算成 UTC。
+
+    created_at 存的是 UTC，原本拿伺服器本機的 00:00 去比，台灣早上 8 點前的造句
+    會被算成「昨天」，每日免費次數就會失準。
+    """
+    tw = timezone(timedelta(hours=8))
+    today_tw = datetime.now(tw).date()
+    return datetime.combine(today_tw, datetime.min.time()) - timedelta(hours=8)
 
 # ==========================================
 # 📚 精選 N5-N1 文法題庫 (內建各3種變化例句)
@@ -100,10 +115,9 @@ def get_task():
     # 🌟 防呆機制：如果資料庫表格還沒建好，攔截錯誤，不要讓整個畫面空白
     today_count = 0
     try:
-        today_start = datetime.combine(date.today(), datetime.min.time())
         today_count = SentencePracticeRecord.query.filter(
             SentencePracticeRecord.user_id == user_id,
-            SentencePracticeRecord.created_at >= today_start
+            SentencePracticeRecord.created_at >= _today_start_utc()
         ).count()
     except Exception as e:
         print(f"⚠️ 無法計算今日次數 (可能尚未更新資料庫): {e}")
@@ -134,30 +148,39 @@ def evaluate_sentence():
     user = User.query.get(user_id)
     
     # 🌟 防呆 1：安全檢查今日次數 (如果出錯就不阻擋)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+
     today_count = 0
     try:
-        today_start = datetime.combine(date.today(), datetime.min.time())
         today_count = SentencePracticeRecord.query.filter(
             SentencePracticeRecord.user_id == user_id,
-            SentencePracticeRecord.created_at >= today_start
+            SentencePracticeRecord.created_at >= _today_start_utc()
         ).count()
     except Exception as e:
         print(f"⚠️ 無法計算今日次數，跳過檢查: {e}")
 
     # 檢查免費次數與扣點機制。教育版學生完全跳過：不限次數也不扣點。
+    paid = False
     if today_count >= 5 and not is_payment_free(user):
         if not pay_with_points:
             return jsonify({"status": "quota_exceeded", "error": "今日免費次數已用盡"}), 400
-        if (user.j_pts or 0) < 10:
+        if (user.j_pts or 0) < PAID_SENTENCE_COST:
             return jsonify({"status": "insufficient_points", "error": "點數不足"}), 400
 
-        # 確定支付，立刻扣除 10 點
-        try:
-            user.j_pts -= 10
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"⚠️ 扣點失敗: {e}")
+        # 確定支付，先扣點（避免同時送出好幾次都只檢查到同一份餘額），AI 批改失敗再退回。
+        # 扣點要記交易紀錄，App 的交易紀錄才查得到這筆消費。
+        user.j_pts -= PAID_SENTENCE_COST
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=-PAID_SENTENCE_COST,
+            price=0,
+            payment_method='points',
+            transaction_type=TransactionType.SPEND,
+            related_feature='sentence_extra',
+        ))
+        db.session.commit()
+        paid = True
 
     level = user.japanese_level if user and user.japanese_level else 'N3'
     
@@ -235,6 +258,23 @@ def evaluate_sentence():
         result['status'] = 'success'
         return jsonify(result), 200
     except Exception as e:
+        db.session.rollback()
+        if paid:
+            # AI 沒批改成功，付費的點數要還給使用者
+            try:
+                user.j_pts = (user.j_pts or 0) + PAID_SENTENCE_COST
+                db.session.add(PointTransaction(
+                    user_id=user.id,
+                    points=PAID_SENTENCE_COST,
+                    price=0,
+                    payment_method='points',
+                    transaction_type=TransactionType.REWARD,
+                    related_feature='sentence_extra_refund',
+                ))
+                db.session.commit()
+            except Exception as re_err:
+                db.session.rollback()
+                print(f"⚠️ 退還造句點數失敗：{re_err}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -271,10 +311,23 @@ def claim_points():
     
     if not record or not user or record.is_claimed:
         return jsonify({"error": "無法領取或已領取過"}), 400
-        
+    # 只能領自己的紀錄，否則拿到別人的 record_id 就能把對方的點數領走
+    if record.user_id != user.id:
+        return jsonify({"error": "無法領取這筆紀錄"}), 403
+
     # 標記為已領取，並真正把點數加給玩家
     record.is_claimed = True
-    user.j_pts = (user.j_pts or 0) + record.points_earned
+    user.j_pts = (user.j_pts or 0) + (record.points_earned or 0)
+    # 獎勵也記一筆交易紀錄（跟每日任務、朗讀獎勵一樣）
+    if record.points_earned:
+        db.session.add(PointTransaction(
+            user_id=user.id,
+            points=record.points_earned,
+            price=0,
+            payment_method='sentence_reward',
+            transaction_type=TransactionType.REWARD,
+            related_feature='sentence_score_reward',
+        ))
     db.session.commit()
     
     return jsonify({"status": "success", "total_points": user.j_pts}), 200

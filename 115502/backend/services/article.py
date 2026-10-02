@@ -19,6 +19,15 @@ article_bp = Blueprint('article', __name__)
 # 後台沒有指定價格時採用的預設解鎖點數
 DEFAULT_UNLOCK_COST = 50
 
+
+def _can_read(user_id, article):
+    """免費文章、教育版學生、或已解鎖的付費文章才可以朗讀評分與結算點數。"""
+    if article is None:
+        return False
+    if article.is_free or is_payment_free(User.query.get(user_id)):
+        return True
+    return UnlockedArticle.query.filter_by(user_id=user_id, article_id=article.id).first() is not None
+
 # ==========================================
 # 1. 取得文章列表 (動態判斷是否已解鎖)
 # ==========================================
@@ -29,9 +38,10 @@ def get_article_dashboard():
     user_level = request.args.get('level', type=str)
     
     if not user_level and user_id:
+        # User 沒有 level 欄位，程度存在 japanese_level（原本找 user.level 永遠找不到，一律變成 N3）
         user = User.query.get(user_id)
-        if user and hasattr(user, 'level') and user.level:
-            user_level = user.level
+        if user and user.japanese_level:
+            user_level = user.japanese_level
             
     if not user_level:
         user_level = 'N3'
@@ -103,6 +113,9 @@ def evaluate_audio():
     eval_article = Article.query.get(eval_article_id) if eval_article_id else None
     if eval_article and eval_article.content:
         article_text = eval_article.content
+    # 還沒解鎖的付費文章不能朗讀評分（否則不付解鎖點數也能朗讀領點）
+    if eval_user_id and eval_article and not _can_read(eval_user_id, eval_article):
+        return jsonify({"status": "error", "message": "請先解鎖這篇文章再朗讀"}), 403
 
     # 音檔直接讀進記憶體、以 bytes 內嵌送給 Gemini（新版 SDK）。
     # 不再存成固定檔名的暫存檔再 upload_file：
@@ -234,44 +247,8 @@ def _detect_audio_mime(data, filename='', declared=''):
             '.mp3': 'audio/mpeg'}.get(ext, 'audio/mp4')
 
 
-# ==========================================
-# 3. 強制重設並注入帶有 Ruby 假名的測試文章
-# ==========================================
-@article_bp.route('/seed', methods=['GET'])
-def seed_articles():
-    """自動清除舊文章，並強制注入帶有假名標註的日文文章"""
-    try:
-        Article.query.delete()
-        db.session.commit()
-
-        dummy_articles = [
-            Article(
-                theme="日常生活", level="N3", title="朝のルーティン (早晨日常)",
-                content="<ruby>私<rt>わたし</rt></ruby>は<ruby>毎朝<rt>まいあさ</rt></ruby><ruby>早<rt>はや</rt></ruby>く<ruby>起<rt>お</rt></ruby>きて、コーヒーを飲みながら<ruby>新聞<rt>しんぶん</rt></ruby>を<ruby>読<rt>よ</rt></ruby>みます。その後、<ruby>公園<rt>こうえん</rt></ruby>を<ruby>散歩<rt>さんぽ</rt></ruby>するのが<ruby>日課<rt>にっか</rt></ruby>です。",
-                translation="我每天早上早起，一邊喝咖啡一邊看報紙。之後去公園散步是我的例行公事。",
-                grammar_points={"grammars": [{"expression": "〜ながら", "meaning": "一邊...一邊...", "example": "音楽を聴きながら勉強します。"}]}
-            ),
-            Article(
-                theme="日本文化", level="N3", title="神社での初詣",
-                content="<ruby>日本<rt>にほん</rt></ruby>では、お<ruby>正月<rt>しょうがつ</rt></ruby>に<ruby>神社<rt>じんじゃ</rt></ruby>へ<ruby>行<rt>い</rt></ruby>って<ruby>新<rt>あたら</rt></ruby>しい<ruby>年<rt>とし</rt></ruby>を<ruby>祝<rt>いわ</rt></ruby>います。これを<ruby>初詣<rt>はつもうで</rt></ruby>と言います。",
-                translation="在日本，過年時會去神社慶祝新年。這被稱為初詣。",
-                grammar_points={"grammars": [{"expression": "〜と言います", "meaning": "叫做...", "example": "この花は桜と言います。"}]}
-            ),
-            Article(
-                theme="旅遊觀光", level="N3", title="京都の秋",
-                content="<ruby>秋<rt>あき</rt></ruby>の<ruby>京都<rt>きょうと</rt></ruby>は<ruby>紅葉<rt>こうよう</rt></ruby>がとても<ruby>美<rt>うつく</rt></ruby>しいです。<ruby>多<rt>おお</rt></ruby>くの<ruby>観光客<rt>かんこうきゃく</rt></ruby>が<ruby>写真<rt>しゃしん</rt></ruby>を<ruby>撮<rt>と</rt></ruby>りに来ます。",
-                translation="秋天的京都楓葉非常美麗。許多觀光客會來拍照。",
-                grammar_points={"grammars": [{"expression": "〜に来ます", "meaning": "來做(某事)", "example": "日本へ日本語を勉強しに来ました。"}]}
-            )
-        ]
-        
-        db.session.add_all(dummy_articles)
-        db.session.commit()
-        return jsonify({"message": "✅ 成功清除舊資料，並已注入帶有假名的最新測試文章！"}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"建立失敗: {str(e)}"}), 500
+# 註：原本這裡有 GET /api/articles/seed，不需登入、呼叫一次就會刪光全部文章並換成 3 篇測試文章，
+#     前端也沒有使用，已移除。需要測試文章請在後台新增，或執行 seed_articles.py。
 
 
 # ==========================================
@@ -376,6 +353,8 @@ def submit_score():
         return jsonify({"status": "error", "error": "找不到這次的朗讀評分，請重新錄音"}), 404
     if evaluation.settled_at is not None:
         return jsonify({"status": "error", "error": "這次的朗讀成績已經結算過了"}), 409
+    if not _can_read(int(user_id), Article.query.get(int(article_id))):
+        return jsonify({"status": "error", "error": "請先解鎖這篇文章"}), 403
     score = evaluation.score
 
     try:

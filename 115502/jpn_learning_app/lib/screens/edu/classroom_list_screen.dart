@@ -51,8 +51,12 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+      // 後端有回錯誤原因（例如「請先登入」）就照實顯示；連不上、格式錯誤這類網路例外才用籠統的說法
+      final text = e.toString();
       setState(() {
-        _error = '教室清單載入失敗，請稍後再試';
+        _error = text.startsWith('Exception: ')
+            ? text.replaceFirst('Exception: ', '')
+            : '教室清單載入失敗，請稍後再試';
         _isLoading = false;
       });
     }

@@ -4,6 +4,9 @@ from models import User, QuizQuestion
 
 quiz_bp = Blueprint('quiz', __name__)
 
+# 程度測驗出題的等級順序，每級 2 題，與 /submit 的判定位置一一對應
+PLACEMENT_LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1']
+
 # ========================================
 # 🆕 1. 隨機抽取 10 題測驗卷 API (智能防呆版)
 # ========================================
@@ -15,13 +18,18 @@ def get_quiz_questions():
         final_questions = []
 
         # 智能判斷：題庫如果超過 10 題，才啟用「分級隨機抽題」
+        # 每個等級抽 2 題，順序必須對上 /submit 的判定位置：
+        #   第 1、2 題 N5，第 3、4 題 N4，第 5、6 題 N3，第 7、8 題 N2，第 9、10 題 N1。
+        # 原本多抽了「超級新手」2 題再截成 10 題，結果 N1 題目永遠被截掉，
+        # 判定也整個錯開一級（答對 N5 題就被判 N4）。
         if len(all_questions) > 10:
-            # 配合你 seed.py 的實際難度標籤
-            levels = ['超級新手', 'N5', 'N4', 'N3', 'N2', 'N1']
-            for level in levels:
+            for level in PLACEMENT_LEVELS:
                 # 使用 db.func.random() 安全隨機排序，每個難度抽 2 題
                 sampled = QuizQuestion.query.filter_by(level_tag=level).order_by(db.func.random()).limit(2).all()
                 final_questions.extend(sampled)
+            if len(final_questions) != 10:
+                # 某個等級題目不足 2 題，抽出來的位置就對不上判定，改用照順序的前 10 題
+                final_questions = all_questions[:10]
         else:
             # 如果題庫剛好只有 10 題，就直接全部照順序拿出來，確保「由簡入深」
             final_questions = all_questions

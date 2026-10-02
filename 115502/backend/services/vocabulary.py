@@ -2,10 +2,21 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 
 from utils.db import db
+from utils.auth_token import current_user_id, forbid_unless_owner
 from models import User, UserVocab, UserFolder, Vocab
 from sqlalchemy import func
 
 vocab_bp = Blueprint('vocab', __name__)
+
+
+def _folder_denied(folder_id, user_id):
+    """指定的資料夾必須是這個使用者自己的（None＝預設相簿，不用檢查）"""
+    if folder_id in (None, ''):
+        return None
+    folder = UserFolder.query.get(folder_id)
+    if folder is None or folder.user_id != int(user_id):
+        return jsonify({"error": "找不到該資料夾"}), 404
+    return None
 
 # 取得使用者所有資料夾（含預設 + 自訂）+ 各資料夾單字數
 @vocab_bp.route('/favorites/<int:user_id>', methods=['GET'])
@@ -107,6 +118,9 @@ def move_vocab():
     uv = UserVocab.query.get(user_vocab_id)
     if not uv:
         return jsonify({"error": "找不到該收藏紀錄"}), 404
+    denied = forbid_unless_owner(uv.user_id) or _folder_denied(target_folder_id, uv.user_id)
+    if denied:
+        return denied
 
     uv.folder_id = target_folder_id
     db.session.commit()
@@ -124,6 +138,9 @@ def collect_vocab():
 
     if not user_id or not vocab_id:
         return jsonify({"error": "缺少必要資料"}), 400
+    denied = _folder_denied(folder_id, user_id)
+    if denied:
+        return denied
 
     # 檢查是否已收藏
     existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab_id).first()
@@ -196,6 +213,9 @@ def delete_folder():
     folder = UserFolder.query.get(folder_id)
     if not folder:
         return jsonify({"error": "找不到該資料夾"}), 404
+    denied = forbid_unless_owner(folder.user_id)
+    if denied:
+        return denied
 
     # 把裡面的單字移回預設
     UserVocab.query.filter_by(folder_id=folder_id).update({"folder_id": None})
@@ -218,6 +238,9 @@ def rename_folder():
     folder = UserFolder.query.get(folder_id)
     if not folder:
         return jsonify({"error": "找不到該資料夾"}), 404
+    denied = forbid_unless_owner(folder.user_id)
+    if denied:
+        return denied
 
     folder.name = name
     db.session.commit()
@@ -324,34 +347,23 @@ def collect_from_article():
     if not user_id or not word:
         return jsonify({"error": "缺少必要資料"}), 400
 
-    # 1. 檢查 Vocab 總字庫有沒有這個單字
-    vocab = Vocab.query.filter_by(word=word).first()
-    if not vocab:
-        # 🛠️ 解決 NOT NULL constraint failed: vocab.scene_id
-        # 我們必須隨便找一個場景給它，不然資料庫會報錯。這裡抓資料庫裡的第一個場景。
-        from models import Scene # 引入 Scene 模型
-        default_scene = Scene.query.first()
-        fallback_scene_id = default_scene.id if default_scene else 1 
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到使用者"}), 404
+    denied = _folder_denied(folder_id, user_id)
+    if denied:
+        return denied
 
-        vocab = Vocab(
-            word=word, 
-            kana=kana, 
-            meaning=meaning,
-            scene_id=fallback_scene_id # 🌟 關鍵修復：給予預設場景 ID
-        )
-        db.session.add(vocab)
-        db.session.commit()
+    # 1. 檢查 Vocab 總字庫有沒有這個單字（新字先不寫入，等確認可以收藏後再一起存）
+    vocab = Vocab.query.filter_by(word=word).first()
 
     # 2. 檢查使用者是否已經收藏過這個單字
-    existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab.id).first()
+    existing = UserVocab.query.filter_by(user_id=user_id, vocab_id=vocab.id).first() if vocab else None
     if existing and existing.collected_at is not None:
         return jsonify({"error": "這個單字已經在收藏夾囉！"}), 400
 
     # 3. 檢查收藏容量上限
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "找不到使用者"}), 404
-        
+
     vocab_slot = getattr(user, 'vocab_slot', 50) or 50
     collected_count = UserVocab.query.filter(
         UserVocab.user_id == user_id,
@@ -364,7 +376,21 @@ def collect_from_article():
             "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +50 個位置"
         }), 400
 
-    # 4. 執行收藏 
+    # 4. 字庫沒有這個字就新增。vocab.scene_id 不能是空的，文章單字沒有主題資訊，
+    #    歸到主題收集冊的「其他」。原本抓資料庫第一個場景，結果文章單字全跑到「一蘭拉麵」。
+    #    source 維持 'ai'，不算進主題收集冊的官方字數。
+    if not vocab:
+        from services.scenario import get_or_create_theme_scene
+        vocab = Vocab(
+            word=word,
+            kana=kana or '',
+            meaning=meaning or '',
+            scene_id=get_or_create_theme_scene('其他').id,
+        )
+        db.session.add(vocab)
+        db.session.flush()
+
+    # 5. 執行收藏
     if existing:
         existing.collected_at = datetime.utcnow()
         existing.folder_id = folder_id 

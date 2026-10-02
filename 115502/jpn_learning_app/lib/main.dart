@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/providers/font_size_provider.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/services/push_service.dart';
+import 'package:jpn_learning_app/utils/auth_http.dart';
 import 'package:jpn_learning_app/utils/route_observer.dart';
 import 'firebase_options.dart'; //不一定要使用
 
@@ -26,6 +27,21 @@ Future<void> main() async {
 
   await NotificationService.init();
   await PushService.init(navigatorKey);
+
+  // 登入通行證失效（過期、改了密碼、帳號被停用、沒有通行證）時：登出並回到歡迎畫面，提示重新登入
+  AuthSession.onUnauthorized = (message) {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
+    final userProvider = ctx.read<UserProvider>();
+    // 本來就沒登入（訪客、登入時帳密錯誤、已經登出）不用跳畫面
+    if (userProvider.userId == null) return;
+    userProvider.logout();
+    navigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (_) => false,
+    );
+    ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(SnackBar(content: Text(message)));
+  };
 
   // 再初始化相機，不一定要使用
   try {

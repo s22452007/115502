@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data' show Uint8List;
 import 'package:audioplayers/audioplayers.dart';
@@ -215,7 +214,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     try {
       final url = Uri.parse('${ApiClient.baseUrl}/tts/synthesize');
-      final response = await http.post(
+      final response = await ApiClient.client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'text': t}),
@@ -540,7 +539,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
 
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
-      final response = await http.post(
+      final response = await ApiClient.client.post(
         url,
         body: {
           'message': '[幫我開場]',
@@ -610,7 +609,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       final levelToPass = userLevel.isNotEmpty ? userLevel : 'N5';
 
       final url = Uri.parse('${ApiClient.baseUrl}/chat');
-      final response = await http.post(
+      final response = await ApiClient.client.post(
         url,
         body: {
           'message': text,

@@ -272,7 +272,14 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 帳號未提供 Email')));
         return;
       }
-      final result = await ApiClient.googleLogin(email, avatar: avatar);
+      // 送 Firebase 的身分憑證給後端驗證，後端以憑證上的 Email 為準（只送 Email 會被拒絕）
+      final idToken = await user.getIdToken();
+      if (!context.mounted) return;
+      if (idToken == null || idToken.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 登入失敗，無法取得身分憑證')));
+        return;
+      }
+      final result = await ApiClient.googleLogin(idToken, avatar: avatar);
       if (!context.mounted) return;
       if (!result.containsKey('user_id')) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')));

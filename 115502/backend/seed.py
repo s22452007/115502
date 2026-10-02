@@ -1,7 +1,8 @@
 from app import app
 from utils.db import db
 from datetime import date, datetime
-from models import User, Scene, UserPhoto, UserPhotoVocab, Vocab, Achievement, UserAbility, UserAchievement, UserVocab, QuizQuestion
+# UserAbility 已從 models 移除（能力值改為即時計算），這裡也不能再匯入，否則整支腳本跑不起來
+from models import User, Scene, UserPhoto, UserPhotoVocab, Vocab, Achievement, UserAchievement, UserVocab, QuizQuestion
 from werkzeug.security import generate_password_hash
 
 def seed_data():

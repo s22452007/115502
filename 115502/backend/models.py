@@ -44,6 +44,13 @@ class User(db.Model):
     ai_count_today = db.Column(db.Integer, default=0)
     ai_extra_count = db.Column(db.Integer, default=0)
     last_reset_date = db.Column(db.Date, nullable=True)
+    # 已扣次數、還沒用掉的拍照辨識／AI 回覆憑證：increment_scan、use_ai 成功各 +1，
+    # /api/scenario/analyze、/api/chat 每次呼叫 AI 前各用掉 1。沒有憑證就不呼叫 AI，
+    # 避免跳過扣次 API 直接打辨識／對話，無限使用。
+    scan_credits = db.Column(db.Integer, default=0)
+    ai_credits = db.Column(db.Integer, default=0)
+    # 登入通行證版本：改密碼、重設密碼時 +1，之前發出的通行證全部失效（utils/auth_token.py）
+    token_version = db.Column(db.Integer, default=0)
     # 徽章與成就
     total_active_days = db.Column(db.Integer, default=0)
     total_scans = db.Column(db.Integer, default=0)
@@ -312,6 +319,17 @@ class Notification(db.Model):
     title = db.Column(db.String(100), nullable=False)
     body = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# 忘記密碼的 Email 驗證碼：寄出時新增一筆，驗證成功或過期就作廢
+class PasswordResetCode(db.Model):
+    __tablename__ = 'password_reset_code'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    code_hash = db.Column(db.String(256), nullable=False)   # 只存雜湊，不存驗證碼本身
+    expires_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, default=0)             # 輸錯次數，達上限就作廢
+    used_at = db.Column(db.DateTime, nullable=True)         # 有值代表已用過或已作廢
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # T18: 系統回饋表

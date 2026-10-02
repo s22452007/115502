@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:jpn_learning_app/utils/auth_http.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
 
@@ -52,9 +53,20 @@ class ApiClient {
 
   static String get _host => baseUrl.replaceAll('/api', '');
 
+  /// 會自動帶上登入通行證的共用連線（見 auth_http.dart）。
+  /// 這個檔案與各畫面直接呼叫後端時都要用它，不要直接用 http.post / http.get，否則後端會回「請先登入」。
+  static final http.Client client = AuthHttpClient(() => _host);
+
   // ==========================================
   // 🔐 登入與註冊
   // ==========================================
+
+  /// 登入、註冊、Google 登入成功時，把後端發的通行證記下來，之後的呼叫會自動帶上
+  static Map<String, dynamic> _keepToken(Map<String, dynamic> data) {
+    final token = data['token'];
+    if (token is String && token.isNotEmpty) AuthSession.token = token;
+    return data;
+  }
 
   static Future<Map<String, dynamic>> register(
     String email,
@@ -62,14 +74,14 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/auth/register');
     try {
-      final response = await http
+      final response = await client
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'email': email, 'password': password}),
           )
           .timeout(const Duration(seconds: 15));
-      return jsonDecode(response.body);
+      return _keepToken(jsonDecode(response.body));
     } catch (e) {
       return _netError(e, url);
     }
@@ -85,7 +97,7 @@ class ApiClient {
     final url = Uri.parse('$baseUrl/auth/login');
     try {
       // 加逾時，否則後端掛掉時登入畫面會無限轉圈，使用者不知道發生什麼事
-      final response = await http
+      final response = await client
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
@@ -96,24 +108,41 @@ class ApiClient {
             }),
           )
           .timeout(const Duration(seconds: 15));
-      return jsonDecode(response.body);
+      return _keepToken(jsonDecode(response.body));
     } catch (e) {
       return _netError(e, url);
     }
   }
 
+  /// [idToken] 是 Firebase 登入後的身分憑證（user.getIdToken()）。
+  /// 後端會向 Google 驗證它，Email 以憑證上的為準，不能只傳 Email 冒用別人。
   static Future<Map<String, dynamic>> googleLogin(
-    String email, {
+    String idToken, {
     String? avatar,
   }) async {
     final url = Uri.parse('$baseUrl/auth/google_login');
     try {
-      final body = <String, dynamic>{'email': email};
+      final body = <String, dynamic>{'id_token': idToken};
       if (avatar != null && avatar.isNotEmpty) body['avatar'] = avatar;
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
+      );
+      return _keepToken(jsonDecode(response.body));
+    } catch (e) {
+      return _netError(e, url);
+    }
+  }
+
+  /// 忘記密碼第一步：寄 6 位數驗證碼到註冊信箱
+  static Future<Map<String, dynamic>> sendResetCode(String email) async {
+    final url = Uri.parse('$baseUrl/auth/forgot_password');
+    try {
+      final response = await client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
       );
       return jsonDecode(response.body);
     } catch (e) {
@@ -121,16 +150,18 @@ class ApiClient {
     }
   }
 
+  /// 忘記密碼第二步：用信箱收到的驗證碼設定新密碼
   static Future<Map<String, dynamic>> resetPassword(
     String email,
+    String code,
     String newPassword,
   ) async {
     final url = Uri.parse('$baseUrl/auth/reset_password');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'new_password': newPassword}),
+        body: jsonEncode({'email': email, 'code': code, 'new_password': newPassword}),
       );
       return jsonDecode(response.body);
     } catch (e) {
@@ -148,7 +179,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/user/update_level');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'level': level}),
@@ -165,7 +196,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/user/upload_avatar');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'avatar': avatarBase64}),
@@ -179,7 +210,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> fetchProfileData(int userId) async {
     final url = Uri.parse('$baseUrl/user/profile_data/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
@@ -193,7 +224,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/subscription/trial');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'payment_method': paymentMethod}),
@@ -212,7 +243,7 @@ class ApiClient {
     try {
       final body = <String, dynamic>{'username': username};
       if (userId != null) body['user_id'] = userId;
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
@@ -229,7 +260,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/user/update_username');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'username': username}),
@@ -243,7 +274,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> deleteAccount(int userId) async {
     final url = Uri.parse('$baseUrl/user/delete_account');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
@@ -262,7 +293,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/user/feedback');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -281,7 +312,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getFeedbacks(int userId) async {
     final url = Uri.parse('$baseUrl/user/feedback/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
@@ -297,7 +328,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/user/add_points');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -316,7 +347,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getTransactions(int userId) async {
     final url = Uri.parse('$baseUrl/user/transactions/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
@@ -327,7 +358,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> incrementDailyScan(int userId) async {
     final url = Uri.parse('$baseUrl/user/increment_scan');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
@@ -343,7 +374,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getUsageStatus(int userId) async {
     final url = Uri.parse('$baseUrl/user/usage_status/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200)
         return jsonDecode(response.body) as Map<String, dynamic>;
       return {'error': '無法取得使用量'};
@@ -355,7 +386,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getDailyStatus(int userId) async {
     final url = Uri.parse('$baseUrl/daily/status?user_id=$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       return jsonDecode(response.body) as Map<String, dynamic>;
     } catch (e) {
       return _netError(e, url);
@@ -365,7 +396,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> claimDailyReward(int userId) async {
     final url = Uri.parse('$baseUrl/daily/claim');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
@@ -383,7 +414,7 @@ class ApiClient {
   ) async {
     try {
       final url = Uri.parse('$baseUrl/user/mark_badge_seen');
-      await http.post(
+      await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -404,7 +435,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> searchFriend(String friendId) async {
     final url = Uri.parse('$baseUrl/user/search_friend');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'friend_id': friendId}),
@@ -421,7 +452,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/user/friend_request/send');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'sender_id': senderId, 'receiver_id': receiverId}),
@@ -435,7 +466,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getPendingRequests(int userId) async {
     final url = Uri.parse('$baseUrl/user/friend_request/pending/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': '連線失敗'};
@@ -448,7 +479,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/user/friend_request/respond');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'request_id': requestId, 'action': action}),
@@ -462,7 +493,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getFriendsList(int userId) async {
     final url = Uri.parse('$baseUrl/user/friends/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
@@ -477,7 +508,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/user/friend/update_nickname');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -498,7 +529,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/user/friend/delete');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'friend_id': friendId}),
@@ -522,7 +553,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/group/create');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -542,7 +573,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getMyGroup(int userId) async {
     final url = Uri.parse('$baseUrl/group/my_group/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
@@ -553,7 +584,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getGroupInvites(int userId) async {
     final url = Uri.parse('$baseUrl/group/invites/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'invites': []};
     } catch (e) {
@@ -568,7 +599,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/group/respond_invite');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -590,7 +621,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/group/invite_friends');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -611,7 +642,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/group/friends_detailed_status');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'group_id': groupId ?? -1, 'user_id': userId}),
@@ -629,7 +660,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/group/cancel_invite');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'group_id': groupId, 'receiver_id': receiverId}),
@@ -646,7 +677,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/group/leave');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'group_id': groupId, 'user_id': userId}),
@@ -659,7 +690,7 @@ class ApiClient {
 
   static Future<bool> checkFreeQuota(int userId) async {
     try {
-      final response = await http.get(
+      final response = await client.get(
         Uri.parse('$baseUrl/group/check_quota/$userId'),
       );
       if (response.statusCode == 200)
@@ -677,7 +708,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> fetchUserFavorites(int userId) async {
     final url = Uri.parse('$baseUrl/vocab/favorites/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '請求失敗'};
     } catch (e) {
@@ -688,7 +719,7 @@ class ApiClient {
   static Future<int?> createFolder(int userId, String folderName) async {
     final url = Uri.parse('$baseUrl/vocab/folders');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'name': folderName}),
@@ -708,7 +739,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/vocab/folder_vocabs');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'folder_id': folderId}),
@@ -725,7 +756,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/vocab/move_vocab');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -746,7 +777,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/vocab/collect');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -764,7 +795,7 @@ class ApiClient {
   static Future<bool> removeFavorite(int vocabId, int userId) async {
     final url = Uri.parse('$baseUrl/vocab/uncollect');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'user_id': userId, 'vocab_id': vocabId}),
@@ -778,7 +809,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> deleteFolder(int folderId) async {
     final url = Uri.parse('$baseUrl/vocab/delete_folder');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'folder_id': folderId}),
@@ -795,7 +826,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/vocab/rename_folder');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'folder_id': folderId, 'name': name}),
@@ -812,7 +843,7 @@ class ApiClient {
     final uri = Uri.parse(
       '$baseUrl/scenario/scenes',
     ).replace(queryParameters: quickSelect ? {'quick_select': 'true'} : null);
-    final response = await http.get(uri);
+    final response = await client.get(uri);
     if (response.statusCode == 200)
       return (json.decode(response.body) as List).cast<Map<String, dynamic>>();
     return [];
@@ -850,7 +881,7 @@ class ApiClient {
     final url = Uri.parse(
       '$baseUrl/scenario/unlocked/$userId',
     ).replace(queryParameters: params);
-    final response = await http.get(url);
+    final response = await client.get(url);
     if (response.statusCode == 200) {
       return Map<String, dynamic>.from(
         json.decode(utf8.decode(response.bodyBytes)),
@@ -863,7 +894,7 @@ class ApiClient {
   /// 每個主題含：封面、探索照數、已解鎖單字數、完成度
   static Future<List<dynamic>> getThemes(int userId) async {
     final url = Uri.parse('$baseUrl/scenario/themes/$userId');
-    final response = await http.get(url);
+    final response = await client.get(url);
     if (response.statusCode == 200) return json.decode(response.body)['themes'];
     throw Exception('無法載入主題');
   }
@@ -871,7 +902,7 @@ class ApiClient {
   /// 徽章：回傳 {theme: [...8 枚主題徽章含 unlocked], general: [...已解鎖的成就徽章]}
   static Future<Map<String, dynamic>> getAchievements(int userId) async {
     final url = Uri.parse('$baseUrl/user/achievements/$userId');
-    final response = await http.get(url);
+    final response = await client.get(url);
     if (response.statusCode == 200) {
       return Map<String, dynamic>.from(
         json.decode(utf8.decode(response.bodyBytes)),
@@ -889,7 +920,7 @@ class ApiClient {
     required String tier,
   }) async {
     final url = Uri.parse('$baseUrl/scenario/claim_theme_reward');
-    final response = await http.post(
+    final response = await client.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'user_id': userId, 'scene_id': sceneId, 'tier': tier}),
@@ -906,14 +937,14 @@ class ApiClient {
     int sceneId,
   ) async {
     final url = Uri.parse('$baseUrl/scenario/theme_vocabs/$userId/$sceneId');
-    final response = await http.get(url);
+    final response = await client.get(url);
     if (response.statusCode == 200) return json.decode(response.body);
     throw Exception('無法載入主題單字');
   }
 
   static Future<List<dynamic>> getSceneVocabs(int sceneId, int userId) async {
     final url = Uri.parse('$baseUrl/vocab/scene/$sceneId?user_id=$userId');
-    final response = await http.get(url);
+    final response = await client.get(url);
     if (response.statusCode == 200) return json.decode(response.body)['vocabs'];
     throw Exception('無法載入');
   }
@@ -925,7 +956,7 @@ class ApiClient {
     final url = Uri.parse(
       '$baseUrl/scenario/photo_vocabs?user_id=$userId&image_path=${Uri.encodeComponent(imagePath)}',
     );
-    final response = await http.get(url);
+    final response = await client.get(url);
     if (response.statusCode == 200) return json.decode(response.body)['vocabs'];
     throw Exception('無法載入');
   }
@@ -935,14 +966,14 @@ class ApiClient {
     int userId,
   ) async {
     final url = Uri.parse('$baseUrl/vocab/detail/$vocabId?user_id=$userId');
-    final response = await http.get(url);
+    final response = await client.get(url);
     if (response.statusCode == 200) return json.decode(response.body);
     throw Exception('無法載入');
   }
 
   static Future<bool> toggleFavorite(int vocabId, int userId) async {
     final url = Uri.parse('$baseUrl/vocab/collect');
-    final response = await http.post(
+    final response = await client.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'user_id': userId, 'vocab_id': vocabId}),
@@ -957,7 +988,7 @@ class ApiClient {
   static Future<List<dynamic>> fetchQuizQuestions() async {
     final url = Uri.parse('$baseUrl/quiz/questions');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200)
         return jsonDecode(response.body)['questions'] ?? [];
       return [];
@@ -972,7 +1003,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/quiz/submit');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'results': results}),
@@ -988,7 +1019,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> fetchUpgradeQuestions(int userId) async {
     final url = Uri.parse('$baseUrl/quiz/upgrade_questions?user_id=$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return {...data, '_status': response.statusCode};
     } catch (e) {
@@ -1003,7 +1034,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/quiz/upgrade_submit');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'results': results}),
@@ -1028,7 +1059,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/chat_history/session');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1051,7 +1082,7 @@ class ApiClient {
   static Future<List<dynamic>> fetchChatSessions(int userId) async {
     final url = Uri.parse('$baseUrl/chat_history/sessions?user_id=$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['sessions'] ?? [];
       }
@@ -1065,7 +1096,7 @@ class ApiClient {
   static Future<Map<String, dynamic>?> fetchChatSession(int sessionId) async {
     final url = Uri.parse('$baseUrl/chat_history/session/$sessionId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return null;
     } catch (e) {
@@ -1077,7 +1108,7 @@ class ApiClient {
   static Future<bool> deleteChatSession(int sessionId) async {
     final url = Uri.parse('$baseUrl/chat_history/session/$sessionId');
     try {
-      final response = await http.delete(url);
+      final response = await client.delete(url);
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -1090,7 +1121,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/quiz/submit');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'score': score}),
@@ -1121,7 +1152,7 @@ class ApiClient {
         request.fields['context_description'] = contextDescription;
 
       if (kIsWeb) {
-        final imageResponse = await http.get(Uri.parse(imagePath));
+        final imageResponse = await client.get(Uri.parse(imagePath));
         request.files.add(
           http.MultipartFile.fromBytes(
             'image',
@@ -1135,7 +1166,7 @@ class ApiClient {
         );
       }
 
-      var streamedResponse = await request.send();
+      var streamedResponse = await client.send(request);
       var response = await http.Response.fromStream(streamedResponse);
       if ([200, 400, 500].contains(response.statusCode))
         return jsonDecode(response.body);
@@ -1151,7 +1182,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/scenario/rename_photo');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'photo_id': photoId, 'custom_title': customTitle}),
@@ -1168,7 +1199,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/group/claim_reward');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'group_id': groupId, 'user_id': userId}),
@@ -1182,7 +1213,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> askTutorQuestion(String question) async {
     final url = Uri.parse('$baseUrl/tutor/ask');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'question': question}),
@@ -1201,7 +1232,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getSubscriptionPlans() async {
     final url = Uri.parse('$baseUrl/subscription/plans');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '無法取得'};
     } catch (e) {
@@ -1212,7 +1243,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getSubscriptionStatus(int userId) async {
     final url = Uri.parse('$baseUrl/subscription/status/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '無法取得'};
     } catch (e) {
@@ -1228,7 +1259,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/subscription/subscribe');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1247,7 +1278,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> cancelSubscription(int userId) async {
     final url = Uri.parse('$baseUrl/subscription/cancel/$userId');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
@@ -1264,7 +1295,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/subscription/schedule_upgrade');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'payment_method': paymentMethod}),
@@ -1281,7 +1312,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/subscription/pay_pending');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'payment_method': paymentMethod}),
@@ -1295,7 +1326,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> cancelScheduleUpgrade(int userId) async {
     final url = Uri.parse('$baseUrl/subscription/schedule_upgrade/$userId');
     try {
-      final response = await http.delete(url);
+      final response = await client.delete(url);
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': '連線失敗'};
@@ -1309,7 +1340,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/user/spend_points');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1328,7 +1359,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> incrementScan(int userId) async {
     final url = Uri.parse('$baseUrl/user/increment_scan');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
@@ -1343,7 +1374,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getPointPackages() async {
     final url = Uri.parse('$baseUrl/store/packages');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '無法取得'};
     } catch (e) {
@@ -1354,7 +1385,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getStoreItems() async {
     final url = Uri.parse('$baseUrl/store/items');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) return jsonDecode(response.body);
       return {'error': '無法取得'};
     } catch (e) {
@@ -1365,7 +1396,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> useAI(int userId) async {
     final url = Uri.parse('$baseUrl/user/use_ai');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
@@ -1402,7 +1433,7 @@ class ApiClient {
       if (kIsWeb) {
         debugPrint('🟢 [進度 3] Web 模式：正在讀取虛擬錄音檔...');
         // 加上 10 秒超時，避免網頁讀取 Blob 遇到死結
-        final audioResponse = await http
+        final audioResponse = await client
             .get(Uri.parse(audioPath))
             .timeout(const Duration(seconds: 10));
         final bytes = audioResponse.bodyBytes;
@@ -1425,7 +1456,7 @@ class ApiClient {
 
       debugPrint('🟢 [進度 5] 正在將檔案與標準文字上傳至 Flask 後端...');
       // 加上 30 秒超時，避免網路不穩時無限期卡死轉圈圈
-      var streamedResponse = await request.send().timeout(
+      var streamedResponse = await client.send(request).timeout(
         const Duration(seconds: 60),
       );
       var response = await http.Response.fromStream(streamedResponse);
@@ -1452,7 +1483,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/vocab/collect_from_article');
     try {
-      var response = await http.post(
+      var response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1480,7 +1511,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/articles/unlock');
     try {
-      var response = await http.post(
+      var response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1511,7 +1542,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/articles/submit_score');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1534,7 +1565,7 @@ class ApiClient {
   static Future<List<dynamic>> getUserScoreHistory(int userId) async {
     final url = Uri.parse('$baseUrl/articles/history/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
@@ -1554,7 +1585,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getSentenceTask(int userId) async {
     final url = Uri.parse('$baseUrl/sentence/get_task?user_id=$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) {
         return jsonDecode(utf8.decode(response.bodyBytes));
       }
@@ -1575,7 +1606,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/sentence/evaluate');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1597,7 +1628,7 @@ class ApiClient {
   static Future<List<dynamic>> getSentenceHistory(int userId) async {
     final url = Uri.parse('$baseUrl/sentence/history/$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         return data['data'] ?? [];
@@ -1611,7 +1642,7 @@ class ApiClient {
   static Future<bool> claimSentencePoints(int recordId, int userId) async {
     final url = Uri.parse('$baseUrl/sentence/claim');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'record_id': recordId, 'user_id': userId}),
@@ -1631,7 +1662,7 @@ class ApiClient {
   /// is_overdue / submission{status, score, ...}
   static Future<List<dynamic>> getStudentAssignments(int userId) async {
     final url = Uri.parse('$baseUrl/assignment/my/$userId');
-    final response = await http.get(url);
+    final response = await client.get(url);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -1650,7 +1681,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/assignment/submit_quiz');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1673,7 +1704,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/assignment/$assignmentId?user_id=$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       return jsonDecode(utf8.decode(response.bodyBytes));
     } catch (e) {
       debugPrint('❌ 作業詳情連線失敗: $e');
@@ -1683,7 +1714,7 @@ class ApiClient {
 
   static Future<List<Map<String, dynamic>>> getMyClassrooms(int userId) async {
     final url = Uri.parse('$baseUrl/classroom/my/$userId');
-    final response = await http.get(url);
+    final response = await client.get(url);
     final data =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
 
@@ -1705,7 +1736,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/user/push_token');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'token': token, 'logout': logout}),
@@ -1726,7 +1757,7 @@ class ApiClient {
   ) async {
     final url = Uri.parse('$baseUrl/classroom/$classroomId/announcements?user_id=$userId');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       return jsonDecode(utf8.decode(response.bodyBytes));
     } catch (e) {
       debugPrint('❌ 教室公告連線失敗: $e');
@@ -1738,7 +1769,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> previewClassroom(String joinCode) async {
     final url = Uri.parse('$baseUrl/classroom/preview?join_code=${Uri.encodeQueryComponent(joinCode)}');
     try {
-      final response = await http.get(url);
+      final response = await client.get(url);
       return jsonDecode(utf8.decode(response.bodyBytes));
     } catch (e) {
       debugPrint('❌ 教室預覽連線失敗: $e');
@@ -1753,7 +1784,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/classroom/join');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'join_code': joinCode}),
@@ -1775,7 +1806,7 @@ class ApiClient {
   }) async {
     final url = Uri.parse('$baseUrl/classroom/leave');
     try {
-      final response = await http.post(
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'classroom_id': classroomId}),

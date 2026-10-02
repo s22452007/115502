@@ -320,6 +320,10 @@ def cancel_invite():
 
     if not group_id or not friend_id_str:
         return jsonify({"error": "缺少必要資訊"}), 400
+    # 只有小組成員可以取消這個小組送出的邀請
+    from utils.auth_token import current_user_id
+    if not GroupMember.query.filter_by(group_id=group_id, user_id=current_user_id()).first():
+        return jsonify({"error": "你不在這個小組裡"}), 403
 
     try:
         # 先用字串 ID 找出這位使用者的真實資料庫 ID
@@ -426,6 +430,8 @@ def invite_friends_to_group():
     group = StudyGroup.query.get(group_id)
     if not group:
         return jsonify({"error": "找不到該小組"}), 404
+    if not GroupMember.query.filter_by(group_id=group_id, user_id=sender_id).first():
+        return jsonify({"error": "你不在這個小組裡"}), 403
 
     # 防白嫖：如果小組已經達標，不准再發邀請拉人！
     if group.current_progress >= group.goal_target:

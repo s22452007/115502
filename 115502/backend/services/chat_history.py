@@ -9,6 +9,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 
 from utils.db import db
+from utils.auth_token import forbid_unless_owner
 from models import ChatSession, ChatMessage, Dialect
 
 chat_history_bp = Blueprint('chat_history', __name__)
@@ -99,6 +100,9 @@ def get_session(session_id):
     s = db.session.get(ChatSession, session_id)
     if not s:
         return jsonify({'error': '找不到這場對話'}), 404
+    denied = forbid_unless_owner(s.user_id)   # 只能看自己的對話
+    if denied:
+        return denied
 
     messages = (ChatMessage.query
                 .filter_by(session_id=session_id)
@@ -122,6 +126,9 @@ def delete_session(session_id):
     s = db.session.get(ChatSession, session_id)
     if not s:
         return jsonify({'error': '找不到這場對話'}), 404
+    denied = forbid_unless_owner(s.user_id)   # 只能刪自己的對話
+    if denied:
+        return denied
 
     db.session.delete(s)  # cascade 會一併刪掉底下的訊息
     db.session.commit()
@@ -131,13 +138,16 @@ def delete_session(session_id):
 # ==========================================
 # 給 /api/chat 使用的儲存工具
 # ==========================================
-def save_exchange(session_id, user_message, ai_reply):
+def save_exchange(session_id, user_message, ai_reply, user_id=None):
     """
     儲存一次問答（使用者訊息 + AI 回覆）並更新場次統計。
     只有 AI 成功回覆時才會被呼叫，失敗的對話不會留下紀錄。
+    帶了 user_id 時，場次必須是這個人的，否則不寫入（不能把訊息塞進別人的對話）。
     """
     s = db.session.get(ChatSession, session_id)
     if not s:
+        return False
+    if user_id is not None and s.user_id != int(user_id):
         return False
 
     now = datetime.utcnow()

@@ -17,7 +17,8 @@ SNAP TO LEARN 系統測試（黑箱 API 測試）——系統手冊第十章「�
      （app.py 匯入時有一段直接連線真實資料庫修欄位的程式，會被導向）。
   4. 測試前後比對真實 jlens.db 各表筆數（唯讀連線），不一致時結束代碼為 2。
 不連外部服務：
-  - google.genai.Client 與 gemini_client.generate_content 一律丟例外，確保不會真的呼叫 Gemini。
+  - google.genai.Client 一律丟例外；gemini_client.generate_content 平常也丟例外，
+    只有朗讀評分（A11）與造句批改（A12）個案執行期間改回傳固定的模擬回應。
   - 拍照辨識（utils.ai_helper.analyze_image_from_path）與 AI 對話（app.get_ai_reply）以固定回應替代，
     只測額度扣除／退還、資料寫入與回應格式；這類個案備註標示「AI 回應以模擬資料替代」。
   - 上傳的照片寫到暫存資料夾，不寫進 static/photos。
@@ -159,25 +160,34 @@ def _blocked_ai(*args, **kwargs):
     raise RuntimeError('系統測試中禁止連線外部 AI 服務')
 
 
+class _FakeGeminiResponse:
+    def __init__(self, text):
+        self.text = text
+
+
+# 朗讀評分（services/article.py）與造句批改（services/sentence.py）直接呼叫 gemini_client.generate_content。
+# 平常一律丟例外（不連外）；個案需要時把 GEMINI_FAKE['handler'] 設成產生模擬回應的函式。
+GEMINI_FAKE = {'handler': None}
+
+
+def _fake_or_blocked_generate_content(feature, contents, config=None, model=None):
+    handler = GEMINI_FAKE['handler']
+    if handler is None:
+        raise RuntimeError('系統測試中禁止連線外部 AI 服務')
+    return _FakeGeminiResponse(handler(feature, contents))
+
+
 _genai.Client = _NoNetworkClient
-gemini_client.generate_content = _blocked_ai
+gemini_client.generate_content = _fake_or_blocked_generate_content
 gemini_client.run_with_legacy_keys = _blocked_ai
 
 # ----------------------------------------------------------------------
-# 暫存資料庫先建表並放入兩筆訂閱方案（正式資料庫本來就有這兩筆）。
-# app.py 在資料庫「沒有」方案時會用 SubscriptionPlan(points_grant=...) 新建，但模型沒有 points_grant
-# 欄位，會直接 TypeError 啟動失敗（全新資料庫無法啟動，見問題清單）；先放入方案讓 app.py 走
-# 「更新既有方案」的分支，與正式環境的啟動流程一致。
+# 暫存資料庫先建好空的資料表，訂閱方案與點數方案交給 app.py 啟動時建立，
+# 等於同時驗證「全新資料庫可以正常啟動」。
+# （app.py 原本用不存在的 points_grant 欄位建方案，全新資料庫會 TypeError，已修正。）
 # ----------------------------------------------------------------------
-import models as _models
-
 _pre_engine = create_engine('sqlite:///' + TMP_DB, poolclass=NullPool)
 db.metadata.create_all(_pre_engine)
-with _pre_engine.begin() as _conn:
-    _conn.execute(_models.SubscriptionPlan.__table__.insert(), [
-        {'name': 'Premium Pro 月訂閱', 'billing_cycle': 'monthly', 'is_active': True},
-        {'name': 'Premium Pro 年訂閱', 'billing_cycle': 'yearly', 'is_active': True},
-    ])
 _pre_engine.dispose()
 
 # ----------------------------------------------------------------------
@@ -204,7 +214,8 @@ from models import (
     User, Admin, Scene, Vocab, UserVocab, UserFolder, UserPhoto, UserPhotoVocab, QuizQuestion,
     Achievement, UserAchievement, FriendRequest, Friendship, StudyGroup, GroupMember, GroupInvite,
     Feedback, PointPackage, SubscriptionPlan, UserSubscription, PointTransaction, ChatSession,
-    ChatMessage, SystemLog, AccountType,
+    ChatMessage, SystemLog, AccountType, Article, ScoreRecord, ReadingEvaluation, UnlockedArticle,
+    SentencePracticeRecord, Classroom, ClassroomMember, Assignment, TaskType,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -241,6 +252,47 @@ def fake_get_ai_reply(topic, user_message, chat_history, japanese_level, dialect
 ai_helper.analyze_image_from_path = fake_analyze_image_from_path
 ai_helper.generate_context_sentences = lambda *a, **k: {}
 student_module.get_ai_reply = fake_get_ai_reply
+
+# ----------------------------------------------------------------------
+# 模擬寄信：忘記密碼的驗證碼不真的寄出，改存在 SENT_MAIL 供個案讀取
+# ----------------------------------------------------------------------
+import re
+import utils.mailer as mailer_module
+
+MAIL_FAKE = {'configured': True}
+SENT_MAIL = []
+
+
+def _fake_send_mail(to, subject, body):
+    SENT_MAIL.append({'to': to, 'subject': subject, 'body': body})
+
+
+mailer_module.is_configured = lambda: MAIL_FAKE['configured']
+mailer_module.send_mail = _fake_send_mail
+
+# ----------------------------------------------------------------------
+# 模擬 Google 身分憑證驗證：不連線 Google。憑證格式 'valid:<email>' 視為驗證通過，其他一律驗證失敗。
+# ----------------------------------------------------------------------
+import services.auth as auth_module
+
+
+def _fake_verify_google_id_token(token):
+    if isinstance(token, str) and token.startswith('valid:'):
+        return {'email': token.split(':', 1)[1], 'email_verified': True}
+    raise ValueError('無效的 Google 身分憑證（測試模擬）')
+
+
+auth_module.verify_google_id_token = _fake_verify_google_id_token
+os.environ['DEMO_PAYMENT'] = 'on'
+
+
+def last_reset_code(email):
+    for m in reversed(SENT_MAIL):
+        if m['to'] == email:
+            found = re.search(r'驗證碼是 (\d{6})', m['body'])
+            return found.group(1) if found else None
+    return None
+
 
 JPEG_BYTES = b'\xff\xd8\xff\xe0' + b'\x00' * 64 + b'\xff\xd9'
 
@@ -283,6 +335,125 @@ with S.app_context():
         'theme_official_vocabs': Vocab.query.filter_by(source='admin').count(),
     }
 
+# ----------------------------------------------------------------------
+# 登入通行證：App 的 API 都要帶通行證（utils/auth_token.py）。
+# 測試連線依「這次操作的是誰」自動帶上那個人的通行證，等同該使用者在自己的 App 上操作；
+# 要測「沒帶／偽造／冒用別人」時，個案自行指定 headers（NO_AUTH 代表不帶）。
+# ----------------------------------------------------------------------
+from urllib.parse import parse_qs
+from flask.testing import FlaskClient
+from itsdangerous import URLSafeTimedSerializer
+import itsdangerous.timed as _its_timed
+from utils.auth_token import issue_token
+
+ACT = {'uid': None}          # 最近一次操作者
+NO_AUTH = {'X-Test-No-Auth': '1'}
+
+
+def token_for(uid):
+    try:
+        uid = int(uid)
+    except (TypeError, ValueError):
+        return None
+    with S.app_context():
+        u = db.session.get(User, uid)
+        return issue_token(u) if u else None
+
+
+def auth_header(u_or_id):
+    uid = u_or_id['id'] if isinstance(u_or_id, dict) else u_or_id
+    return {'Authorization': 'Bearer ' + token_for(uid)}
+
+
+def bearer(token):
+    return {'Authorization': 'Bearer ' + token}
+
+
+def old_token_for(uid, days):
+    """模擬 days 天前簽發的通行證"""
+    original = _its_timed.TimestampSigner.get_timestamp
+    _its_timed.TimestampSigner.get_timestamp = lambda self: int(time.time() - days * 86400)
+    try:
+        return token_for(uid)
+    finally:
+        _its_timed.TimestampSigner.get_timestamp = original
+
+
+def _owner_of(method, path, body):
+    """沒有 user_id 的 API：找出這筆資料的主人（正常使用時就是操作者本人）"""
+    from models import FriendRequest, UserVocab, UserFolder, UserPhoto, ChatSession, GroupMember
+    with S.app_context():
+        try:
+            endpoint, view_args = S.url_map.bind('localhost').match(path, method=method)
+        except Exception:
+            return None
+
+        def get(model, key):
+            try:
+                return db.session.get(model, int(key))
+            except (TypeError, ValueError):
+                return None
+
+        if endpoint == 'user.respond_friend_request':
+            o = get(FriendRequest, body.get('request_id'))
+            return o.receiver_id if o else None
+        if endpoint == 'vocab.move_vocab':
+            o = get(UserVocab, body.get('user_vocab_id'))
+            return o.user_id if o else None
+        if endpoint in ('vocab.delete_folder', 'vocab.rename_folder'):
+            o = get(UserFolder, body.get('folder_id'))
+            return o.user_id if o else None
+        if endpoint == 'scenario.rename_photo':
+            o = get(UserPhoto, body.get('photo_id'))
+            return o.user_id if o else None
+        if endpoint in ('chat_history.get_session', 'chat_history.delete_session'):
+            o = get(ChatSession, view_args.get('session_id'))
+            return o.user_id if o else None
+        if endpoint == 'group.cancel_invite':
+            m = GroupMember.query.filter_by(group_id=body.get('group_id')).first()
+            return m.user_id if m else None
+        for k in ('user_id', 'sender_id'):
+            if k in view_args:
+                return view_args[k]
+    return None
+
+
+class AuthTestClient(FlaskClient):
+    def open(self, *args, **kwargs):
+        headers = dict(kwargs.pop('headers', None) or {})
+        no_auth = headers.pop('X-Test-No-Auth', None)
+        path = args[0] if args and isinstance(args[0], str) else None
+        if not no_auth and 'Authorization' not in headers and path and path.startswith('/api/'):
+            tok = token_for(self._actor(kwargs.get('method', 'GET'), path, kwargs))
+            if tok:
+                headers['Authorization'] = 'Bearer ' + tok
+        kwargs['headers'] = headers
+        return super().open(*args, **kwargs)
+
+    @staticmethod
+    def _actor(method, path, kw):
+        base, _, qs = path.partition('?')
+        js = kw.get('json') if isinstance(kw.get('json'), dict) else {}
+        data = kw.get('data') if isinstance(kw.get('data'), dict) else {}
+        uid = None
+        for src in (js, data):
+            for k in ('user_id', 'sender_id'):
+                if src.get(k) not in (None, ''):
+                    uid = src[k]
+                    break
+            if uid is not None:
+                break
+        if uid is None and parse_qs(qs).get('user_id'):
+            uid = parse_qs(qs)['user_id'][0]
+        if uid is None:
+            uid = _owner_of(method, base, js or data)
+        if uid is None:
+            return ACT['uid']
+        ACT['uid'] = uid
+        return uid
+
+
+S.test_client_class = AuthTestClient
 SC = S.test_client()
 
 # ----------------------------------------------------------------------
@@ -291,6 +462,7 @@ SC = S.test_client()
 FEATURES = {
     'A01': '帳號管理', 'A02': '拍照學習', 'A03': '單字收藏', 'A04': 'AI對話練習', 'A05': '個人檔案',
     'A06': '社群互動', 'A07': '訂閱與點數', 'A09': '系統設定', 'A10': '管理員後台',
+    'A11': '閱讀系統', 'A12': '造句系統', 'A13': '校園教育版', 'B02': '安全需求',
 }
 CASES = []
 _serial = {}
@@ -581,12 +753,12 @@ def _(c):
 
 @case('A01', '被停用的帳號無法以 Google 登入',
       pre='同 A01-09，使用者已被管理者停用',
-      steps='POST /api/auth/google_login，email=該停用帳號的 Email',
+      steps='POST /api/auth/google_login，帶該停用帳號 Email 的 Google 身分憑證',
       expect='HTTP 403，拒絕登入（與 Email 登入一致）',
       note='只呼叫本系統後端 /google_login，未連線 Google')
 def _(c):
     u = STATE['suspended']
-    r = SC.post('/api/auth/google_login', json={'email': u['email']})
+    r = SC.post('/api/auth/google_login', json={'id_token': 'valid:' + u['email']})
     c.log(http(r, 'message', 'error', 'user_id'))
     check(r.status_code == 403,
           f'停用帳號仍可透過 Google 登入（HTTP {r.status_code}「{J(r).get("message")}」並取得 user_id）')
@@ -594,11 +766,11 @@ def _(c):
 
 @case('A01', 'Google 首次登入自動建立帳號',
       pre='Email「gnew@test.local」尚未註冊',
-      steps='POST /api/auth/google_login，email=gnew@test.local、avatar=https://example.com/a.png',
+      steps='POST /api/auth/google_login，帶 gnew@test.local 的 Google 身分憑證、avatar=https://example.com/a.png',
       expect='HTTP 200，訊息「Google 登入成功！」；自動建立帳號並配發 8 碼 friend_id、streak_days=1、儲存大頭貼網址',
       note='未連線 Google，直接呼叫後端；後端未驗證 Google ID Token')
 def _(c):
-    r = SC.post('/api/auth/google_login', json={'email': 'gnew@test.local', 'avatar': 'https://example.com/a.png'})
+    r = SC.post('/api/auth/google_login', json={'id_token': 'valid:gnew@test.local', 'avatar': 'https://example.com/a.png'})
     d = J(r)
     c.log(http(r, 'message', 'user_id', 'friend_id', 'streak_days', 'avatar'))
     check(r.status_code == 200 and d.get('message') == 'Google 登入成功！', '登入失敗')
@@ -721,7 +893,7 @@ def _(c):
             '意見回饋 feedback': Feedback.query.filter_by(user_id=d['id']).count(),
             '對話場次 chat_session': ChatSession.query.filter_by(user_id=d['id']).count(),
         }
-    c.log('刪除後仍殘留：' + '、'.join(f'{k}={v} 筆' for k, v in left.items()))
+    c.log('刪除後剩餘筆數：' + '、'.join(f'{k}={v} 筆' for k, v in left.items()))
     check(all(v == 0 for v in left.values()),
           '刪除帳號後仍殘留個人資料：' + '、'.join(f'{k} {v} 筆' for k, v in left.items() if v))
 
@@ -729,7 +901,7 @@ def _(c):
 @case('A01', '取得日語程度測驗題目',
       pre='題庫依 seed.py 結構共 12 題（超級新手、N5、N4、N3、N2、N1 各 2 題）',
       steps='GET /api/quiz/questions',
-      expect='HTTP 200，回傳 10 題，每題有題目、4 個選項與正確答案索引（0～3），並依難度由淺入深排列')
+      expect='HTTP 200，回傳 10 題，每題有題目、4 個選項與正確答案索引（0～3），依序為 N5、N4、N3、N2、N1 各 2 題（與判定位置一致）')
 def _(c):
     r = SC.get('/api/quiz/questions')
     qs = J(r).get('questions', [])
@@ -740,8 +912,8 @@ def _(c):
     check(all(len(q['options']) == 4 and q['correctIndex'] in (0, 1, 2, 3) and q['question'] for q in qs),
           '題目格式不完整')
     check(levels == sorted(levels, key=order.index), '題目未依難度排列')
-    if 'N1' not in levels:
-        c.note('題庫雖有 N1 題目，但 API 只取前 10 題，N1 題目不會出現在測驗中（見問題清單）')
+    check(levels == ['N5', 'N5', 'N4', 'N4', 'N3', 'N3', 'N2', 'N2', 'N1', 'N1'],
+          '題目等級與判定位置不一致（第 3、4 題應為 N4，第 9、10 題應為 N1）')
 
 
 @case('A01', '程度測驗全部答對判定為 N1',
@@ -792,6 +964,21 @@ def _(c):
     check(r.status_code == 400 and J(r).get('error') == '缺少使用者 ID', '未正確拒絕')
 
 
+@case('A01', '校園教育版帳號不可使用 Google 登入或自行刪除帳號',
+      pre='老師已建立學生帳號 11156099@school.test（account_type=student）',
+      steps='1. POST /api/auth/google_login，帶學生帳號 Email 的 Google 身分憑證\n2. POST /api/user/delete_account，user_id=學生帳號',
+      expect='1. HTTP 403，「這個帳號不能使用 Google 登入，請改用帳號密碼登入」\n2. HTTP 403，「校園教育版帳號無法在 App 刪除，請聯繫老師或系統管理員」，帳號仍存在')
+def _(c):
+    ensure_edu()
+    st = STATE['edu_student']
+    r1 = SC.post('/api/auth/google_login', json={'id_token': 'valid:' + st['email']})
+    r2 = SC.post('/api/user/delete_account', json={'user_id': st['id']})
+    still = user_row(st['id']) is not None
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}，帳號仍存在={still}')
+    check(r1.status_code == 403 and J(r1).get('error') == '這個帳號不能使用 Google 登入，請改用帳號密碼登入', 'Google 登入未擋下學生帳號')
+    check(r2.status_code == 403 and still, '學生帳號可以在 App 自行刪除')
+
+
 # ======================================================================
 # A02 拍照學習（AI 辨識以模擬資料替代）
 # ======================================================================
@@ -829,7 +1016,7 @@ def _(c):
 @case('A02', '辨識失敗時退還拍照次數',
       pre='A02-01 的使用者今日已用 1 次；AI 辨識以模擬「服務忙碌」失敗替代',
       steps='1. POST /api/user/increment_scan（今日次數變 2）\n2. POST /api/scenario/analyze（AI 回傳失敗）\n3. GET /api/user/usage_status/{user_id}',
-      expect='2. HTTP 500，回傳錯誤訊息\n3. photo_count_today 退回 1；不新增照片紀錄',
+      expect='2. HTTP 500，回傳錯誤訊息，已上傳的圖片檔刪除\n3. photo_count_today 退回 1；不新增照片紀錄',
       note='AI 回應以模擬資料替代')
 def _(c):
     u = STATE['scan']
@@ -844,10 +1031,9 @@ def _(c):
         FAKE['scan_ok'] = True
     st = usage(u)
     n_photo = count(UserPhoto, user_id=u['id'])
-    c.log(f'1. {http(r1, "daily_scans")}；2. {http(r2, "error")}；3. photo_count_today={st.get("photo_count_today")}，'
-          f'照片紀錄 {n_photo} 筆')
-    if files_after > files_before:
-        c.note(f'辨識失敗後上傳的圖片檔仍留在伺服器（多 {files_after - files_before} 個檔案，無對應照片紀錄）')
+    c.log(f'1. {http(r1, "daily_scans")}；2. {http(r2, "error")}，圖片檔 {files_before} → {files_after} 個；'
+          f'3. photo_count_today={st.get("photo_count_today")}，照片紀錄 {n_photo} 筆')
+    check(files_after == files_before, f'辨識失敗後上傳的圖片檔仍留在伺服器（多 {files_after - files_before} 個檔案）')
     check(r1.status_code == 200 and J(r1).get('daily_scans') == 2, '前置扣次失敗')
     check(r2.status_code == 500 and J(r2).get('error'), '失敗時未回傳錯誤')
     check(st.get('photo_count_today') == 1, '拍照次數未退還')
@@ -866,21 +1052,27 @@ def _(c):
 
 
 @case('A02', '今日拍照額度用完時辨識 API 拒絕服務',
-      pre='免費會員今日已用完 2 次拍照額度（第 3 次 /increment_scan 回傳 403）；AI 辨識以模擬資料替代',
-      steps='直接 POST /api/scenario/analyze（multipart：user_id、image）',
-      expect='依「免費會員每日 2 次」規則，額度用完後辨識應被拒絕，不產生新照片紀錄',
+      pre='免費會員今日已正常拍照辨識 2 次（每次先 /increment_scan 再 /analyze），第 3 次 /increment_scan 回傳 403；AI 辨識以模擬資料替代',
+      steps='不經過 /increment_scan，直接 POST /api/scenario/analyze（multipart：user_id、image）',
+      expect='額度用完、沒有扣次就呼叫辨識應被拒絕（HTTP 403），不產生新照片紀錄',
       note='AI 回應以模擬資料替代')
 def _(c):
     u = register('scanlimit')
-    codes = [scan(u).status_code for _ in range(3)]
-    if codes != [200, 200, 403]:
-        raise RuntimeError(f'前置作業失敗：拍照扣次結果 {codes}')
+    codes = []
+    for i in range(2):   # 正常流程：先扣次數再辨識
+        codes.append(scan(u).status_code)
+        SC.post('/api/scenario/analyze', data={'user_id': str(u['id']), 'image': (io.BytesIO(JPEG_BYTES), f'ok{i}.jpg')},
+                content_type='multipart/form-data')
+    codes.append(scan(u).status_code)
+    before = count(UserPhoto, user_id=u['id'])
+    if codes != [200, 200, 403] or before != 2:
+        raise RuntimeError(f'前置作業失敗：拍照扣次結果 {codes}、照片 {before} 筆')
     r = SC.post('/api/scenario/analyze', data={'user_id': str(u['id']), 'image': (io.BytesIO(JPEG_BYTES), 'over.jpg')},
                 content_type='multipart/form-data')
     n_photo = count(UserPhoto, user_id=u['id'])
-    c.log(f'前置 /increment_scan 三次狀態碼={codes}；/analyze {http(r, "message", "error")}，新增照片紀錄 {n_photo} 筆')
-    check(r.status_code in (400, 403) and n_photo == 0,
-          f'額度用完仍可辨識（HTTP {r.status_code}，新增 {n_photo} 筆照片）：/analyze 本身不檢查額度')
+    c.log(f'前置正常辨識 2 次、第 3 次扣次狀態碼={codes[-1]}；直接 /analyze {http(r, "error")}，照片紀錄 {before} → {n_photo} 筆')
+    check(r.status_code == 403 and n_photo == before,
+          f'額度用完仍可辨識（HTTP {r.status_code}，照片 {before} → {n_photo} 筆）：/analyze 本身不檢查額度')
 
 
 # ======================================================================
@@ -1088,19 +1280,24 @@ def _(c):
 
 
 @case('A04', '今日 AI 對話額度用完時對話 API 拒絕服務',
-      pre='免費會員今日已用完 3 次 AI 對話額度（第 4 次 /use_ai 回傳 403）；AI 回覆以模擬資料替代',
-      steps='直接 POST /api/chat（form：message、topic、level、user_id）',
-      expect='依「免費會員每日 3 次」規則，額度用完後對話應被拒絕，不回傳 AI 回覆',
+      pre='免費會員今日已正常對話 3 次（每次先 /use_ai 再 /api/chat），第 4 次 /use_ai 回傳 403；AI 回覆以模擬資料替代',
+      steps='不經過 /use_ai，直接 POST /api/chat（form：message、topic、level、user_id）',
+      expect='額度用完、沒有扣次就呼叫對話應被拒絕（HTTP 403），不回傳 AI 回覆',
       note='AI 回應以模擬資料替代')
 def _(c):
     u = register('chatlimit')
-    codes = [use_ai(u).status_code for _ in range(4)]
-    if codes != [200, 200, 200, 403]:
-        raise RuntimeError(f'前置作業失敗：AI 扣次結果 {codes}')
+    codes, replies = [], []
+    for _i in range(3):   # 正常流程：先扣次數再對話
+        codes.append(use_ai(u).status_code)
+        rr = SC.post('/api/chat', data={'message': 'こんにちは', 'topic': '日常對話', 'level': 'N5', 'user_id': str(u['id'])})
+        replies.append(rr.status_code)
+    codes.append(use_ai(u).status_code)
+    if codes != [200, 200, 200, 403] or replies != [200, 200, 200]:
+        raise RuntimeError(f'前置作業失敗：AI 扣次結果 {codes}、對話結果 {replies}')
     r = SC.post('/api/chat', data={'message': 'こんにちは', 'topic': '日常對話', 'level': 'N5', 'user_id': str(u['id'])})
     body = r.get_data(as_text=True)
-    c.log(f'前置 /use_ai 四次狀態碼={codes}；/api/chat HTTP {r.status_code}，回傳 AI 回覆={body == FAKE_CHAT_REPLY}')
-    check(r.status_code in (400, 403) and body != FAKE_CHAT_REPLY,
+    c.log(f'前置正常對話 3 次、第 4 次扣次狀態碼={codes[-1]}；直接 /api/chat HTTP {r.status_code}「{body}」')
+    check(r.status_code == 403 and body != FAKE_CHAT_REPLY,
           f'額度用完仍取得 AI 回覆（HTTP {r.status_code}）：/api/chat 本身不檢查額度')
 
 
@@ -1127,14 +1324,14 @@ def _(c):
     check((d.get('badge_progress') or {}).get('level_01') == 2 and d['badge_progress'].get('vocab_01') == 1, '徽章進度不正確')
 
 
-@case('A05', '查詢不存在的使用者個人檔案',
-      pre='user_id=999999 不存在',
-      steps='GET /api/user/profile_data/999999',
-      expect='HTTP 404，「找不到使用者」')
+@case('A05', '查詢其他使用者的個人檔案被拒',
+      pre='使用者 P 已登入；user_id=999999 不是 P',
+      steps='P 以自己的通行證 GET /api/user/profile_data/999999',
+      expect='HTTP 403，「不能操作其他使用者的資料」')
 def _(c):
-    r = SC.get('/api/user/profile_data/999999')
+    r = SC.get('/api/user/profile_data/999999', headers=auth_header(STATE['profile']))
     c.log(http(r, 'error'))
-    check(r.status_code == 404 and J(r).get('error') == '找不到使用者', '未回傳 404')
+    check(r.status_code == 403 and J(r).get('error') == '不能操作其他使用者的資料', '未擋下')
 
 
 @case('A05', '拍照與連續登入累積徽章進度',
@@ -1481,6 +1678,24 @@ def _(c):
     check(quota.get('free_quota') == 3, '訂閱會員免費額度不是 3')
     check(pts == [(201, 20)] * 3, '前 3 次未免押金')
     check(r4.status_code == 201 and J(r4).get('new_j_pts') == 10, '第 4 次押金不是 10 點')
+
+
+@case('A06', '已處理的交友邀請不能再處理，也不能加自己為好友',
+      pre='使用者 K1 向 K2 送出交友邀請，K2 已接受',
+      steps='1. K2 對同一筆邀請再 POST /api/user/friend_request/respond，action=accept\n2. K1 POST /api/user/friend_request/send，receiver_id=K1 自己',
+      expect='1. HTTP 400，「這個邀請已經處理過了」，雙方各只有 1 筆好友紀錄\n2. HTTP 400，「不能加自己為好友喔！」')
+def _(c):
+    k1, k2 = register('friendK1'), register('friendK2')
+    SC.post('/api/user/friend_request/send', json={'sender_id': k1['id'], 'receiver_id': k2['id']})
+    with S.app_context():
+        rid = FriendRequest.query.filter_by(sender_id=k1['id'], receiver_id=k2['id']).first().id
+    SC.post('/api/user/friend_request/respond', json={'request_id': rid, 'action': 'accept'})
+    r1 = SC.post('/api/user/friend_request/respond', json={'request_id': rid, 'action': 'accept'})
+    n = count(Friendship, user_id=k1['id']) + count(Friendship, user_id=k2['id'])
+    r2 = SC.post('/api/user/friend_request/send', json={'sender_id': k1['id'], 'receiver_id': k1['id']})
+    c.log(f'1. {http(r1, "error")}，好友紀錄共 {n} 筆；2. {http(r2, "error")}')
+    check(r1.status_code == 400 and J(r1).get('error') == '這個邀請已經處理過了' and n == 2, '同一筆邀請可以重複接受')
+    check(r2.status_code == 400 and J(r2).get('error') == '不能加自己為好友喔！', '可以加自己為好友')
 
 
 # ======================================================================
@@ -1833,45 +2048,128 @@ def _(c):
     STATE['feedback_id'] = fb[0]['id']
 
 
-@case('A09', '重設密碼後以新密碼登入',
-      pre='一般會員 M，密碼 Pass1234',
-      steps='1. POST /api/auth/reset_password，email=M、new_password=NewPass88\n2. 以新密碼登入\n3. 以舊密碼登入',
-      expect='1. HTTP 200，「密碼重設成功！請使用新密碼登入」\n2. HTTP 200 登入成功\n3. HTTP 401',
-      note='App 端目前只有「忘記密碼／重設密碼」API，未要求驗證舊密碼或驗證碼')
+def send_reset_code(email):
+    return SC.post('/api/auth/forgot_password', json={'email': email})
+
+
+def reset_with_code(email, code, new_password='NewPass88'):
+    return SC.post('/api/auth/reset_password', json={'email': email, 'code': code, 'new_password': new_password})
+
+
+def age_reset_codes(email, seconds=None, expire=False):
+    """把該帳號的驗證碼紀錄往前調（模擬時間經過）"""
+    from models import PasswordResetCode
+    with S.app_context():
+        uid = User.query.filter_by(email=email).first().id
+        for rec in PasswordResetCode.query.filter_by(user_id=uid).all():
+            if seconds:
+                rec.created_at = rec.created_at - timedelta(seconds=seconds)
+            if expire:
+                rec.expires_at = datetime.utcnow() - timedelta(seconds=1)
+        db.session.commit()
+
+
+@case('A09', '寄送驗證碼並以驗證碼重設密碼',
+      pre='一般會員 M，密碼 Pass1234；寄信以模擬方式攔截',
+      steps='1. POST /api/auth/forgot_password，email=M\n2. 以信中的驗證碼 POST /api/auth/reset_password，new_password=NewPass88\n'
+            '3. 分別以新密碼、舊密碼登入\n4. 用同一組驗證碼再重設一次',
+      expect='1. HTTP 200，「驗證碼已寄到…，10 分鐘內有效」，寄出含 6 位數驗證碼的信\n2. HTTP 200，「密碼重設成功！請使用新密碼登入」\n'
+             '3. 新密碼 HTTP 200、舊密碼 HTTP 401\n4. HTTP 400，「驗證碼已失效，請重新寄送驗證碼」',
+      note='寄信以模擬方式攔截，未真的寄出')
 def _(c):
     m = register('resetpw')
-    r1 = SC.post('/api/auth/reset_password', json={'email': m['email'], 'new_password': 'NewPass88'})
-    r2 = login(m, 'NewPass88')
-    r3 = login(m, 'Pass1234')
-    c.log(f'1. {http(r1, "message")}；2. {http(r2, "message")}；3. {http(r3, "error")}')
-    check(r1.status_code == 200 and r2.status_code == 200 and r3.status_code == 401, '重設密碼流程不正確')
+    r1 = send_reset_code(m['email'])
+    code = last_reset_code(m['email'])
+    r2 = reset_with_code(m['email'], code)
+    r3, r4 = login(m, 'NewPass88'), login(m, 'Pass1234')
+    r5 = reset_with_code(m['email'], code, 'Again999')
+    c.log(f'1. {http(r1, "message")}，寄出驗證碼={"有" if code else "無"}；2. {http(r2, "message")}；'
+          f'3. 新密碼 HTTP {r3.status_code}、舊密碼 HTTP {r4.status_code}；4. {http(r5, "error")}')
+    check(r1.status_code == 200 and code and len(code) == 6, '驗證碼沒有寄出')
+    check(r2.status_code == 200 and r3.status_code == 200 and r4.status_code == 401, '重設密碼流程不正確')
+    check(r5.status_code == 400 and J(r5).get('error') == '驗證碼已失效，請重新寄送驗證碼', '驗證碼可以重複使用')
+
+
+@case('A09', '沒有驗證碼或驗證碼錯誤無法重設密碼',
+      pre='一般會員 N，密碼 Pass1234',
+      steps='1. 只帶 email 與 new_password POST /api/auth/reset_password（舊做法，沒有驗證碼）\n'
+            '2. 寄送驗證碼後，連續 5 次輸入錯誤驗證碼\n3. 再輸入正確驗證碼\n4. 以原密碼登入',
+      expect='1. HTTP 400，「請輸入信箱收到的驗證碼」\n2. 前 4 次「驗證碼錯誤，還可以再試 N 次」，第 5 次「驗證碼錯誤次數過多，請重新寄送驗證碼」\n'
+             '3. HTTP 400，驗證碼已作廢\n4. 原密碼仍可登入',
+      note='寄信以模擬方式攔截，未真的寄出')
+def _(c):
+    n = register('resetwrong')
+    r1 = SC.post('/api/auth/reset_password', json={'email': n['email'], 'new_password': 'Hack1234'})
+    send_reset_code(n['email'])
+    code = last_reset_code(n['email'])
+    wrong = '000000' if code != '000000' else '111111'
+    errs = [J(reset_with_code(n['email'], wrong)).get('error') for _ in range(5)]
+    r3 = reset_with_code(n['email'], code)
+    r4 = login(n)
+    c.log(f'1. {http(r1, "error")}；2. {"／".join(errs)}；3. {http(r3, "error")}；4. 原密碼登入 HTTP {r4.status_code}')
+    check(r1.status_code == 400 and J(r1).get('error') == '請輸入信箱收到的驗證碼', '沒有驗證碼也能重設')
+    check(errs[:4] == [f'驗證碼錯誤，還可以再試 {k} 次' for k in (4, 3, 2, 1)]
+          and errs[4] == '驗證碼錯誤次數過多，請重新寄送驗證碼', '錯誤次數限制不正確')
+    check(r3.status_code == 400 and r4.status_code == 200, '輸錯太多次後驗證碼仍可使用')
+
+
+@case('A09', '驗證碼重寄間隔與有效期限',
+      pre='一般會員 P2',
+      steps='1. 連續兩次 POST /api/auth/forgot_password\n2. 模擬 61 秒後再寄一次，以第一封的驗證碼重設\n3. 模擬新驗證碼超過 10 分鐘後，以新驗證碼重設',
+      expect='1. 第二次 HTTP 429，「驗證碼剛寄出，請 N 秒後再試」\n2. 寄送成功；舊驗證碼已作廢，重設失敗\n3. HTTP 400，「驗證碼已失效，請重新寄送驗證碼」',
+      note='寄信以模擬方式攔截；時間經過以修改資料庫時間模擬')
+def _(c):
+    p = register('resetcool')
+    send_reset_code(p['email'])
+    old = last_reset_code(p['email'])
+    r1 = send_reset_code(p['email'])
+    age_reset_codes(p['email'], seconds=61)
+    r2 = send_reset_code(p['email'])
+    new = last_reset_code(p['email'])
+    r3 = reset_with_code(p['email'], old) if old != new else None
+    age_reset_codes(p['email'], expire=True)
+    r4 = reset_with_code(p['email'], new)
+    c.log(f'1. 第二次 {http(r1, "error")}；2. 再寄 HTTP {r2.status_code}，用舊驗證碼重設 {http(r3, "error") if r3 else "（新舊驗證碼相同，略過）"}；'
+          f'3. {http(r4, "error")}')
+    check(r1.status_code == 429 and '秒後再試' in (J(r1).get('error') or ''), '可以連續重寄')
+    check(r2.status_code == 200 and (r3 is None or r3.status_code == 400), '重寄後舊驗證碼仍有效')
+    check(r4.status_code == 400 and J(r4).get('error') == '驗證碼已失效，請重新寄送驗證碼', '過期的驗證碼仍可使用')
 
 
 @case('A09', '校園教育版學生帳號不可在 App 重設密碼',
       pre='學生帳號（account_type=student，由老師建立）',
-      steps='POST /api/auth/reset_password，email=學生帳號、new_password=Hack1234',
-      expect='HTTP 403，「校園教育版帳號無法在這裡重設密碼，請老師在班級名冊幫你重設」；原密碼仍可登入')
+      steps='1. POST /api/auth/forgot_password，email=學生帳號\n2. 以原密碼登入',
+      expect='1. HTTP 403，「校園教育版帳號無法在這裡重設密碼，請老師在班級名冊幫你重設」，不寄信\n2. 原密碼仍可登入')
 def _(c):
     with S.app_context():
         st = User(email='stu001@test.local', password_hash=generate_password_hash('11156001'),
                   account_type=AccountType.STUDENT, friend_id='STU00001')
         db.session.add(st)
         db.session.commit()
-    r1 = SC.post('/api/auth/reset_password', json={'email': 'stu001@test.local', 'new_password': 'Hack1234'})
+    sent_before = len(SENT_MAIL)
+    r1 = send_reset_code('stu001@test.local')
     r2 = SC.post('/api/auth/login', json={'email': 'stu001@test.local', 'password': '11156001'})
-    c.log(f'1. {http(r1, "error")}；2. 原密碼登入 {http(r2, "message")}')
-    check(r1.status_code == 403 and J(r1).get('error') == '校園教育版帳號無法在這裡重設密碼，請老師在班級名冊幫你重設', '未擋下')
+    c.log(f'1. {http(r1, "error")}，寄出信件 {len(SENT_MAIL) - sent_before} 封；2. 原密碼登入 {http(r2, "message")}')
+    check(r1.status_code == 403 and J(r1).get('error') == '校園教育版帳號無法在這裡重設密碼，請老師在班級名冊幫你重設'
+          and len(SENT_MAIL) == sent_before, '未擋下')
     check(r2.status_code == 200, '原密碼被改掉')
 
 
-@case('A09', '不存在的 Email 重設密碼',
-      pre='nobody@test.local 未註冊',
-      steps='POST /api/auth/reset_password，email=nobody@test.local、new_password=Pass9999',
-      expect='HTTP 404，「找不到此 Email，請確認是否輸入正確」')
+@case('A09', '不存在的 Email 或寄信服務未設定時無法寄送驗證碼',
+      pre='nobody@test.local 未註冊；一般會員 Q 已註冊',
+      steps='1. POST /api/auth/forgot_password，email=nobody@test.local\n2. 寄信帳號未設定時，Q POST /api/auth/forgot_password',
+      expect='1. HTTP 404，「找不到此 Email，請確認是否輸入正確」\n2. HTTP 503，「寄信服務尚未設定，請聯繫系統管理員」')
 def _(c):
-    r = SC.post('/api/auth/reset_password', json={'email': 'nobody@test.local', 'new_password': 'Pass9999'})
-    c.log(http(r, 'error'))
-    check(r.status_code == 404 and J(r).get('error') == '找不到此 Email，請確認是否輸入正確', '未回傳 404')
+    q = register('resetnomail')
+    r1 = send_reset_code('nobody@test.local')
+    MAIL_FAKE['configured'] = False
+    try:
+        r2 = send_reset_code(q['email'])
+    finally:
+        MAIL_FAKE['configured'] = True
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}')
+    check(r1.status_code == 404 and J(r1).get('error') == '找不到此 Email，請確認是否輸入正確', '未回傳 404')
+    check(r2.status_code == 503 and J(r2).get('error') == '寄信服務尚未設定，請聯繫系統管理員', '未提示寄信服務未設定')
 
 
 # ======================================================================
@@ -2067,15 +2365,19 @@ def _(c):
 
 @case('A10', '管理者回覆意見回饋',
       pre='使用者 K 已送出回饋（A09-01）；管理者已登入',
-      steps='1. POST /feedback/reply/{回饋 id}，reply=感謝建議，深色模式已排入開發\n2. App GET /api/user/feedback/{K}',
-      expect='1. HTTP 302\n2. 該筆回饋 reply 顯示官方回覆內容，replied_at 有值')
+      steps='1. 不登入後台，以 App 的 POST /api/user/feedback/reply 冒充官方回覆\n'
+            '2. 管理者 POST /feedback/reply/{回饋 id}，reply=感謝建議，深色模式已排入開發\n3. App GET /api/user/feedback/{K}',
+      expect='1. HTTP 404（App 端沒有回覆 API），回饋仍未回覆\n2. HTTP 302\n3. 該筆回饋 reply 顯示官方回覆內容，replied_at 有值')
 def _(c):
     ac = admin_client('sys_super', 'Admin@1234')
     if not STATE.get('feedback_id'):
         raise RuntimeError('前置個案 A09-03 未完成')
+    r0 = SC.post('/api/user/feedback/reply', json={'feedback_id': STATE['feedback_id'], 'reply': '冒充的官方回覆'})
+    fb0 = J(SC.get(f'/api/user/feedback/{STATE["feedback"]["id"]}')).get('feedbacks', [{}])[0]
     r = ac.post(f'/feedback/reply/{STATE["feedback_id"]}', data={'reply': '感謝建議，深色模式已排入開發'})
     fb = J(SC.get(f'/api/user/feedback/{STATE["feedback"]["id"]}')).get('feedbacks', [{}])[0]
-    c.log(f'1. HTTP {r.status_code}；2. reply={fb.get("reply")}、replied_at={fb.get("replied_at")}')
+    c.log(f'1. HTTP {r0.status_code}，reply={fb0.get("reply")}；2. HTTP {r.status_code}；3. reply={fb.get("reply")}、replied_at={fb.get("replied_at")}')
+    check(r0.status_code == 404 and fb0.get('reply') is None, 'App API 可以冒充官方回覆')
     check(r.status_code == 302 and fb.get('reply') == '感謝建議，深色模式已排入開發' and fb.get('replied_at'), '回覆未出現在 App 端')
 
 
@@ -2113,6 +2415,697 @@ def _(c):
 
 
 # ======================================================================
+# A11 閱讀系統（services/article.py、vocabulary.py /collect_from_article）
+# ======================================================================
+M4A_BYTES = b'\x00\x00\x00\x18ftypM4A \x00\x00\x02\x00' + b'\x00' * 128   # 只有檔頭的 m4a，供格式判斷用
+FAKE_TRANSCRIPT = 'あきのきょうとはこうようがとてもうつくしいです。'
+
+
+def fake_reading_ai(feature, contents):
+    """朗讀評分的模擬 AI：第一次呼叫（含音訊）回轉錄文字，第二次回評分 JSON"""
+    if isinstance(contents, list):
+        return FAKE_TRANSCRIPT
+    return '{"score": 92, "mistakes": [], "overall_feedback": "發音清楚，語調自然，「紅葉」的長音再拉長一點會更好。"}'
+
+
+def ensure_articles():
+    """前置：後台已上架的分級文章（含假名標音、翻譯、文法解析）"""
+    if 'art_free' in STATE:
+        return
+    grammar = {'grammars': [{'expression': '〜ながら', 'meaning': '一邊...一邊...', 'example': '音楽を聴きながら勉強します。'}]}
+    with S.app_context():
+        rows = {
+            'art_free': Article(theme='日常生活', level='N3', title='朝のルーティン',
+                                content='<ruby>私<rt>わたし</rt></ruby>は<ruby>毎朝<rt>まいあさ</rt></ruby>コーヒーを<ruby>飲<rt>の</rt></ruby>みながら<ruby>新聞<rt>しんぶん</rt></ruby>を<ruby>読<rt>よ</rt></ruby>みます。',
+                                translation='我每天早上一邊喝咖啡一邊看報紙。', grammar_points=grammar,
+                                is_free=True, unlock_cost=0, is_published=True),
+            'art_paid': Article(theme='旅遊觀光', level='N3', title='京都の秋',
+                                content='<ruby>秋<rt>あき</rt></ruby>の<ruby>京都<rt>きょうと</rt></ruby>は<ruby>紅葉<rt>こうよう</rt></ruby>がとても<ruby>美<rt>うつく</rt></ruby>しいです。',
+                                translation='秋天的京都楓葉非常美麗。',
+                                grammar_points={'grammars': [{'expression': '〜に来ます', 'meaning': '來做(某事)', 'example': '日本へ勉強しに来ました。'}]},
+                                is_free=False, unlock_cost=50, is_published=True),
+            'art_hidden': Article(theme='日本文化', level='N3', title='下架中的文章', content='テスト', translation='測試',
+                                  is_free=True, is_published=False),
+            'art_n5': Article(theme='日常生活', level='N5', title='はじめまして', content='はじめまして。', translation='初次見面。',
+                              is_free=True, is_published=True),
+        }
+        db.session.add_all(rows.values())
+        db.session.commit()
+        STATE.update({k: v.id for k, v in rows.items()})
+
+
+@case('A11', '依程度取得分級文章列表',
+      pre='後台已上架 N3 文章 2 篇（「朝のルーティン」免費、「京都の秋」付費 50 點）、N3 下架文章 1 篇、N5 文章 1 篇；使用者 R 程度 N3、0 點',
+      steps='GET /api/articles/dashboard?user_id=R&level=N3',
+      expect='HTTP 200，status=success，只列出 N3 且上架中的 2 篇（不含下架與 N5 文章）；免費文章 is_unlocked=true、unlock_cost=0；付費文章 is_unlocked=false、unlock_cost=50')
+def _(c):
+    ensure_articles()
+    r_user = register('reader')
+    STATE['reader'] = r_user
+    SC.post('/api/user/update_level', json={'user_id': r_user['id'], 'level': 'N3'})
+    r = SC.get(f'/api/articles/dashboard?user_id={r_user["id"]}&level=N3')
+    data = J(r).get('data', [])
+    brief = [(a['title'], a['is_unlocked'], a['unlock_cost']) for a in data]
+    c.log(f'HTTP {r.status_code}，status={J(r).get("status")}，文章（標題, 已解鎖, 解鎖點數）={brief}')
+    check(r.status_code == 200 and J(r).get('status') == 'success', '列表取得失敗')
+    check(brief == [('朝のルーティン', True, 0), ('京都の秋', False, 50)], '列表內容或解鎖狀態不正確')
+
+
+@case('A11', '文章提供假名標音、中文翻譯與文法解析',
+      pre='同 A11-01 的 N3 文章',
+      steps='GET /api/articles/dashboard?user_id=R&level=N3，檢查每篇文章的 content、translation、grammar_points',
+      expect='每篇 content 以 <ruby>漢字<rt>假名</rt></ruby> 標音；translation 有中文翻譯；grammar_points 列出文法（expression、meaning、example）')
+def _(c):
+    data = J(SC.get(f'/api/articles/dashboard?user_id={STATE["reader"]["id"]}&level=N3')).get('data', [])
+    rows = []
+    ok = bool(data)
+    for a in data:
+        g = ((a.get('grammar_points') or {}).get('grammars') or [{}])[0]
+        has_ruby = '<ruby>' in (a.get('content') or '') and '<rt>' in (a.get('content') or '')
+        rows.append(f'「{a["title"]}」標音={has_ruby}、翻譯「{a.get("translation")}」、文法 {g.get("expression")}（{g.get("meaning")}）')
+        ok = ok and has_ruby and bool(a.get('translation')) and all(g.get(k) for k in ('expression', 'meaning', 'example'))
+    c.log('；'.join(rows))
+    check(ok, '有文章缺少標音、翻譯或文法解析')
+
+
+@case('A11', '以點數解鎖付費文章',
+      pre='使用者 R 為 0 點；「京都の秋」需 50 點',
+      steps='1. POST /api/articles/unlock，user_id=R、article_id=京都の秋\n2. R 購買 60 點後再解鎖一次\n3. 再解鎖第三次\n4. GET /api/articles/dashboard 與 /api/user/transactions/{R}',
+      expect='1. HTTP 400，status=not_enough_points、「J-pts 不足，解鎖此文章需要 50 點」\n2. HTTP 200，status=success、扣 50 點（new_j_pts=10）\n3. HTTP 200，status=already_unlocked，不再扣點\n4. 文章 is_unlocked=true；交易紀錄有 -50（article_unlock）')
+def _(c):
+    u, aid = STATE['reader'], STATE['art_paid']
+    r1 = SC.post('/api/articles/unlock', json={'user_id': u['id'], 'article_id': aid})
+    SC.post('/api/user/add_points', json={'user_id': u['id'], 'points': 60, 'price': 50, 'payment_method': 'credit_card'})
+    r2 = SC.post('/api/articles/unlock', json={'user_id': u['id'], 'article_id': aid})
+    r3 = SC.post('/api/articles/unlock', json={'user_id': u['id'], 'article_id': aid})
+    art = next((a for a in J(SC.get(f'/api/articles/dashboard?user_id={u["id"]}&level=N3')).get('data', []) if a['id'] == aid), {})
+    tx = [(t['points'], t['related_feature']) for t in J(SC.get(f'/api/user/transactions/{u["id"]}')).get('transactions', [])
+          if t['related_feature'] == 'article_unlock']
+    c.log(f'1. {http(r1, "status", "message")}；2. {http(r2, "status", "cost", "new_j_pts")}；3. {http(r3, "status", "new_j_pts")}；'
+          f'4. is_unlocked={art.get("is_unlocked")}、解鎖交易={tx}')
+    check(r1.status_code == 400 and J(r1).get('status') == 'not_enough_points'
+          and J(r1).get('message') == 'J-pts 不足，解鎖此文章需要 50 點', '點數不足未擋下')
+    check(r2.status_code == 200 and J(r2).get('status') == 'success' and J(r2).get('new_j_pts') == 10, '解鎖失敗')
+    check(r3.status_code == 200 and J(r3).get('status') == 'already_unlocked' and J(r3).get('new_j_pts') == 10, '重複解鎖又扣點')
+    check(art.get('is_unlocked') is True and tx == [(-50, 'article_unlock')], '解鎖狀態或交易紀錄不正確')
+
+
+@case('A11', '朗讀錄音 AI 評分、結算點數並保留朗讀歷史',
+      pre='R 已解鎖「京都の秋」，目前 10 點；AI 轉錄與評分以模擬資料替代（92 分）',
+      steps='1. POST /api/articles/evaluate（multipart：audio=reading.m4a、user_id、article_id）\n2. POST /api/articles/submit_score，user_id、article_id、evaluation_id\n3. GET /api/articles/history/{R}',
+      expect='1. HTTP 200，status=success，回傳轉錄文字、score=92、evaluation_id\n2. HTTP 200，「成績結算成功！」，90 分以上得 50 點（total_points=60）、is_new_record=true\n3. 歷史紀錄 1 筆：京都の秋、92 分、50 點',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    u, aid = STATE['reader'], STATE['art_paid']
+    GEMINI_FAKE['handler'] = fake_reading_ai
+    r1 = SC.post('/api/articles/evaluate', data={'audio': (io.BytesIO(M4A_BYTES), 'reading.m4a'),
+                                                 'user_id': str(u['id']), 'article_id': str(aid)},
+                 content_type='multipart/form-data')
+    GEMINI_FAKE['handler'] = None
+    eid = J(r1).get('evaluation_id')
+    STATE['reading_eval'] = eid
+    r2 = SC.post('/api/articles/submit_score', json={'user_id': u['id'], 'article_id': aid, 'evaluation_id': eid})
+    hist = J(SC.get(f'/api/articles/history/{u["id"]}')).get('data', [])
+    c.log(f'1. {http(r1, "status", "transcript", "score", "evaluation_id")}；2. {http(r2, "message", "points_earned", "total_points", "is_new_record")}；'
+          f'3. 歷史={[(h["article_title"], h["score"], h["points_earned"]) for h in hist]}')
+    check(r1.status_code == 200 and J(r1).get('status') == 'success' and J(r1).get('score') == 92 and eid, '評分失敗')
+    check(J(r1).get('transcript') == FAKE_TRANSCRIPT, '未回傳轉錄文字')
+    check(r2.status_code == 200 and J(r2).get('points_earned') == 50 and J(r2).get('total_points') == 60
+          and J(r2).get('is_new_record') is True, '結算不正確')
+    check([(h['article_title'], h['score'], h['points_earned']) for h in hist] == [('京都の秋', 92, 50)], '朗讀歷史不正確')
+
+
+@case('A11', '同一次朗讀評分不能重複結算或被他人冒用',
+      pre='R 的朗讀評分（A11-04）已結算；另一位使用者 S2',
+      steps='1. R 以同一個 evaluation_id 再 POST /api/articles/submit_score\n2. S2 以 R 的 evaluation_id POST /api/articles/submit_score\n3. 查詢 R 的點數與朗讀歷史',
+      expect='1. HTTP 409，「這次的朗讀成績已經結算過了」\n2. HTTP 404，「找不到這次的朗讀評分，請重新錄音」\n3. R 仍為 60 點、歷史仍為 1 筆')
+def _(c):
+    u, aid, eid = STATE['reader'], STATE['art_paid'], STATE.get('reading_eval')
+    if not eid:
+        raise RuntimeError('前置個案 A11-04 未完成')
+    other = register('reader2')
+    r1 = SC.post('/api/articles/submit_score', json={'user_id': u['id'], 'article_id': aid, 'evaluation_id': eid})
+    r2 = SC.post('/api/articles/submit_score', json={'user_id': other['id'], 'article_id': aid, 'evaluation_id': eid})
+    pts = user_row(u['id'])['j_pts']
+    n_hist = len(J(SC.get(f'/api/articles/history/{u["id"]}')).get('data', []))
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}；3. R 點數={pts}、歷史 {n_hist} 筆')
+    check(r1.status_code == 409 and J(r1).get('error') == '這次的朗讀成績已經結算過了', '可重複結算')
+    check(r2.status_code == 404 and J(r2).get('error') == '找不到這次的朗讀評分，請重新錄音', '可冒用他人評分')
+    check(pts == 60 and n_hist == 1, '點數或歷史被異動')
+
+
+@case('A11', '文章單字長按收藏',
+      pre='R 尚未收藏任何單字；「紅葉」不在系統字典中',
+      steps='1. POST /api/vocab/collect_from_article，user_id=R、word=紅葉、kana=こうよう、meaning=楓葉\n2. GET /api/vocab/favorites/{R}\n3. 再收藏一次同一個字',
+      expect='1. HTTP 200，「✅ 成功加入收藏夾！」，字典新增「紅葉」並歸到主題「其他」\n2. 預設相簿 count=1\n3. HTTP 400，「這個單字已經在收藏夾囉！」')
+def _(c):
+    u = STATE['reader']
+    body = {'user_id': u['id'], 'word': '紅葉', 'kana': 'こうよう', 'meaning': '楓葉'}
+    r1 = SC.post('/api/vocab/collect_from_article', json=body)
+    fav = favorites(u)
+    r3 = SC.post('/api/vocab/collect_from_article', json=body)
+    with S.app_context():
+        v = Vocab.query.filter_by(word='紅葉', kana='こうよう').first()
+        scene_name = v.scene.name if v and v.scene else None
+    c.log(f'1. {http(r1, "status", "message")}，字典新增紅葉={v is not None}（歸入場景「{scene_name}」）；'
+          f'2. 預設相簿 count={fav.get("預設相簿", {}).get("count")}；3. {http(r3, "error")}')
+    check(r1.status_code == 200 and J(r1).get('status') == 'success' and v is not None, '收藏失敗')
+    check(scene_name == '其他', f'文章新字被歸到「{scene_name}」，應歸到主題收集冊的「其他」')
+    check(fav.get('預設相簿', {}).get('count') == 1, '收藏數不正確')
+    check(r3.status_code == 400 and J(r3).get('error') == '這個單字已經在收藏夾囉！', '未擋下重複收藏')
+
+
+@case('A11', '未解鎖的付費文章不能朗讀評分，文章重設 API 已移除',
+      pre='使用者 L 為 0 點，尚未解鎖「京都の秋」',
+      steps='1. POST /api/articles/evaluate（multipart：audio、user_id=L、article_id=京都の秋）\n2. GET /api/articles/seed（舊的「清除並重設文章」API）',
+      expect='1. HTTP 403，「請先解鎖這篇文章再朗讀」，不產生朗讀評分\n2. HTTP 404，文章數量不變',
+      note='AI 回應以模擬資料替代（本個案不應呼叫到 AI）')
+def _(c):
+    ensure_articles()
+    lu = register('lockedReader')
+    before = count(Article)
+    GEMINI_FAKE['handler'] = fake_reading_ai
+    try:
+        r1 = SC.post('/api/articles/evaluate', data={'audio': (io.BytesIO(M4A_BYTES), 'reading.m4a'),
+                                                     'user_id': str(lu['id']), 'article_id': str(STATE['art_paid'])},
+                     content_type='multipart/form-data')
+    finally:
+        GEMINI_FAKE['handler'] = None
+    n_eval = count(ReadingEvaluation, user_id=lu['id'])
+    r2 = SC.get('/api/articles/seed')
+    after = count(Article)
+    c.log(f'1. {http(r1, "status", "message")}，朗讀評分 {n_eval} 筆；2. HTTP {r2.status_code}，文章數 {before} → {after}')
+    check(r1.status_code == 403 and n_eval == 0, '未解鎖的付費文章仍可朗讀評分')
+    check(r2.status_code == 404 and after == before, '文章重設 API 仍可呼叫')
+
+
+# ======================================================================
+# A12 造句系統（services/sentence.py）
+# ======================================================================
+FAKE_SENTENCE_RESULT = ('{"score": 85, "is_grammar_correct": true, '
+                        '"corrected_sentence": "健康のために、毎日冷蔵庫の野菜を食べています。", '
+                        '"strict_feedback": "1. 文法「〜ために」使用正確\\n2. 助詞「を」正確"}')
+
+
+def fake_sentence_ai(feature, contents):
+    return FAKE_SENTENCE_RESULT
+
+
+def evaluate_sentence(u, vocabs=None, pay=False, sentence='健康のために、毎日冷蔵庫の野菜を食べます。'):
+    GEMINI_FAKE['handler'] = fake_sentence_ai
+    try:
+        return SC.post('/api/sentence/evaluate', json={
+            'user_id': u['id'], 'grammar_point': '〜ために', 'selected_vocabs': vocabs or [],
+            'user_sentence': sentence, 'pay_with_points': pay})
+    finally:
+        GEMINI_FAKE['handler'] = None
+
+
+@case('A12', '依使用者程度取得文法造句題目',
+      pre='使用者 W1 程度 N4，今日尚未造句',
+      steps='1. GET /api/sentence/get_task?user_id=W1\n2. GET /api/sentence/get_task（未帶 user_id）',
+      expect='1. HTTP 200，level=N4，回傳一題 N4 文法（grammar、meaning、3 個例句），today_count=0\n2. HTTP 400，「缺少 user_id」')
+def _(c):
+    from services.sentence import GRAMMAR_DB
+    w1 = register('writer')
+    STATE['writer'] = w1
+    SC.post('/api/user/update_level', json={'user_id': w1['id'], 'level': 'N4'})
+    r1 = SC.get(f'/api/sentence/get_task?user_id={w1["id"]}')
+    r2 = SC.get('/api/sentence/get_task')
+    d = J(r1)
+    task = d.get('data') or {}
+    in_n4 = task.get('grammar') in [g['grammar'] for g in GRAMMAR_DB['N4']]
+    c.log(f'1. HTTP {r1.status_code}，level={d.get("level")}，題目={task.get("grammar")}（{task.get("meaning")}），'
+          f'例句 {len(task.get("examples") or [])} 句，屬於 N4 題庫={in_n4}，today_count={d.get("today_count")}；2. {http(r2, "error")}')
+    check(r1.status_code == 200 and d.get('level') == 'N4' and in_n4 and len(task.get('examples') or []) == 3, '題目不正確')
+    check(d.get('today_count') == 0, '今日次數不正確')
+    check(r2.status_code == 400 and J(r2).get('error') == '缺少 user_id', '未擋下缺少 user_id')
+
+
+@case('A12', '使用收藏單字造句並由 AI 批改',
+      pre='W1 已收藏「冷蔵庫」；AI 批改以模擬資料替代（85 分）',
+      steps='1. 從收藏夾取得單字（POST /api/vocab/folder_vocabs）\n2. POST /api/sentence/evaluate，grammar_point=〜ために、selected_vocabs=[冷蔵庫]、user_sentence=健康のために、毎日冷蔵庫の野菜を食べます。\n3. POST /api/sentence/evaluate 未帶 user_sentence',
+      expect='2. HTTP 200，status=success，score=85、修正句與條列評語、80 分以上可得 30 點（points_earned=30）、回傳 record_id；資料庫紀錄保存選用的收藏單字\n3. HTTP 400，「缺少必要參數」',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    w1 = STATE['writer']
+    with S.app_context():
+        fridge = Vocab.query.filter_by(word='冷蔵庫', kana='れいぞうこ').first()
+        fridge_id = fridge.id if fridge else None
+    if not fridge_id:
+        raise RuntimeError('前置作業失敗：字典沒有「冷蔵庫」')
+    SC.post('/api/vocab/collect', json={'user_id': w1['id'], 'vocab_id': fridge_id})
+    words = [v['word'] for v in J(SC.post('/api/vocab/folder_vocabs', json={'user_id': w1['id'], 'folder_id': None})).get('vocabs', [])]
+    r = evaluate_sentence(w1, vocabs=words)
+    d = J(r)
+    STATE['sentence_record'] = d.get('record_id')
+    r_bad = SC.post('/api/sentence/evaluate', json={'user_id': w1['id'], 'grammar_point': '〜ために'})
+    with S.app_context():
+        rec = db.session.get(SentencePracticeRecord, d.get('record_id')) if d.get('record_id') else None
+        saved_vocabs = rec.selected_vocabs if rec else None
+    c.log(f'1. 收藏單字={words}；2. {http(r, "status", "score", "corrected_sentence", "points_earned", "record_id")}，'
+          f'資料庫保存的選用單字={saved_vocabs}；3. {http(r_bad, "error")}')
+    check(words == ['冷蔵庫'], '收藏夾內容不正確')
+    check(r.status_code == 200 and d.get('status') == 'success' and d.get('score') == 85
+          and d.get('points_earned') == 30 and d.get('record_id'), '批改結果不正確')
+    check(d.get('corrected_sentence') and d.get('strict_feedback'), '缺少修正句或評語')
+    check(saved_vocabs == ['冷蔵庫'], '未保存選用的收藏單字')
+    check(r_bad.status_code == 400 and J(r_bad).get('error') == '缺少必要參數', '未擋下缺少參數')
+
+
+@case('A12', '查詢造句歷史紀錄',
+      pre='W1 已完成 1 次造句（A12-02），尚未領取獎勵',
+      steps='GET /api/sentence/history/{W1}',
+      expect='HTTP 200，列出 1 筆：文法〜ために、原句、修正句、AI 評語、85 分、可領 30 點、is_claimed=false')
+def _(c):
+    w1 = STATE['writer']
+    r = SC.get(f'/api/sentence/history/{w1["id"]}')
+    hist = J(r).get('data', [])
+    h = hist[0] if hist else {}
+    c.log(f'HTTP {r.status_code}，{len(hist)} 筆；grammar_point={h.get("grammar_point")}、score={h.get("score")}、'
+          f'points_earned={h.get("points_earned")}、is_claimed={h.get("is_claimed")}、有修正句={bool(h.get("corrected_sentence"))}、有評語={bool(h.get("ai_feedback"))}')
+    check(r.status_code == 200 and len(hist) == 1 and h.get('grammar_point') == '〜ために' and h.get('score') == 85
+          and h.get('points_earned') == 30 and h.get('is_claimed') is False
+          and h.get('corrected_sentence') and h.get('ai_feedback'), '歷史紀錄不正確')
+
+
+@case('A12', '領取造句獎勵且不能重複領取',
+      pre='W1 有一筆未領取的造句紀錄（30 點），目前 0 點',
+      steps='1. POST /api/sentence/claim，record_id、user_id=W1\n2. 再領一次\n3. GET /api/sentence/history/{W1}',
+      expect='1. HTTP 200，status=success、total_points=30，交易紀錄新增 +30（reward）\n2. HTTP 400，「無法領取或已領取過」，點數不變\n3. is_claimed=true')
+def _(c):
+    w1, rid = STATE['writer'], STATE.get('sentence_record')
+    if not rid:
+        raise RuntimeError('前置個案 A12-02 未完成')
+    r1 = SC.post('/api/sentence/claim', json={'record_id': rid, 'user_id': w1['id']})
+    r2 = SC.post('/api/sentence/claim', json={'record_id': rid, 'user_id': w1['id']})
+    pts = user_row(w1['id'])['j_pts']
+    claimed = J(SC.get(f'/api/sentence/history/{w1["id"]}')).get('data', [{}])[0].get('is_claimed')
+    tx = [t for t in J(SC.get(f'/api/user/transactions/{w1["id"]}')).get('transactions', [])]
+    c.log(f'1. {http(r1, "status", "total_points")}；2. {http(r2, "error")}，點數={pts}；3. is_claimed={claimed}；交易紀錄 {len(tx)} 筆')
+    check(r1.status_code == 200 and J(r1).get('total_points') == 30, '領取失敗')
+    check([(t['points'], t['transaction_type']) for t in tx] == [(30, 'reward')], '領取的點數沒有寫入交易紀錄')
+    check(r2.status_code == 400 and J(r2).get('error') == '無法領取或已領取過' and pts == 30, '可重複領取')
+    check(claimed is True, '領取狀態未更新')
+
+
+@case('A12', '不能領取他人的造句獎勵',
+      pre='W1 另有一筆未領取的造句紀錄（30 點，AI 以模擬資料替代）；使用者 W2 為 0 點',
+      steps='W2 POST /api/sentence/claim，record_id=W1 的紀錄、user_id=W2',
+      expect='HTTP 400 或 403 拒絕領取；W2 點數維持 0，W1 的紀錄仍為未領取',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    w1 = STATE['writer']
+    w2 = register('writer2')
+    rid = J(evaluate_sentence(w1, vocabs=['冷蔵庫'])).get('record_id')
+    if not rid:
+        raise RuntimeError('前置作業失敗：無法建立造句紀錄')
+    r = SC.post('/api/sentence/claim', json={'record_id': rid, 'user_id': w2['id']})
+    pts = user_row(w2['id'])['j_pts']
+    with S.app_context():
+        claimed = db.session.get(SentencePracticeRecord, rid).is_claimed
+    c.log(f'{http(r, "status", "total_points", "error")}；W2 點數={pts}；W1 紀錄 is_claimed={claimed}')
+    check(r.status_code in (400, 403) and pts == 0 and claimed is False,
+          f'W2 領走了 W1 的造句獎勵（HTTP {r.status_code}，W2 點數變 {pts}）：/claim 未檢查紀錄擁有者')
+
+
+@case('A12', '每日免費造句 5 次，超過需付 10 點',
+      pre='使用者 W3 今日已造句 5 次（AI 以模擬資料替代），目前 0 點',
+      steps='1. 第 6 次 POST /api/sentence/evaluate（不付點）\n2. 第 6 次帶 pay_with_points=true（0 點）\n3. 購買 20 點後，第 6 次帶 pay_with_points=true',
+      expect='1. HTTP 400，status=quota_exceeded、「今日免費次數已用盡」\n2. HTTP 400，status=insufficient_points、「點數不足」\n3. HTTP 200 批改成功，扣 10 點（餘額 10），交易紀錄有 -10（spend）',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    w3 = register('writer3')
+    first5 = [evaluate_sentence(w3).status_code for _ in range(5)]
+    r1 = evaluate_sentence(w3)
+    r2 = evaluate_sentence(w3, pay=True)
+    SC.post('/api/user/add_points', json={'user_id': w3['id'], 'points': 20, 'price': 0, 'payment_method': 'credit_card'})
+    r3 = evaluate_sentence(w3, pay=True)
+    pts = user_row(w3['id'])['j_pts']
+    tx = [(t['points'], t['transaction_type']) for t in J(SC.get(f'/api/user/transactions/{w3["id"]}')).get('transactions', [])]
+    c.log(f'前 5 次狀態碼={first5}；1. {http(r1, "status", "error")}；2. {http(r2, "status", "error")}；'
+          f'3. {http(r3, "status", "score")}，點數={pts}；交易紀錄={tx}')
+    check(first5 == [200] * 5, '前 5 次未全部成功')
+    check((-10, 'spend') in tx, '付費造句扣除的 10 點沒有寫入交易紀錄')
+    check(r1.status_code == 400 and J(r1).get('status') == 'quota_exceeded' and J(r1).get('error') == '今日免費次數已用盡', '未擋下第 6 次')
+    check(r2.status_code == 400 and J(r2).get('status') == 'insufficient_points', '點數不足未擋下')
+    check(r3.status_code == 200 and J(r3).get('status') == 'success' and pts == 10, '付費造句不正確')
+
+
+@case('A12', '付費造句 AI 批改失敗時退還點數',
+      pre='使用者 W4 今日已造句 5 次（AI 以模擬資料替代），購買 20 點',
+      steps='第 6 次 POST /api/sentence/evaluate，pay_with_points=true，AI 批改失敗',
+      expect='HTTP 500；扣除的 10 點退還（餘額 20），交易紀錄有 -10（spend）與 +10（退還）',
+      note='AI 失敗以模擬方式產生')
+def _(c):
+    w4 = register('writer4')
+    first5 = [evaluate_sentence(w4).status_code for _ in range(5)]
+    SC.post('/api/user/add_points', json={'user_id': w4['id'], 'points': 20, 'price': 0, 'payment_method': 'credit_card'})
+    r = SC.post('/api/sentence/evaluate', json={'user_id': w4['id'], 'grammar_point': '〜ために', 'selected_vocabs': [],
+                                               'user_sentence': '健康のために走ります。', 'pay_with_points': True})
+    pts = user_row(w4['id'])['j_pts']
+    tx = [(t['points'], t['related_feature']) for t in J(SC.get(f'/api/user/transactions/{w4["id"]}')).get('transactions', [])]
+    c.log(f'前 5 次狀態碼={first5}；第 6 次 HTTP {r.status_code}，點數={pts}；交易紀錄={tx}')
+    check(first5 == [200] * 5, '前 5 次未全部成功')
+    check(r.status_code == 500 and pts == 20, 'AI 失敗後點數沒有退還')
+    check((-10, 'sentence_extra') in tx and (10, 'sentence_extra_refund') in tx, '扣點與退點沒有寫入交易紀錄')
+
+
+# ======================================================================
+# A13 校園教育版：學生端（services/auth.py、services/classroom.py）
+# ======================================================================
+def ensure_edu():
+    """前置：老師已建立教室並把學生加入名冊（老師端另有測試腳本）"""
+    if 'edu_student' in STATE:
+        return
+    with S.app_context():
+        teacher = User(email='teacher_wang@school.test', username='王老師', account_type=AccountType.TEACHER,
+                       password_hash=generate_password_hash('Teacher@1234'))
+        student = User(email='11156099@school.test', username='學生小明', account_type=AccountType.STUDENT,
+                       password_hash=generate_password_hash('11156099'))
+        db.session.add_all([teacher, student])
+        db.session.flush()
+        open_room = Classroom(teacher_id=teacher.id, name='一年甲班', join_code='K7M3P9', is_open=True)
+        closed_room = Classroom(teacher_id=teacher.id, name='二年乙班', join_code='Q4W8R2', is_open=False)
+        archived_room = Classroom(teacher_id=teacher.id, name='去年的班級', join_code='Z9X8C7', is_archived=True)
+        db.session.add_all([open_room, closed_room, archived_room])
+        db.session.flush()
+        db.session.add_all([
+            Assignment(classroom_id=open_room.id, title='第一課造句', task_type=TaskType.SENTENCE,
+                       config={'grammar_point': '〜てください'}, is_published=True),
+            Assignment(classroom_id=open_room.id, title='草稿作業', task_type=TaskType.SENTENCE,
+                       config={'grammar_point': '〜ないでください'}, is_published=False),
+            # 學生原本就在去年的班級，老師已封存
+            ClassroomMember(classroom_id=archived_room.id, student_id=student.id, display_name='學生小明'),
+        ])
+        db.session.commit()
+        STATE['edu_student'] = {'id': student.id, 'email': student.email, 'password': '11156099'}
+        STATE['edu_rooms'] = {'open': open_room.id, 'closed': closed_room.id, 'archived': archived_room.id}
+
+
+@case('A13', '學生帳號由校園教育版入口登入',
+      pre='老師已在班級名冊建立學生帳號 11156099@school.test（account_type=student，密碼為學號）',
+      steps='POST /api/auth/login，email=11156099@school.test、password=11156099、portal=edu',
+      expect='HTTP 200，「登入成功！」，account_type=student（App 依此進入校園教育版），並補發 friend_id')
+def _(c):
+    ensure_edu()
+    st = STATE['edu_student']
+    r = SC.post('/api/auth/login', json={'email': st['email'], 'password': st['password'], 'portal': 'edu'})
+    c.log(http(r, 'message', 'user_id', 'account_type', 'friend_id'))
+    check(r.status_code == 200 and J(r).get('account_type') == 'student' and J(r).get('user_id') == st['id'], '學生登入失敗')
+    check(len(J(r).get('friend_id') or '') == 8, '未補發 friend_id')
+
+
+@case('A13', '登入入口分流與學生帳號不可自行註冊',
+      pre='一般會員帳號 G（account_type=general）；學生帳號 11156099@school.test',
+      steps='1. G 以 portal=edu 登入\n2. 學生以 portal=general 登入\n3. POST /api/auth/register，account_type=student（自行註冊學生帳號）',
+      expect='1. HTTP 403，status=wrong_portal、「這不是校園教育版的學生帳號，請改從「一般自主學習」登入」\n2. HTTP 403，status=wrong_portal、「這是校園教育版的學生帳號，請改從「校園教育版」登入」\n3. HTTP 403，「校園教育版帳號由老師建立，請向老師確認你的帳號」，不建立帳號')
+def _(c):
+    ensure_edu()
+    g = register('general')
+    st = STATE['edu_student']
+    r1 = SC.post('/api/auth/login', json={'email': g['email'], 'password': g['password'], 'portal': 'edu'})
+    r2 = SC.post('/api/auth/login', json={'email': st['email'], 'password': st['password'], 'portal': 'general'})
+    r3 = SC.post('/api/auth/register', json={'email': 'selfstudent@test.local', 'password': 'Pass1234', 'account_type': 'student'})
+    n = count(User, email='selfstudent@test.local')
+    c.log(f'1. {http(r1, "status", "error")}；2. {http(r2, "status", "error")}；3. {http(r3, "error")}，建立帳號 {n} 筆')
+    check(r1.status_code == 403 and J(r1).get('status') == 'wrong_portal'
+          and J(r1).get('error') == '這不是校園教育版的學生帳號，請改從「一般自主學習」登入', '一般帳號可進教育版')
+    check(r2.status_code == 403 and J(r2).get('status') == 'wrong_portal'
+          and J(r2).get('error') == '這是校園教育版的學生帳號，請改從「校園教育版」登入', '學生帳號可進一般版')
+    check(r3.status_code == 403 and J(r3).get('error') == '校園教育版帳號由老師建立，請向老師確認你的帳號' and n == 0, '可自行註冊學生帳號')
+
+
+@case('A13', '以教室代碼預覽並加入教室',
+      pre='老師的「一年甲班」代碼 K7M3P9、開放加入，目前 0 位學生',
+      steps='1. GET /api/classroom/preview?join_code= k7m-3p9 （小寫、含空白與連字號）\n2. 學生 POST /api/classroom/join，user_id、join_code=k7m3p9',
+      expect='1. HTTP 200，代碼自動正規化，回傳教室名稱「一年甲班」、老師「王老師」、成員 0 人\n2. HTTP 201，status=success、「已加入「一年甲班」」，成員變 1 人')
+def _(c):
+    ensure_edu()
+    st = STATE['edu_student']
+    r1 = SC.get('/api/classroom/preview?join_code=%20k7m-3p9%20')
+    room = J(r1).get('classroom') or {}
+    r2 = SC.post('/api/classroom/join', json={'user_id': st['id'], 'join_code': 'k7m3p9'})
+    joined = J(r2).get('classroom') or {}
+    c.log(f'1. HTTP {r1.status_code}，教室={room.get("name")}、老師={room.get("teacher_name")}、代碼={room.get("join_code")}、成員={room.get("member_count")}；'
+          f'2. {http(r2, "status", "message")}，成員={joined.get("member_count")}')
+    check(r1.status_code == 200 and room.get('name') == '一年甲班' and room.get('teacher_name') == '王老師'
+          and room.get('member_count') == 0, '預覽失敗')
+    check(r2.status_code == 201 and J(r2).get('status') == 'success' and J(r2).get('message') == '已加入「一年甲班」'
+          and joined.get('member_count') == 1, '加入失敗')
+
+
+@case('A13', '錯誤代碼、非學生帳號、已關閉或已封存的教室無法加入',
+      pre='「二年乙班」（Q4W8R2）已關閉加入；「去年的班級」（Z9X8C7）已封存；一般會員帳號 G',
+      steps='1. GET /api/classroom/preview?join_code=ABC999（不存在）\n2. 學生 POST /api/classroom/join，join_code=ABC999\n3. 一般會員 G POST /api/classroom/join，join_code=K7M3P9\n4. 學生加入 Q4W8R2\n5. 預覽 Z9X8C7',
+      expect='1. HTTP 404，「找不到這個教室代碼，請再確認一次」\n2. HTTP 404，status=code_not_found\n3. HTTP 403，status=not_student、「只有校園教育版的學生帳號可以加入教室」\n4. HTTP 403，status=classroom_closed、「「二年乙班」已經關閉加入，請聯絡老師」\n5. HTTP 404')
+def _(c):
+    ensure_edu()
+    st = STATE['edu_student']
+    g = register('generaljoin')
+    r1 = SC.get('/api/classroom/preview?join_code=ABC999')
+    r2 = SC.post('/api/classroom/join', json={'user_id': st['id'], 'join_code': 'ABC999'})
+    r3 = SC.post('/api/classroom/join', json={'user_id': g['id'], 'join_code': 'K7M3P9'})
+    r4 = SC.post('/api/classroom/join', json={'user_id': st['id'], 'join_code': 'Q4W8R2'})
+    r5 = SC.get('/api/classroom/preview?join_code=Z9X8C7')
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "status")}；3. {http(r3, "status", "error")}；4. {http(r4, "status", "error")}；5. {http(r5, "error")}')
+    check(r1.status_code == 404 and J(r1).get('error') == '找不到這個教室代碼，請再確認一次', '錯誤代碼預覽未擋下')
+    check(r2.status_code == 404 and J(r2).get('status') == 'code_not_found', '錯誤代碼加入未擋下')
+    check(r3.status_code == 403 and J(r3).get('status') == 'not_student'
+          and J(r3).get('error') == '只有校園教育版的學生帳號可以加入教室', '一般帳號可加入教室')
+    check(r4.status_code == 403 and J(r4).get('status') == 'classroom_closed'
+          and J(r4).get('error') == '「二年乙班」已經關閉加入，請聯絡老師', '已關閉教室可加入')
+    check(r5.status_code == 404, '已封存教室仍可預覽')
+
+
+@case('A13', '重複加入視為成功，並查詢我的教室',
+      pre='學生已加入「一年甲班」（有 1 份已發布作業、1 份草稿）；學生原本也在已封存的「去年的班級」',
+      steps='1. 學生再次 POST /api/classroom/join，join_code=K7M3P9\n2. GET /api/classroom/my/{學生 id}',
+      expect='1. HTTP 200，status=already_joined、「你已經在「一年甲班」裡了」，成員仍 1 人\n2. HTTP 200，count=1，只列出「一年甲班」（不顯示已封存教室），assignment_count=1（草稿不計）')
+def _(c):
+    ensure_edu()
+    st = STATE['edu_student']
+    r1 = SC.post('/api/classroom/join', json={'user_id': st['id'], 'join_code': 'K7M3P9'})
+    r2 = SC.get(f'/api/classroom/my/{st["id"]}')
+    rooms = [(x['name'], x['assignment_count'], x['member_count']) for x in J(r2).get('classrooms', [])]
+    c.log(f'1. {http(r1, "status", "message")}，成員={(J(r1).get("classroom") or {}).get("member_count")}；'
+          f'2. HTTP {r2.status_code}，count={J(r2).get("count")}，教室（名稱, 作業數, 成員數）={rooms}')
+    check(r1.status_code == 200 and J(r1).get('status') == 'already_joined'
+          and J(r1).get('message') == '你已經在「一年甲班」裡了' and (J(r1).get('classroom') or {}).get('member_count') == 1, '重複加入處理不正確')
+    check(r2.status_code == 200 and J(r2).get('count') == 1 and rooms == [('一年甲班', 1, 1)], '我的教室列表不正確')
+
+
+@case('A13', '退出教室',
+      pre='學生在「一年甲班」中',
+      steps='1. POST /api/classroom/leave，user_id、classroom_id=一年甲班\n2. GET /api/classroom/my/{學生 id}\n3. 再退出一次\n4. POST /api/classroom/leave 未帶 classroom_id',
+      expect='1. HTTP 200，「已退出教室」\n2. count=0\n3. HTTP 404，「你不在這個教室裡」\n4. HTTP 400，「缺少使用者 ID 或教室 ID」')
+def _(c):
+    ensure_edu()
+    st, rid = STATE['edu_student'], STATE['edu_rooms']['open']
+    r1 = SC.post('/api/classroom/leave', json={'user_id': st['id'], 'classroom_id': rid})
+    my = J(SC.get(f'/api/classroom/my/{st["id"]}'))
+    r3 = SC.post('/api/classroom/leave', json={'user_id': st['id'], 'classroom_id': rid})
+    r4 = SC.post('/api/classroom/leave', json={'user_id': st['id']})
+    c.log(f'1. {http(r1, "status", "message")}；2. count={my.get("count")}；3. {http(r3, "error")}；4. {http(r4, "error")}')
+    check(r1.status_code == 200 and J(r1).get('message') == '已退出教室', '退出失敗')
+    check(my.get('count') == 0, '退出後仍顯示教室')
+    check(r3.status_code == 404 and J(r3).get('error') == '你不在這個教室裡', '重複退出未回 404')
+    check(r4.status_code == 400 and J(r4).get('error') == '缺少使用者 ID 或教室 ID', '缺少參數未擋下')
+
+
+# ======================================================================
+# B02 安全需求：登入通行證、Google 身分憑證、模擬付款開關
+# ======================================================================
+@case('B02', '未登入呼叫需要登入的 API 被拒，公開清單不受影響',
+      pre='使用者 U 已註冊',
+      steps='1. 不帶通行證 GET /api/user/profile_data/{U}\n2. 不帶通行證 GET /api/store/packages',
+      expect='1. HTTP 401，「請先登入」\n2. HTTP 200，回傳點數方案')
+def _(c):
+    u = register('noauth')
+    r1 = SC.get(f'/api/user/profile_data/{u["id"]}', headers=NO_AUTH)
+    r2 = SC.get('/api/store/packages', headers=NO_AUTH)
+    c.log(f'1. {http(r1, "error")}；2. HTTP {r2.status_code}，方案 {len(J(r2).get("packages", []))} 個')
+    check(r1.status_code == 401 and J(r1).get('error') == '請先登入', '未登入仍可呼叫')
+    check(r2.status_code == 200 and J(r2).get('packages'), '公開清單被擋下')
+
+
+@case('B02', '登入取得通行證並以通行證操作自己的資料',
+      pre='使用者 U 已註冊',
+      steps='1. POST /api/auth/login\n2. 以回傳的通行證 GET /api/user/profile_data/{U}',
+      expect='1. HTTP 200，回傳 token\n2. HTTP 200，回傳 U 的個人檔案')
+def _(c):
+    u = register('withtoken')
+    r1 = login(u)
+    tok = J(r1).get('token') or ''
+    r2 = SC.get(f'/api/user/profile_data/{u["id"]}', headers=bearer(tok)) if tok else None
+    c.log(f'1. HTTP {r1.status_code}，token 長度 {len(tok)}；2. HTTP {r2.status_code if r2 else "-"}')
+    check(r1.status_code == 200 and tok, '登入沒有回傳通行證')
+    check(r2 is not None and r2.status_code == 200, '用通行證查自己的資料失敗')
+
+
+@case('B02', '以自己的通行證操作他人資料被拒',
+      pre='使用者 A、B 已註冊，B 有 100 點',
+      steps='A 以自己的通行證：\n1. POST /api/user/spend_points，user_id=B\n2. GET /api/user/transactions/{B}\n3. POST /api/user/delete_account，user_id=B',
+      expect='三次皆 HTTP 403，「不能操作其他使用者的資料」；B 的點數與帳號不受影響')
+def _(c):
+    a, b = register('ownerA'), register('ownerB')
+    SC.post('/api/user/add_points', json={'user_id': b['id'], 'points': 100, 'price': 0, 'payment_method': 'credit_card'})
+    h = auth_header(a)
+    r1 = SC.post('/api/user/spend_points', json={'user_id': b['id'], 'feature': 'ai_extra'}, headers=h)
+    r2 = SC.get(f'/api/user/transactions/{b["id"]}', headers=h)
+    r3 = SC.post('/api/user/delete_account', json={'user_id': b['id']}, headers=h)
+    row = user_row(b['id'])
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}；3. {http(r3, "error")}；B 點數={row["j_pts"] if row else None}、帳號存在={row is not None}')
+    check([r.status_code for r in (r1, r2, r3)] == [403, 403, 403], '可以操作別人的資料')
+    check(row is not None and row['j_pts'] == 100, 'B 的資料被改動')
+
+
+@case('B02', '以物件編號操作他人的對話、資料夾與交友邀請被拒',
+      pre='B 有一場對話與一個資料夾；C 向 B 送出交友邀請；A 已登入',
+      steps='A 以自己的通行證：\n1. GET /api/chat_history/session/{B 的對話}\n2. POST /api/vocab/delete_folder，B 的資料夾\n3. POST /api/user/friend_request/respond，C 寄給 B 的邀請',
+      expect='三次皆 HTTP 403；B 的資料夾仍在、邀請仍待回覆')
+def _(c):
+    a, b, cc = register('objA'), register('objB'), register('objC')
+    sid = J(SC.post('/api/chat_history/session', json={'user_id': b['id'], 'topic': '私人對話'})).get('session_id')
+    fid = J(SC.post('/api/vocab/folders', json={'user_id': b['id'], 'name': 'B 的資料夾'})).get('folder_id')
+    SC.post('/api/user/friend_request/send', json={'sender_id': cc['id'], 'receiver_id': b['id']})
+    with S.app_context():
+        rid = FriendRequest.query.filter_by(sender_id=cc['id'], receiver_id=b['id']).first().id
+    h = auth_header(a)
+    r1 = SC.get(f'/api/chat_history/session/{sid}', headers=h)
+    r2 = SC.post('/api/vocab/delete_folder', json={'folder_id': fid}, headers=h)
+    r3 = SC.post('/api/user/friend_request/respond', json={'request_id': rid, 'action': 'accept'}, headers=h)
+    from models import UserFolder
+    with S.app_context():
+        folder_left = db.session.get(UserFolder, fid) is not None
+        status = db.session.get(FriendRequest, rid).status
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}；3. {http(r3, "error")}；資料夾仍在={folder_left}、邀請狀態={status}')
+    check([r.status_code for r in (r1, r2, r3)] == [403, 403, 403], '可以用編號操作別人的資料')
+    check(folder_left and status == 'pending', 'B 的資料被改動')
+
+
+@case('B02', '偽造或竄改的通行證被拒',
+      pre='使用者 U 已註冊',
+      steps='1. 竄改通行證最後兩個字元後 GET /api/user/profile_data/{U}\n2. 用不同密鑰自行簽一張 U 的通行證後呼叫',
+      expect='兩次皆 HTTP 401，「登入狀態無效，請重新登入」')
+def _(c):
+    u = register('forge')
+    tok = token_for(u['id'])
+    tampered = tok[:-2] + ('AA' if not tok.endswith('AA') else 'BB')
+    fake = URLSafeTimedSerializer('not-the-server-key', salt='snaptolearn-app-auth').dumps({'uid': u['id'], 'v': 0})
+    r1 = SC.get(f'/api/user/profile_data/{u["id"]}', headers=bearer(tampered))
+    r2 = SC.get(f'/api/user/profile_data/{u["id"]}', headers=bearer(fake))
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}')
+    check(all(r.status_code == 401 and J(r).get('error') == '登入狀態無效，請重新登入' for r in (r1, r2)), '偽造的通行證可以使用')
+
+
+@case('B02', '通行證 30 天到期，有在使用則自動延長',
+      pre='使用者 U 已註冊',
+      steps='1. 以 31 天前簽發的通行證呼叫 API\n2. 以 2 天前簽發的通行證呼叫 API\n3. 以第 2 步回應附的新通行證呼叫 API',
+      expect='1. HTTP 401，「登入已過期，請重新登入」\n2. HTTP 200，回應標頭附上新的通行證（X-Auth-Token）\n3. HTTP 200')
+def _(c):
+    u = register('expire')
+    url = f'/api/user/profile_data/{u["id"]}'
+    r1 = SC.get(url, headers=bearer(old_token_for(u['id'], 31)))
+    r2 = SC.get(url, headers=bearer(old_token_for(u['id'], 2)))
+    renewed = r2.headers.get('X-Auth-Token') or ''
+    r3 = SC.get(url, headers=bearer(renewed)) if renewed else None
+    c.log(f'1. {http(r1, "error")}；2. HTTP {r2.status_code}，附上新通行證={bool(renewed)}；3. HTTP {r3.status_code if r3 else "-"}')
+    check(r1.status_code == 401 and J(r1).get('error') == '登入已過期，請重新登入', '過期的通行證仍可使用')
+    check(r2.status_code == 200 and renewed and r3 is not None and r3.status_code == 200, '沒有自動延長')
+
+
+@case('B02', '重設密碼後舊通行證立即失效',
+      pre='使用者 U 已登入（持有通行證 T1）；寄信以模擬方式攔截',
+      steps='1. 以 T1 呼叫 API\n2. 用 Email 驗證碼重設密碼\n3. 再以 T1 呼叫 API\n4. 以新密碼登入取得 T2 後呼叫 API',
+      expect='1. HTTP 200\n3. HTTP 401，「登入已失效，請重新登入」\n4. HTTP 200',
+      note='寄信以模擬方式攔截，未真的寄出')
+def _(c):
+    u = register('revoke')
+    url = f'/api/user/profile_data/{u["id"]}'
+    t1 = J(login(u)).get('token')
+    r1 = SC.get(url, headers=bearer(t1))
+    send_reset_code(u['email'])
+    reset_with_code(u['email'], last_reset_code(u['email']), 'NewPass88')
+    r3 = SC.get(url, headers=bearer(t1))
+    t2 = J(login(u, 'NewPass88')).get('token')
+    r4 = SC.get(url, headers=bearer(t2))
+    c.log(f'1. HTTP {r1.status_code}；3. {http(r3, "error")}；4. HTTP {r4.status_code}')
+    check(r1.status_code == 200 and r4.status_code == 200, '正常通行證無法使用')
+    check(r3.status_code == 401 and J(r3).get('error') == '登入已失效，請重新登入', '改密碼後舊通行證仍可使用')
+
+
+@case('B02', '帳號被停用後通行證立即失效',
+      pre='使用者 X 已登入（持有通行證）；super_admin 已登入後台',
+      steps='1. 管理者停用 X（POST /user/suspend/{X}）\n2. X 以原通行證呼叫 API\n3. 管理者解除停用',
+      expect='2. HTTP 403，「此帳號已被停用，請聯繫客服」')
+def _(c):
+    x = register('suspendtok')
+    tok = J(login(x)).get('token')
+    ac = admin_client('sys_super', 'Admin@1234')
+    ac.post(f'/user/suspend/{x["id"]}')
+    r = SC.get(f'/api/user/profile_data/{x["id"]}', headers=bearer(tok))
+    ac.post(f'/user/suspend/{x["id"]}')
+    c.log(f'2. {http(r, "error")}')
+    check(r.status_code == 403 and J(r).get('error') == '此帳號已被停用，請聯繫客服', '停用後通行證仍可使用')
+
+
+@case('B02', 'Google 登入必須附上有效的 Google 身分憑證',
+      pre='使用者 V（victim）已用 Email 註冊；Google 身分憑證驗證以模擬方式進行',
+      steps='1. 只帶 V 的 Email、不帶身分憑證 POST /api/auth/google_login\n2. 帶無效的身分憑證\n3. Email 填 V、但身分憑證屬於 attacker@test.local',
+      expect='1. HTTP 400，「請更新 App 後再使用 Google 登入」\n2. HTTP 401，「Google 登入驗證失敗，請重新登入」\n3. 以身分憑證上的 attacker 登入，不會登入 V 的帳號',
+      note='Google 身分憑證驗證以模擬方式進行，未連線 Google')
+def _(c):
+    v = register('victim')
+    r1 = SC.post('/api/auth/google_login', json={'email': v['email']})
+    r2 = SC.post('/api/auth/google_login', json={'email': v['email'], 'id_token': 'forged-token'})
+    r3 = SC.post('/api/auth/google_login', json={'email': v['email'], 'id_token': 'valid:attacker@test.local'})
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}；3. {http(r3, "email")}，登入的 user_id={J(r3).get("user_id")}（V={v["id"]}）')
+    check(r1.status_code == 400 and J(r1).get('error') == '請更新 App 後再使用 Google 登入', '沒有身分憑證仍可登入')
+    check(r2.status_code == 401 and J(r2).get('error') == 'Google 登入驗證失敗，請重新登入', '無效的身分憑證可以登入')
+    check(r3.status_code == 200 and J(r3).get('email') == 'attacker@test.local' and J(r3).get('user_id') != v['id'],
+          '可以用別人的 Email 冒用 Google 登入')
+
+
+@case('B02', '模擬付款關閉時無法購點與訂閱，免費試用不受影響',
+      pre='.env 設 DEMO_PAYMENT=off（測試中暫時切換）；使用者 Y 已註冊',
+      steps='1. GET /api/store/packages、/api/subscription/plans\n2. POST /api/user/add_points\n3. POST /api/subscription/subscribe\n4. POST /api/subscription/trial',
+      expect='1. demo_payment=false\n2、3. HTTP 403，「付款功能尚未開放」\n4. HTTP 200，試用啟用')
+def _(c):
+    y = register('nopay')
+    os.environ['DEMO_PAYMENT'] = 'off'
+    try:
+        p1 = J(SC.get('/api/store/packages')).get('demo_payment')
+        p2 = J(SC.get('/api/subscription/plans')).get('demo_payment')
+        r2 = SC.post('/api/user/add_points', json={'user_id': y['id'], 'points': 70, 'price': 50, 'payment_method': 'credit_card'})
+        r3 = subscribe(y)
+        r4 = SC.post('/api/subscription/trial', json={'user_id': y['id']})
+    finally:
+        os.environ['DEMO_PAYMENT'] = 'on'
+    c.log(f'1. packages demo_payment={p1}、plans demo_payment={p2}；2. {http(r2, "error")}；3. {http(r3, "error")}；4. {http(r4, "message")}')
+    check(p1 is False and p2 is False, '沒有回報付款已關閉')
+    check(all(r.status_code == 403 and J(r).get('error') == '付款功能尚未開放' for r in (r2, r3)), '付款關閉仍可購點或訂閱')
+    check(r4.status_code == 200, '免費試用被擋下')
+
+
+@case('B02', '網頁版跨網域可以帶通行證並讀到延長後的通行證',
+      pre='App 網頁版與後端不同網域（例如 localhost:xxxx 呼叫 127.0.0.1:5050）',
+      steps='1. 瀏覽器預檢請求 OPTIONS /api/user/profile_data/{U}，宣告要帶 Authorization 標頭\n2. 帶 Origin 與 2 天前簽發的通行證 GET 同一支 API',
+      expect='1. 預檢通過，允許 Authorization 標頭（不需要通行證）\n2. HTTP 200，回應開放 X-Auth-Token、X-Auth-Error 標頭給網頁讀取')
+def _(c):
+    u = register('cors')
+    url = f'/api/user/profile_data/{u["id"]}'
+    r1 = SC.options(url, headers={**NO_AUTH, 'Origin': 'http://localhost:5173', 'Access-Control-Request-Method': 'GET',
+                                   'Access-Control-Request-Headers': 'authorization'})
+    allow = (r1.headers.get('Access-Control-Allow-Headers') or '').lower()
+    r2 = SC.get(url, headers={'Origin': 'http://localhost:5173', **bearer(old_token_for(u['id'], 2))})
+    expose = (r2.headers.get('Access-Control-Expose-Headers') or '').lower()
+    c.log(f'1. HTTP {r1.status_code}，允許標頭={allow}；2. HTTP {r2.status_code}，開放標頭={expose}')
+    check(r1.status_code in (200, 204) and 'authorization' in allow, '預檢請求不允許 Authorization')
+    check(r2.status_code == 200 and 'x-auth-token' in expose and 'x-auth-error' in expose, '網頁讀不到延長後的通行證')
+
+
+# ======================================================================
 # 執行
 # ======================================================================
 def _cell(text):
@@ -2143,6 +3136,7 @@ def main():
             LOG.write(traceback.format_exc())
         finally:
             FAKE['scan_ok'] = FAKE['chat_ok'] = True
+            GEMINI_FAKE['handler'] = None
         notes = '；'.join(x for x in [cs['note']] + ctx.notes if x)
         results.append({**{k: v for k, v in cs.items() if k != 'fn'}, 'verdict': verdict,
                         'actual': '；'.join(ctx.actual), 'fail': fail, 'notes': notes})

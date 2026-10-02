@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -46,7 +45,7 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
     });
 
     try {
-      final response = await http.post(
+      final response = await ApiClient.client.post(
         Uri.parse('${ApiClient.baseUrl}/scenario/evaluate_sentence'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({

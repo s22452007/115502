@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/services/push_service.dart';
+import 'package:jpn_learning_app/utils/auth_http.dart';
 
 class UserProvider extends ChangeNotifier {
   int? _userId;
@@ -255,6 +256,8 @@ class UserProvider extends ChangeNotifier {
       PushService.unregister(uid);
       NotificationService.cancelAssignmentReminders();
     }
+    // 丟掉登入通行證。上面 unregister 的請求在送出當下就已經帶上通行證，這裡清掉不影響它
+    AuthSession.clear();
     _userId = null;
     _accountType = 'general';
     _photoDailyLimitApi = null;

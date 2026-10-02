@@ -539,43 +539,49 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildInputField({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    bool obscureText = false,
-    VoidCallback? onToggleObscure,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      style: TextStyle(color: _textDark, fontWeight: FontWeight.w600),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(color: Colors.black26, fontWeight: FontWeight.w600),
-        prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
-        filled: true,
-        fillColor: _inputFillColor,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        suffixIcon: onToggleObscure == null
-            ? null
-            : IconButton(
-                onPressed: onToggleObscure,
-                icon: Icon(
-                  obscureText ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.black38,
-                ),
-                tooltip: obscureText ? '顯示密碼' : '隱藏密碼',
+  required TextEditingController controller,
+  required String hintText,
+  required IconData icon,
+  TextInputType keyboardType = TextInputType.text,
+  bool obscureText = false,
+  VoidCallback? onToggleObscure,
+}) {
+  final isPassword = onToggleObscure != null;
+
+  return TextField(
+    controller: controller,
+    keyboardType: keyboardType,
+    obscureText: obscureText,
+    autocorrect: !isPassword,
+    enableSuggestions: !isPassword,
+    style: TextStyle(color: _textDark, fontWeight: FontWeight.w600),
+    decoration: InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(color: Colors.black26, fontWeight: FontWeight.w600),
+      prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
+      filled: true,
+      fillColor: _inputFillColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      suffixIcon: isPassword
+          ? IconButton(
+              onPressed: onToggleObscure,
+              icon: Icon(
+                obscureText
+                    ? Icons.visibility_outlined      // 目前隱藏 → 顯示「睜眼」，點了可看密碼
+                    : Icons.visibility_off_outlined, // 目前可見 → 顯示「閉眼」，點了可隱藏
+                color: Colors.black38,
               ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
+              tooltip: obscureText ? '顯示密碼' : '隱藏密碼',
+            )
+          : null,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildGoogleButton({required VoidCallback onTap}) {
     return InkWell(

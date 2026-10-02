@@ -491,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 120),
           ],
         ),
       ),

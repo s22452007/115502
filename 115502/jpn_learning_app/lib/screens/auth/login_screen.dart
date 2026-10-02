@@ -32,6 +32,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
   bool _agreedToTerms = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -386,7 +388,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _passwordController,
                           hintText: '密碼',
                           icon: Icons.lock_outline_rounded,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
+                          onToggleObscure: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                         if (!_isLogin) ...[
                           const SizedBox(height: 18),
@@ -394,7 +399,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _confirmPasswordController,
                             hintText: '確認密碼',
                             icon: Icons.lock_reset_rounded,
-                            obscureText: true,
+                            obscureText: _obscureConfirmPassword,
+                            onToggleObscure: () => setState(
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                            ),
                           ),
                         ],
 
@@ -535,6 +544,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
+    VoidCallback? onToggleObscure,
   }) {
     return TextField(
       controller: controller,
@@ -548,6 +558,16 @@ class _LoginScreenState extends State<LoginScreen> {
         filled: true,
         fillColor: _inputFillColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        suffixIcon: onToggleObscure == null
+            ? null
+            : IconButton(
+                onPressed: onToggleObscure,
+                icon: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.black38,
+                ),
+                tooltip: obscureText ? '顯示密碼' : '隱藏密碼',
+              ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),

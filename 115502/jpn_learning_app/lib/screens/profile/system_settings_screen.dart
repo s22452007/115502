@@ -1056,6 +1056,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 10,
+                    runSpacing: 10, 
                     children: _types.map((type) {
                       final isSelected = type == _selectedType;
                       return ChoiceChip(

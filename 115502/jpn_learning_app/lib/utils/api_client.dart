@@ -1682,10 +1682,13 @@ class ApiClient {
   // ==========================================
 
   /// 學生所有教室的作業清單，後端已排序（未交的在前、截止日近的優先）。
+  /// 帶 [classroomId] 只看那一間（教室頁的「作業」分頁）。
   /// 每筆欄位：assignment_id / classroom_name / title / task_type / due_at /
   /// is_overdue / submission{status, score, ...}
-  static Future<List<dynamic>> getStudentAssignments(int userId) async {
-    final url = Uri.parse('$baseUrl/assignment/my/$userId');
+  static Future<List<dynamic>> getStudentAssignments(int userId, {int? classroomId}) async {
+    final url = Uri.parse(
+      '$baseUrl/assignment/my/$userId${classroomId != null ? '?classroom_id=$classroomId' : ''}',
+    );
     final response = await client.get(url);
 
     if (response.statusCode == 200) {
@@ -1785,6 +1788,19 @@ class ApiClient {
       return jsonDecode(utf8.decode(response.bodyBytes));
     } catch (e) {
       debugPrint('❌ 教室公告連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
+    }
+  }
+
+  /// 自己在這班的成績：assignments[{title, status, score, effective, deduct, teacher_comment, ...}]、
+  /// summary{total, submitted, graded, graded_avg}
+  static Future<Map<String, dynamic>> getClassroomGrades(int classroomId, int userId) async {
+    final url = Uri.parse('$baseUrl/classroom/$classroomId/grades?user_id=$userId');
+    try {
+      final response = await client.get(url);
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 教室成績連線失敗: $e');
       return {'status': 'error', 'error': '連線失敗'};
     }
   }

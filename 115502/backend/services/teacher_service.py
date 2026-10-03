@@ -856,6 +856,56 @@ def save_grade_config(classroom_id, form):
     return None
 
 
+def get_my_grades(classroom_id, student_id):
+    """學生在 App 教室「成績」分頁看到的內容：各作業分數與繳交進度。
+
+    各作業的分數學生本來就看得到（作業清單、作業詳情），這裡只是整理成一張表。
+    遲交扣分、缺交判斷跟成績總表用同一套（_cell_for），兩邊看到的分數才會一樣。
+    學期成績（權重、自主練習占比）只給老師看，不回傳。
+    """
+    if not ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=student_id).first():
+        return None
+
+    assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True) \
+        .order_by(Assignment.created_at.asc()).all()
+    subs = {s.assignment_id: s for s in AssignmentSubmission.query.filter(
+        AssignmentSubmission.student_id == student_id,
+        AssignmentSubmission.assignment_id.in_([a.id for a in assignments] or [0]),
+    )}
+    cells = {a.id: _cell_for(subs.get(a.id), a) for a in assignments}
+
+    rows = []
+    for a in assignments:
+        cell = cells[a.id]
+        sub = subs.get(a.id)
+        rows.append({
+            'assignment_id': a.id,
+            'title': a.title,
+            'task_type': a.task_type,
+            'type_label': TASK_TYPE_LABELS.get(a.task_type, a.task_type),
+            'due_at': a.due_at.isoformat() if a.due_at else None,   # 老師設定的台灣時間
+            'status': cell['status'],            # missing 未交 / ungraded 待批閱 / graded 有分數
+            'score': cell['score'],              # 原始分數
+            'effective': cell['effective'],      # 扣完遲交分數、真正計入成績的分數
+            'deduct': cell['deduct'],
+            'late': cell['late'],
+            # 還沒交而且已經過了截止時間，前端顯示「缺交」；還沒到截止的只算「未繳交」
+            'is_overdue': cell['status'] == 'missing' and _is_late(a),
+            'teacher_comment': (sub.teacher_comment if sub else None) or '',
+        })
+
+    graded = [c['effective'] for c in cells.values() if c['status'] == 'graded']
+    return {
+        'assignments': rows,
+        'summary': {
+            'total': len(assignments),
+            'submitted': sum(1 for c in cells.values() if c['status'] != 'missing'),
+            'graded': len(graded),
+            'graded_avg': round(sum(graded) / len(graded), 1) if graded else None,
+        },
+    }
+
+
 def set_assignment_score(assignment_id, student_id, raw_score):
     """老師在成績總表直接改一格分數。空字串代表清除分數。回傳 (成功, 錯誤訊息)。"""
     assignment = Assignment.query.get(assignment_id)

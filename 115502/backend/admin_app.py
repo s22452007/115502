@@ -2043,6 +2043,46 @@ def teacher_change_password():
                            active_menu='password')
 
 
+@app.route('/teacher/profile', methods=['GET', 'POST'])
+@teacher_required
+def teacher_profile():
+    """老師改自己的顯示名稱（user.username），學生在 App 教室頁看到的「老師：XXX」就是這個。
+
+    Google 登入的老師名稱是第一次登入時抓 Google 顯示名稱，管理者建的帳號是建立時填的姓名，
+    之前建好就改不了。登入用 Email、系統認人用 user.id，所以改名不影響登入和班級。
+    """
+    if session.get('role') != 'teacher':
+        return redirect(url_for('teacher_classrooms'))
+    teacher = User.query.get(session['teacher_user_id'])
+    error = success = None
+    if request.method == 'POST':
+        name = (request.form.get('username') or '').strip()
+        if not name:
+            error = '請輸入顯示名稱'
+        elif len(name) > 30:
+            error = '顯示名稱最多 30 個字'
+        elif name == teacher.username:
+            success = '名稱沒有變更'
+        elif User.query.filter(User.username == name, User.id != teacher.id).first():
+            # username 全系統唯一（含 App 一般會員的暱稱），跟管理者新增老師帳號同一個規則
+            error = f'「{name}」已經有人使用，請換一個（例如加上全名或科目）'
+        else:
+            old = teacher.username
+            teacher.username = name
+            db.session.add(SystemLog(
+                admin_id=None, user_id=teacher.id,
+                action='UPDATE', target_table='user', target_id=teacher.id,
+                old_value={'username': old}, new_value={'username': name, 'via': 'teacher_profile'}
+            ))
+            db.session.commit()
+            session['admin_user'] = name   # 側欄上的名字跟著換
+            success = '已更新，學生在 App 重新整理教室頁就會看到新名稱'
+    # 存失敗時保留老師剛剛打的字，不要被換回舊名稱
+    name_value = (request.form.get('username') or '') if error else (teacher.username or '')
+    return render_template('teacher/profile.html', teacher=teacher, error=error, success=success,
+                           name_value=name_value, active_menu='profile')
+
+
 @app.route('/teacher/classroom/create', methods=['POST'])
 @teacher_required
 def teacher_classroom_create():

@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
+import 'package:jpn_learning_app/screens/auth/force_change_password_screen.dart';
 
 /// 校園教育版登入頁。
 ///
@@ -93,11 +94,30 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
 
     // 跟一般版一樣：還沒選過日文程度的先去選程度
     final level = result['japanese_level'];
+    if (level != null) provider.setJapaneseLevel(level.toString());
+    final Widget next = level != null ? const HomeScreen() : const LevelSelectScreen();
+
+    // 老師建立的帳號（初始密碼是學號）或被重設過密碼：先設定新密碼才能進入
+    if (result['must_change_password'] == true) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ForceChangePasswordScreen(
+            currentPassword: password,
+            account: account,
+            requireMedium: true,   // 學生帳號至少要「中」
+            next: next,
+          ),
+        ),
+        (route) => false,
+      );
+      return;
+    }
+
     if (level != null) {
-      provider.setJapaneseLevel(level.toString());
-      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => next), (route) => false);
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
     }
   }
 

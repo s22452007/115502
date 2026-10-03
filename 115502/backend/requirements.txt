@@ -36,3 +36,4 @@ google-generativeai
 google-genai
 python-dotenv
 gTTS
+firebase-admin==7.7.0   # 手機推播（utils/push.py），金鑰放 secrets/，沒有金鑰時自動略過

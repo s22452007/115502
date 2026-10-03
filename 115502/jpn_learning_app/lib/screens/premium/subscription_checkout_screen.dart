@@ -205,6 +205,15 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
                     ),
             ),
           ),
+          // 系統沒有串接真正的金流，避免使用者或評審以為真的會扣款
+          if (!_isTrialFlow) ...[
+            const SizedBox(height: 12),
+            const Text(
+              '此為模擬付款，不會實際扣款',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ],
         ],
       ),
     );

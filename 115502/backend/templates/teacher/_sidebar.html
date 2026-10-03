@@ -1,0 +1,21 @@
+{# 老師端側欄：每頁 include。active_menu 指定目前項目，沒設就是「班級」 #}
+<aside class="sidebar">
+    <div class="sidebar-admin">
+        <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+        <div class="sidebar-admin-info">
+            <div class="name">{{ session['admin_user'] }}</div>
+            <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
+        </div>
+    </div>
+    <ul class="sidebar-menu">
+        {% if session.get('role') == 'super_admin' %}
+        <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
+        {% endif %}
+        <li><a href="/teacher/classrooms" class="{{ 'active' if (active_menu or 'classrooms') == 'classrooms' }}"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級' if session.get('role') == 'super_admin' else '我的班級' }}</a></li>
+        {% if session.get('role') == 'teacher' %}
+        <li><a href="/teacher/change_password" class="{{ 'active' if active_menu == 'password' }}"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
+        {% endif %}
+        <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
+        <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
+    </ul>
+</aside>

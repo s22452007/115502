@@ -1,3 +1,4 @@
+import os
 import re
 import base64
 from datetime import date, datetime, timedelta, timezone
@@ -13,10 +14,40 @@ from utils.account_helper import has_unlimited_usage, is_payment_free
 from models import (
     User, UserAchievement, UserVocab, UserFolder,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
-    Feedback, PointTransaction, Vocab, TransactionType,
+    Feedback, PointTransaction, Vocab, TransactionType, AccountType,
+    UserPhoto, UserPhotoVocab, ChatSession, ChatMessage, Notification, UserSubscription,
+    ArticleProgress, UnlockedArticle, ScoreRecord, ReadingEvaluation, SentencePracticeRecord, SystemLog,
 )
 
 user_bp = Blueprint('user', __name__)
+
+
+@user_bp.route('/push_token', methods=['POST'])
+def register_push_token():
+    """App 登記這支手機的推播 token（Firebase Cloud Messaging）。
+
+    body：{user_id, token, logout?}
+      - 登入後：帶 token，之後老師發公告、出作業、批改就推到這支手機
+      - 登出時：帶 logout=true 和這支手機的 token，只有帳號記的還是這支手機才清掉，
+        避免在舊手機登出、把新手機的通知也一起關掉
+    同一支手機換別人登入時，token 從前一個帳號移走，通知才不會推錯人。
+    """
+    data = request.get_json() or {}
+    user = User.query.get(data.get('user_id') or 0)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+    token = (data.get('token') or '').strip()[:255] or None
+
+    if data.get('logout'):
+        if token and user.push_token == token:
+            user.push_token = None
+    else:
+        if token:
+            User.query.filter(User.push_token == token, User.id != user.id) \
+                .update({'push_token': None}, synchronize_session=False)
+        user.push_token = token
+    db.session.commit()
+    return jsonify({"status": "success"}), 200
 
 # ==========================================
 # [個人設定與數據]
@@ -251,9 +282,41 @@ def delete_account():
     if not user:
         return jsonify({"error": "找不到使用者"}), 404
 
+    # 學生帳號由老師建立，作業與成績都掛在帳號上；老師帳號同時是後台帳號。
+    # 兩者都不開放在 App 自行刪除，跟重設密碼的規則一致。
+    account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
+    if account_type != AccountType.GENERAL:
+        return jsonify({"error": "校園教育版帳號無法在 App 刪除，請聯繫老師或系統管理員"}), 403
+
+    from services import scenario as _scenario  # 取照片存放資料夾（測試時會改到暫存資料夾）
+
     try:
-        # 刪除相關資料
-        # UserAbility.query.filter_by(user_id=user_id).delete()
+        user_id = user.id
+        # 需求 A01：刪除帳號要清除個人所有資料。原本只刪了收藏、好友、小組，
+        # 照片、點數交易、意見回饋、對話等都留在資料庫裡變成孤兒資料。
+
+        # 照片：先刪明細再刪主檔，檔案等資料庫確定刪除後再清
+        photos = UserPhoto.query.filter_by(user_id=user_id).all()
+        photo_paths = {p.image_path for p in photos if p.image_path}
+        photo_ids = [p.id for p in photos]
+        if photo_ids:
+            UserPhotoVocab.query.filter(UserPhotoVocab.photo_id.in_(photo_ids)).delete(synchronize_session=False)
+        UserPhoto.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        # AI 對話：先刪訊息再刪場次
+        session_ids = [s.id for s in ChatSession.query.filter_by(user_id=user_id).all()]
+        if session_ids:
+            ChatMessage.query.filter(ChatMessage.session_id.in_(session_ids)).delete(synchronize_session=False)
+        ChatSession.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        for model in (Notification, Feedback, UserSubscription, PointTransaction,
+                      ArticleProgress, UnlockedArticle, ScoreRecord, ReadingEvaluation,
+                      SentencePracticeRecord):
+            model.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        # 系統日誌是後台的稽核紀錄，保留紀錄、只拿掉跟這個人的關聯
+        SystemLog.query.filter_by(user_id=user_id).update({'user_id': None}, synchronize_session=False)
+
         UserAchievement.query.filter_by(user_id=user_id).delete()
         UserVocab.query.filter_by(user_id=user_id).delete()
         UserFolder.query.filter_by(user_id=user_id).delete()
@@ -278,6 +341,17 @@ def delete_account():
 
         db.session.delete(user)
         db.session.commit()
+
+        # 照片檔案：其他紀錄沒有用到同一個檔案才刪（種子資料可能多人共用同一張示範圖）
+        for path in photo_paths:
+            if UserPhoto.query.filter_by(image_path=path).first():
+                continue
+            file_path = os.path.join(_scenario.UPLOAD_FOLDER, os.path.basename(path))
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except OSError as fe:
+                print(f"⚠️ 刪除照片檔案失敗（帳號已刪除）：{fe}")
 
         return jsonify({"message": "帳號已刪除"}), 200
     except Exception as e:
@@ -389,6 +463,11 @@ def mark_badge_seen():
 # 增加點數
 @user_bp.route('/add_points', methods=['POST'])
 def add_points():
+    # 目前是模擬付款（沒有串接金流）；.env 設 DEMO_PAYMENT=off 時不能購買點數
+    from utils.payment import payment_disabled_response
+    blocked = payment_disabled_response()
+    if blocked:
+        return blocked
     data = request.get_json()
     user_id = data.get('user_id')
     points_to_add = data.get('points', 0)
@@ -566,6 +645,8 @@ def increment_scan():
         }), 403
 
     user.total_scans = (user.total_scans or 0) + 1
+    # 發一張辨識憑證，/api/scenario/analyze 要用掉它才會呼叫 AI
+    user.scan_credits = (user.scan_credits or 0) + 1
 
     member_record = GroupMember.query.filter_by(user_id=user_id).first()
     if member_record:
@@ -622,6 +703,9 @@ def use_ai():
             "extra_count": 0,
         }), 403
 
+    # 發一張 AI 回覆憑證，/api/chat 要用掉它才會呼叫 AI
+    user.ai_credits = (user.ai_credits or 0) + 1
+
     # 每日任務：標記 AI 對話完成
     from services.daily_reward import _ensure_today
     _ensure_today(user)
@@ -636,6 +720,31 @@ def use_ai():
         "extra_count": getattr(user, 'ai_extra_count', 0) or 0,
         "unlimited": unlimited,
     }), 200
+
+
+def _consume_credit(user_id, column):
+    """用掉一張憑證；沒有憑證回傳 False。
+
+    用單一條件式 UPDATE（credits > 0 才減 1），同時送出兩個請求也只會有一個拿到同一張憑證。
+    """
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return False
+    rows = User.query.filter(User.id == uid, column > 0).update(
+        {column: column - 1}, synchronize_session=False)
+    db.session.commit()
+    return rows == 1
+
+
+def consume_scan_credit(user_id):
+    """拍照辨識前呼叫：必須先成功呼叫過 /increment_scan 扣次數。"""
+    return _consume_credit(user_id, User.scan_credits)
+
+
+def consume_ai_credit(user_id):
+    """AI 對話前呼叫：必須先成功呼叫過 /use_ai 扣次數。"""
+    return _consume_credit(user_id, User.ai_credits)
 
 
 def refund_scan_usage(user_id):
@@ -773,6 +882,11 @@ def send_friend_request():
     sender_id = data.get('sender_id')
     receiver_id = data.get('receiver_id')
 
+    if not sender_id or not receiver_id:
+        return jsonify({"error": "缺少必要資料"}), 400
+    if str(sender_id) == str(receiver_id):
+        return jsonify({"error": "不能加自己為好友喔！"}), 400
+
     # 檢查是否已經是好友
     if Friendship.query.filter_by(user_id=sender_id, friend_id=receiver_id).first():
          return jsonify({"error": "你們已經是好友了！"}), 400
@@ -811,17 +925,29 @@ def respond_friend_request():
     request_id = data.get('request_id')
     action = data.get('action') # 'accept' (接受) 或 'reject' (拒絕)
 
+    if action not in ('accept', 'reject'):
+        return jsonify({"error": "動作不正確"}), 400
+
     req = FriendRequest.query.get(request_id)
     if not req:
         return jsonify({"error": "找不到此邀請"}), 404
+    # 只有收到邀請的人可以回覆
+    from utils.auth_token import forbid_unless_owner
+    denied = forbid_unless_owner(req.receiver_id)
+    if denied:
+        return denied
+    # 已處理過的邀請不能再處理一次，否則同一筆接受兩次會建立重複的好友紀錄
+    if req.status != 'pending':
+        return jsonify({"error": "這個邀請已經處理過了"}), 400
 
-    req.status = action # 更新狀態
-    
+    # 狀態依模型定義存 accepted / rejected
+    req.status = 'accepted' if action == 'accept' else 'rejected'
+
     if action == 'accept':
-        # 如果接受，就互相加為好友 (建立兩筆紀錄，方便雙向查詢)
-        f1 = Friendship(user_id=req.sender_id, friend_id=req.receiver_id)
-        f2 = Friendship(user_id=req.receiver_id, friend_id=req.sender_id)
-        db.session.add_all([f1, f2])
+        # 如果接受，就互相加為好友 (建立兩筆紀錄，方便雙向查詢)；已經是好友的那一邊不重複建立
+        for a, b in ((req.sender_id, req.receiver_id), (req.receiver_id, req.sender_id)):
+            if not Friendship.query.filter_by(user_id=a, friend_id=b).first():
+                db.session.add(Friendship(user_id=a, friend_id=b))
 
     db.session.commit()
     return jsonify({"message": f"已{'接受' if action == 'accept' else '拒絕'}邀請！"}), 200
@@ -969,21 +1095,6 @@ def get_feedbacks(user_id):
     return jsonify({"feedbacks": result}), 200
 
 
-# 管理員回覆回饋
-@user_bp.route('/feedback/reply', methods=['POST'])
-def reply_feedback():
-    data = request.get_json()
-    feedback_id = data.get('feedback_id')
-    reply = (data.get('reply') or '').strip()
-
-    if not feedback_id or not reply:
-        return jsonify({"error": "缺少必要資訊"}), 400
-
-    fb = Feedback.query.get(feedback_id)
-    if not fb:
-        return jsonify({"error": "找不到該回饋"}), 404
-
-    fb.reply = reply
-    fb.replied_at = datetime.utcnow()
-    db.session.commit()
-    return jsonify({"message": "回覆成功"}), 200
+# 註：原本這裡有 POST /api/user/feedback/reply（管理員回覆回饋），但它在 App 的 API 底下、
+#     不需要任何管理者身分，任何人都能替任一則回饋寫入「官方回覆」，前端也沒有使用，已移除。
+#     官方回覆請由管理後台 /feedback/reply/<id> 處理（需管理者登入）。

@@ -1,15 +1,19 @@
 {# 班級內固定分頁列：每個班級頁面都 include，用 active 指定目前頁 #}
 {# 用法：{% with cid=班級id, active='students' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %} #}
+{# 這一頁專屬的按鈕（新增學生、出題…）先用 {% set tab_actions %}…{% endset %} 包好，會放在分頁列右側 #}
 <style>
-    .class-tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8e3; margin: 4px 0 22px; }
-    .class-tabs a { display: flex; align-items: center; gap: 7px; padding: 10px 18px; margin-bottom: -2px; color: #777; text-decoration: none; font-weight: 700; font-size: 0.93rem; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; transition: 0.15s; }
-    .class-tabs a i { font-size: 1rem; }
-    .class-tabs a:hover { color: var(--green-accent); background: rgba(92,131,100,0.06); }
-    .class-tabs a.active { color: var(--green-dark); border-bottom-color: var(--green-dark); }
+    .class-tabs { display: flex; align-items: flex-end; gap: 4px; border-bottom: 2px solid #e2e8e3; margin: 4px 0 22px; }
+    .class-tabs a.tab { display: flex; align-items: center; gap: 7px; padding: 10px 18px; margin-bottom: -2px; color: #777; text-decoration: none; font-weight: 700; font-size: 0.93rem; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; transition: 0.15s; }
+    .class-tabs a.tab i { font-size: 1rem; }
+    .class-tabs a.tab:hover { color: var(--green-accent); background: rgba(92,131,100,0.06); }
+    .class-tabs a.tab.active { color: var(--green-dark); border-bottom-color: var(--green-dark); }
+    .class-tabs .tab-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; padding-bottom: 7px; }
 </style>
 <nav class="class-tabs">
-    <a href="/teacher/classroom/{{ cid }}/students" class="{{ 'active' if active == 'students' }}"><i class="bi bi-people-fill"></i>學生</a>
-    <a href="/teacher/classroom/{{ cid }}/assignments" class="{{ 'active' if active == 'assignments' }}"><i class="bi bi-journal-check"></i>作業</a>
-    <a href="/teacher/classroom/{{ cid }}/gradebook" class="{{ 'active' if active == 'gradebook' }}"><i class="bi bi-table"></i>成績</a>
-    <a href="/teacher/classroom/{{ cid }}/report" class="{{ 'active' if active == 'report' }}"><i class="bi bi-graph-up"></i>報表</a>
+    <a href="/teacher/classroom/{{ cid }}/students" class="tab {{ 'active' if active == 'students' }}"><i class="bi bi-people-fill"></i>學生</a>
+    <a href="/teacher/classroom/{{ cid }}/assignments" class="tab {{ 'active' if active == 'assignments' }}"><i class="bi bi-journal-check"></i>作業</a>
+    <a href="/teacher/classroom/{{ cid }}/announcements" class="tab {{ 'active' if active == 'announcements' }}"><i class="bi bi-megaphone-fill"></i>公告</a>
+    <a href="/teacher/classroom/{{ cid }}/gradebook" class="tab {{ 'active' if active == 'gradebook' }}"><i class="bi bi-table"></i>成績</a>
+    <a href="/teacher/classroom/{{ cid }}/report" class="tab {{ 'active' if active == 'report' }}"><i class="bi bi-graph-up"></i>報表</a>
+    {% if tab_actions %}<div class="tab-actions">{{ tab_actions }}</div>{% endif %}
 </nav>

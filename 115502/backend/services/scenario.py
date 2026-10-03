@@ -21,6 +21,15 @@ def _refund_scan(user_id):
     except Exception as e:
         print(f"⚠️ 退還拍照次數時發生錯誤：{e}")
 
+def _remove_file(path):
+    """刪掉辨識失敗時已存下的圖片，刪不掉也不影響要回報的錯誤。"""
+    try:
+        if path and os.path.exists(path):
+            os.remove(path)
+    except OSError as e:
+        print(f"⚠️ 刪除辨識失敗的圖片時發生錯誤：{e}")
+
+
 # 設定圖片上傳的儲存路徑
 UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'static', 'photos')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -201,6 +210,13 @@ def analyze_scene():
     if file.filename == '':
         return jsonify({'error': '檔案名稱為空'}), 400
 
+    # 必須先透過 /api/user/increment_scan 扣過次數。原本這裡完全不檢查，
+    # 次數用完後跳過扣次 API 直接呼叫辨識，就能無限使用。
+    from services.user import consume_scan_credit
+    if not consume_scan_credit(user_id):
+        return jsonify({'error': '今日拍照次數已用完，請花 60 點加購 5 次', 'quota_exceeded': True}), 403
+
+    file_path = None
     if file:
         try:
             # 1. 生成唯一的檔案名稱並儲存圖片到伺服器
@@ -231,7 +247,9 @@ def analyze_scene():
                 }), 400
 
             if not ai_result_wrapper.get("success"):
-                # 辨識失敗（額度用完、格式錯誤、連線問題…）→ 退還拍照次數
+                # 辨識失敗（額度用完、格式錯誤、連線問題…）→ 退還拍照次數，
+                # 已存的圖片沒有對應的照片紀錄，一併刪掉，不要留在伺服器上
+                _remove_file(file_path)
                 _refund_scan(user_id)
                 return jsonify({'error': ai_result_wrapper.get("error", "AI 分析失敗")}), 500
             
@@ -397,7 +415,8 @@ def analyze_scene():
         except Exception as e:
             print(f"分析圖片時發生錯誤: {e}")
             db.session.rollback()
-            # 發生例外代表這次拍照沒有任何成果，把次數還給使用者
+            # 發生例外代表這次拍照沒有任何成果，把次數還給使用者，圖片也不留
+            _remove_file(file_path)
             _refund_scan(user_id)
             return jsonify({'error': '照片分析失敗了，請確認網路連線後再試一次。'}), 500
 
@@ -720,6 +739,10 @@ def rename_photo():
     photo = UserPhoto.query.get(photo_id)
     if not photo:
         return jsonify({'error': '找不到照片'}), 404
+    from utils.auth_token import forbid_unless_owner
+    denied = forbid_unless_owner(photo.user_id)   # 只能改自己的照片名稱
+    if denied:
+        return denied
         
     photo.custom_title = new_title
     db.session.commit()

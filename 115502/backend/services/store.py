@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from models import PointPackage
+from utils.payment import demo_payment_enabled
 
 store_bp = Blueprint('store', __name__)
 
@@ -57,7 +58,7 @@ def get_packages():
             'description': p.description or '',
         }
         for p in pkgs
-    ]}), 200
+    ], 'demo_payment': demo_payment_enabled()}), 200
 
 
 @store_bp.route('/items', methods=['GET'])

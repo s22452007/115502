@@ -75,6 +75,7 @@ class SystemSettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
+                  const Spacer(),
                   const SizedBox(height: 32),
                   const Padding(
                     padding: EdgeInsets.only(left: 4, bottom: 10),
@@ -183,59 +184,100 @@ class SystemSettingsScreen extends StatelessWidget {
   }
 
   static void _showFinalConfirmDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
+  bool confirmed = false; // 勾選狀態（每次開啟對話框都會重置）
+
+  showDialog(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (statefulContext, setDialogState) => AlertDialog(
         title: const Text('最後確認'),
-        content: const Text('此操作無法復原，確定要永久刪除帳號嗎？'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '此操作無法復原，確定要永久刪除帳號嗎？',
+              style: TextStyle(height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: () => setDialogState(() => confirmed = !confirmed),
+              borderRadius: BorderRadius.circular(8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: confirmed,
+                    activeColor: Colors.red,
+                    onChanged: (v) => setDialogState(() => confirmed = v ?? false),
+                  ),
+                  const Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: Text(
+                        '我了解刪除後帳號與所有學習資料將永久消失，無法復原',
+                        style: TextStyle(fontSize: 14, height: 1.4),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              final userId = context.read<UserProvider>().userId;
-              if (userId == null) return;
+            // 沒勾選時 onPressed 為 null，按鈕自動變灰且無法點擊
+            onPressed: !confirmed
+                ? null
+                : () async {
+                    Navigator.pop(dialogContext);
+                    final userId = context.read<UserProvider>().userId;
+                    if (userId == null) return;
 
-              final res = await ApiClient.deleteAccount(userId);
+                    final res = await ApiClient.deleteAccount(userId);
 
-              try {
-                await FirebaseAuth.instance.currentUser?.delete();
-              } catch (_) {}
+                    try {
+                      await FirebaseAuth.instance.currentUser?.delete();
+                    } catch (_) {}
 
-              if (!context.mounted) return;
+                    if (!context.mounted) return;
 
-              if (res['error'] != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(res['error'])),
-                );
-                return;
-              }
+                    if (res['error'] != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(res['error'])),
+                      );
+                      return;
+                    }
 
-              // logout() 會把帳號類型重設，要先記下來：學生回教育版登入頁，
-              // 帶去一般版登入頁的話，一般版入口不收學生帳號
-              final wasEduStudent = context.read<UserProvider>().isEduStudent;
-              context.read<UserProvider>().logout();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (_) => wasEduStudent ? const EduLoginScreen() : const LoginScreen(),
-                ),
-                (route) => false,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('帳號已刪除，所有資料已清除')),
-              );
-            },
-            child: const Text('確認刪除',
-                style: TextStyle(
-                    color: Colors.red, fontWeight: FontWeight.bold)),
+                    // logout() 會把帳號類型重設，要先記下來：學生回教育版登入頁，
+                    // 帶去一般版登入頁的話，一般版入口不收學生帳號
+                    final wasEduStudent = context.read<UserProvider>().isEduStudent;
+                    context.read<UserProvider>().logout();
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (_) => wasEduStudent ? const EduLoginScreen() : const LoginScreen(),
+                      ),
+                      (route) => false,
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('帳號已刪除，所有資料已清除')),
+                    );
+                  },
+            child: Text(
+              '確認刪除',
+              style: TextStyle(color: confirmed ? Colors.red : Colors.grey),
+            ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMenuCard({
     required BuildContext context,
@@ -576,9 +618,9 @@ class _NotificationSettingsScreenState
     final dayOptions = [
       (1, '1 天（溫和提醒）'),
       (2, '2 天（善意叮嚀）'),
-      (3, '3 天（戲劇化整活 建議）'),
-      (5, '5 天（戲劇化整活）'),
-      (7, '7 天（戲劇化整活）'),
+      (3, '3 天（戲劇化情勒 建議）'),
+      (5, '5 天（戲劇化情勒）'),
+      (7, '7 天（戲劇化情勒）'),
       (0, '漸進式 (1/3/7天)'),
     ];
 
@@ -602,7 +644,7 @@ class _NotificationSettingsScreenState
           SwitchListTile(
             contentPadding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
             title: const Text(
-              '久未登入提醒（戲劇化整活）',
+              '久未登入提醒（戲劇化情勒）',
               style: TextStyle(
                 color: textColor,
                 fontSize: 16,
@@ -1014,6 +1056,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 10,
+                    runSpacing: 10, 
                     children: _types.map((type) {
                       final isSelected = type == _selectedType;
                       return ChoiceChip(

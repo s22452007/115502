@@ -32,7 +32,13 @@ from services.student_assignment import student_assignment_bp
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
-CORS(app) # 允許跨網域請求
+# 允許跨網域請求；網頁版要讀得到自動延長後的新通行證與拒絕原因，所以把這兩個標頭開放給前端
+CORS(app, expose_headers=['X-Auth-Token', 'X-Auth-Error'])
+
+# 登入通行證：除了登入註冊與公開清單，App 的 API 都要帶通行證，而且只能操作自己的資料
+from utils.auth_token import check_request as _check_auth, attach_renewed_token as _attach_renewed_token
+app.before_request(_check_auth)
+app.after_request(_attach_renewed_token)
 
 print("================ 我是最新版、超乾淨的 app.py 喔喔喔 ================")
 
@@ -164,49 +170,29 @@ with app.app_context():
         '學習小組獎勵加倍',
     ]
 
-    # ── 月訂閱方案 ──
-    monthly_plan = SubscriptionPlan.query.filter_by(name='Premium Pro 月訂閱').first()
-    if monthly_plan:
-        monthly_plan.price_monthly = 149
-        monthly_plan.price_yearly = None
-        monthly_plan.billing_cycle = 'monthly'
-        monthly_plan.points_grant_monthly = MONTHLY_POINTS_GRANT
-        monthly_plan.points_grant_yearly = None
-        monthly_plan.points_grant = MONTHLY_POINTS_GRANT
-        monthly_plan.features_json = _FEATURES
-        monthly_plan.is_active = True
-    else:
+    # ── 月訂閱、年訂閱方案 ──
+    # 只在方案不存在時建立預設值。已存在的方案由管理者在後台維護（價格、上下架、功能說明），
+    # 啟動時不能再寫回預設值，否則後台的修改一重啟就被蓋掉。
+    # （原本還會寫入 points_grant，但模型沒有這個欄位，全新資料庫建立方案時會直接 TypeError。）
+    if not SubscriptionPlan.query.filter_by(name='Premium Pro 月訂閱').first():
         _db.session.add(SubscriptionPlan(
             name='Premium Pro 月訂閱',
             billing_cycle='monthly',
             price_monthly=149,
             price_yearly=None,
             features_json=_FEATURES,
-            points_grant=MONTHLY_POINTS_GRANT,
             points_grant_monthly=MONTHLY_POINTS_GRANT,
             points_grant_yearly=None,
             is_active=True,
         ))
 
-    # ── 年訂閱方案 ──
-    yearly_plan = SubscriptionPlan.query.filter_by(name='Premium Pro 年訂閱').first()
-    if yearly_plan:
-        yearly_plan.price_monthly = None
-        yearly_plan.price_yearly = 1290
-        yearly_plan.billing_cycle = 'yearly'
-        yearly_plan.points_grant_monthly = None
-        yearly_plan.points_grant_yearly = YEARLY_POINTS_GRANT
-        yearly_plan.points_grant = YEARLY_POINTS_GRANT
-        yearly_plan.features_json = _FEATURES
-        yearly_plan.is_active = True
-    else:
+    if not SubscriptionPlan.query.filter_by(name='Premium Pro 年訂閱').first():
         _db.session.add(SubscriptionPlan(
             name='Premium Pro 年訂閱',
             billing_cycle='yearly',
             price_monthly=None,
             price_yearly=1290,
             features_json=_FEATURES,
-            points_grant=YEARLY_POINTS_GRANT,
             points_grant_monthly=None,
             points_grant_yearly=YEARLY_POINTS_GRANT,
             is_active=True,
@@ -219,21 +205,14 @@ with app.app_context():
 
     _db.session.commit()
 
-    # 購點方案（idempotent upsert）
+    # 購點方案：只補上不存在的預設方案，已存在的交給後台「點數方案管理」維護
     _PACKAGES = [
         ('入門包', 70,  50,  '',      '小試牛刀'),
         ('中包',   140, 90,  '推薦',  '最受歡迎的選擇'),
         ('大包',   380, 170, '最划算','平均單價最低'),
     ]
     for pkg_name, pts, price, tag, desc in _PACKAGES:
-        pkg = PointPackage.query.filter_by(name=pkg_name).first()
-        if pkg:
-            pkg.points = pts
-            pkg.price = price
-            pkg.tag = tag
-            pkg.description = desc
-            pkg.is_active = True
-        else:
+        if not PointPackage.query.filter_by(name=pkg_name).first():
             _db.session.add(PointPackage(name=pkg_name, points=pts, price=price, tag=tag, description=desc))
     _db.session.commit()
 
@@ -292,6 +271,15 @@ def chat():
 
     print(f" 收到包裹 -> 主題：{topic} | 等級：{user_level} | 腔調：{dialect_id} | 訊息：{user_message}")
 
+    # 1b. 必須先透過 /api/user/use_ai 扣過次數才能呼叫 AI。原本這裡不檢查，
+    #     次數用完後跳過扣次 API 直接打這支，就能無限對話。
+    from services.user import consume_ai_credit
+    if not user_id or not consume_ai_credit(user_id):
+        quota_msg = "今日 AI 對話次數已用完，請花 60 點加購 5 次"
+        if request.form.get('assignment_id', type=int):
+            return jsonify({"error": quota_msg, "quota_exceeded": True}), 403
+        return quota_msg, 403
+
     # 2. 把食材交給內場廚師 (呼叫 tutor.py 的函數，記得把 user_level / dialect_id 也傳進去)
     ai_response_text, ok = get_ai_reply(topic, user_message, chat_history, user_level, dialect_id)
 
@@ -309,7 +297,7 @@ def chat():
     if ok and session_id:
         try:
             from services.chat_history import save_exchange
-            save_exchange(session_id, user_message, ai_response_text)
+            save_exchange(session_id, user_message, ai_response_text, user_id=user_id)
         except Exception as e:
             print(f"⚠️ 儲存對話紀錄時發生錯誤：{e}")
 

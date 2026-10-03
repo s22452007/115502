@@ -64,6 +64,7 @@
         .diff-neg { color: #c9302c; font-weight: 700; }
         .status-missing { color: #b94a48; font-size: 0.78rem; font-weight: 700; }
         .status-ungraded { color: #7f92b3; font-size: 0.78rem; font-weight: 700; }
+        .status-late { color: #b7791f; font-size: 0.72rem; font-weight: 700; margin-left: 4px; }
         .bar-wrap { display: inline-block; width: 80px; height: 8px; background: #eef1ef; border-radius: 4px; vertical-align: middle; margin-right: 8px; overflow: hidden; }
         .bar-wrap .bar { display: block; height: 8px; border-radius: 4px; background: var(--green-mid); }
         .bar-wrap .bar.bad { background: #d9534f; }
@@ -90,37 +91,13 @@
 </head>
 <body>
 <div class="layout">
-    <aside class="sidebar">
-        <div class="sidebar-admin">
-            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
-            <div class="sidebar-admin-info">
-                <div class="name">{{ session['admin_user'] }}</div>
-                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
-            </div>
-        </div>
-        <ul class="sidebar-menu">
-            {% if session.get('role') == 'super_admin' %}
-            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
-            {% endif %}
-            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
-            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
-        </ul>
-    </aside>
+    {% include 'teacher/_sidebar.html' %}
 
     <main class="main-content">
         {% set cid = data.classroom.id %}
         {% set st = data.student %}
         {% set g = data.grade %}
-        <div class="mb-3 fw-bold" style="font-size: 0.9rem; color: #888;">
-            <a href="/teacher/classrooms" class="text-decoration-none text-secondary">我的班級</a>
-            <span class="mx-1">›</span>
-            <a href="/teacher/classroom/{{ cid }}/students" class="text-decoration-none text-secondary">{{ data.classroom.name }}</a>
-            <span class="mx-1">›</span>
-            <a href="/teacher/classroom/{{ cid }}/students" class="text-decoration-none text-secondary">學生</a>
-            <span class="mx-1">›</span>
-            <span style="color: var(--green-dark);">{{ st.display_name }}</span>
-        </div>
+        {% with crumbs=[(data.classroom.name, '/teacher/classroom/%d/students' % cid), (st.display_name, None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %}
 
         <div class="page-header">
             <div>
@@ -186,13 +163,13 @@
                             <tr>
                                 <td><span class="type-chip chip-{{ a.task_type }}">{{ a.type_label }}</span>{{ a.title }}</td>
                                 <td class="num">
-                                    {% if a.status == 'graded' %}<b class="{{ 'diff-neg' if a.score < 60 else '' }}">{{ a.score }}</b>
+                                    {% if a.status == 'graded' %}<b class="{{ 'diff-neg' if a.score < 60 else '' }}">{{ a.score }}</b>{% if a.deduct %}<span class="status-late" title="原始分數 {{ a.raw_score }}，遲交扣 {{ a.deduct }} 分">原 {{ a.raw_score }}</span>{% endif %}
                                     {% elif a.status == 'ungraded' %}<span class="status-ungraded">已交待批</span>
                                     {% else %}<span class="status-missing">缺交</span>{% endif %}
                                 </td>
                                 <td class="num">{{ a.class_avg if a.class_avg is not none else '—' }}</td>
                                 <td class="num">{% if a.diff is not none %}<span class="{{ 'diff-pos' if a.diff >= 0 else 'diff-neg' }}">{{ '+' if a.diff >= 0 }}{{ a.diff }}</span>{% else %}—{% endif %}</td>
-                                <td class="text-muted small">{{ a.due_at or '—' }}</td>
+                                <td class="text-muted small">{{ a.due_at or '—' }}{% if a.late %}<span class="status-late">遲交{% if a.deduct %} −{{ a.deduct }}{% endif %}</span>{% endif %}</td>
                             </tr>
                             {% endfor %}
                             </tbody>

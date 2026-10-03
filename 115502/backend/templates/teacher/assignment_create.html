@@ -61,35 +61,14 @@
 </head>
 <body>
 <div class="layout">
-    <!-- 側邊欄 -->
-    <aside class="sidebar">
-        <div class="sidebar-admin">
-            <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
-            <div class="sidebar-admin-info">
-                <div class="name">{{ session['admin_user'] }}</div>
-                <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
-            </div>
-        </div>
-        <ul class="sidebar-menu">
-            {% if session.get('role') == 'super_admin' %}
-            <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
-            {% endif %}
-            <li><a href="/teacher/classrooms" class="active"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級與隨機碼' if session.get('role') == 'super_admin' else '我的班級與隨機碼' }}</a></li>
-            <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
-            <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
-        </ul>
-    </aside>
+    {% include 'teacher/_sidebar.html' %}
 
     <!-- 主要內容區 -->
     <main class="main-content">
-        <div class="mb-3">
-            <a href="/teacher/classroom/{{ classroom.id }}/assignments" class="text-decoration-none text-secondary fw-bold" style="font-size: 0.9rem;">
-                <i class="bi bi-arrow-left"></i> 返回作業列表
-            </a>
-        </div>
+        {% with crumbs=[(classroom.name, '/teacher/classroom/%d/students' % classroom.id), ('作業', '/teacher/classroom/%d/assignments' % classroom.id), ('出題新作業', None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %}
 
         <div class="page-header">
-            <h1 class="page-title"><i class="bi bi-pencil-square me-2"></i>{{ classroom.name }} - 出題新作業</h1>
+            <h1 class="page-title"><i class="bi bi-pencil-square me-2"></i>出題新作業</h1>
             <div class="page-sub">支援「造句挑戰」、「文章閱讀（上傳文章、選擇題、是非題）」、「拍照學習」與「AI 情境對話」</div>
         </div>
 
@@ -137,6 +116,15 @@
                     <div class="col-12">
                         <label class="form-label fw-bold">作業指引 / 老師的話</label>
                         <textarea name="instructions" class="form-control" rows="2" placeholder="請學生注意的事項或提示..."></textarea>
+                    </div>
+                    <div class="col-12">
+                        {% with lp_id='new', lp_policy=None, lp_penalty=None %}{% include 'teacher/_late_policy_fields.html' %}{% endwith %}
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="announce" value="1" id="announceNew" checked>
+                            <label class="form-check-label" for="announceNew">發布時通知學生（發一則公告，並推播到學生手機）</label>
+                        </div>
                     </div>
                 </div>
             </div>

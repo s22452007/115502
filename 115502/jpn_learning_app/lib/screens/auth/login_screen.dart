@@ -19,6 +19,10 @@ import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
+import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
+import 'package:jpn_learning_app/screens/auth/force_change_password_screen.dart';
+import 'package:jpn_learning_app/utils/password_policy.dart';
+import 'package:jpn_learning_app/widgets/common/password_strength_meter.dart';
 import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart';
 import 'package:jpn_learning_app/screens/auth/privacy_policy_screen.dart'; // 新增：新手引導頁面
 
@@ -32,6 +36,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
   bool _agreedToTerms = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -111,6 +117,14 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    if (!_isLogin) {
+      final pwError = PasswordPolicy.validate(password, account: email);
+      if (pwError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pwError)));
+        return;
+      }
+    }
+
     if (!_isLogin && password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('兩次輸入的密碼不相同喔！')));
       return;
@@ -155,9 +169,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
-          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+        }
+        final Widget next = result['japanese_level'] != null ? const HomeScreen() : const LevelSelectScreen();
+
+        // 帳號被管理者重設過密碼：先設定新密碼才能進入
+        if (result['must_change_password'] == true) {
+          final type = result['account_type']?.toString();
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ForceChangePasswordScreen(
+                currentPassword: password,
+                account: email,
+                requireMedium: type == 'student' || type == 'teacher',
+                next: next,
+              ),
+            ),
+            (route) => false,
+          );
+          return;
+        }
+
+        if (result['japanese_level'] != null) {
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => next), (route) => false);
         } else {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
         }
       } else {
         final errMsg = result['error'] ?? '登入失敗';
@@ -270,7 +306,14 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 帳號未提供 Email')));
         return;
       }
-      final result = await ApiClient.googleLogin(email, avatar: avatar);
+      // 送 Firebase 的身分憑證給後端驗證，後端以憑證上的 Email 為準（只送 Email 會被拒絕）
+      final idToken = await user.getIdToken();
+      if (!context.mounted) return;
+      if (idToken == null || idToken.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google 登入失敗，無法取得身分憑證')));
+        return;
+      }
+      final result = await ApiClient.googleLogin(idToken, avatar: avatar);
       if (!context.mounted) return;
       if (!result.containsKey('user_id')) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'] ?? 'Google 登入同步失敗')));
@@ -328,6 +371,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
+      // 跟校園教育版登入頁一致：左上角提供返回鍵回到版本選擇頁。
+      // 登出後是用 pushAndRemoveUntil 進來的，底下沒有上一頁，
+      // 這時直接導回版本選擇頁，避免返回鍵按了變成空白畫面。
+      appBar: AppBar(
+        backgroundColor: _flatCanvasColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              );
+            }
+          },
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -386,15 +449,27 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _passwordController,
                           hintText: '密碼',
                           icon: Icons.lock_outline_rounded,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
+                          onToggleObscure: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
+                        if (!_isLogin)
+                          PasswordStrengthMeter(
+                            controller: _passwordController,
+                            accountController: _emailController,
+                          ),
                         if (!_isLogin) ...[
                           const SizedBox(height: 18),
                           _buildInputField(
                             controller: _confirmPasswordController,
                             hintText: '確認密碼',
                             icon: Icons.lock_reset_rounded,
-                            obscureText: true,
+                            obscureText: _obscureConfirmPassword,
+                            onToggleObscure: () => setState(
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                            ),
                           ),
                         ],
 
@@ -530,32 +605,49 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildInputField({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    bool obscureText = false,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      style: TextStyle(color: _textDark, fontWeight: FontWeight.w600),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(color: Colors.black26, fontWeight: FontWeight.w600),
-        prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
-        filled: true,
-        fillColor: _inputFillColor,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
+  required TextEditingController controller,
+  required String hintText,
+  required IconData icon,
+  TextInputType keyboardType = TextInputType.text,
+  bool obscureText = false,
+  VoidCallback? onToggleObscure,
+}) {
+  final isPassword = onToggleObscure != null;
+
+  return TextField(
+    controller: controller,
+    keyboardType: keyboardType,
+    obscureText: obscureText,
+    autocorrect: !isPassword,
+    enableSuggestions: !isPassword,
+    style: TextStyle(color: _textDark, fontWeight: FontWeight.w600),
+    decoration: InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(color: Colors.black26, fontWeight: FontWeight.w600),
+      prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
+      filled: true,
+      fillColor: _inputFillColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      suffixIcon: isPassword
+          ? IconButton(
+              onPressed: onToggleObscure,
+              icon: Icon(
+                obscureText
+                    ? Icons.visibility_outlined      // 目前隱藏 → 顯示「睜眼」，點了可看密碼
+                    : Icons.visibility_off_outlined, // 目前可見 → 顯示「閉眼」，點了可隱藏
+                color: Colors.black38,
+              ),
+              tooltip: obscureText ? '顯示密碼' : '隱藏密碼',
+            )
+          : null,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildGoogleButton({required VoidCallback onTap}) {
     return InkWell(

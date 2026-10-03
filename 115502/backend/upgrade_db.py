@@ -885,6 +885,56 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ admin 欄位升級警告：{e}")
 
+# ==========================================
+# 校園教育版：班級評分設定與作業作答明細
+# ==========================================
+add_column("classroom", "grade_config JSON")
+add_column("assignment_submission", "answer_detail JSON")
+print("✅ classroom.grade_config / assignment_submission.answer_detail 欄位確認完畢")
+
+# ==========================================
+# 校園教育版：班級公告、遲交規則
+# ==========================================
+add_column("assignment", "late_policy VARCHAR(10) DEFAULT 'allow'")
+add_column("assignment", "late_penalty INTEGER DEFAULT 0")
+add_column("classroom_member", "notice_seen_at DATETIME")
+add_column("user", "push_token VARCHAR(255)")   # 手機推播 token
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS classroom_announcement (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        classroom_id INTEGER NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        content TEXT,
+        assignment_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME,
+        FOREIGN KEY (classroom_id) REFERENCES classroom (id)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_classroom_announcement_classroom_id ON classroom_announcement(classroom_id);")
+    print("✅ 班級公告表、作業遲交規則欄位確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 班級公告／遲交規則升級警告：{e}")
+
+# ==========================================
+# 學生帳號強制改密碼：老師建立的學生帳號初始密碼是學號，第一次登入要自己換掉
+# ==========================================
+add_column("user", "must_change_password BOOLEAN DEFAULT 0")
+try:
+    cursor.execute("UPDATE user SET must_change_password = 0 WHERE must_change_password IS NULL;")
+    # 已經存在、而且密碼還是學號的學生帳號，一併標記為需要改密碼
+    from werkzeug.security import check_password_hash as _chk_stu
+    _flagged = 0
+    for _uid, _email, _hash in cursor.execute(
+            "SELECT id, email, password_hash FROM user WHERE account_type = 'student'").fetchall():
+        if _email and _hash and _chk_stu(_hash, _email):
+            cursor.execute("UPDATE user SET must_change_password = 1 WHERE id = ?;", (_uid,))
+            _flagged += 1
+    print(f"✅ user.must_change_password 欄位確認完畢（密碼仍是學號的學生：{_flagged} 位）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user.must_change_password 升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

@@ -201,7 +201,12 @@ def teacher_required(f):
                 return redirect(url_for('teacher_pending'))
             return f(*args, **kwargs)
         if session.get('role') == 'super_admin':
-            return f(*args, **kwargs)
+            # 和管理者頁面一樣每次重查：被停用或降成 admin 之後要立刻進不來
+            blocked = _refresh_admin_session()
+            if blocked:
+                return blocked
+            if session.get('role') == 'super_admin':
+                return f(*args, **kwargs)
         if 'admin_user' in session:
             return redirect(url_for('admin_dashboard'))
         return redirect(url_for('admin_login'))
@@ -398,12 +403,8 @@ def change_password():
             error = '目前密碼錯誤'
         elif new_pw != confirm:
             error = '新密碼與確認密碼不一致'
-        elif len(new_pw) < 6:
-            error = '密碼至少需要 6 個字元'
-        elif new_pw == admin.username:
-            error = '新密碼不可與帳號相同'
-        elif new_pw == current:
-            error = '新密碼不可與目前密碼相同'
+        elif _validate_password(new_pw, account=admin.username, old_hash=admin.password_hash):
+            error = _validate_password(new_pw, account=admin.username, old_hash=admin.password_hash)
         else:
             admin.set_password(new_pw)
             admin.must_change_password = False
@@ -1962,13 +1963,19 @@ def photo_src(image_path):
 from services.teacher_service import (
     create_classroom, regenerate_join_code,
     toggle_classroom_open, get_classroom_list, get_classroom_student_stats,
-    get_student_detail, create_sentence_assignment, create_article_assignment,
+    create_sentence_assignment, create_article_assignment,
     create_photo_assignment, create_chat_assignment,
     get_assignment_submissions_list, grade_submission,
     get_gradebook, save_grade_config, set_assignment_score, gradebook_csv,
-    get_classroom_report, get_student_report, student_report_csv
+    get_classroom_report, get_student_report, student_report_csv, tw_fmt,
+    set_late_policy, late_policy_text, post_announcement, announce_assignment, get_announcements,
+    copy_assignment, LATE_POLICY_LABELS, push_announcement, push_new_assignment, push_graded
 )
-from models import Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene
+from models import (Classroom, ClassroomMember, Assignment, AssignmentSubmission, Dialect, Scene,
+                    ClassroomAnnouncement)
+
+# 模板裡直接拿 ORM 物件的時間（UTC）顯示時用：{{ a.created_at|tw }}
+app.add_template_filter(tw_fmt, 'tw')
 
 
 def _own_classroom(classroom_id):
@@ -2005,6 +2012,37 @@ def teacher_pending():
     return render_template('teacher/pending.html', teacher=teacher)
 
 
+@app.route('/teacher/change_password', methods=['GET', 'POST'])
+@teacher_required
+def teacher_change_password():
+    """老師改自己的密碼。管理者的 /admin/change_password 只認 admin 表，老師進不去"""
+    if session.get('role') != 'teacher':
+        return redirect(url_for('change_password'))
+    teacher = User.query.get(session['teacher_user_id'])
+    error = success = None
+    if request.method == 'POST':
+        current = request.form.get('current_password', '')
+        new_pw = request.form.get('new_password', '')
+        confirm = request.form.get('confirm_password', '')
+        if not check_password_hash(teacher.password_hash, current):
+            error = '目前密碼錯誤'
+        elif new_pw != confirm:
+            error = '新密碼與確認密碼不一致'
+        elif _validate_password(new_pw, account=teacher.email, old_hash=teacher.password_hash):
+            error = _validate_password(new_pw, account=teacher.email, old_hash=teacher.password_hash)
+        else:
+            teacher.password_hash = generate_password_hash(new_pw)
+            db.session.add(SystemLog(
+                admin_id=None, user_id=teacher.id,
+                action='UPDATE', target_table='user', target_id=teacher.id,
+                new_value={'password': 'changed_by_self'}
+            ))
+            db.session.commit()
+            success = '密碼已更新，下次登入請使用新密碼'
+    return render_template('teacher/change_password.html', teacher=teacher, error=error, success=success,
+                           active_menu='password')
+
+
 @app.route('/teacher/classroom/create', methods=['POST'])
 @teacher_required
 def teacher_classroom_create():
@@ -2019,7 +2057,7 @@ def teacher_classroom_create():
         return redirect(url_for('teacher_classrooms'))
 
     c = create_classroom(session['teacher_user_id'], name, description)
-    flash(f"班級「{c.name}」建立成功！學生加入隨機碼為：{c.join_code}", "success")
+    flash(f"班級「{c.name}」建立成功！班級代碼為：{c.join_code}", "success")
     return redirect(url_for('teacher_classrooms'))
 
 
@@ -2031,7 +2069,7 @@ def teacher_classroom_regenerate_code(classroom_id):
         flash("找不到該班級", "danger")
         return redirect(url_for('teacher_classrooms'))
     new_code = regenerate_join_code(classroom_id)
-    flash(f"班級隨機碼已更新為：{new_code}", "success")
+    flash(f"班級代碼已更新為：{new_code}", "success")
     return redirect(url_for('teacher_classrooms'))
 
 
@@ -2059,21 +2097,6 @@ def teacher_classroom_students(classroom_id):
     return render_template('teacher/student_progress.html', data=data)
 
 
-@app.route('/teacher/student/<int:student_id>/detail')
-@teacher_required
-def teacher_student_detail(student_id):
-    """取得單一學生的詳細學習紀錄 (AJAX)"""
-    classroom_id = request.args.get('classroom_id', type=int)
-    if not classroom_id:
-        return jsonify({"error": "缺少 classroom_id"}), 400
-    if not _own_classroom(classroom_id):
-        return jsonify({"error": "找不到該班級"}), 404
-    detail = get_student_detail(student_id, classroom_id)
-    if not detail:
-        return jsonify({"error": "找不到學生資料"}), 404
-    return jsonify(detail)
-
-
 @app.route('/teacher/classroom/<int:classroom_id>/assignments')
 @teacher_required
 def teacher_classroom_assignments(classroom_id):
@@ -2091,8 +2114,17 @@ def teacher_classroom_assignments(classroom_id):
         a.submitted_count = AssignmentSubmission.query.filter_by(assignment_id=a.id).filter(
             AssignmentSubmission.status.in_(['submitted', 'graded'])
         ).count()
+        a.late_text = late_policy_text(a)
 
-    return render_template('teacher/assignment_list.html', classroom=classroom, assignments=assignments)
+    # 「複製到其他班」能選的班級：同一位老師、使用中的其他班（super_admin 不能代替老師出題）
+    other_classrooms = []
+    if session.get('role') == 'teacher':
+        other_classrooms = Classroom.query.filter(
+            Classroom.teacher_id == session['teacher_user_id'], Classroom.id != classroom_id,
+            Classroom.is_archived.isnot(True)).order_by(Classroom.created_at.desc()).all()
+
+    return render_template('teacher/assignment_list.html', classroom=classroom, assignments=assignments,
+                           other_classrooms=other_classrooms, late_policy_labels=LATE_POLICY_LABELS)
 
 
 @app.route('/teacher/classroom/<int:classroom_id>/assignment/create', methods=['GET', 'POST'])
@@ -2130,7 +2162,7 @@ def teacher_assignment_create(classroom_id):
             vocabs_raw = request.form.get('required_vocabs', '')
             vocabs = [v.strip() for v in vocabs_raw.replace('，', ',').split(',') if v.strip()]
             pass_score = request.form.get('pass_score', 60)
-            create_sentence_assignment(classroom_id, title, instructions, grammar, vocabs, pass_score, due_at)
+            assignment = create_sentence_assignment(classroom_id, title, instructions, grammar, vocabs, pass_score, due_at)
             flash(f"造句挑戰作業「{title}」發布成功！", "success")
 
         elif task_type == 'article':
@@ -2159,7 +2191,7 @@ def teacher_assignment_create(classroom_id):
             except Exception:
                 questions = []
 
-            create_article_assignment(
+            assignment = create_article_assignment(
                 classroom_id, title, instructions,
                 article_id=art_id, new_article=new_art,
                 has_quiz=has_quiz, questions=questions, due_at=due_at
@@ -2169,7 +2201,7 @@ def teacher_assignment_create(classroom_id):
         elif task_type == 'photo':
             theme = request.form.get('photo_theme', '').strip()
             min_vocab_count = request.form.get('min_vocab_count', 3)
-            create_photo_assignment(classroom_id, title, instructions, theme, min_vocab_count, due_at)
+            assignment = create_photo_assignment(classroom_id, title, instructions, theme, min_vocab_count, due_at)
             flash(f"拍照學習作業「{title}」發布成功！", "success")
 
         elif task_type == 'chat':
@@ -2179,13 +2211,25 @@ def teacher_assignment_create(classroom_id):
                 return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
             dialect_id = request.form.get('dialect_id', type=int)
             min_turns = request.form.get('min_turns', 6)
-            create_chat_assignment(classroom_id, title, instructions, topic, dialect_id, min_turns, due_at)
+            assignment = create_chat_assignment(classroom_id, title, instructions, topic, dialect_id, min_turns, due_at)
             flash(f"情境對話作業「{title}」發布成功！", "success")
 
         else:
             flash("未知的作業題型", "danger")
             return redirect(url_for('teacher_assignment_create', classroom_id=classroom_id))
 
+        # 遲交規則填錯不擋發布（出題表單很長，退回去會整份重填），先用預設的允許遲交並提醒老師
+        late_error = set_late_policy(assignment, request.form.get('late_policy'), request.form.get('late_penalty'))
+        if late_error:
+            flash(f"{late_error}；這份作業先設為「允許遲交」，可在作業列表按「編輯」修改", "warning")
+        announce = request.form.get('announce') == '1'
+        if announce:
+            announce_assignment(assignment)
+        db.session.commit()
+        if announce:
+            pushed = push_new_assignment(assignment)
+            if pushed:
+                flash(f"已推播通知到 {pushed} 位學生的手機", "info")
         return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
     existing_articles = Article.query.filter(Article.is_published.isnot(False)).order_by(Article.level, Article.id).all()
@@ -2204,7 +2248,9 @@ def teacher_assignment_submissions(assignment_id):
     if not data:
         flash("找不到該作業", "danger")
         return redirect(url_for('teacher_classrooms'))
-    return render_template('teacher/assignment_submissions.html', data=data)
+    # saved：剛批完的學生 id，那一列會標「已儲存」
+    return render_template('teacher/assignment_submissions.html', data=data,
+                           saved_id=request.args.get('saved', type=int))
 
 
 @app.route('/teacher/submission/<int:submission_id>/grade', methods=['POST'])
@@ -2218,9 +2264,14 @@ def teacher_submission_grade(submission_id):
         flash("找不到該繳交紀錄", "danger")
         return redirect(url_for('teacher_classrooms'))
 
-    grade_submission(submission_id, score, teacher_comment)
-    flash("批閱成績與教師評語已成功儲存！", "success")
-    return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+    ok, error = grade_submission(submission_id, score, teacher_comment)
+    if not ok:
+        flash(error, "danger")
+        return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id))
+    push_graded(sub)
+    # 存完回到剛剛那一列（不用每批一個人就捲回最上面），那一列會標「已儲存」
+    return redirect(url_for('teacher_assignment_submissions', assignment_id=sub.assignment_id,
+                            saved=sub.student_id, _anchor=f'stu-{sub.student_id}'))
 
 
 # ---- 班級成績總表 / 學期成績 ----
@@ -2412,6 +2463,31 @@ def teacher_student_remove(classroom_id, student_id):
     return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
 
+@app.route('/teacher/classroom/<int:classroom_id>/student/<int:student_id>/reset_password', methods=['POST'])
+@teacher_required
+def teacher_student_reset_password(classroom_id, student_id):
+    """學生忘記密碼：重設回學號（學生帳號的 email 欄位存的就是學號）。App 的忘記密碼不開放學生帳號用"""
+    member = _own_member(classroom_id, student_id)
+    student = User.query.get(student_id) if member else None
+    if not student:
+        flash("找不到該學生", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    if (student.account_type or AccountType.GENERAL) != AccountType.STUDENT:
+        flash("這不是校園教育版的學生帳號，無法在這裡重設密碼", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+    student.password_hash = generate_password_hash(student.email)
+    student.must_change_password = True   # 密碼是學號，任何知道學號的人都能登入，學生下次登入要自己換掉
+    student.token_version = (student.token_version or 0) + 1   # 已登入的裝置一併登出
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=student.id,
+        action='UPDATE', target_table='user', target_id=student.id,
+        new_value={'password': 'reset_to_student_no', 'classroom_id': classroom_id}
+    ))
+    db.session.commit()
+    flash(f"已將「{member.display_name or student.username or student.email}」的密碼重設為學號 {student.email}，學生下次登入時會被要求設定新密碼", "success")
+    return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
+
 # ---- 學生名冊：老師貼上名單建立學生帳號 ----
 # 教育版學生不能自己註冊，一律由老師在班級名冊加入：帳號與初始密碼都是學號，建立後自動加入該班級
 STUDENT_ID_RE = re.compile(r'^[A-Za-z0-9_.\-]{2,30}$')
@@ -2470,6 +2546,7 @@ def teacher_students_add(classroom_id):
                 password_hash=generate_password_hash(student_no),
                 friend_id=generate_friend_id(),
                 account_type=AccountType.STUDENT,
+                must_change_password=True,   # 初始密碼是學號，第一次登入要自己換掉
             )
             db.session.add(user)
             db.session.flush()
@@ -2536,8 +2613,12 @@ def teacher_assignment_edit(assignment_id):
         except ValueError:
             pass
     assignment.is_published = request.form.get('is_published') == 'on'
+    late_error = set_late_policy(assignment, request.form.get('late_policy'), request.form.get('late_penalty'))
     db.session.commit()
-    flash(f"作業「{title}」已更新", "success")
+    if late_error:
+        flash(f"作業「{title}」已更新，但{late_error}，遲交規則維持原本的設定", "warning")
+    else:
+        flash(f"作業「{title}」已更新", "success")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
 
 
@@ -2551,7 +2632,8 @@ def teacher_assignment_toggle_publish(assignment_id):
         return redirect(url_for('teacher_classrooms'))
     assignment.is_published = not bool(assignment.is_published)
     db.session.commit()
-    flash(("作業「%s」已發布，學生現在看得到" if assignment.is_published else "作業「%s」已下架，學生看不到了") % assignment.title, "info")
+    flash(("作業「%s」已發布，學生看得到，也計入學期成績" if assignment.is_published
+           else "作業「%s」已下架：學生看不到，也不計入學期成績；已繳交的紀錄保留，重新發布就恢復") % assignment.title, "info")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id))
 
 
@@ -2570,11 +2652,136 @@ def teacher_assignment_delete(assignment_id):
         action='DELETE', target_table='assignment', target_id=assignment_id,
         old_value={'title': title, 'classroom_id': classroom_id, 'submissions': submission_count}
     ))
+    ClassroomAnnouncement.query.filter_by(assignment_id=assignment_id).delete()
     db.session.delete(assignment)
     db.session.commit()
     note = f"，學生的 {submission_count} 份繳交紀錄一併移除" if submission_count else ""
     flash(f"作業「{title}」已刪除{note}", "success")
     return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
+
+
+@app.route('/teacher/assignment/<int:assignment_id>/copy', methods=['POST'])
+@teacher_required
+def teacher_assignment_copy(assignment_id):
+    """把作業複製到老師自己的其他班：同一門課開兩班、或新學期沿用舊班的作業"""
+    assignment = _own_assignment(assignment_id)
+    if not assignment:
+        flash("找不到該作業", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    back = url_for('teacher_classroom_assignments', classroom_id=assignment.classroom_id)
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        flash("管理者無法代替老師出題，請由班級老師登入後複製", "danger")
+        return redirect(back)
+
+    targets = Classroom.query.filter(
+        Classroom.id.in_(request.form.getlist('target_classroom_ids', type=int) or [0]),
+        Classroom.teacher_id == session['teacher_user_id'],
+        Classroom.id != assignment.classroom_id,
+        Classroom.is_archived.isnot(True),
+    ).all()
+    if not targets:
+        flash("請勾選要複製到哪個班級", "danger")
+        return redirect(back)
+
+    due_at = None
+    if request.form.get('due_at'):
+        try:
+            due_at = datetime.fromisoformat(request.form['due_at'])
+        except ValueError:
+            flash("截止時間格式不正確", "danger")
+            return redirect(back)
+    publish = request.form.get('publish') == 'on'
+    announce = publish and request.form.get('announce') == 'on'
+    copies = []
+    for c in targets:
+        new = copy_assignment(assignment, c.id, due_at=due_at, publish=publish)
+        if announce:
+            announce_assignment(new)
+        copies.append(new)
+    db.session.commit()
+    if announce:
+        for new in copies:
+            push_new_assignment(new)
+    names = '、'.join(f"「{c.name}」" for c in targets)
+    flash(f"已將「{assignment.title}」複製到 {names}"
+          + ("" if publish else "（尚未發布，到該班的作業列表按「發布」學生才看得到）"), "success")
+    return redirect(back)
+
+
+# ---- 班級公告 ----
+def _own_announcement(announcement_id):
+    a = ClassroomAnnouncement.query.get(announcement_id)
+    return a if a and _own_classroom(a.classroom_id) else None
+
+
+@app.route('/teacher/classroom/<int:classroom_id>/announcements', methods=['GET', 'POST'])
+@teacher_required
+def teacher_announcements(classroom_id):
+    """班級公告：老師發布、學生在 App 教室頁看到（有未讀會顯示紅點）"""
+    classroom = _own_classroom(classroom_id)
+    if not classroom:
+        flash("找不到該班級", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    if request.method == 'POST':
+        # 和出題一樣：super_admin 可以檢視、刪除，但不能代替老師發公告
+        if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+            flash("管理者無法代替老師發公告，請由班級老師登入後發布", "danger")
+            return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
+        title = (request.form.get('title') or '').strip()
+        if not title:
+            flash("請填寫公告標題", "danger")
+            return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
+        ann = post_announcement(classroom_id, title, request.form.get('content'))
+        db.session.commit()
+        pushed = push_announcement(ann)
+        flash("公告已發布，學生打開 App 的教室就會看到"
+              + (f"，並已推播到 {pushed} 位學生的手機" if pushed else ""), "success")
+        return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
+    return render_template('teacher/announcements.html', classroom=classroom,
+                           announcements=get_announcements(classroom_id))
+
+
+@app.route('/teacher/announcement/<int:announcement_id>/edit', methods=['POST'])
+@teacher_required
+def teacher_announcement_edit(announcement_id):
+    """修改公告內容。不會重新變成未讀，要提醒學生請另發一則"""
+    a = _own_announcement(announcement_id)
+    if not a:
+        flash("找不到該公告", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    back = url_for('teacher_announcements', classroom_id=a.classroom_id)
+    if session.get('role') != 'teacher':
+        flash("管理者無法代替老師修改公告", "danger")
+        return redirect(back)
+    title = (request.form.get('title') or '').strip()
+    if not title:
+        flash("請填寫公告標題", "danger")
+        return redirect(back)
+    a.title = title[:100]
+    a.content = (request.form.get('content') or '').strip()
+    a.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash("公告已更新", "success")
+    return redirect(back)
+
+
+@app.route('/teacher/announcement/<int:announcement_id>/delete', methods=['POST'])
+@teacher_required
+def teacher_announcement_delete(announcement_id):
+    a = _own_announcement(announcement_id)
+    if not a:
+        flash("找不到該公告", "danger")
+        return redirect(url_for('teacher_classrooms'))
+    classroom_id = a.classroom_id
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=session.get('teacher_user_id'),
+        action='DELETE', target_table='classroom_announcement', target_id=a.id,
+        old_value={'classroom_id': classroom_id, 'title': a.title}
+    ))
+    db.session.delete(a)
+    db.session.commit()
+    flash("公告已刪除", "success")
+    return redirect(url_for('teacher_announcements', classroom_id=classroom_id))
 
 
 # ==========================================
@@ -2643,10 +2850,10 @@ def teacher_account_reject(user_id):
     return redirect(url_for('teacher_account_list'))
 
 
-def _validate_password(pw):
-    if len(pw or '') < 6:
-        return '密碼至少需要 6 個字元'
-    return None
+def _validate_password(pw, account=None, old_hash=None):
+    """老師、管理者帳號的密碼：8 個字元以上且強度至少「中」（規則見 utils/password_policy.py）"""
+    from utils import password_policy
+    return password_policy.validate(pw, account=account, require_medium=True, old_hash=old_hash)
 
 
 @app.route('/teacher_account/add', methods=['POST'])
@@ -2662,8 +2869,8 @@ def teacher_account_add():
         error = '請輸入正確的 Email'
     elif not username:
         error = '請輸入老師姓名'
-    elif _validate_password(password):
-        error = _validate_password(password)
+    elif _validate_password(password, account=email):
+        error = _validate_password(password, account=email)
     elif User.query.filter_by(email=email).first():
         error = f'Email「{email}」已經被使用'
     elif User.query.filter_by(username=username).first():
@@ -2696,7 +2903,7 @@ def teacher_account_reset_password(user_id):
     admin_id = session.get('admin_id')
     teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
     password = request.form.get('password') or ''
-    error = _validate_password(password)
+    error = _validate_password(password, account=teacher.email)
     if error:
         flash(error, 'error')
         return redirect(url_for('teacher_account_list'))
@@ -2764,10 +2971,8 @@ def admin_account_add():
         error = '請輸入帳號'
     elif role not in ADMIN_ROLES:
         error = '權限不正確'
-    elif len(password) < 6:
-        error = '密碼至少需要 6 個字元'
-    elif password == username:
-        error = '初始密碼不可與帳號相同'
+    elif _validate_password(password, account=username):
+        error = _validate_password(password, account=username)
     elif Admin.query.filter_by(username=username).first():
         error = f'帳號「{username}」已存在'
     if error:
@@ -2792,11 +2997,9 @@ def admin_account_add():
 def admin_account_reset_password(admin_id):
     admin = Admin.query.get_or_404(admin_id)
     password = request.form.get('password') or ''
-    if len(password) < 6:
-        flash('密碼至少需要 6 個字元', 'error')
-        return redirect(url_for('admin_account_list'))
-    if password == admin.username:
-        flash('臨時密碼不可與帳號相同', 'error')
+    pw_error = _validate_password(password, account=admin.username)
+    if pw_error:
+        flash(pw_error, 'error')
         return redirect(url_for('admin_account_list'))
     admin.set_password(password)
     admin.must_change_password = True

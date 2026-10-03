@@ -1,0 +1,24 @@
+{# 遲交規則欄位：出題表單、編輯作業共用。 #}
+{# 用法：{% with lp_id='new', lp_policy=None, lp_penalty=None %}{% include 'teacher/_late_policy_fields.html' %}{% endwith %} #}
+{# lp_id 讓同一頁多個表單的 id 不重複；扣分欄只有選「遲交扣分」時後端才會讀 #}
+{% set lp = lp_policy or 'allow' %}
+<label class="form-label fw-bold mb-1">遲交規則 <span class="text-muted fw-normal small">（有設截止時間才有作用）</span></label>
+<div class="d-flex flex-wrap gap-3 align-items-center">
+    <div class="form-check mb-0">
+        <input class="form-check-input" type="radio" name="late_policy" id="lpAllow{{ lp_id }}" value="allow" {{ 'checked' if lp == 'allow' }}>
+        <label class="form-check-label" for="lpAllow{{ lp_id }}">允許遲交（標示「遲交」）</label>
+    </div>
+    <div class="form-check mb-0">
+        <input class="form-check-input" type="radio" name="late_policy" id="lpReject{{ lp_id }}" value="reject" {{ 'checked' if lp == 'reject' }}>
+        <label class="form-check-label" for="lpReject{{ lp_id }}">截止後不收</label>
+    </div>
+    <div class="form-check mb-0 d-flex align-items-center gap-2">
+        <input class="form-check-input" type="radio" name="late_policy" id="lpDeduct{{ lp_id }}" value="deduct" {{ 'checked' if lp == 'deduct' }}>
+        <label class="form-check-label" for="lpDeduct{{ lp_id }}">遲交扣</label>
+        <input type="number" name="late_penalty" class="form-control form-control-sm" style="width: 72px;" min="1" max="100" step="1"
+               value="{{ lp_penalty if lp == 'deduct' and lp_penalty else 10 }}"
+               onfocus="document.getElementById('lpDeduct{{ lp_id }}').checked = true">
+        <span>分</span>
+    </div>
+</div>
+<div class="form-text">扣分是在算成績時才扣，學生的原始分數會保留；之後改規則，成績會自動重算。</div>

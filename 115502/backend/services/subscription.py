@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from utils.db import db
 from models import User, UserSubscription, SubscriptionPlan, PointTransaction, TransactionType
 from utils.subscription_helper import check_and_expire_subscription, get_subscription_status
+from utils.payment import demo_payment_enabled, payment_disabled_response
 
 subscription_bp = Blueprint('subscription', __name__)
 
@@ -24,7 +25,9 @@ def get_plans():
             'points_grant': p.points_grant_monthly,
             'points_grant_monthly': p.points_grant_monthly,
             'points_grant_yearly': p.points_grant_yearly,
-        } for p in plans]
+        } for p in plans],
+        # 目前是模擬付款：前端據此在付款畫面註明「不會實際扣款」，關閉時隱藏付款按鈕
+        'demo_payment': demo_payment_enabled(),
     }), 200
 
 
@@ -87,6 +90,10 @@ def get_status(user_id):
 
 @subscription_bp.route('/subscribe', methods=['POST'])
 def subscribe():
+    # 模擬付款關閉時（.env 設 DEMO_PAYMENT=off）不能付款
+    blocked = payment_disabled_response()
+    if blocked:
+        return blocked
     data = request.get_json()
     user_id = data.get('user_id')
     plan_id = data.get('plan_id')
@@ -203,6 +210,10 @@ def cancel_subscription(user_id):
 # ─── 排程升級：月繳/試用 → 年繳（付款後建立 pending，到期後自動切換）────────────
 @subscription_bp.route('/schedule_upgrade', methods=['POST'])
 def schedule_upgrade():
+    # 模擬付款關閉時（.env 設 DEMO_PAYMENT=off）不能付款
+    blocked = payment_disabled_response()
+    if blocked:
+        return blocked
     data = request.get_json()
     user_id = data.get('user_id')
     payment_method = data.get('payment_method', 'google_pay')
@@ -278,6 +289,10 @@ def schedule_upgrade():
 
 @subscription_bp.route('/pay_pending', methods=['POST'])
 def pay_pending():
+    # 模擬付款關閉時（.env 設 DEMO_PAYMENT=off）不能付款
+    blocked = payment_disabled_response()
+    if blocked:
+        return blocked
     data = request.get_json()
     user_id = data.get('user_id')
     payment_method = data.get('payment_method', 'google_pay')

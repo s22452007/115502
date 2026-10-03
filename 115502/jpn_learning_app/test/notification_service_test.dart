@@ -66,7 +66,7 @@ void main() {
       expect(updated['social'], false);
     });
 
-    test('4. 斷記錄超過 3-7 天《戲劇化整活》文案驗證', () {
+    test('4. 斷記錄超過 3-7 天《戲劇化情勒》文案驗證', () {
       // 第 1-2 天：溫和友善引導
       final day1 = NotificationService.getInactiveNotificationContent(1);
       expect(day1.title, contains('今天還沒登入'));
@@ -76,7 +76,7 @@ void main() {
       expect(day2.title, contains('2 天'));
       expect(day2.body, contains('單字記憶猶新'));
 
-      // 第 3~7 天：《戲劇化整活》情緒勒索與幽默搞笑召回
+      // 第 3~7 天：《戲劇化情勒》情緒勒索與幽默搞笑召回
       final day3 = NotificationService.getInactiveNotificationContent(3);
       expect(day3.title, contains('3 天沒理我'));
       expect(day3.body, contains('五十音都要哭了'));
@@ -105,7 +105,7 @@ void main() {
       // 漸進式描述
       final progressive = NotificationService.getInactiveNotificationContent(0);
       expect(progressive.title, contains('漸進'));
-      expect(progressive.body, contains('第 3-7 天開啟戲劇化整活召回'));
+      expect(progressive.body, contains('第 3-7 天開啟戲劇化情勒召回'));
     });
 
     test('登入與活躍狀態記錄', () async {

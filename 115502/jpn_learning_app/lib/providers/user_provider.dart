@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
+import 'package:jpn_learning_app/services/push_service.dart';
+import 'package:jpn_learning_app/utils/auth_http.dart';
 
 class UserProvider extends ChangeNotifier {
   int? _userId;
@@ -248,6 +250,14 @@ class UserProvider extends ChangeNotifier {
   }
 
   void logout() {
+    // 校園教育版學生登出：請後端別再推播到這支手機，也取消作業截止提醒（換別人登入不該收到）
+    final uid = _userId;
+    if (uid != null && isEduStudent) {
+      PushService.unregister(uid);
+      NotificationService.cancelAssignmentReminders();
+    }
+    // 丟掉登入通行證。上面 unregister 的請求在送出當下就已經帶上通行證，這裡清掉不影響它
+    AuthSession.clear();
     _userId = null;
     _accountType = 'general';
     _photoDailyLimitApi = null;

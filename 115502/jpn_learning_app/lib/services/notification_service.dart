@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -54,7 +56,7 @@ class NotificationService {
   // 每週社交/排行榜通知（2-3次/週）
   static const _keySocial = 'notif_social';
 
-  // 久未登入提醒（戲劇化整活）
+  // 久未登入提醒（戲劇化情勒）
   static const _keyInactive = 'notif_inactive';
   static const _keyInactiveDays = 'notif_inactive_days';
   static const _keyInactiveHour = 'notif_inactive_hour';
@@ -79,14 +81,27 @@ class NotificationService {
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: android);
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      // 點通知：班級通知的 payload 是 JSON，交給 PushService 打開作業或公告
+      onDidReceiveNotificationResponse: (r) => onTapPayload?.call(r.payload),
+    );
 
-    // 請求通知權限
-    await _plugin
+    final androidPlugin = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
+        >();
+    // 請求通知權限
+    await androidPlugin?.requestNotificationsPermission();
+    // 班級通知頻道：後端推播（utils/push.py 的 ANDROID_CHANNEL_ID）和作業截止提醒都用這個
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        classroomChannelId,
+        _classroomChannelName,
+        description: '老師發的公告、新作業、批改結果與作業截止提醒',
+        importance: Importance.high,
+      ),
+    );
 
     // App 啟動時依照目前設定重新排程一次
     await rescheduleAll();
@@ -337,12 +352,12 @@ class NotificationService {
   }
 
   // ==========================================
-  // 🎭 久未登入召回文案（3-7天啟動《戲劇化整活》）
+  // 🎭 久未登入召回文案（3-7天啟動《戲劇化情勒》）
   // ==========================================
 
   /// 根據未登入天數取得對應的通知文案
   /// - 1~2 天：溫和鼓勵、善意提醒保持手感
-  /// - 3~7 天：《戲劇化整活》登場！情緒勒索、幽默懸疑、Duolingo 風格搞笑召回
+  /// - 3~7 天：《戲劇化情勒》登場！情緒勒索、幽默懸疑、Duolingo 風格搞笑召回
   /// - > 7 天：溫暖隨時回歸，無壓力重啟
   static NotificationContent getInactiveNotificationContent(int days) {
     switch (days) {
@@ -356,7 +371,7 @@ class NotificationService {
           title: '⏳ 已經 2 天沒登入了',
           body: '趁著單字記憶猶新，快回來複習一下保持節奏～',
         );
-      // ── 3-7 天：《戲劇化整活》文案 ──
+      // ── 3-7 天：《戲劇化情勒》文案 ──
       case 3:
         return const NotificationContent(
           title: '🦉 你已經 3 天沒理我了...',
@@ -385,7 +400,7 @@ class NotificationService {
       case 0:
         return const NotificationContent(
           title: '📈 漸進式多階段提醒',
-          body: '未登入第 1-2 天溫和提醒，第 3-7 天開啟戲劇化整活召回！',
+          body: '未登入第 1-2 天溫和提醒，第 3-7 天開啟戲劇化情勒召回！',
         );
       default:
         if (days > 7) {
@@ -398,6 +413,128 @@ class NotificationService {
           title: '📖 已經 $days 天沒登入學習了',
           body: '今天花一點點時間回來看看新單字，重啟你的學習節奏吧！',
         );
+    }
+  }
+
+  // ==========================================
+  // 🎓 校園教育版：班級推播、作業截止提醒
+  // ==========================================
+  /// 老師發公告、出作業、批改的通知頻道；後端推播指定同一個 ID（utils/push.py）
+  static const classroomChannelId = 'jpn_classroom_channel';
+  static const _classroomChannelName = '班級公告與作業';
+  static const _classroomDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      classroomChannelId,
+      _classroomChannelName,
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+  );
+
+  /// 作業截止提醒的通知 ID：500000 + 作業 ID，不會撞到上面的固定 ID
+  static const int _idAssignmentBase = 500000;
+
+  /// 目前排了哪些作業提醒（JSON）。rescheduleAll 會 cancelAll，之後要照這份排回去
+  static const _keyAssignmentReminders = 'notif_assignment_reminders';
+
+  /// 點通知時要做的事，由 PushService 設定；payload 例如 {"type":"assignment","assignment_id":"12"}
+  static void Function(String? payload)? onTapPayload;
+
+  /// App 是被點本機通知打開的話，回傳那則通知的 payload
+  static Future<String?> launchPayload() async {
+    if (kIsWeb) return null;
+    final details = await _plugin.getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp != true) return null;
+    return details?.notificationResponse?.payload;
+  }
+
+  /// App 開著時收到推播，系統不會自己跳出來，改用本機通知顯示
+  static Future<void> showClassroomNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (kIsWeb) return;
+    // 600000 起跳，每則用不同 ID 才不會互相蓋掉
+    final id = 600000 + DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000;
+    await _plugin.show(id, title, body, _classroomDetails, payload: payload);
+  }
+
+  /// 依作業清單（GET /api/assignment/my）排截止前提醒：還沒交、也沒被鎖的作業，
+  /// 截止前 24 小時提醒；已經不到 24 小時就改成截止前 2 小時。
+  /// 每次先取消上一輪排的再重排，交了、改了截止時間、被刪掉的作業都會跟著更新。
+  static Future<void> scheduleAssignmentReminders(List<dynamic> assignments) async {
+    if (kIsWeb) return;
+    final now = tz.TZDateTime.now(tz.local);
+    String two(int n) => n.toString().padLeft(2, '0');
+    final reminders = <Map<String, dynamic>>[];
+    for (final raw in assignments) {
+      final a = Map<String, dynamic>.from(raw as Map);
+      final submission = Map<String, dynamic>.from((a['submission'] ?? const {}) as Map);
+      final id = (a['assignment_id'] as num?)?.toInt();
+      final due = DateTime.tryParse((a['due_at'] ?? '').toString());
+      if (id == null || due == null) continue;
+      if ((submission['status'] ?? 'pending') != 'pending' || a['is_closed'] == true) continue;
+      // 後端給的是台灣時間，tz.local 在 init 設成 Asia/Taipei
+      final dueAt = tz.TZDateTime(tz.local, due.year, due.month, due.day, due.hour, due.minute);
+      var remindAt = dueAt.subtract(const Duration(hours: 24));
+      if (!remindAt.isAfter(now)) remindAt = dueAt.subtract(const Duration(hours: 2));
+      if (!remindAt.isAfter(now)) continue;
+      reminders.add({
+        'id': _idAssignmentBase + id,
+        'at': remindAt.millisecondsSinceEpoch,
+        'title': '作業快截止了',
+        'body': '「${a['title'] ?? '作業'}」${dueAt.month}/${dueAt.day} ${two(dueAt.hour)}:${two(dueAt.minute)} 截止，還沒繳交',
+        'payload': jsonEncode({'type': 'assignment', 'assignment_id': '$id'}),
+      });
+    }
+    await cancelAssignmentReminders();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyAssignmentReminders, jsonEncode(reminders));
+    await _applyAssignmentReminders(reminders);
+  }
+
+  /// 取消全部作業截止提醒（登出時呼叫，換別人登入不該收到）
+  static Future<void> cancelAssignmentReminders() async {
+    if (kIsWeb) return;
+    final prefs = await SharedPreferences.getInstance();
+    for (final r in _decodeReminders(prefs.getString(_keyAssignmentReminders))) {
+      await _plugin.cancel(r['id'] as int);
+    }
+    await prefs.remove(_keyAssignmentReminders);
+  }
+
+  static List<Map<String, dynamic>> _decodeReminders(String? raw) {
+    try {
+      return (jsonDecode(raw ?? '[]') as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> _applyAssignmentReminders(List<Map<String, dynamic>> reminders) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final r in reminders) {
+      final at = r['at'] as int;
+      if (at <= now) continue;
+      try {
+        await _plugin.zonedSchedule(
+          r['id'] as int,
+          r['title'] as String,
+          r['body'] as String,
+          tz.TZDateTime.fromMillisecondsSinceEpoch(tz.local, at),
+          _classroomDetails,
+          // 不需要精準到秒，用不需要額外權限的模式
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: r['payload'] as String?,
+        );
+      } catch (e) {
+        debugPrint('作業截止提醒排程失敗: $e');
+      }
     }
   }
 
@@ -474,7 +611,7 @@ class NotificationService {
         await _scheduleWeeklySocial();
       }
 
-      // 4. 斷記錄超過 3-7 天《戲劇化整活》文案
+      // 4. 斷記錄超過 3-7 天《戲劇化情勒》文案
       if (inactiveEnabled) {
         await _scheduleInactiveNotification(
           days: inactiveDays,
@@ -483,6 +620,11 @@ class NotificationService {
           prefs: prefs,
         );
       }
+
+      // 5. 上面的 cancelAll 也會清掉作業截止提醒，照上次排的清單排回去
+      await _applyAssignmentReminders(
+        _decodeReminders(prefs.getString(_keyAssignmentReminders)),
+      );
     } catch (e) {
       debugPrint('推播排程處理例外（可能是測試環境或權限未就緒）: $e');
     }
@@ -649,7 +791,7 @@ class NotificationService {
     );
   }
 
-  /// 排程久未登入提醒（支援指定天數與 1/3/7 漸進式整活召回）
+  /// 排程久未登入提醒（支援指定天數與 1/3/7 漸進式情勒召回）
   static Future<void> _scheduleInactiveNotification({
     required int days,
     required int hour,
@@ -661,7 +803,7 @@ class NotificationService {
     final lastLogin = DateTime.fromMillisecondsSinceEpoch(lastLoginMs);
     final nowTz = tz.TZDateTime.now(tz.local);
 
-    // 若選擇 0，代表漸進式提醒（第 1 天溫和、第 3 天整活、第 7 天戲劇化）
+    // 若選擇 0，代表漸進式提醒（第 1 天溫和、第 3 天情勒、第 7 天戲劇化）
     if (days == 0) {
       final milestones = [
         (1, idInactiveDay1),

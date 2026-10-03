@@ -20,6 +20,9 @@ import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
 import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
+import 'package:jpn_learning_app/screens/auth/force_change_password_screen.dart';
+import 'package:jpn_learning_app/utils/password_policy.dart';
+import 'package:jpn_learning_app/widgets/common/password_strength_meter.dart';
 import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart';
 import 'package:jpn_learning_app/screens/auth/privacy_policy_screen.dart'; // 新增：新手引導頁面
 
@@ -114,6 +117,14 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    if (!_isLogin) {
+      final pwError = PasswordPolicy.validate(password, account: email);
+      if (pwError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pwError)));
+        return;
+      }
+    }
+
     if (!_isLogin && password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('兩次輸入的密碼不相同喔！')));
       return;
@@ -158,9 +169,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (result['japanese_level'] != null) {
           context.read<UserProvider>().setJapaneseLevel(result['japanese_level']);
-          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+        }
+        final Widget next = result['japanese_level'] != null ? const HomeScreen() : const LevelSelectScreen();
+
+        // 帳號被管理者重設過密碼：先設定新密碼才能進入
+        if (result['must_change_password'] == true) {
+          final type = result['account_type']?.toString();
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ForceChangePasswordScreen(
+                currentPassword: password,
+                account: email,
+                requireMedium: type == 'student' || type == 'teacher',
+                next: next,
+              ),
+            ),
+            (route) => false,
+          );
+          return;
+        }
+
+        if (result['japanese_level'] != null) {
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => next), (route) => false);
         } else {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
         }
       } else {
         final errMsg = result['error'] ?? '登入失敗';
@@ -421,6 +454,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             () => _obscurePassword = !_obscurePassword,
                           ),
                         ),
+                        if (!_isLogin)
+                          PasswordStrengthMeter(
+                            controller: _passwordController,
+                            accountController: _emailController,
+                          ),
                         if (!_isLogin) ...[
                           const SizedBox(height: 18),
                           _buildInputField(

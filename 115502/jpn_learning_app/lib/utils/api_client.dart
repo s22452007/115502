@@ -114,6 +114,30 @@ class ApiClient {
     }
   }
 
+  /// 已登入狀態下自己改密碼（含第一次登入強制改密碼）。
+  /// 成功時後端會換發新通行證（舊的全部失效），這裡會自動記下新的。
+  static Future<Map<String, dynamic>> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    final url = Uri.parse('$baseUrl/auth/change_password');
+    try {
+      final response = await client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'current_password': currentPassword,
+              'new_password': newPassword,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      return _keepToken(jsonDecode(response.body));
+    } catch (e) {
+      return _netError(e, url);
+    }
+  }
+
   /// [idToken] 是 Firebase 登入後的身分憑證（user.getIdToken()）。
   /// 後端會向 Google 驗證它，Email 以憑證上的為準，不能只傳 Email 冒用別人。
   static Future<Map<String, dynamic>> googleLogin(

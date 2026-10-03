@@ -403,12 +403,8 @@ def change_password():
             error = '目前密碼錯誤'
         elif new_pw != confirm:
             error = '新密碼與確認密碼不一致'
-        elif len(new_pw) < 6:
-            error = '密碼至少需要 6 個字元'
-        elif new_pw == admin.username:
-            error = '新密碼不可與帳號相同'
-        elif new_pw == current:
-            error = '新密碼不可與目前密碼相同'
+        elif _validate_password(new_pw, account=admin.username, old_hash=admin.password_hash):
+            error = _validate_password(new_pw, account=admin.username, old_hash=admin.password_hash)
         else:
             admin.set_password(new_pw)
             admin.must_change_password = False
@@ -2032,10 +2028,8 @@ def teacher_change_password():
             error = '目前密碼錯誤'
         elif new_pw != confirm:
             error = '新密碼與確認密碼不一致'
-        elif _validate_password(new_pw):
-            error = _validate_password(new_pw)
-        elif new_pw == current:
-            error = '新密碼不可與目前密碼相同'
+        elif _validate_password(new_pw, account=teacher.email, old_hash=teacher.password_hash):
+            error = _validate_password(new_pw, account=teacher.email, old_hash=teacher.password_hash)
         else:
             teacher.password_hash = generate_password_hash(new_pw)
             db.session.add(SystemLog(
@@ -2482,13 +2476,15 @@ def teacher_student_reset_password(classroom_id, student_id):
         flash("這不是校園教育版的學生帳號，無法在這裡重設密碼", "danger")
         return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
     student.password_hash = generate_password_hash(student.email)
+    student.must_change_password = True   # 密碼是學號，任何知道學號的人都能登入，學生下次登入要自己換掉
+    student.token_version = (student.token_version or 0) + 1   # 已登入的裝置一併登出
     db.session.add(SystemLog(
         admin_id=session.get('admin_id'), user_id=student.id,
         action='UPDATE', target_table='user', target_id=student.id,
         new_value={'password': 'reset_to_student_no', 'classroom_id': classroom_id}
     ))
     db.session.commit()
-    flash(f"已將「{member.display_name or student.username or student.email}」的密碼重設為學號 {student.email}，請學生登入後自行修改", "success")
+    flash(f"已將「{member.display_name or student.username or student.email}」的密碼重設為學號 {student.email}，學生下次登入時會被要求設定新密碼", "success")
     return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
 
@@ -2550,6 +2546,7 @@ def teacher_students_add(classroom_id):
                 password_hash=generate_password_hash(student_no),
                 friend_id=generate_friend_id(),
                 account_type=AccountType.STUDENT,
+                must_change_password=True,   # 初始密碼是學號，第一次登入要自己換掉
             )
             db.session.add(user)
             db.session.flush()
@@ -2853,10 +2850,10 @@ def teacher_account_reject(user_id):
     return redirect(url_for('teacher_account_list'))
 
 
-def _validate_password(pw):
-    if len(pw or '') < 6:
-        return '密碼至少需要 6 個字元'
-    return None
+def _validate_password(pw, account=None, old_hash=None):
+    """老師、管理者帳號的密碼：8 個字元以上且強度至少「中」（規則見 utils/password_policy.py）"""
+    from utils import password_policy
+    return password_policy.validate(pw, account=account, require_medium=True, old_hash=old_hash)
 
 
 @app.route('/teacher_account/add', methods=['POST'])
@@ -2872,8 +2869,8 @@ def teacher_account_add():
         error = '請輸入正確的 Email'
     elif not username:
         error = '請輸入老師姓名'
-    elif _validate_password(password):
-        error = _validate_password(password)
+    elif _validate_password(password, account=email):
+        error = _validate_password(password, account=email)
     elif User.query.filter_by(email=email).first():
         error = f'Email「{email}」已經被使用'
     elif User.query.filter_by(username=username).first():
@@ -2906,7 +2903,7 @@ def teacher_account_reset_password(user_id):
     admin_id = session.get('admin_id')
     teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
     password = request.form.get('password') or ''
-    error = _validate_password(password)
+    error = _validate_password(password, account=teacher.email)
     if error:
         flash(error, 'error')
         return redirect(url_for('teacher_account_list'))
@@ -2974,10 +2971,8 @@ def admin_account_add():
         error = '請輸入帳號'
     elif role not in ADMIN_ROLES:
         error = '權限不正確'
-    elif len(password) < 6:
-        error = '密碼至少需要 6 個字元'
-    elif password == username:
-        error = '初始密碼不可與帳號相同'
+    elif _validate_password(password, account=username):
+        error = _validate_password(password, account=username)
     elif Admin.query.filter_by(username=username).first():
         error = f'帳號「{username}」已存在'
     if error:
@@ -3002,11 +2997,9 @@ def admin_account_add():
 def admin_account_reset_password(admin_id):
     admin = Admin.query.get_or_404(admin_id)
     password = request.form.get('password') or ''
-    if len(password) < 6:
-        flash('密碼至少需要 6 個字元', 'error')
-        return redirect(url_for('admin_account_list'))
-    if password == admin.username:
-        flash('臨時密碼不可與帳號相同', 'error')
+    pw_error = _validate_password(password, account=admin.username)
+    if pw_error:
+        flash(pw_error, 'error')
         return redirect(url_for('admin_account_list'))
     admin.set_password(password)
     admin.must_change_password = True

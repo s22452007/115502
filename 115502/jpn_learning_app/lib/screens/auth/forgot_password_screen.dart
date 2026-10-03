@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/password_policy.dart';
+import 'package:jpn_learning_app/widgets/common/password_strength_meter.dart';
 
 /// 忘記密碼：先寄驗證碼到註冊信箱，再輸入驗證碼與新密碼。
 /// 原本只要輸入 Email 就能直接改密碼，任何人都能改掉別人的密碼。
@@ -76,6 +78,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     // 防呆檢查
     if (email.isEmpty || code.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
       _showMessage('所有欄位都必須填寫喔！');
+      return;
+    }
+
+    final pwError = PasswordPolicy.validate(newPassword, account: email);
+    if (pwError != null) {
+      _showMessage(pwError);
       return;
     }
 
@@ -172,6 +180,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   labelText: '新密碼',
                   hintText: '請輸入新密碼',
                   obscureText: true,
+                ),
+                PasswordStrengthMeter(
+                  controller: _newPasswordController,
+                  accountController: _emailController,
                 ),
                 const SizedBox(height: 16),
 

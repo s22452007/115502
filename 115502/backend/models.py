@@ -74,6 +74,9 @@ class User(db.Model):
     # 老師帳號審核狀態：'pending'（用學校 Google 帳號自行登入，等管理者確認是老師）／'approved'。
     # 管理者建立的老師帳號直接 approved；一般使用者與學生用不到這個欄位。
     teacher_status = db.Column(db.String(20), default='approved')
+    # 下次登入是否要強制改密碼：老師建立學生帳號、或幫學生重設密碼時設為 True
+    # （初始密碼是學號，知道學號就能登入，所以一定要學生自己換掉），改完即清除。
+    must_change_password = db.Column(db.Boolean, default=False)
     # 每日任務
     daily_task_date = db.Column(db.Date, nullable=True)
     daily_task_photo = db.Column(db.Boolean, default=False)

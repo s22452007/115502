@@ -12,7 +12,8 @@ from utils.db import db
 from utils.auth_helper import generate_friend_id
 from utils.subscription_helper import check_and_expire_subscription
 from utils.group_helper import add_group_progress_and_check_reward
-from utils.auth_token import issue_token
+from utils.auth_token import issue_token, current_user_id
+from utils import password_policy
 from models import (
     User, UserAchievement, Achievement,
     UserVocab, UserFolder, FriendRequest, Friendship,
@@ -44,6 +45,11 @@ def register():
         return jsonify({"error": "校園教育版帳號由老師建立，請向老師確認你的帳號"}), 403
     if account_type != AccountType.GENERAL:
         return jsonify({"error": "帳號類型不正確"}), 400
+
+    # 一般使用者自行設定的密碼：8 個字元以上即可（強度只是參考）
+    pw_error = password_policy.validate(password, account=email)
+    if pw_error:
+        return jsonify({"error": pw_error}), 400
 
     # 將密碼加密後，存入資料庫
     hashed_pw = generate_password_hash(password)
@@ -181,6 +187,8 @@ def login():
             "is_premium": bool(getattr(user, 'is_premium', False)),
             # 前端靠這個欄位決定進一般版還是校園教育版
             "account_type": getattr(user, 'account_type', 'general'),
+            # 老師建立的學生帳號（初始密碼是學號）或被重設過密碼：App 要先帶去改密碼
+            "must_change_password": bool(getattr(user, 'must_change_password', False)),
             "subscription_end_date": end_date.isoformat() if end_date else None,
             "auto_renew": bool(getattr(user, 'auto_renew', False)),
         }), 200
@@ -297,13 +305,53 @@ def reset_password():
         left = RESET_CODE_MAX_ATTEMPTS - record.attempts
         return jsonify({"error": f"驗證碼錯誤，還可以再試 {left} 次"}), 400
 
+    pw_error = password_policy.validate(new_password, account=user.email, old_hash=user.password_hash)
+    if pw_error:
+        return jsonify({"error": pw_error}), 400
+
     # 將新密碼加密後，覆蓋掉舊密碼；驗證碼用過就作廢
     user.password_hash = generate_password_hash(new_password)
+    user.must_change_password = False
     user.token_version = (user.token_version or 0) + 1   # 其他裝置上的舊通行證全部失效
     record.used_at = now
     db.session.commit()
 
     return jsonify({"message": "密碼重設成功！請使用新密碼登入"}), 200
+
+@auth_bp.route('/change_password', methods=['POST'])
+def change_password():
+    """已登入的使用者自己改密碼；老師建立的學生帳號第一次登入時一定會走到這裡。
+
+    學生與老師帳號的密碼至少要「中」，一般使用者 8 個字元以上即可。
+    改完後舊的通行證全部失效（其他裝置要重新登入），這台裝置則換發一張新的。
+    """
+    data = request.get_json() or {}
+    current = data.get('current_password') or ''
+    new_password = data.get('new_password') or ''
+
+    user = User.query.get(current_user_id())
+    if user is None:
+        return jsonify({"error": "請先登入"}), 401
+    if not check_password_hash(user.password_hash, current):
+        return jsonify({"error": "目前密碼錯誤"}), 400
+
+    account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
+    pw_error = password_policy.validate(
+        new_password,
+        account=user.email,
+        require_medium=account_type in (AccountType.STUDENT, AccountType.TEACHER),
+        old_hash=user.password_hash,
+    )
+    if pw_error:
+        return jsonify({"error": pw_error}), 400
+
+    user.password_hash = generate_password_hash(new_password)
+    user.must_change_password = False
+    user.token_version = (user.token_version or 0) + 1
+    db.session.commit()
+
+    return jsonify({"message": "密碼已更新", "token": issue_token(user)}), 200
+
 
 # ==========================================
 # 第三方登入整合 API (Google Login)

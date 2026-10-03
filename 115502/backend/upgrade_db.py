@@ -917,6 +917,24 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ 班級公告／遲交規則升級警告：{e}")
 
+# ==========================================
+# 學生帳號強制改密碼：老師建立的學生帳號初始密碼是學號，第一次登入要自己換掉
+# ==========================================
+add_column("user", "must_change_password BOOLEAN DEFAULT 0")
+try:
+    cursor.execute("UPDATE user SET must_change_password = 0 WHERE must_change_password IS NULL;")
+    # 已經存在、而且密碼還是學號的學生帳號，一併標記為需要改密碼
+    from werkzeug.security import check_password_hash as _chk_stu
+    _flagged = 0
+    for _uid, _email, _hash in cursor.execute(
+            "SELECT id, email, password_hash FROM user WHERE account_type = 'student'").fetchall():
+        if _email and _hash and _chk_stu(_hash, _email):
+            cursor.execute("UPDATE user SET must_change_password = 1 WHERE id = ?;", (_uid,))
+            _flagged += 1
+    print(f"✅ user.must_change_password 欄位確認完畢（密碼仍是學號的學生：{_flagged} 位）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ user.must_change_password 升級警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

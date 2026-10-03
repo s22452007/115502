@@ -19,6 +19,7 @@ import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
 import 'package:jpn_learning_app/screens/auth/forgot_password_screen.dart';
+import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
 import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart';
 import 'package:jpn_learning_app/screens/auth/privacy_policy_screen.dart'; // 新增：新手引導頁面
 
@@ -337,6 +338,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
+      // 跟校園教育版登入頁一致：左上角提供返回鍵回到版本選擇頁。
+      // 登出後是用 pushAndRemoveUntil 進來的，底下沒有上一頁，
+      // 這時直接導回版本選擇頁，避免返回鍵按了變成空白畫面。
+      appBar: AppBar(
+        backgroundColor: _flatCanvasColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              );
+            }
+          },
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

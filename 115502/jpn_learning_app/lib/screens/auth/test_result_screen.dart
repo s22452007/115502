@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 // 引入首頁與我們的工具箱、彈窗
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
+import 'package:jpn_learning_app/utils/helpers.dart';
 import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
 
 class TestResultScreen extends StatelessWidget {
@@ -10,16 +11,8 @@ class TestResultScreen extends StatelessWidget {
 
   const TestResultScreen({Key? key, required this.levelCode}) : super(key: key);
 
-  // 前端自己負責將代碼轉為 UI 文字
-  String get displayTitle {
-    switch (levelCode) {
-      case 'N1': return '日語大師';
-      case 'N2': return '商務菁英';
-      case 'N3': return '高級對話';
-      case 'N4': return '中級應用';
-      case 'N5': default: return '入門新手';
-    }
-  }
+  // 稱號統一取自 AppHelpers.getLevelTitle，跟個人檔案顯示的一樣
+  String get displayTitle => AppHelpers.getLevelTitle(levelCode);
 
   // 給予相對應的字母評分視覺
   String get gradeVisual {

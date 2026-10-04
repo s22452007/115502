@@ -43,7 +43,9 @@ def get_quiz_questions():
             
             result_list.append({
                 "id": q.id,
-                "context": f"{q.stage} ({q.level_tag})",
+                # 只顯示階段名稱（如「第二階段：初級」），不帶 N5/N1：那只是參考分級，不代表真正的檢定程度
+                "context": q.stage,
+                "level_tag": q.level_tag,   # 內部分級，給程式判斷用，畫面不顯示
                 "question": q.question,
                 "options": [q.option_a, q.option_b, q.option_c, q.option_d],
                 "correctIndex": correct_idx

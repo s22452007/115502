@@ -905,7 +905,8 @@ def _(c):
 def _(c):
     r = SC.get('/api/quiz/questions')
     qs = J(r).get('questions', [])
-    levels = [q['context'].rsplit('(', 1)[-1].rstrip(')') for q in qs]
+    levels = [q['level_tag'] for q in qs]
+    check(all('N' not in q['context'] for q in qs), '題目階段標籤不應顯示 N5～N1 代碼')
     c.log(f'HTTP {r.status_code}，題數={len(qs)}，各題等級依序：{"、".join(levels)}')
     order = ['超級新手', 'N5', 'N4', 'N3', 'N2', 'N1']
     check(r.status_code == 200 and len(qs) == 10, '題數不是 10 題')

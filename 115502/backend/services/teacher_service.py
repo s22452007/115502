@@ -47,7 +47,8 @@ def get_or_create_teacher_user(admin_username):
     """確保後台管理員在 User 表中具備對應的 Teacher 帳號，以滿足外鍵關聯。"""
     if not admin_username:
         admin_username = 'teacher'
-    user = User.query.filter_by(username=admin_username).first()
+    # 一般使用者的暱稱可以跟別人重複，只找老師帳號，避免對應到剛好同名的一般使用者
+    user = User.query.filter_by(username=admin_username, account_type=AccountType.TEACHER).first()
     if not user:
         # 嘗試以 email 找找看
         user = User.query.filter_by(email=f"{admin_username}@teacher.edu.tw").first()

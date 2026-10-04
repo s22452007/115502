@@ -313,11 +313,12 @@ def _verify_google_id_token(credential):
 
 
 def _unique_teacher_username(preferred, email):
-    """user.username 有唯一限制；Google 顯示名稱撞名時改用 Email 帳號部分，再撞就加流水號"""
+    """一般使用者的暱稱可以重複，但老師之間名稱要能分辨（後台名單、學生看到的老師名稱）；
+    Google 顯示名稱跟其他老師撞名時改用 Email 帳號部分，再撞就加流水號"""
     base = (preferred or '').strip() or email.split('@')[0]
     candidates = [base, email.split('@')[0]] + [f'{base}{i}' for i in range(2, 100)]
     for name in candidates:
-        if not User.query.filter_by(username=name).first():
+        if not User.query.filter_by(username=name, account_type=AccountType.TEACHER).first():
             return name
     return email
 
@@ -2873,8 +2874,8 @@ def teacher_account_add():
         error = _validate_password(password, account=email)
     elif User.query.filter_by(email=email).first():
         error = f'Email「{email}」已經被使用'
-    elif User.query.filter_by(username=username).first():
-        error = f'名稱「{username}」已經被使用，請換一個（例如加上科目或班級）'
+    elif User.query.filter_by(username=username, account_type=AccountType.TEACHER).first():
+        error = f'已經有老師叫「{username}」，請換一個（例如加上科目或班級）'
     if error:
         flash(error, 'error')
         return redirect(url_for('teacher_account_list'))

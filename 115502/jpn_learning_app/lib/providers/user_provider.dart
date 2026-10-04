@@ -183,6 +183,14 @@ class UserProvider extends ChangeNotifier {
   String get japaneseLevel => _japaneseLevel;
   String? get email => _email;
   String? get username => _username;
+
+  /// 畫面上顯示的名字：有暱稱用暱稱，沒有就用 Email @ 前面那段。
+  /// 首頁、側邊選單、個人檔案都用這個，名字才會一致。
+  String get displayName {
+    final name = _username?.trim() ?? '';
+    if (name.isNotEmpty) return name;
+    return (_email ?? '').split('@').first.trim();
+  }
   String? get avatar => _avatar;
   String? get friendId => _friendId;
   int get streakDays => _streakDays;

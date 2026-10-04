@@ -20,27 +20,35 @@ class AppHelpers {
     }
   }
 
-  /// 將日語等級代碼轉換成顯示文字（含 Emoji）
+  /// 內容難度（文章、題目等）的顯示文字：初級／中級／中高級／高級。
+  /// N5～N1 只是系統內部的參考分級，不代表真正的日語檢定程度，所以畫面上不直接顯示代碼。
+  static String getDifficultyLabel(String? level) {
+    switch ((level ?? '').toUpperCase().trim()) {
+      case 'N5':
+      case 'N4':
+        return '初級';
+      case 'N3':
+        return '中級';
+      case 'N2':
+        return '中高級';
+      case 'N1':
+        return '高級';
+      default:
+        return level ?? '';
+    }
+  }
+
+  /// 將日語等級代碼轉換成顯示文字（含 Emoji），稱號一樣取自 [getLevelTitle]
   /// - N1: 日語大師 🎓
   /// - N2: 商務菁英 💼
   /// - N3: 交流無礙 🗣️
   /// - N4: 生活達人 🚶
-  /// - N5: 日語新手 🌱
+  /// - N5: 新手上路 🌱
   static String getDisplayLevel(String? dbLevel) {
     if (dbLevel == null || dbLevel.isEmpty) return '尚未設定等級 🌱';
-    switch (dbLevel) {
-      case 'N1':
-        return '日語大師 🎓';
-      case 'N2':
-        return '商務菁英 💼';
-      case 'N3':
-        return '交流無礙 🗣️';
-      case 'N4':
-        return '生活達人 🚶';
-      case 'N5':
-      default:
-        return '日語新手 🌱';
-    }
+    const emoji = {'N1': '🎓', 'N2': '💼', 'N3': '🗣️', 'N4': '🚶', 'N5': '🌱'};
+    final code = dbLevel.toUpperCase().trim();
+    return '${getLevelTitle(code)} ${emoji[code] ?? '🌱'}';
   }
 
   /// 根據字串 Hash 計算固定的顏色代碼

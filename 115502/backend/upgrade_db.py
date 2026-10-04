@@ -58,7 +58,12 @@ add_column("user", "group_free_used_this_week INTEGER DEFAULT 0")
 add_column("user", "is_suspended INTEGER DEFAULT 0")
 
 try:
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_username ON user(username);")
+    # 暱稱可以跟別人重複（辨識使用者靠交友 ID），舊資料庫的唯一索引換成一般索引
+    row = cursor.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_user_username';").fetchone()
+    if row and row[0] and 'UNIQUE' in row[0].upper():
+        cursor.execute("DROP INDEX idx_user_username;")
+        print("✅ 暱稱改為可以重複（移除 username 唯一索引）")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_username ON user(username);")
     print("✅ user 及其索引、訂閱、對賭額度欄位確認完畢")
 except sqlite3.OperationalError as e:
     print(f"⚠️ username 索引建立警告：{e}")
@@ -481,7 +486,7 @@ try:
 
         # 重建唯一索引
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_user_email ON user(email);")
-        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_username ON user(username);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_username ON user(username);")  # 暱稱可以重複
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_user_friend_id ON user(friend_id);")
 
         print("✅ group_completions 欄位已從 user 資料表移除！")
@@ -934,6 +939,16 @@ try:
     print(f"✅ user.must_change_password 欄位確認完畢（密碼仍是學號的學生：{_flagged} 位）")
 except sqlite3.OperationalError as e:
     print(f"⚠️ user.must_change_password 升級警告：{e}")
+
+# ==========================================
+# 程度測驗／升級測驗題庫擴充：N5～N1 每級補到 20 題（題目在 quiz_bank.py）
+# ==========================================
+try:
+    from quiz_bank import sync_quiz_bank
+    _added, _fixed = sync_quiz_bank(cursor)
+    print(f"✅ 測驗題庫確認完畢（新增 {_added} 題、修正舊題目 {_fixed} 處）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 測驗題庫擴充警告：{e}")
 
 # 儲存並關閉
 conn.commit()

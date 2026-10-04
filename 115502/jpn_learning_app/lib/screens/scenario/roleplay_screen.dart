@@ -439,7 +439,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     if (_sessionId != null) return _sessionId;
 
     final userId = context.read<UserProvider>().userId;
-    if (userId == null) return null; // 訪客不留紀錄
+    if (userId == null) return null; // 沒有登入就不留紀錄
 
     _sessionCreation ??= ApiClient.createChatSession(
       userId: userId,

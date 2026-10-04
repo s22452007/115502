@@ -18,6 +18,7 @@ class VocabCard extends StatefulWidget {
 
 class _VocabCardState extends State<VocabCard> {
   bool _isLoading = true;
+  bool _loadFailed = false; // 例句載入失敗時顯示提示，不要留一塊空白灰框
   bool _isStarred = false;
   List<dynamic> _sentences = []; 
   final FlutterTts _flutterTts = FlutterTts();
@@ -53,7 +54,12 @@ class _VocabCardState extends State<VocabCard> {
         });
       }
     } catch (e) {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadFailed = true;
+        });
+      }
     }
   }
 
@@ -562,7 +568,11 @@ class _VocabCardState extends State<VocabCard> {
             ),
           ],
 
-          // 鷹架式例句區塊
+          if (_loadFailed)
+            const Text('分級例句載入失敗，請稍後再試', style: TextStyle(fontSize: 13, color: Colors.grey)),
+
+          // 鷹架式例句區塊（沒有例句時不顯示，避免出現空白灰框）
+          if (_sentences.isNotEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),

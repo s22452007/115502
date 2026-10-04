@@ -67,7 +67,7 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
 
     // 等第一幀畫完再開始分析。
     // 若直接在 initState 內執行，失敗時會在 initState 尚未完成時就呼叫
-    // showDialog，Flutter 會拋出 Localizations 相關的錯誤（訪客未登入時必現）。
+    // showDialog，Flutter 會拋出 Localizations 相關的錯誤（未登入時必現）。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _startAnalysis();
     });
@@ -97,7 +97,7 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
     try {
       final userId = context.read<UserProvider>().userId;
       if (userId == null) {
-        // 訪客沒有帳號可以綁定圖鑑，直接說明原因而不是丟出技術錯誤
+        // 登入狀態失效時沒有帳號可以綁定圖鑑，直接說明原因而不是丟出技術錯誤
         _showErrorDialog('請先登入才能使用拍照辨識功能，登入後單字會自動存進你的圖鑑。');
         return;
       }

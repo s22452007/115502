@@ -208,8 +208,6 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
 
   @override
   Widget build(BuildContext context) {
-    final isGuest = context.watch<UserProvider>().userId == null;
-
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -226,18 +224,14 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
         ),
         centerTitle: true,
       ),
-      floatingActionButton: isGuest
-          ? null
-          : FloatingActionButton(
-              backgroundColor: AppColors.primary,
-              elevation: 0, 
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), 
-              onPressed: _showAddFolderDialog,
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
-            ),
-      body: isGuest
-          ? _buildGuestView()
-          : _isLoading
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        onPressed: _showAddFolderDialog,
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+      ),
+      body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : RefreshIndicator(
               color: AppColors.primary,
@@ -511,33 +505,6 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
           const Text(
             '去拍照探索場景，收藏喜歡的單字吧！',
             style: TextStyle(fontSize: 14, color: subColor, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGuestView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.lock_rounded, size: 60, color: subColor),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            '登入即可使用收藏夾功能',
-            style: TextStyle(
-              fontSize: 18,
-              color: textColor,
-              fontWeight: FontWeight.w800,
-            ),
           ),
         ],
       ),

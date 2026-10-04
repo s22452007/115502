@@ -90,7 +90,7 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                hintText: '例如：JLPT N3 衝刺班',
+                hintText: '例如：中級衝刺班',
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 filled: true,
                 fillColor: _cardColor,

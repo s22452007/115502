@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+/// 單字詳情（從單字本點進來，一次只看一個字）。
+/// 跟拍照結果頁的 VocabCard 同一套視覺（情境例句黃底、分級例句灰底），
+/// 但因為整頁只有這個字，多放了：收藏在哪個單字本、在幾張照片出現過、
+/// 自己拍照時留下的情境例句（原本從單字本點進來看不到）。
 class SingleVocabDetailScreen extends StatefulWidget {
   final int vocabId;
   final String word;
@@ -24,343 +29,381 @@ class SingleVocabDetailScreen extends StatefulWidget {
 }
 
 class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
-  static const Color primaryGreen = Color(0xFF6AA86B);
-  static const Color textColor = Colors.black;
-  static const Color subTextColor = Color(0xFF888888);
-  static const Color bgLightGreen = Color(0xFFF4F8F5); 
-  static const Color starColor = Color(0xFFFFC107);
+  static const Color _amber = Color(0xFFE0A100);
 
   bool _isLoading = true;
+  bool _loadFailed = false; // 連不到後端或後端出錯：顯示「載入失敗」，不要誤導成「例句生成中」
   bool _isStarred = true;
   List<dynamic> _sentences = [];
+  List<dynamic> _contextSentences = [];
+  bool _moreLocked = false;
+  int _photoCount = 0;
+  String? _folderName;
   final FlutterTts _flutterTts = FlutterTts();
 
   @override
   void initState() {
     super.initState();
-    _initTts();
+    _flutterTts.setLanguage('ja-JP');
     _fetchDetail();
   }
 
   Future<void> _fetchDetail() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
+    setState(() {
+      _isLoading = true;
+      _loadFailed = false;
+    });
     try {
       final detail = await ApiClient.getVocabDetail(widget.vocabId, userId);
+      if (!mounted) return;
+      setState(() {
+        _isStarred = detail['is_favorited'] ?? true;
+        // 後端「系統努力生成例句中」的提示不是真的例句，不當成例句卡顯示
+        _sentences = (detail['sentences'] as List? ?? []).where((s) => s['level_name'] != null).toList();
+        _contextSentences = detail['context_sentences'] as List? ?? [];
+        _moreLocked = detail['more_sentences_locked'] == true;
+        _photoCount = (detail['photo_count'] as num?)?.toInt() ?? 0;
+        _folderName = detail['folder_name']?.toString();
+        _isLoading = false;
+      });
+    } catch (e) {
       if (mounted) {
         setState(() {
-          _isStarred = detail['is_favorited'] ?? true;
-          _sentences = detail['sentences'] ?? [];
           _isLoading = false;
+          _loadFailed = true;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _initTts() async {
-    await _flutterTts.setLanguage("ja-JP");
-  }
-
-  Future<void> _speakWord(String text) async {
-    await _flutterTts.setLanguage("ja-JP");
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage('ja-JP');
     await _flutterTts.speak(text);
   }
 
-Future<void> _toggleStar() async {
+  Future<void> _toggleStar() async {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
-    // 1. 樂觀 UI 更新：先讓星星變色
-    setState(() {
-      _isStarred = !_isStarred;
-    });
+    // 樂觀更新：先讓星星變色，失敗再退回
+    setState(() => _isStarred = !_isStarred);
 
-    bool success = false;
-
-    // 2. 判斷是要「新增」還是「取消」，並呼叫你原本就寫好的 API
+    bool success;
     if (_isStarred) {
-      // 呼叫你的 collectVocab (注意參數順序：先 userId 再 vocabId)
       final result = await ApiClient.collectVocab(userId, widget.vocabId);
-      success = !result.containsKey('error'); 
+      success = !result.containsKey('error');
     } else {
-      // 呼叫你的 removeFavorite (注意參數順序：先 vocabId 再 userId)
       success = await ApiClient.removeFavorite(widget.vocabId, userId);
     }
-
     if (!mounted) return;
 
-    // 3. 處理結果
     if (!success) {
-      // 如果後端報錯，把星星顏色退回去
-      setState(() {
-        _isStarred = !_isStarred;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('連線失敗，請稍後再試')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isStarred ? '✅ 已加入收藏' : '❌ 已從收藏移除')),
-      );
+      setState(() => _isStarred = !_isStarred);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('連線失敗，請稍後再試')));
+      return;
     }
+    setState(() => _folderName = _isStarred ? '預設相簿' : null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_isStarred ? '已加入收藏' : '已從收藏移除')),
+    );
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4EF), // 換成 App 統一的淺灰背景，讓白色卡片浮出來
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // 透明 AppBar 讓畫面更一體
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: textColor, size: 20),
+          icon: const Icon(AppIcons.back, color: Colors.black87, size: AppIcons.navSize),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          // 將星星移到右上角，不佔用卡片空間
-          IconButton(
-            onPressed: _toggleStar,
-            icon: Icon(
-              _isStarred ? Icons.star_rounded : Icons.star_border_rounded,
-              color: _isStarred ? starColor : Colors.grey.shade400,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildWordCard(),
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              )
+            else if (_loadFailed)
+              _buildLoadFailed()
+            else ...[
+              if (_contextSentences.isNotEmpty) ...[
+                _sectionTitle(Icons.auto_awesome, '情境例句', '你拍照時的情境', _amber),
+                ..._contextSentences.map((s) => _buildContextCard(s as Map)),
+              ],
+              _sectionTitle(Icons.menu_book_rounded, '分級例句', null, AppColors.primary),
+              if (_sentences.isEmpty)
+                const Text('系統努力生成例句中…', style: TextStyle(color: AppColors.textSubtle))
+              else
+                ..._sentences.map((s) => _buildLevelCard(s as Map)),
+              if (_moreLocked) _buildLockedHint(),
             ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- 頂部：假名標籤與單字 ---
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // 精美的假名標籤
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: primaryGreen.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        widget.kana,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: primaryGreen,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // 主單字置中放大與發音按鈕
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          widget.word,
-                          style: const TextStyle(
-                            fontSize: 44,
-                            fontWeight: FontWeight.w900,
-                            color: textColor,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.volume_up, color: primaryGreen, size: 32),
-                          onPressed: () => _speakWord(widget.kana),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // 分隔線
-              Divider(color: Colors.grey.shade100, thickness: 2, height: 0),
-
-              // --- 中間：中文解釋 ---
-              Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.menu_book_rounded, color: Colors.grey.shade400, size: 22),
-                        const SizedBox(width: 8),
-                        const Text(
-                          '詞彙說明',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: subTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.meaning,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // --- 底部：例句區塊 ---
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
-                decoration: const BoxDecoration(
-                  color: bgLightGreen,
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '實用例句',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    if (_isLoading)
-                      const Center(child: CircularProgressIndicator(color: primaryGreen))
-                    else if (_sentences.isEmpty)
-                      const Text('系統努力生成例句中...', style: TextStyle(color: Colors.grey))
-                    else
-                      ..._sentences.asMap().entries.map((entry) {
-                        const levelColors = [primaryGreen, Color(0xFF5B9983), Color(0xFF4A7FA5), Color(0xFF8B6B9E)];
-                        return Column(
-                          children: [
-                            if (entry.key > 0) const SizedBox(height: 16),
-                            _buildSentenceCard(
-                              entry.value['level_name'] ?? entry.value['level'] ?? '提示',
-                              entry.value['text'] ?? '',
-                              entry.value['translation'],
-                              levelColors[entry.key % levelColors.length],
-                            ),
-                          ],
-                        );
-                      }),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  // 例句現在變成了獨立且帶有播放按鈕的精緻小卡！
-  Widget _buildSentenceCard(String level, String sentence, String? translation, Color themeColor) {
+  // ---------------- 單字主卡 ----------------
+  Widget _buildWordCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: themeColor.withOpacity(0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: themeColor.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          )
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 20, 16, 22),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.kana.isNotEmpty && widget.kana != widget.word)
+                      Text(widget.kana,
+                          style: const TextStyle(fontSize: 16, color: AppColors.textGrey, letterSpacing: 1)),
+                    const SizedBox(height: 2),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      children: [
+                        Text(widget.word,
+                            style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+                        _speakButton(() => _speak(widget.kana.isNotEmpty ? widget.kana : widget.word), size: 22),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _toggleStar,
+                tooltip: _isStarred ? '取消收藏' : '加入收藏',
+                icon: Icon(
+                  _isStarred ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: _isStarred ? Colors.amber : Colors.grey.shade300,
+                  size: 36,
+                ),
+              ),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Divider(color: Color(0xFFEEEEEE), thickness: 1.5, height: 1),
+          ),
+          const Text('詞彙說明', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textSubtle)),
+          const SizedBox(height: 6),
+          Text(widget.meaning,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.textDark, height: 1.4)),
+          if (_folderName != null || _photoCount > 0) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (_folderName != null) _infoChip(Icons.bookmark_rounded, '收藏於「$_folderName」'),
+                if (_photoCount > 0) _infoChip(Icons.photo_camera_rounded, '出現在 $_photoCount 張照片'),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _infoChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+        ],
+      ),
+    );
+  }
+
+  // ---------------- 例句區 ----------------
+  Widget _sectionTitle(IconData icon, String title, String? sub, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24, bottom: 10, left: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 6),
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+          if (sub != null) ...[
+            const SizedBox(width: 8),
+            Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.textSubtle)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 情境例句：黃底，下面標出是哪張照片、哪一天
+  Widget _buildContextCard(Map s) {
+    final text = (s['text'] ?? '').toString();
+    final translation = (s['translation'] ?? '').toString();
+    final source = [s['photo_title'], s['date']].where((v) => v != null && '$v'.trim().isNotEmpty).join(' · ');
+
+    return _sentenceCard(
+      background: const Color(0xFFFFF8E1),
+      border: _amber.withOpacity(0.35),
+      speakColor: _amber,
+      text: text,
+      translation: translation,
+      footer: source.isEmpty
+          ? null
+          : Row(
+              children: [
+                const Icon(Icons.photo_outlined, size: 13, color: AppColors.textSubtle),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(source,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSubtle)),
+                ),
+              ],
+            ),
+    );
+  }
+
+  /// 分級例句：白底，上方小標籤標示難度
+  Widget _buildLevelCard(Map s) {
+    return _sentenceCard(
+      background: Colors.white,
+      border: const Color(0xFFEEEEEE),
+      speakColor: AppColors.primary,
+      header: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(6)),
+        child: Text((s['level_name'] ?? '').toString(),
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary)),
+      ),
+      text: (s['text'] ?? '').toString(),
+      translation: (s['translation'] ?? '').toString(),
+    );
+  }
+
+  Widget _sentenceCard({
+    required Color background,
+    required Color border,
+    required Color speakColor,
+    required String text,
+    required String translation,
+    Widget? header,
+    Widget? footer,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 左側：難度標籤
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: themeColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              level,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: themeColor),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // 中間：例句與翻譯
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FuriganaText(
-                  text: sentence,
-                  fontSize: 16,
-                  textColor: textColor,
-                ),
-                if (translation != null && translation.trim().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      translation,
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 1.4,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
+                if (header != null) header,
+                FuriganaText(text: text, fontSize: 17, textColor: AppColors.textDark),
+                if (translation.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(translation, style: const TextStyle(fontSize: 14, height: 1.4, color: AppColors.textGrey)),
+                ],
+                if (footer != null) ...[const SizedBox(height: 8), footer],
               ],
             ),
           ),
           const SizedBox(width: 8),
-          // 右側：實體播放按鈕
-          GestureDetector(
-            onTap: () => _speakWord(FuriganaText.cleanFuriganaForTts(sentence)),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: themeColor,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: themeColor.withOpacity(0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-              ),
-              child: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 20),
+          _speakButton(() => _speak(FuriganaText.cleanFuriganaForTts(text)), color: speakColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadFailed() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDecoration(),
+      child: Column(
+        children: [
+          const Icon(Icons.cloud_off_rounded, size: 36, color: AppColors.mutedLight),
+          const SizedBox(height: 8),
+          const Text('例句載入失敗', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          const SizedBox(height: 4),
+          const Text('請確認網路連線，或稍後再試一次', style: TextStyle(fontSize: 13, color: AppColors.textSubtle)),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _fetchDetail,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('重新載入'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildLockedHint() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AppColors.lightBg, borderRadius: BorderRadius.circular(12)),
+      child: const Row(
+        children: [
+          Icon(Icons.lock_outline_rounded, size: 16, color: AppColors.textSubtle),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text('提升稱號後，可以看到更進階的例句',
+                style: TextStyle(fontSize: 13, color: AppColors.textGrey)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _speakButton(VoidCallback onTap, {Color color = AppColors.primary, double size = 18}) {
+    return InkResponse(
+      onTap: onTap,
+      radius: 24,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+        child: Icon(Icons.volume_up_rounded, size: size, color: color),
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: Offset(0, 4))],
+      );
 }

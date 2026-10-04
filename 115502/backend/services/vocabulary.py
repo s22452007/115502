@@ -322,12 +322,50 @@ def get_vocab_detail(vocab_id):
     if not sentences:
         sentences.append({"level": "提示", "text": "系統努力生成例句中..."})
 
+    # 還有更進階、但目前稱號還看不到的例句（App 顯示「提升稱號可以看到更多例句」）
+    available = sum(1 for s in (v.sentence_basic, v.sentence_inter, v.sentence_upper_inter, v.sentence_advanced) if s)
+    more_locked = available > len([s for s in sentences if s.get('level_name')])
+
+    # 這個使用者拍照時留下的情境例句（新的在前、同一句不重複，最多 3 句）
+    # 原本只有拍照結果頁看得到，從單字本點進來就看不到了
+    from models import UserPhoto, UserPhotoVocab
+    photo_rows = (db.session.query(UserPhotoVocab.context_sentence, UserPhoto.custom_title, UserPhoto.created_at)
+                  .join(UserPhoto, UserPhotoVocab.photo_id == UserPhoto.id)
+                  .filter(UserPhoto.user_id == user_id, UserPhotoVocab.vocab_id == vocab_id)
+                  .order_by(UserPhoto.created_at.desc())
+                  .all())
+    context_sentences, seen = [], set()
+    for ctx, title, created in photo_rows:
+        lines = (ctx or '').strip().split('\n')
+        text = lines[0].strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        translation = '\n'.join(lines[1:]).strip().strip('（）()').strip()
+        context_sentences.append({
+            "text": text,
+            "translation": translation,
+            "photo_title": title,
+            "date": created.strftime('%Y-%m-%d') if created else None,
+        })
+        if len(context_sentences) >= 3:
+            break
+
+    folder_name = None
+    if is_favorited:
+        folder = UserFolder.query.get(uv.folder_id) if uv.folder_id else None
+        folder_name = folder.name if folder else '預設相簿'
+
     return jsonify({
         "vocab_id": v.id,
         "word": v.word,
         "kana": v.kana,
         "meaning": v.meaning,
         "sentences": sentences,
+        "more_sentences_locked": more_locked,
+        "context_sentences": context_sentences,
+        "photo_count": len(photo_rows),          # 在幾張自己的照片裡出現過
+        "folder_name": folder_name,              # 收藏在哪個單字本（沒收藏是 null）
         "is_favorited": is_favorited
     }), 200
 

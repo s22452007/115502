@@ -119,64 +119,81 @@ class FuriganaText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = _parseTokens(text);
+    final scaler = MediaQuery.textScalerOf(context);
+    final baseStyle = TextStyle(fontSize: fontSize, color: textColor, fontWeight: fontWeight, height: 1.2);
+    final rubyStyle = TextStyle(fontSize: fontSize * 0.55, color: Colors.grey.shade600, height: 1.1);
+    final rubyHeight = scaler.scale(fontSize * 0.55) * 1.1;
+
+    bool plainAt(int i) => i >= 0 && i < tokens.length && (tokens[i].furigana?.isEmpty ?? true);
 
     return Wrap(
       alignment: WrapAlignment.start,
       crossAxisAlignment: WrapCrossAlignment.end,
       spacing: 0,
       runSpacing: 6,
-      children: tokens.map((t) {
+      children: List.generate(tokens.length, (i) {
+        final t = tokens[i];
         if (t.furigana != null && t.furigana!.isNotEmpty) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                t.furigana!,
-                style: TextStyle(
-                  fontSize: fontSize * 0.55,
-                  color: Colors.grey.shade600, // 淺灰色
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                t.kanji,
-                style: TextStyle(
-                  fontSize: fontSize,
-                  color: textColor,
-                  fontWeight: fontWeight,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          );
-        } else {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 透明佔位符，保證全句所有文字的高度與底部基準線完全對齊
-              Text(
-                ' ',
-                style: TextStyle(
-                  fontSize: fontSize * 0.55,
-                  color: Colors.transparent,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                t.kanji,
-                style: TextStyle(
-                  fontSize: fontSize,
-                  color: textColor,
-                  fontWeight: fontWeight,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          );
+          return _rubyToken(t, baseStyle, rubyStyle, rubyHeight,
+              leftFree: plainAt(i - 1), rightFree: plainAt(i + 1));
         }
-      }).toList(),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 讀音那一行的空白佔位，讓全句的字底部對齊
+            SizedBox(height: rubyHeight),
+            Text(t.kanji, style: baseStyle),
+          ],
+        );
+      }),
+    );
+  }
+
+  /// 有讀音的字。讀音比漢字寬時（例如「私」上面的「わたし」），原本整格會被撐成讀音的寬度，
+  /// 漢字後面就空出一塊（「私　の」）。現在格子寬度只看漢字，讀音可以延伸到旁邊
+  /// 「沒有讀音」的字上方，漢字之間就不會有空隙；兩邊都是有讀音的字時才照舊撐開，避免讀音重疊。
+  /// 不用 TextPainter 量字寬（量的字型跟實際顯示的不一定一樣，網頁版中文字型還是延後載入的），
+  /// 改由漢字本身決定格子大小，讀音用 OverflowBox 允許超出。
+  Widget _rubyToken(
+    _FuriganaToken t,
+    TextStyle baseStyle,
+    TextStyle rubyStyle,
+    double rubyHeight, {
+    required bool leftFree,
+    required bool rightFree,
+  }) {
+    final ruby = Text(t.furigana!, style: rubyStyle, softWrap: false, maxLines: 1);
+    final base = Text(t.kanji, style: baseStyle, softWrap: false, maxLines: 1);
+
+    // 兩邊都有讀音（或在句首、句尾又只有一邊）：照原本的方式，寬度取讀音和漢字較寬的那個
+    if (!leftFree && !rightFree) {
+      return Column(mainAxisSize: MainAxisSize.min, children: [ruby, base]);
+    }
+
+    // 假名、漢字幾乎等寬，用字數估讀音會不會比漢字寬（讀音字級是 0.55 倍）
+    final rubyWider = t.furigana!.length * 0.55 > t.kanji.length;
+    final Alignment align;
+    if (!rubyWider || (leftFree && rightFree)) {
+      align = Alignment.center; // 置中，必要時左右各超出一點
+    } else if (rightFree) {
+      align = Alignment.centerLeft; // 左邊也有讀音：只往右延伸
+    } else {
+      align = Alignment.centerRight; // 右邊也有讀音：只往左延伸
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Padding(padding: EdgeInsets.only(top: rubyHeight), child: base),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: rubyHeight,
+          child: OverflowBox(maxWidth: double.infinity, alignment: align, child: ruby),
+        ),
+      ],
     );
   }
 }

@@ -782,7 +782,7 @@ def _(c):
 @case('A01', '檢查暱稱是否可用',
       pre='使用者 A 已將暱稱設為「Sakura01」',
       steps='使用者 B 呼叫 POST /api/user/check_username：\n1. username=sakura01（大小寫不同）\n2. username=Momo_02\n3. username=a（只有 1 個字）',
-      expect='1. HTTP 200，available=false、「此暱稱已被使用」（不分大小寫）\n2. HTTP 200，available=true\n3. HTTP 400，「暱稱需為 2～20 個字元」')
+      expect='1. HTTP 200，available=true（暱稱可以跟別人重複，辨識使用者靠交友 ID）\n2. HTTP 200，available=true\n3. HTTP 400，「暱稱需為 2～20 個字元」')
 def _(c):
     a, b = register('nickA'), register('nickB')
     STATE['nickA'], STATE['nickB'] = a, b
@@ -793,25 +793,25 @@ def _(c):
     r2 = SC.post('/api/user/check_username', json={'user_id': b['id'], 'username': 'Momo_02'})
     r3 = SC.post('/api/user/check_username', json={'user_id': b['id'], 'username': 'a'})
     c.log(f'1. {http(r1, "available", "error")}；2. {http(r2, "available")}；3. {http(r3, "error")}')
-    check(r1.status_code == 200 and J(r1).get('available') is False and J(r1).get('error') == '此暱稱已被使用',
-          '重複暱稱未被偵測')
+    check(r1.status_code == 200 and J(r1).get('available') is True, '跟別人同名的暱稱被判定為不可用')
     check(r2.status_code == 200 and J(r2).get('available') is True, '可用暱稱被判定為不可用')
     check(r3.status_code == 400 and J(r3).get('error') == '暱稱需為 2～20 個字元', '長度檢查失效')
 
 
-@case('A01', '修改暱稱與重複暱稱被拒',
+@case('A01', '修改暱稱（可以跟別人同名）',
       pre='使用者 A 暱稱為「Sakura01」',
       steps='使用者 B 呼叫 POST /api/user/update_username：\n1. username=Taro_02\n2. username=SAKURA01',
-      expect='1. HTTP 200，「暱稱更新成功」\n2. HTTP 400，「此暱稱已被使用」；B 的暱稱維持 Taro_02')
+      expect='1. HTTP 200，「暱稱更新成功」\n2. HTTP 200，「暱稱更新成功」；B 的暱稱變成 SAKURA01，A 的暱稱維持 Sakura01')
 def _(c):
     b = STATE['nickB']
     r1 = SC.post('/api/user/update_username', json={'user_id': b['id'], 'username': 'Taro_02'})
     r2 = SC.post('/api/user/update_username', json={'user_id': b['id'], 'username': 'SAKURA01'})
     row = user_row(b['id'])
-    c.log(f'1. {http(r1, "message", "username")}；2. {http(r2, "error")}；資料庫暱稱={row["username"]}')
+    c.log(f'1. {http(r1, "message", "username")}；2. {http(r2, "message", "username")}；資料庫暱稱={row["username"]}')
     check(r1.status_code == 200 and J(r1).get('message') == '暱稱更新成功', '修改暱稱失敗')
-    check(r2.status_code == 400 and J(r2).get('error') == '此暱稱已被使用', '重複暱稱未被擋下')
-    check(row['username'] == 'Taro_02', '暱稱被錯誤覆寫')
+    check(r2.status_code == 200 and J(r2).get('message') == '暱稱更新成功', '跟別人同名的暱稱被擋下')
+    check(row['username'] == 'SAKURA01', '暱稱沒有更新')
+    check(user_row(STATE['nickA']['id'])['username'] == 'Sakura01', '使用者 A 的暱稱被改到')
 
 
 @case('A01', '上傳大頭貼與格式驗證',

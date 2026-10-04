@@ -24,7 +24,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    username = db.Column(db.String(30), unique=True, nullable=True)
+    username = db.Column(db.String(30), nullable=True)  # 暱稱，可以跟別人重複（辨識靠 friend_id）
     friend_id = db.Column(db.String(20), unique=True, nullable=True)
     japanese_level = db.Column(db.String(50), nullable=True)
     avatar = db.Column(db.Text, nullable=True)

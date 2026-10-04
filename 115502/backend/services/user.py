@@ -222,7 +222,6 @@ def upload_avatar():
 def check_username():
     data = request.get_json()
     username = (data.get('username') or '').strip()
-    current_user_id = data.get('user_id')
 
     if not username:
         return jsonify({"error": "請輸入暱稱"}), 400
@@ -231,13 +230,7 @@ def check_username():
     if not re.match(r'^[\u4e00-\u9fffA-Za-z0-9_]+$', username):
         return jsonify({"error": "暱稱只能包含中文、英文、數字或底線"}), 400
 
-    query = User.query.filter(db.func.lower(User.username) == username.lower())
-    if current_user_id:
-        query = query.filter(User.id != current_user_id)
-    taken = query.first()
-    if taken:
-        return jsonify({"available": False, "error": "此暱稱已被使用"}), 200
-
+    # 暱稱可以跟別人重複（加好友、邀請都用交友 ID），格式正確就能用
     return jsonify({"available": True}), 200
 
 # 更新暱稱
@@ -253,13 +246,6 @@ def update_username():
         return jsonify({"error": "暱稱需為 2～20 個字元"}), 400
     if not re.match(r'^[\u4e00-\u9fffA-Za-z0-9_]+$', username):
         return jsonify({"error": "暱稱只能包含中文、英文、數字或底線"}), 400
-
-    taken = User.query.filter(
-        db.func.lower(User.username) == username.lower(),
-        User.id != user_id
-    ).first()
-    if taken:
-        return jsonify({"error": "此暱稱已被使用"}), 400
 
     user = User.query.get(user_id)
     if not user:

@@ -130,6 +130,45 @@ def get_task():
         "level": level,
         "today_count": today_count
     }), 200
+
+
+# 讀音標記的兩種寫法：[漢字|かな]、漢字[かな]（AI 偶爾會用第二種），
+# 再加上 AI 自己加的強調框 [リード]（沒有讀音，只去掉括號）
+_RUBY_PATTERN = re.compile(
+    r'\[([^|\]]+)\|[^\]]+\]|([一-鿿㐀-䶿々]+)\[[぀-ヿ]+\]|\[([^|\[\]]+)\]')
+
+
+def _normalize_feedback(result):
+    """整理 AI 批改結果，讓 App 能穩定分區顯示，也讓存進資料庫的內容維持純文字。
+
+    - corrections 只留格式完整的前 5 筆
+    - corrected_sentence 去掉讀音標記（歷史紀錄、老師後台都直接顯示這欄）
+    - corrected_ruby 沒給就用 corrected_sentence
+    - strict_feedback（存成 ai_feedback）由 corrections 組成條列文字，舊畫面照樣看得懂
+    """
+    if not isinstance(result, dict):
+        raise ValueError("AI 回傳格式錯誤")
+    corrections = []
+    for c in result.get('corrections') or []:
+        if isinstance(c, dict) and c.get('original') and c.get('corrected'):
+            corrections.append({k: str(c.get(k) or '').strip() for k in ('original', 'corrected', 'reason')})
+    corrections = corrections[:5]
+    result['corrections'] = corrections
+
+    ruby = str(result.get('corrected_ruby') or result.get('corrected_sentence') or '').strip()
+    result['corrected_ruby'] = ruby
+    result['corrected_sentence'] = _RUBY_PATTERN.sub(
+        lambda m: m.group(1) or m.group(2) or m.group(3), str(result.get('corrected_sentence') or ruby)).strip()
+
+    if corrections:
+        result['strict_feedback'] = '\n'.join(
+            f"{i}. {c['original']} → {c['corrected']}" + (f"：{c['reason']}" if c['reason'] else '')
+            for i, c in enumerate(corrections, 1))
+    elif not result.get('strict_feedback'):
+        result['strict_feedback'] = str(result.get('summary') or '').strip()
+    return result
+
+
 # ==========================================
 # 🌟 2. 極度嚴格的 AI 批改與結算 API (防彈升級版)
 # ==========================================
@@ -197,13 +236,28 @@ def evaluate_sentence():
 
         計分(滿分100)：基礎分60，每個指定單字+10。助詞錯扣5分，變形錯扣10分，語意不通扣20分。未正確使用「指定文法」直接不及格。
         
-        【重點要求】：評語請務必「條列式、極度簡短」，一針見血指出錯誤即可，完全不要廢話或寒暄。
+        App 會把結果拆成「總評、修改建議、參考句子」分區顯示，每個欄位只放該放的內容：
+        - summary：一句總評（30 字以內），不要在這裡重複解釋錯誤。
+        - corrections：每一個要改的地方一筆（最多 5 筆，完全正確就給空陣列）：
+            original 是學生句子中要改的那一小段（照抄，不加讀音標記）、
+            corrected 是改成的寫法（不加讀音標記）、
+            reason 用一句話說明錯在哪（30 字以內，例如「助詞錯誤：表示地點要用で」）。
+        - corrected_sentence：修正後的完整句子，純文字，不加讀音標記。
+        - corrected_ruby：同一句，但漢字一律用 [漢字|平假名] 標記讀音，例如 [犬|いぬ]に、[新|あたら]しい。
+          方括號只能用來標讀音，片假名、平假名和指定單字都不要加方括號（不要寫成 [リード]）。
+        - translation：修正後句子的繁體中文翻譯。
+        所有說明用繁體中文，不要夾雜英文術語，不要用 markdown 符號。
         請以純 JSON 格式回傳（絕對不可加 Markdown 標籤）：
         {{
             "score": 85,
-            "is_grammar_correct": true,
-            "corrected_sentence": "修正後的完美自然句子",
-            "strict_feedback": "1. 助詞錯誤：に 應改為 で\\n2. 變形錯誤：食べる 應改為 食べて"
+            "is_grammar_correct": false,
+            "summary": "有用到指定文法，助詞再注意一下就更好了。",
+            "corrections": [
+                {{"original": "公園に", "corrected": "公園で", "reason": "助詞錯誤：表示動作地點要用で"}}
+            ],
+            "corrected_sentence": "公園で友達と遊びました。",
+            "corrected_ruby": "[公園|こうえん]で[友達|ともだち]と[遊|あそ]びました。",
+            "translation": "在公園和朋友玩了。"
         }}
         """
         response = gemini_client.generate_content('article', prompt, config=JSON_CONFIG)
@@ -213,7 +267,7 @@ def evaluate_sentence():
 
     try:
         # 交由 Gemini 批改
-        result = _analyze()
+        result = _normalize_feedback(_analyze())
         score = result.get('score', 0)
         points_earned = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
 

@@ -43,6 +43,11 @@ class FuriganaText extends StatelessWidget {
       RegExp(r'([\u4e00-\u9faf\u3400-\u4dbf々]+)\[([a-zA-Z\u3040-\u309f\u30a0-\u30ff]+)\]'),
       (match) => match.group(1) ?? '',
     );
+    // 3. 去掉沒有讀音的強調框 [文字]
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'\[([^|\[\]]+)\]'),
+      (match) => match.group(1) ?? '',
+    );
     return cleaned;
   }
 
@@ -51,8 +56,9 @@ class FuriganaText extends StatelessWidget {
     if (rawText.isEmpty) return tokens;
 
     // 匹配兩種常見格式： [漢字|假名] 或 漢字[假名]
+    // 第 3 種是 AI 自己加的強調框（例如把指定單字寫成 [リード]），沒有讀音，去掉括號當一般文字
     final regex = RegExp(
-      r'\[([^|\]]+)\|([^\]]+)\]|([\u4e00-\u9faf\u3400-\u4dbf々]+)\[([a-zA-Z\u3040-\u309f\u30a0-\u30ff]+)\]',
+      r'\[([^|\]]+)\|([^\]]+)\]|([\u4e00-\u9faf\u3400-\u4dbf々]+)\[([a-zA-Z\u3040-\u309f\u30a0-\u30ff]+)\]|\[([^|\[\]]+)\]',
     );
 
     int currentIndex = 0;
@@ -68,6 +74,9 @@ class FuriganaText extends StatelessWidget {
       } else if (match.group(3) != null) {
         // 格式 2: 漢字[假名]
         _addAnnotatedToken(tokens, match.group(3)!, match.group(4)!);
+      } else if (match.group(5) != null) {
+        // 沒有讀音的 [文字]：只是強調框，照一般文字顯示
+        _addNormalTextTokens(tokens, match.group(5)!);
       }
 
       currentIndex = match.end;

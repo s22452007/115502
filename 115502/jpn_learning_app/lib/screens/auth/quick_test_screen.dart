@@ -119,7 +119,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
     final currentQ = _questions[_currentIndex];
     final List<String> displayOptions = List<String>.from(currentQ['options']);
-    displayOptions.add('E. 我還沒學過這個');
+    displayOptions.add('我還沒學過這個'); // 其他選項沒有 ABCD 編號，這裡也不加
 
     return Scaffold(
       backgroundColor: AppColors.background,

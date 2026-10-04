@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/widgets/common/sentence_feedback.dart';
 
 class MakeSentenceScreen extends StatefulWidget {
   final String imagePath;
@@ -76,89 +77,70 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
     }
   }
 
+  /// AI 批改結果：分成「總評 → 你的句子 → 修改建議 → 參考句子」四區，
+  /// 不再把整段說明塞成一大段文字；後三區用共用的 SentenceFeedbackSections。
   Widget _buildFeedbackCard() {
     if (_feedbackResult == null) return const SizedBox.shrink();
 
     final isValid = _feedbackResult!['is_valid'] == true;
-    final feedback = _feedbackResult!['feedback'] ?? '';
-    final corrected = _feedbackResult!['corrected_sentence'] ?? '';
-    final translation = _feedbackResult!['translation'] ?? '';
+    final feedback = (_feedbackResult!['feedback'] ?? '').toString();
+    final corrected = (_feedbackResult!['corrected_sentence'] ?? '').toString();
+    final translation = (_feedbackResult!['translation'] ?? '').toString();
+    final corrections = (_feedbackResult!['corrections'] as List? ?? [])
+        .whereType<Map>()
+        .toList();
+
+    final accent = isValid ? AppColors.primary : const Color(0xFFE08A1E);
+    final title = isValid
+        ? '句子完全正確！'
+        : (corrections.isEmpty ? 'AI 老師的回饋' : '有 ${corrections.length} 個地方可以更好');
 
     return Container(
       margin: const EdgeInsets.only(top: 24),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isValid ? Colors.green.shade50 : Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isValid ? Colors.green.shade200 : Colors.orange.shade200,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withOpacity(0.35)),
+        boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. 總評
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                isValid ? Icons.thumb_up : Icons.lightbulb,
-                color: isValid ? Colors.green : Colors.orange,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: accent.withOpacity(0.12), shape: BoxShape.circle),
+                child: Icon(isValid ? Icons.check_rounded : Icons.lightbulb_outline_rounded, color: accent, size: 22),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  isValid ? '太棒了！' : 'AI 老師的回饋',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isValid ? Colors.green.shade700 : Colors.orange.shade700,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: accent)),
+                    if (feedback.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(feedback, style: const TextStyle(fontSize: 14, height: 1.5, color: AppColors.textDark)),
+                    ],
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            feedback,
-            style: const TextStyle(fontSize: 16, height: 1.5),
+
+          // 2～4. 你的句子 → 修改建議 → 參考句子（與造句練習共用）
+          SentenceFeedbackSections(
+            userSentence: _submittedSentence,
+            corrections: corrections,
+            correctedSentence: corrected,
+            translation: translation,
+            isCorrect: isValid,
           ),
-          if (corrected.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const Text(
-              '日文例句：',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              corrected,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-            ),
-          ],
-          if (translation.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Text(
-              '中文翻譯：',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              translation,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ],
-          if (_submittedSentence != null) ...[
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            const Text(
-              '您的造句：',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _submittedSentence!,
-              style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-            ),
-          ],
         ],
       ),
     );

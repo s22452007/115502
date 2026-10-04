@@ -6,6 +6,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/sentence/sentence_history_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/widgets/common/staged_progress_overlay.dart';
+import 'package:jpn_learning_app/widgets/common/sentence_feedback.dart';
 
 class SentencePracticeScreen extends StatefulWidget {
   /// 從「我的作業」進來時帶入作業 ID：題目改用老師指定的文法與單字，
@@ -410,8 +411,13 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
   void _showEvaluationResultDialog(Map<String, dynamic> result) {
     final score = result['score'] ?? 0;
     final points = result['points_earned'] ?? 0;
-    final correctedSentence = result['corrected_sentence'] ?? '';
-    final feedback = result['strict_feedback'] ?? '';
+    // corrected_ruby 是含讀音標記的版本（舊版後端沒有就用 corrected_sentence）
+    final correctedSentence =
+        (result['corrected_ruby'] ?? result['corrected_sentence'] ?? '').toString();
+    final feedback = (result['strict_feedback'] ?? '').toString();
+    final summary = (result['summary'] ?? '').toString();
+    final translation = (result['translation'] ?? '').toString();
+    final corrections = (result['corrections'] as List?) ?? const [];
     final isCorrect = result['is_grammar_correct'] ?? false;
     // 作業模式才有：後端自動繳交的結果
     final Map<String, dynamic>? assignmentResult =
@@ -499,45 +505,20 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                   ),
                   const Divider(height: 30),
 
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
+                  // 總評一句 + 你的句子 → 修改建議 → 參考句子（與拍照後的練習造句共用）
+                  if (summary.isNotEmpty)
+                    Text(
+                      summary,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 14, height: 1.5, color: AppColors.textDark),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '完美句子建議：',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          correctedSentence,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          '嚴格老師的點評：',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(feedback, style: const TextStyle(height: 1.5)),
-                      ],
-                    ),
+                  SentenceFeedbackSections(
+                    userSentence: _sentenceController.text,
+                    corrections: corrections,
+                    correctedSentence: correctedSentence,
+                    translation: translation,
+                    isCorrect: isCorrect == true,
+                    fallbackFeedback: feedback,
                   ),
                   const SizedBox(height: 24),
 

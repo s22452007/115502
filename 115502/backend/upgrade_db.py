@@ -940,6 +940,16 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ user.must_change_password 升級警告：{e}")
 
+# ==========================================
+# 程度測驗／升級測驗題庫擴充：N5～N1 每級補到 20 題（題目在 quiz_bank.py）
+# ==========================================
+try:
+    from quiz_bank import sync_quiz_bank
+    _added, _fixed = sync_quiz_bank(cursor)
+    print(f"✅ 測驗題庫確認完畢（新增 {_added} 題、修正舊題目 {_fixed} 處）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 測驗題庫擴充警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

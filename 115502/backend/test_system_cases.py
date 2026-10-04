@@ -898,61 +898,145 @@ def _(c):
           '刪除帳號後仍殘留個人資料：' + '、'.join(f'{k} {v} 筆' for k, v in left.items() if v))
 
 
+def quiz_answers(qs, flags):
+    """依每題要答對／答錯產生作答：True 送正確選項文字，False 送其他選項，None 代表選「我還沒學過這個」"""
+    with S.app_context():
+        out = []
+        for q, ok in zip(qs, flags):
+            row = db.session.get(QuizQuestion, q['id'])
+            right = [row.option_a, row.option_b, row.option_c, row.option_d]['ABCD'.index(row.correct_answer)]
+            wrong = next(o for o in q['options'] if o != right)
+            out.append({'id': q['id'], 'answer': None if ok is None else (right if ok else wrong)})
+        return out
+
+
+def placement(u, flags):
+    """幫還沒有程度的使用者做一次程度測驗"""
+    qs = J(SC.get('/api/quiz/questions')).get('questions', [])
+    return SC.post('/api/quiz/submit', json={'user_id': u['id'], 'answers': quiz_answers(qs, flags)})
+
+
 @case('A01', '取得日語程度測驗題目',
       pre='題庫依 seed.py 結構共 12 題（超級新手、N5、N4、N3、N2、N1 各 2 題）',
       steps='GET /api/quiz/questions',
-      expect='HTTP 200，回傳 10 題，每題有題目、4 個選項與正確答案索引（0～3），依序為 N5、N4、N3、N2、N1 各 2 題（與判定位置一致）')
+      expect='HTTP 200，回傳 10 題，每題有題目與 4 個選項，依序為 N5、N4、N3、N2、N1 各 2 題；'
+             '不回傳正確答案（由後端改考卷），階段標籤不顯示 N5～N1')
 def _(c):
     r = SC.get('/api/quiz/questions')
     qs = J(r).get('questions', [])
     levels = [q['level_tag'] for q in qs]
-    check(all('N' not in q['context'] for q in qs), '題目階段標籤不應顯示 N5～N1 代碼')
     c.log(f'HTTP {r.status_code}，題數={len(qs)}，各題等級依序：{"、".join(levels)}')
-    order = ['超級新手', 'N5', 'N4', 'N3', 'N2', 'N1']
     check(r.status_code == 200 and len(qs) == 10, '題數不是 10 題')
-    check(all(len(q['options']) == 4 and q['correctIndex'] in (0, 1, 2, 3) and q['question'] for q in qs),
-          '題目格式不完整')
-    check(levels == sorted(levels, key=order.index), '題目未依難度排列')
-    check(levels == ['N5', 'N5', 'N4', 'N4', 'N3', 'N3', 'N2', 'N2', 'N1', 'N1'],
-          '題目等級與判定位置不一致（第 3、4 題應為 N4，第 9、10 題應為 N1）')
+    check(all(len(q['options']) == 4 and q['question'] for q in qs), '題目格式不完整')
+    check(all('correctIndex' not in q and 'correct_answer' not in q for q in qs), '題目不應附上正確答案')
+    check(all('N' not in q['context'] for q in qs), '題目階段標籤不應顯示 N5～N1 代碼')
+    check(levels == ['N5', 'N5', 'N4', 'N4', 'N3', 'N3', 'N2', 'N2', 'N1', 'N1'], '題目未依 N5→N1 由淺入深排列')
 
 
 @case('A01', '程度測驗全部答對判定為 N1',
       pre='新註冊使用者，japanese_level 尚未設定',
-      steps='POST /api/quiz/submit，user_id、results=[10 題皆答對]',
-      expect='HTTP 200，level=N1；資料庫 japanese_level 更新為 N1')
+      steps='GET /api/quiz/questions 後，POST /api/quiz/submit，answers=[10 題都選正確選項]',
+      expect='HTTP 200，level=N1、correct=10；資料庫 japanese_level 更新為 N1')
 def _(c):
     u = register('quiz')
-    STATE['quiz'] = u
-    r = SC.post('/api/quiz/submit', json={'user_id': u['id'], 'results': [True] * 10})
+    r = placement(u, [True] * 10)
     row = user_row(u['id'])
-    c.log(http(r, 'message', 'level') + f'；資料庫 japanese_level={row["japanese_level"]}')
-    check(r.status_code == 200 and J(r).get('level') == 'N1', '判定等級不是 N1')
+    c.log(http(r, 'message', 'level', 'correct') + f'；資料庫 japanese_level={row["japanese_level"]}')
+    check(r.status_code == 200 and J(r).get('level') == 'N1' and J(r).get('correct') == 10, '判定等級不是 N1')
     check(row['japanese_level'] == 'N1', '資料庫等級未更新')
 
 
 @case('A01', '程度測驗部分答對判定為 N4',
-      pre='同一位使用者（目前 N1）',
-      steps='POST /api/quiz/submit，results=[第 1～4 題答對、第 5～10 題答錯]',
+      pre='新註冊使用者',
+      steps='POST /api/quiz/submit，answers=[第 1～4 題答對、第 5～10 題答錯]',
       expect='HTTP 200，level=N4（第 3、4 題答對達 N4，第 5、6 題全錯停在 N4）；資料庫更新為 N4')
 def _(c):
-    u = STATE['quiz']
-    r = SC.post('/api/quiz/submit', json={'user_id': u['id'], 'results': [True] * 4 + [False] * 6})
+    u = register('quiz')
+    r = placement(u, [True] * 4 + [False] * 6)
     row = user_row(u['id'])
     c.log(http(r, 'level') + f'；資料庫 japanese_level={row["japanese_level"]}')
     check(r.status_code == 200 and J(r).get('level') == 'N4' and row['japanese_level'] == 'N4', '判定等級不是 N4')
 
 
 @case('A01', '程度測驗全部答錯判定為 N5',
-      pre='同一位使用者（目前 N4）',
-      steps='POST /api/quiz/submit，results=[10 題皆答錯]',
+      pre='新註冊使用者',
+      steps='POST /api/quiz/submit，answers=[10 題都選「我還沒學過這個」]',
       expect='HTTP 200，level=N5；資料庫更新為 N5')
 def _(c):
-    u = STATE['quiz']
-    r = SC.post('/api/quiz/submit', json={'user_id': u['id'], 'results': [False] * 10})
+    u = register('quiz')
+    r = placement(u, [None] * 10)
     row = user_row(u['id'])
     c.log(http(r, 'level') + f'；資料庫 japanese_level={row["japanese_level"]}')
     check(r.status_code == 200 and J(r).get('level') == 'N5' and row['japanese_level'] == 'N5', '判定等級不是 N5')
+
+
+@case('A01', '程度測驗每關只對一題不會過關',
+      pre='兩位新註冊使用者',
+      steps='POST /api/quiz/submit：\n1. 第 1、3、5、7 題答對，其餘答錯（每關各對 1 題）\n'
+            '2. 第 1～7 題答對、第 8 題答錯、第 9～10 題答對',
+      expect='1. HTTP 200，level=N5（N4 那關兩題沒有都對，停在 N5）\n2. HTTP 200，level=N3（N2 那關只對 1 題，停在 N3）')
+def _(c):
+    r1 = placement(register('quiz'), [True, False] * 4 + [False, False])
+    r2 = placement(register('quiz'), [True] * 7 + [False] + [True] * 2)
+    c.log(f'1. {http(r1, "level")}；2. {http(r2, "level")}')
+    check(r1.status_code == 200 and J(r1).get('level') == 'N5', '每關各對 1 題卻判定過關')
+    check(r2.status_code == 200 and J(r2).get('level') == 'N3', '沒有在 N2 那關停下')
+
+
+@case('A01', '程度測驗不能偽造作答或重做',
+      pre='使用者 Q 尚未設定程度',
+      steps='1. POST /api/quiz/submit，舊格式 results=[true×10]\n2. answers 只送 2 題\n'
+            '3. 正常作答（全錯）\n4. 再做一次程度測驗（全對）\n5. POST /api/user/update_level，level=N1',
+      expect='1. HTTP 400（不接受 App 自己算的對錯）\n2. HTTP 400，「請完成整份測驗再送出」\n3. HTTP 200，level=N5\n'
+             '4. HTTP 409，程度不變\n5. HTTP 409，程度仍是 N5')
+def _(c):
+    u = register('quiz')
+    qs = J(SC.get('/api/quiz/questions')).get('questions', [])
+    r1 = SC.post('/api/quiz/submit', json={'user_id': u['id'], 'results': [True] * 10})
+    r2 = SC.post('/api/quiz/submit', json={'user_id': u['id'], 'answers': quiz_answers(qs[:2], [True, True])})
+    r3 = placement(u, [False] * 10)
+    r4 = placement(u, [True] * 10)
+    r5 = SC.post('/api/user/update_level', json={'user_id': u['id'], 'level': 'N1'})
+    lv = user_row(u['id'])['japanese_level']
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}；3. {http(r3, "level")}；4. {http(r4, "error")}；'
+          f'5. {http(r5, "error")}；資料庫 japanese_level={lv}')
+    check(r1.status_code == 400 and r2.status_code == 400 and J(r2).get('error') == '請完成整份測驗再送出',
+          '偽造的作答沒有被擋下')
+    check(r3.status_code == 200 and J(r3).get('level') == 'N5', '正常作答判定錯誤')
+    check(r4.status_code == 409 and r5.status_code == 409 and lv == 'N5', '已有程度的使用者還能重做程度測驗或直接改程度')
+
+
+@case('A01', '升級測驗由後端改考卷',
+      pre='使用者 U 選「我是日文新手」（程度 N5），測試題庫 N4 有 2 題',
+      steps='1. GET /api/quiz/upgrade_questions\n2. POST /api/quiz/upgrade_submit，舊格式 results=[true]\n'
+            '3. answers 只送 1 題（答對）\n4. answers 混入 N3 的題目\n5. 完整作答但只對 1 題\n6. 完整作答全對',
+      expect='1. HTTP 200，target_level=N4、2 題、不附正確答案\n2～4. HTTP 400，程度維持 N5\n'
+             '5. HTTP 200，passed=false（通過需 2 題）\n6. HTTP 200，passed=true，程度升為 N4')
+def _(c):
+    u = register('upq')
+    SC.post('/api/user/update_level', json={'user_id': u['id'], 'level': 'N5'})
+    r1 = SC.get(f'/api/quiz/upgrade_questions?user_id={u["id"]}')
+    qs = J(r1).get('questions', [])
+    n3 = [q for q in J(SC.get('/api/quiz/questions')).get('questions', []) if q['level_tag'] == 'N3'][:1]
+
+    def sub(answers):
+        return SC.post('/api/quiz/upgrade_submit', json={'user_id': u['id'], 'answers': answers})
+
+    r2 = SC.post('/api/quiz/upgrade_submit', json={'user_id': u['id'], 'results': [True]})
+    r3 = sub(quiz_answers(qs[:1], [True]))
+    r4 = sub(quiz_answers(qs[:1] + n3, [True, True]))
+    lv_mid = user_row(u['id'])['japanese_level']
+    r5 = sub(quiz_answers(qs, [True, False]))
+    r6 = sub(quiz_answers(qs, [True, True]))
+    lv = user_row(u['id'])['japanese_level']
+    c.log(f'1. {http(r1, "target_level", "total", "pass_count")}；2. {http(r2, "error")}；3. {http(r3, "error")}；'
+          f'4. {http(r4, "error")}；5. {http(r5, "passed", "correct", "pass_count")}；6. {http(r6, "passed", "level")}')
+    check(r1.status_code == 200 and J(r1).get('target_level') == 'N4' and len(qs) == 2, '升級題目不正確')
+    check(all('correctIndex' not in q for q in qs), '升級題目不應附上正確答案')
+    check(r2.status_code == 400 and r3.status_code == 400 and r4.status_code == 400 and lv_mid == 'N5',
+          '偽造的升級作答沒有被擋下')
+    check(r5.status_code == 200 and J(r5).get('passed') is False, '答對率不足卻通過')
+    check(r6.status_code == 200 and J(r6).get('passed') is True and lv == 'N4', '全對卻沒有升級')
 
 
 @case('A01', '提交測驗缺少使用者 ID 被拒',
@@ -1313,7 +1397,7 @@ def _(c):
     u = register('profile')
     STATE['profile'] = u
     SC.post('/api/user/update_username', json={'user_id': u['id'], 'username': 'Hana_05'})
-    SC.post('/api/user/update_level', json={'user_id': u['id'], 'level': 'N4'})
+    set_user(u['id'], japanese_level='N4')
     SC.post('/api/vocab/collect', json={'user_id': u['id'], 'vocab_id': VOCAB_IDS[2]})
     r = SC.get(f'/api/user/profile_data/{u["id"]}')
     d = J(r)
@@ -2463,7 +2547,7 @@ def _(c):
     ensure_articles()
     r_user = register('reader')
     STATE['reader'] = r_user
-    SC.post('/api/user/update_level', json={'user_id': r_user['id'], 'level': 'N3'})
+    set_user(r_user['id'], japanese_level='N3')
     r = SC.get(f'/api/articles/dashboard?user_id={r_user["id"]}&level=N3')
     data = J(r).get('data', [])
     brief = [(a['title'], a['is_unlocked'], a['unlock_cost']) for a in data]
@@ -2630,7 +2714,7 @@ def _(c):
     from services.sentence import GRAMMAR_DB
     w1 = register('writer')
     STATE['writer'] = w1
-    SC.post('/api/user/update_level', json={'user_id': w1['id'], 'level': 'N4'})
+    set_user(w1['id'], japanese_level='N4')
     r1 = SC.get(f'/api/sentence/get_task?user_id={w1["id"]}')
     r2 = SC.get('/api/sentence/get_task')
     d = J(r1)

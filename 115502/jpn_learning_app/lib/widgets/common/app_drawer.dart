@@ -26,7 +26,6 @@ class AppDrawer extends StatelessWidget {
     final userProvider = context.watch<UserProvider>();
     final userName = userProvider.username ?? '使用者';
     final friendId = userProvider.friendId;
-    final isGuest = !userProvider.isLoggedIn;
 
     return Drawer(
       backgroundColor: _flatCanvasColor,
@@ -51,7 +50,7 @@ class AppDrawer extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isGuest ? '訪客' : userName,
+                        userName,
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
@@ -60,7 +59,7 @@ class AppDrawer extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isGuest ? '登入解鎖功能' : 'ID：${friendId ?? '—'}',
+                        'ID：${friendId ?? '—'}',
                         style: TextStyle(fontSize: 13, color: _subTextColor),
                       ),
                     ],
@@ -179,18 +178,16 @@ class AppDrawer extends StatelessWidget {
                   ),
                   _buildPillItem(
                     context,
-                    isGuest ? Icons.login : Icons.logout,
-                    isGuest ? '註冊 / 登入' : '登出帳號',
-                    iconColor: isGuest ? Colors.blue : Colors.redAccent,
-                    textColor: isGuest ? Colors.blue : Colors.redAccent, // 保持登出按鈕的跳色
-                    bgColor: isGuest
-                        ? Colors.blue.withOpacity(0.1)
-                        : Colors.redAccent.withOpacity(0.1),
+                    Icons.logout,
+                    '登出帳號',
+                    iconColor: Colors.redAccent,
+                    textColor: Colors.redAccent, // 保持登出按鈕的跳色
+                    bgColor: Colors.redAccent.withOpacity(0.1),
                     onTap: () {
                       // logout() 會把帳號類型重設，要先記下來：學生回教育版登入頁，
                       // 帶去一般版登入頁的話，一般版入口不收學生帳號
                       final wasEduStudent = userProvider.isEduStudent;
-                      if (!isGuest) userProvider.logout();
+                      userProvider.logout();
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(

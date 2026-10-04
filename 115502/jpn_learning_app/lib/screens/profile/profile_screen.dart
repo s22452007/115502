@@ -90,10 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _pickAndUploadImage() async {
     final userProvider = context.read<UserProvider>();
     final userId = userProvider.userId;
-    if (userId == null) {
-      _handleGuestClick('修改大頭貼');
-      return;
-    }
+    if (userId == null) return;
 
     final picked = await showAvatarPicker(
       context,
@@ -162,16 +159,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() { _isSaving = false; _isEditing = false; });
   }
 
-  void _handleGuestClick(String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('訪客無法使用「$featureName」功能，請先登入喔！')));
-  }
-
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final isGuest = userProvider.userId == null;
-    final email = isGuest ? '登入後同步資料' : (userProvider.email ?? '—');
-    final userName = isGuest ? 'Guest' : (userProvider.username ?? email.split('@')[0]);
+    final email = userProvider.email ?? '—';
+    final userName = userProvider.username ?? email.split('@')[0];
     final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
     final levelTitle = _getLevelTitle(rawLevel);
     final jPts = userProvider.jPts;
@@ -255,17 +247,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               height: 44,
                               child: ElevatedButton(
                                 onPressed: _isSaving ? null : () {
-                                  if (isGuest) {
-                                    _handleGuestClick('管理個人檔案');
+                                  if (_isEditing) {
+                                    _saveProfile();
                                   } else {
-                                    if (_isEditing) {
-                                      _saveProfile();
-                                    } else {
-                                      setState(() {
-                                        _nameController.text = userName;
-                                        _isEditing = true;
-                                      });
-                                    }
+                                    setState(() {
+                                      _nameController.text = userName;
+                                      _isEditing = true;
+                                    });
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -321,7 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 20),
                   // 教育版學生沒有付費機制：不顯示會員卡（沒訂閱時點進去是商城）
-                  if (!isGuest && !userProvider.isEduStudent)
+                  if (!userProvider.isEduStudent)
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: _sidePadding),
                       child: _buildSubscriptionCard(userProvider),
@@ -334,29 +322,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // J-Points 點進去是買點數的頁面，學生也不顯示
                         if (!userProvider.isEduStudent)
                           _buildListItem(icon: Icons.monetization_on_rounded, title: 'J-Points', trailingText: '$jPts', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen(initialIndex: 1)))),
-                        _buildListItem(icon: Icons.folder_special_rounded, title: '我的收藏', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('我的收藏') : Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))),
-                        _buildListItem(icon: Icons.people_alt_rounded, title: '我的好友', iconColor: AppColors.primary, trailingText: friendId, onTap: () => isGuest ? _handleGuestClick('我的好友') : Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
-                        _buildListItem(icon: Icons.military_tech_rounded, title: '成就徽章', iconColor: AppColors.primary, onTap: () => isGuest ? _handleGuestClick('成就徽章') : Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()))),
+                        _buildListItem(icon: Icons.folder_special_rounded, title: '我的收藏', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoFolderV2Screen()))),
+                        _buildListItem(icon: Icons.people_alt_rounded, title: '我的好友', iconColor: AppColors.primary, trailingText: friendId, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsListScreen()))),
+                        _buildListItem(icon: Icons.military_tech_rounded, title: '成就徽章', iconColor: AppColors.primary, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeLibraryScreen()))),
                         const SizedBox(height: 8),
                         _buildFlatInfoTile(
                           label: '稱號認證',
                           value: levelTitle,
                           isMaxLevel: rawLevel == 'N1',
-                          onUpgrade: isGuest
-                              ? () => _handleGuestClick('升級測驗')
-                              : () => _showUpgradeIntro(rawLevel),
+                          onUpgrade: () => _showUpgradeIntro(rawLevel),
                         ),
                         const SizedBox(height: 8),
                         _buildListItem(
-                          icon: isGuest ? Icons.login_rounded : Icons.logout_rounded,
-                          title: isGuest ? '登入帳號' : '登出帳號',
-                          iconColor: isGuest ? AppColors.primary : Colors.redAccent,
-                          textColor: isGuest ? _textColor : Colors.redAccent,
+                          icon: Icons.logout_rounded,
+                          title: '登出帳號',
+                          iconColor: Colors.redAccent,
+                          textColor: Colors.redAccent,
                           onTap: () {
                             // logout() 會把帳號類型重設，所以要先記下來。
                             // 學生要回教育版登入頁；帶去一般版登入頁的話，一般版入口不收學生帳號。
                             final wasEduStudent = context.read<UserProvider>().isEduStudent;
-                            if (!isGuest) context.read<UserProvider>().logout();
+                            context.read<UserProvider>().logout();
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (_) => wasEduStudent ? const EduLoginScreen() : const LoginScreen()),

@@ -46,7 +46,7 @@ class AuthHttpClient extends http.BaseClient {
       }
       // 通行證被拒時通知 main.dart 登出。沒帶通行證卻收到 401 也要通知：App 以為已登入、
       // 記憶體裡卻沒有通行證（例如開發時 hot reload 前就登入了），否則每個畫面都只會一直載入失敗。
-      // 是不是訪客由 main.dart 判斷，訪客呼叫需要登入的 API 只會拿到錯誤，不跳畫面。
+      // 尚未登入時由 main.dart 判斷，呼叫需要登入的 API 只會拿到錯誤，不跳畫面。
       // 等回應的期間如果已經重新登入、換了新通行證，這次的失敗就與現在的登入無關。
       final authFailed = response.statusCode == 401 ||
           (response.statusCode == 403 && response.headers['x-auth-error'] == 'suspended');

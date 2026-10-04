@@ -562,14 +562,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         _buildGoogleButton(onTap: _handleGoogleLogin),
                         const SizedBox(height: 24),
-
-                        GestureDetector(
-                          onTap: () => Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false),
-                          child: const Text(
-                            '以訪客身分繼續',
-                            style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
-                          ),
-                        ),
                       ],
                     ),
                   ),

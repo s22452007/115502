@@ -24,7 +24,6 @@ import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/widgets/home/daily_goal_card.dart';
 import 'package:jpn_learning_app/widgets/dialogs/vocab_bottom_sheet.dart';
-import 'package:jpn_learning_app/widgets/common/premium_locked_overlay.dart';
 import 'package:jpn_learning_app/widgets/home/recent_scenes_list.dart';
 import 'package:jpn_learning_app/widgets/common/status_chip.dart';
 import 'package:jpn_learning_app/screens/sentence/sentence_practice_screen.dart';
@@ -246,8 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
 
     final userProvider = context.watch<UserProvider>();
-    final isGuest = !userProvider.isLoggedIn;
-    final userName = isGuest ? '訪客' : (userProvider.username ?? '使用者');
+    final userName = userProvider.username ?? '使用者';
     final jPts = userProvider.jPts;
     final streakDays = userProvider.streakDays;
     final avatarUrl = userProvider.avatar;
@@ -324,8 +322,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         ),
 
                         const SizedBox(height: 10),
-                        if (!isGuest)
-                          Wrap(
+                        Wrap(
                             spacing: 8,
                             runSpacing: 6,
                             children: [
@@ -455,14 +452,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             _buildSectionHeader('今日學習目標'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: isGuest
-                  ? PremiumLockedOverlay(
-                      message: '登入啟用今日目標',
-                      child: DailyGoalCard(
-                        onReturnFromCamera: () => _syncHomeData(),
-                      ),
-                    )
-                  : DailyGoalCard(onReturnFromCamera: () => _syncHomeData()),
+              child: DailyGoalCard(onReturnFromCamera: () => _syncHomeData()),
             ),
 
             const SizedBox(height: 35),

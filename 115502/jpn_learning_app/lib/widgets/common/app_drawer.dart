@@ -24,7 +24,7 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final userName = userProvider.username ?? '使用者';
+    final userName = userProvider.displayName;
     final friendId = userProvider.friendId;
 
     return Drawer(

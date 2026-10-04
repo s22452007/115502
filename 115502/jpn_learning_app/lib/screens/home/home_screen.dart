@@ -245,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     List<String> weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
 
     final userProvider = context.watch<UserProvider>();
-    final userName = userProvider.username ?? '使用者';
+    final userName = userProvider.displayName;
     final jPts = userProvider.jPts;
     final streakDays = userProvider.streakDays;
     final avatarUrl = userProvider.avatar;

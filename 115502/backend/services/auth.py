@@ -9,7 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # 3. 本地端模組 (Local)
 from utils.db import db
-from utils.auth_helper import generate_friend_id
+from utils.auth_helper import generate_friend_id, is_valid_email, default_username
 from utils.subscription_helper import check_and_expire_subscription
 from utils.group_helper import add_group_progress_and_check_reward
 from utils.auth_token import issue_token, current_user_id
@@ -26,11 +26,13 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    email = data.get('email')
+    email = (data.get('email') or '').strip()
     password = data.get('password')
 
     if not email or not password:
         return jsonify({"error": "請填寫 Email 與密碼"}), 400
+    if not is_valid_email(email):
+        return jsonify({"error": "請輸入正確的 Email（例如 name@gmail.com）"}), 400
 
     # 檢查是否已經被註冊過
     if User.query.filter_by(email=email).first():
@@ -58,9 +60,17 @@ def register():
     new_friend_id = generate_friend_id()
     new_user = User(
         email=email,
+        username=default_username(email),   # 預設暱稱＝Email @ 前面那段，之後可以在個人檔案改
         password_hash=hashed_pw,
         friend_id=new_friend_id,
         account_type=account_type,
+        # 註冊完直接進 App、不會再經過 /login，所以註冊當天就算第 1 天登入，
+        # 否則首頁會顯示「已連續登入 0 天」，要等明天再登入才變 1 天
+        streak_days=1,
+        total_active_days=1,
+        last_login_date=date.today(),
+        last_scan_date=date.today(),
+        last_seen_at=datetime.utcnow(),
     )
 
     db.session.add(new_user)
@@ -70,6 +80,9 @@ def register():
         "message": "註冊成功！",
         "token": issue_token(new_user),   # 登入通行證：之後呼叫 API 都要帶在 Authorization 標頭
         "user_id": new_user.id,
+        "email": new_user.email,
+        "username": new_user.username,
+        "streak_days": new_user.streak_days,
         "friend_id": new_friend_id,
         "account_type": account_type,
     }), 201
@@ -83,6 +96,10 @@ def login():
     print("=== [DEBUG] login ===")
     print("收到 email:", repr(email))
     print("收到 password 長度:", len(password) if password else 0)
+
+    # 一般版入口一定要用 Email 登入（校園教育版學生用學號，不在此限）
+    if (data.get('portal') or '').strip().lower() == 'general' and not is_valid_email((email or '').strip()):
+        return jsonify({"error": "請輸入正確的 Email（例如 name@gmail.com）"}), 400
 
     user = User.query.filter_by(email=email).first()
 
@@ -124,6 +141,10 @@ def login():
         # 防呆：如果舊玩家沒有 friend_id，就在登入時幫他補發一個
         if not user.friend_id:
             user.friend_id = generate_friend_id()
+            db.session.commit()
+        # 舊帳號沒有暱稱時補一個（Email @ 前面那段），各畫面才不會顯示「使用者」
+        if not user.username:
+            user.username = default_username(user.email)
             db.session.commit()
 
         # ----- 登入天數與任務重置邏輯 -----
@@ -396,7 +417,8 @@ def google_login():
         # 因為是用 Google 登入，不需要輸入密碼，所以隨機塞一個極高強度的假密碼給他
         dummy_pwd = generate_password_hash("GOOGLE_OAUTH_" + email) 
         
-        user = User(email=email, password_hash=dummy_pwd, friend_id=new_friend_id, avatar=avatar)
+        user = User(email=email, username=default_username(email), password_hash=dummy_pwd,
+                    friend_id=new_friend_id, avatar=avatar)
         db.session.add(user)
         db.session.commit() # 先 commit 讓 user 產生 id
     else:
@@ -414,6 +436,8 @@ def google_login():
         # 如果老用戶沒頭像，但這次 Google 有傳過來，就順便更新
         if avatar and not user.avatar:
             user.avatar = avatar
+        if not user.username:
+            user.username = default_username(user.email)
 
     # ----- 登入天數與任務重置邏輯 -----
     today = date.today()

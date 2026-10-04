@@ -100,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     String avatarValue;
     if (picked == kAvatarGallery) {
-      final cropped = await pickAndCropAvatarFromGallery();
+      final cropped = await pickAndCropAvatarFromGallery(context);
       if (cropped == null || !mounted) return;
       avatarValue = cropped;
     } else {
@@ -163,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
     final email = userProvider.email ?? '—';
-    final userName = userProvider.username ?? email.split('@')[0];
+    final userName = userProvider.displayName;
     final rawLevel = userProvider.japaneseLevel.isNotEmpty ? userProvider.japaneseLevel : '尚未設定';
     final levelTitle = _getLevelTitle(rawLevel);
     final jPts = userProvider.jPts;

@@ -257,7 +257,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final hasClassrooms = _myClassrooms.isNotEmpty;
     // 各教室未讀公告加總，「我的教室」按鈕上顯示紅色數字
     final unreadNotices = _myClassrooms.fold<int>(
-        0, (sum, c) => sum + ((c['unread_count'] as num?)?.toInt() ?? 0));
+      0,
+      (sum, c) => sum + ((c['unread_count'] as num?)?.toInt() ?? 0),
+    );
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
@@ -467,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
             const SizedBox(height: 35),
 
-            // 🌟 新增造句挑戰區塊
+            // 🌟 造句挑戰區塊
             _buildSectionHeader('AI 挑戰'),
             _buildSentencePracticeCard(context),
 
@@ -503,7 +505,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 FloatingActionButton.extended(
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const ClassroomListScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const ClassroomListScreen(),
+                    ),
                   ).then((_) => _syncHomeData()),
                   icon: const Icon(
                     Icons.add_home_work_outlined,

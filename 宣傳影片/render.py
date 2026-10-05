@@ -12,22 +12,17 @@ import time
 from pathlib import Path
 
 import imageio_ffmpeg
-import qrcode
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).parent
 BUILD = ROOT / "build"
 OUT = ROOT / "Snap_to_Learn_宣傳影片.mp4"
-QR_URL = "https://github.com/s22452007/115502"   # 片尾 QR Code 內容，換成實際下載連結
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 
 def prepare():
     cues = json.loads((BUILD / "cues.json").read_text(encoding="utf-8"))
     (BUILD / "cues.js").write_text("window.CUES=" + json.dumps(cues, ensure_ascii=False) + ";", encoding="utf-8")
-    qr = qrcode.QRCode(border=1, box_size=12, error_correction=qrcode.constants.ERROR_CORRECT_M)
-    qr.add_data(QR_URL)
-    qr.make_image(fill_color="#1F3A24", back_color="white").save(BUILD / "qr.png")
     write_srt(cues)
     return cues
 

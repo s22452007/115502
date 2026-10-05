@@ -17,6 +17,7 @@ from prosody import synth_phrased
 
 VOICE = "zh-TW-HsiaoChenNeural"
 RATE = "+2%"
+STYLE = "lively"   # 語調：normal 平穩、lively 活潑（見 prosody.py）
 ROOT = Path(__file__).parent
 BUILD = ROOT / "build"
 REC = ROOT / "錄音"
@@ -25,6 +26,7 @@ FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 # 每段：(念完後停留秒數, [(與上一句的間隔秒數, 句子), ...])
 # 第一句的間隔就是開場後幾秒開始念。間隔長的地方是留給畫面動作（例如金幣噴出）
 NARRATION = [
+    (3.2, []),   # 片頭：Logo 與標語，不念旁白
     (2.4, [(0.5, "想學日文卻看不懂？打開相機，隨拍隨翻！"),
            (0.5, "系統瞬間解析日文，為你建立專屬單字卡，照片中的個人資訊也會自動打碼保護。"),
            (0.6, "一鍵加入收藏夾，打造你獨一無二的「單詞牆」，集滿主題收集冊，生活隨處都是教材。")]),
@@ -33,16 +35,18 @@ NARRATION = [
     (2.6, [(0.5, "寫作與文法，系統幫你嚴格把關。「AI 造句批改」宛如貼身家教，精準揪出文法盲點；"),
            (1.6, "還有疑問？「AI 家教」隨時為你解答。")]),
     (2.2, [(0.5, "「閱讀模組」提供進階文章，"),
-           (0.8, "結合聲學模型為你的朗讀即時評分，精準指出發音弱點，聽說讀寫全面提升。")]),
+           (0.8, "AI 逐字聆聽你的朗讀並即時評分，精準指出唸錯的地方，聽說讀寫全面提升。")]),
     (1.6, [(0.5, "不確定自己的程度？「程度測驗」快速為你分級；"),
            (0.5, "實力提升後，挑戰「升級測驗」，一步步邁向更高等級。")]),
     (2.2, [(0.5, "一個人學太孤單？加入「學習小組」！與好友組隊挑戰排行榜，"),
            (1.6, "或加入老師的線上班級，直接接收派發作業，凝聚學習動力。")]),
+    (2.2, [(0.5, "校園教育版支援學校 Google 帳號一鍵登入，輸入班級代碼即可加入班級；"),
+           (0.8, "老師透過網頁後台建立班級，派發造句、閱讀、拍照與情境對話作業，全班成績與繳交率一目了然。")]),
     (2.6, [(0.5, "學習也能像打怪升級！完成「每日任務」賺取點數，"),
            (2.2, "不斷挑戰自我，點亮專屬你的「成就徽章牆」，見證每一個學習里程碑。")]),
-    (2.4, [(0.5, "想解鎖更多進階功能？系統採用 J-pts 點數機制，按需兌換學習額度。"),
+    (3.4, [(0.5, "想解鎖更多進階功能？系統採用 J-pts 點數機制，按需兌換學習額度。"),
            (1.2, "強烈推薦升級「Premium 訂閱」，享受最高規格的無限暢學體驗！"),
-           (2.2, "立即掃描下載，開啟你的 AI 日語之旅！")]),
+           (2.2, "Snap to Learn，讓生活中的每一刻，都成為學習日語的起點。")]),
 ]
 
 # 字幕在這些標點斷行；顯示時去掉句尾的 ，。；
@@ -65,6 +69,9 @@ def split_chunks(text):
         core = p.rstrip(BREAK)
         if len(core) > MAX_CHARS:
             mid = len(core) // 2
+            # 不要切在英文單字中間（例如 Google）
+            while mid < len(core) - 1 and core[mid - 1].isascii() and core[mid - 1].isalnum() and core[mid].isascii() and core[mid].isalnum():
+                mid += 1
             out += [p[:mid], p[mid:]]
         else:
             out.append(p)
@@ -111,7 +118,7 @@ async def main():
         seg, t = {"parts": [], "cues": []}, 0.0
         for j, (gap, text) in enumerate(parts):
             name = f"seg{i}_{j}"
-            words, dur = await synth_phrased(text, VOICE, RATE, BUILD / f"{name}.mp3")
+            words, dur = await synth_phrased(text, VOICE, RATE, BUILD / f"{name}.mp3", STYLE)
             cues = align(text, words, dur)
             rec = REC / f"{name}.mp3"
             if rec.exists():

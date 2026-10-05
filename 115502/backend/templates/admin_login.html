@@ -105,13 +105,15 @@
             flex: 1;
             background: #ffffff;
             display: flex;
-            align-items: center;
             justify-content: center;
             padding: 60px 56px;
+            overflow-y: auto;
         }
+        /* 用 margin:auto 置中：內容比畫面高時從頂端排、往下捲，標題不會被切掉 */
         .form-box {
             width: 100%;
             max-width: 340px;
+            margin: auto 0;
         }
         .form-hello {
             font-size: 0.78rem;

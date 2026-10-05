@@ -193,7 +193,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .ghero small{font-size:14px;opacity:.85;font-weight:600}
 .members{display:flex;margin-top:16px}
 .members .av{width:46px;height:46px;border:3px solid #3C7440;margin-right:-8px;font-size:16px;opacity:0}
-.lb{position:relative;margin:0 20px;height:300px}
+.lb{position:relative;margin:0 20px;height:292px}
 .lrow{position:absolute;left:0;right:0;height:52px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:14px;background:#fff;opacity:0}
 .lrow .rk{width:24px;font:900 18px "Segoe UI";color:var(--mute);text-align:center}
 .lrow .av{width:32px;height:32px;font-size:13px}
@@ -330,6 +330,124 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .lvsub{margin-top:16px;font-size:20px;font-weight:900}
 .lvnote{margin-top:6px;font-size:14px;color:var(--mute);font-weight:600}
 .lvbtn{position:absolute;left:20px;right:20px;top:600px;height:56px;border-radius:14px;background:var(--g);color:#fff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center}
+/* ===== 片頭、章節列、背景字、手機外的重點卡片 ===== */
+#bgk{position:absolute;inset:0;pointer-events:none}
+#bgk span{position:absolute;font-family:"Yu Gothic UI","Meiryo",sans-serif;font-weight:900;color:var(--g);opacity:.055}
+#nav{position:absolute;left:150px;top:92px;display:flex;gap:28px;z-index:8}
+#nav div{position:relative;font-size:21px;font-weight:800;color:#B4BBB2;letter-spacing:2px;padding-bottom:12px}
+#nav div.done{color:var(--ink2)}
+#nav div.on{color:var(--g)}
+#nav div i{position:absolute;left:0;bottom:0;height:4px;border-radius:2px;background:var(--g);width:0}
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#intro img{width:190px}
+#intro h1{margin-top:14px;font:900 120px "Segoe UI";color:var(--g-d);letter-spacing:1px}
+#intro p{margin-top:8px;font-size:40px;font-weight:800;color:var(--ink);letter-spacing:4px}
+#intro p em{font-style:normal;color:var(--g)}
+.co{position:absolute;left:1650px;z-index:9;background:#fff;border-radius:20px;box-shadow:0 18px 40px rgba(34,49,63,.16);padding:16px 22px;opacity:0;white-space:nowrap}
+.co .jp{font-size:32px;font-weight:900;color:var(--ink)}
+.co small{display:block;margin-top:2px;font-size:18px;font-weight:800;color:var(--g)}
+.co.bad{border:3px solid var(--red)} .co.bad .jp{color:var(--red);text-decoration:line-through}
+.co.good{border:3px solid var(--g)} .co.good .jp{color:var(--g)}
+.co .mk{font:900 22px "Segoe UI";margin-right:8px}
+.co.chipco{padding:12px 20px;font-size:22px;font-weight:800;color:var(--ink2)}
+.co.big{text-align:center;padding:22px 30px}
+.co.big b{display:block;font:900 96px "Segoe UI";line-height:1;background:linear-gradient(180deg,#6FBF6C,#2F5E33);-webkit-background-clip:text;color:transparent}
+.co.big.gold b{background:linear-gradient(180deg,#F5C842,#A08B1E);-webkit-background-clip:text}
+.co.big small{font-size:20px;margin-top:8px;color:var(--ink2)}
+.co .medal{width:110px;height:110px;margin:0 auto 10px}
+.co .medal svg{width:56px;height:56px}
+#s5-ladder{position:absolute;left:1660px;top:250px;width:210px;z-index:9}
+.rung{height:84px;margin-bottom:14px;border-radius:18px;background:#fff;box-shadow:0 10px 24px rgba(34,49,63,.10);display:flex;align-items:center;justify-content:space-between;padding:0 24px;font:900 34px "Segoe UI";color:#C3C9C0;opacity:0}
+.rung small{font:800 16px "Microsoft JhengHei";color:inherit}
+.rung.cur{background:var(--g);color:#fff}
+.rung.up{background:linear-gradient(135deg,#FFE58A,#C6B13B);color:#4A3D00}
+.goal{margin:8px 20px 0;padding:14px 16px}
+.goal b{font-size:15px}.goal span{float:right;font:800 14px "Segoe UI";color:var(--g)}
+.goal .pg{margin-top:10px;height:10px;border-radius:5px;background:#EEF0EA;overflow:hidden}
+.goal .pg i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4E8B4C,#8CC58A);border-radius:5px}
+.week{margin:18px 20px 0;padding:14px 16px}
+.week b{font-size:15px}
+.week .days{display:flex;justify-content:space-between;margin-top:12px}
+.week .days div{width:38px;text-align:center;font-size:12px;font-weight:700;color:var(--mute)}
+.week .days i{display:flex;width:34px;height:34px;margin:0 auto 6px;border-radius:50%;background:#EEF0EA;align-items:center;justify-content:center;color:#fff;font-style:normal;font:900 15px "Segoe UI"}
+.week .days i.f{background:var(--g)}
+.week .days i.today{background:#fff;border:3px solid var(--gold);color:var(--gold)}
+/* ===== 校園教育版 ===== */
+.edu-hero{margin:10px 20px 0;padding:20px;display:flex;gap:16px;align-items:center}
+.edu-hero img{width:56px}
+.edu-hero b{display:block;font-size:20px}
+.edu-hero small{font-size:13px;color:var(--mute);font-weight:600}
+.field{margin:18px 20px 0}
+.field small{font-size:13px;font-weight:800;color:var(--ink2)}
+.field div{margin-top:6px;height:52px;border-radius:14px;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:17px;font-weight:800}
+.field span{color:var(--mute)}
+.gbtn{margin:18px 20px 0;height:56px;border-radius:14px;background:#fff;border:2px solid #D7DBD3;display:flex;align-items:center;justify-content:center;gap:12px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.gbtn .g{font:900 22px "Segoe UI";background:conic-gradient(from -45deg,#EA4335 0 25%,#FBBC05 0 50%,#34A853 0 75%,#4285F4 0);-webkit-background-clip:text;color:transparent}
+.alt{margin-top:16px;text-align:center;font-size:13px;font-weight:700;color:var(--mute)}
+.joincard{margin:10px 20px 0;padding:22px}
+.joincard small{font-size:14px;font-weight:800;color:var(--ink2)}
+.code{display:flex;gap:8px;margin-top:12px}
+.code i{flex:1;height:60px;border-radius:12px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font:900 28px "Segoe UI";font-style:normal;color:var(--ink)}
+.code i.f{border-color:var(--g);background:var(--g-l)}
+.joined{margin:14px 20px 0;padding:16px;display:flex;gap:14px;align-items:center;opacity:0;border:2px solid var(--g)}
+.joined b{display:block;font-size:17px}.joined small{font-size:13px;color:var(--g);font-weight:700}
+#browser{position:absolute;left:1010px;top:150px;width:870px;height:640px;border-radius:16px;background:#fff;box-shadow:0 40px 80px rgba(34,49,63,.22);overflow:hidden;opacity:0;z-index:3}
+.bbar{height:44px;background:#ECEEE8;display:flex;align-items:center;gap:8px;padding:0 16px}
+.bbar i{width:12px;height:12px;border-radius:50%;background:#F26B5B}
+.url{margin-left:14px;flex:1;height:28px;border-radius:8px;background:#fff;font:600 14px "Microsoft JhengHei";color:var(--mute);display:flex;align-items:center;padding:0 12px}
+.bbody{display:flex;height:596px}
+.side{width:190px;background:#1F3A24;color:#fff;padding:18px 12px}
+.side .logo{display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px;height:34px;margin-bottom:18px}
+.side .logo img{width:32px;background:#fff;border-radius:8px;padding:2px}
+.nv{height:43px;line-height:43px;padding:0 14px;border-radius:10px;font-size:15px;font-weight:700;color:rgba(255,255,255,.65);margin-bottom:4px}
+.nv.on{background:rgba(255,255,255,.16);color:#fff}
+.main{flex:1;position:relative;background:#F5F6F2}
+.pane{position:absolute;inset:0;padding:22px 26px;opacity:0}
+.pane h3{font-size:22px;font-weight:900;height:30px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.pane h3 .btn{font-size:14px;padding:8px 14px;border-radius:10px;background:var(--g);color:#fff}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ccard{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 14px rgba(0,0,0,.05);opacity:0}
+.ccard b{font-size:18px}
+.ccard .bd{float:right;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:#EEF0EA;color:var(--mute)}
+.ccard .bd.on{background:var(--g-l);color:var(--g)}
+.ccard .cd{margin-top:14px;font-size:13px;color:var(--mute);font-weight:700}
+.ccard .cd span{display:block;margin-top:4px;font:900 36px "Segoe UI";letter-spacing:5px;color:var(--g-d)}
+.ccard .meta{margin-top:10px;font-size:13px;color:var(--ink2);font-weight:600}
+.step{font-size:14px;font-weight:800;color:var(--ink2);height:20px;margin-bottom:10px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tcard{height:86px;background:#fff;border-radius:14px;padding:14px 16px;border:2px solid transparent;box-shadow:0 3px 10px rgba(0,0,0,.04)}
+.tcard b{font-size:16px}
+.tcard small{display:block;margin-top:6px;font-size:12.5px;color:var(--mute);font-weight:600;line-height:1.5}
+.tcard.sel{border-color:var(--g);background:var(--g-l)}
+.frow{display:flex;gap:12px;margin-top:16px}
+.frow div{flex:1;background:#fff;border-radius:12px;padding:10px 14px;border:1.5px solid var(--line)}
+.frow small{display:block;font-size:12px;color:var(--mute);font-weight:700}
+.frow span{font-size:16px;font-weight:800}
+.chk{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--ink2)}
+.chk i{width:20px;height:20px;border-radius:5px;background:var(--g);color:#fff;font-style:normal;font-size:13px;display:flex;align-items:center;justify-content:center}
+.pub{position:absolute;right:26px;bottom:26px;height:46px;padding:0 26px;border-radius:12px;background:var(--g);color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center}
+.stats{display:flex;background:#fff;border-radius:14px;padding:18px 6px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.stats div{flex:1;padding:0 18px;border-left:1.5px solid var(--line)}
+.stats div:first-child{border-left:0}
+.stats small{font-size:13px;color:var(--mute);font-weight:700}
+.stats b{display:block;margin-top:4px;font:900 32px "Segoe UI";color:var(--ink)}
+.chart{margin-top:16px;background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.chart small{font-size:14px;font-weight:800;color:var(--ink2)}
+.bars{display:flex;align-items:flex-end;gap:22px;height:250px;margin-top:10px;padding:0 10px}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bars i{display:block;width:100%;border-radius:8px 8px 0 0;background:linear-gradient(180deg,#8CC58A,#4E8B4C)}
+.bars span{margin-top:8px;font:700 13px "Segoe UI";color:var(--mute)}
+.cursor{position:absolute;left:0;top:0;width:28px;height:28px;z-index:5;opacity:0}
+.btoast{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;bottom:24px;background:#22313F;color:#fff;padding:12px 22px;border-radius:999px;font-weight:800;font-size:16px;opacity:0;z-index:6}
+.endwrap{display:flex;flex-direction:column;align-items:center}
+.endwrap img{width:150px}
+.endwrap h1{margin-top:10px;font:900 100px "Segoe UI";color:var(--g-d)}
+.endwrap .slogan{margin-top:6px;font-size:40px;font-weight:800;color:var(--ink);letter-spacing:2px}
+.endwrap .slogan em{font-style:normal;color:var(--g)}
+.recap{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;max-width:1800px;margin-top:40px}
+.recap span{padding:12px 24px;border-radius:999px;background:#fff;box-shadow:0 8px 20px rgba(34,49,63,.08);font-size:24px;font-weight:800;color:var(--g-d)}
+.team{margin-top:44px;padding-top:26px;border-top:2px solid #DCE3D8;text-align:center;font-size:24px;font-weight:700;color:var(--ink2);letter-spacing:2px;line-height:1.7}
+.team div:first-child{font-size:26px;font-weight:900;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -365,12 +483,19 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 </svg>
 
 <div id="stage">
+  <div id="bgk"><span style="font-size:190px;left:40px;top:180px">学</span><span style="font-size:120px;left:820px;top:640px">あ</span><span style="font-size:160px;left:1700px;top:860px">日</span><span style="font-size:110px;left:1020px;top:120px">カ</span><span style="font-size:140px;left:560px;top:880px">語</span><span style="font-size:100px;left:1850px;top:170px">の</span><span style="font-size:120px;left:880px;top:700px">話</span><span style="font-size:90px;left:40px;top:620px">ア</span><span style="font-size:130px;left:1620px;top:40px">読</span></div>
+  <div id="nav"><div>拍照<i></i></div><div>對話<i></i></div><div>批改<i></i></div><div>朗讀<i></i></div><div>測驗<i></i></div><div>小組<i></i></div><div>教育<i></i></div><div>任務<i></i></div><div>商城<i></i></div></div>
   <div id="phone"></div>
+  <section class="scene" id="s0"><div class="scr" id="s0-splash" style="background:linear-gradient(160deg,#4E8B4C,#2F5E33);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px"><div style="width:120px;height:120px;border-radius:30px;background:#fff;display:flex;align-items:center;justify-content:center"><img src="logo.png" style="width:92px"></div><div style="color:#fff;font:900 30px 'Segoe UI'">Snap to Learn</div></div><div id="intro"><img src="logo.png"><h1>Snap to Learn</h1><p>拍下生活，<em>AI 陪你學日文</em></p></div></section>
   <div id="sb"><span>9:41</span><span>●●● ▮</span></div>
   <div id="island"></div>
 
   <!-- ================= S1 拍照辨識・個資打碼・單詞牆・主題收集冊 ================= -->
   <section class="scene" id="s1">
+    <div class="co" id="s1-c1" style="top:300px"><span class="jp">ラーメン</span><small>拉麵</small></div>
+    <div class="co" id="s1-c2" style="top:420px"><span class="jp">餃子</span><small>煎餃</small></div>
+    <div class="co" id="s1-c3" style="top:540px"><span class="jp">生ビール</span><small>生啤酒</small></div>
+    <div class="co big" id="s1-c4" style="top:330px"><div class="medal" style="background:linear-gradient(135deg,#F6A28C,#D9603F);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"><svg class="i"><use href="#i-bowl"/></svg></div><small style="color:var(--ink);font-size:22px">拉麵達人</small><small>主題集滿徽章</small></div>
     <div class="left">
       <div class="kicker"><b>01</b>拍照辨識 × 單詞牆</div>
       <div class="headline">打開相機，<br>生活就是<em>教材</em></div>
@@ -453,6 +578,10 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
   <!-- ================= S2 情境對話 ================= -->
   <section class="scene" id="s2">
+    <div class="co chipco" id="s2-c1" style="top:300px">便利商店</div>
+    <div class="co chipco" id="s2-c2" style="top:390px">飯店入住</div>
+    <div class="co chipco" id="s2-c3" style="top:480px">看醫生</div>
+    <div class="co chipco" id="s2-c4" style="top:570px">搭計程車</div>
     <div class="left">
       <div class="kicker"><b>02</b>AI 情境對話</div>
       <div class="headline">AI 語伴，<br>陪你<em>開口說</em></div>
@@ -492,6 +621,8 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
   <!-- ================= S3 造句批改 & AI 家教 ================= -->
   <section class="scene" id="s3">
+    <div class="co bad" id="s3-c1" style="top:340px"><span class="mk" style="color:var(--red)">✗</span><span class="jp">食べるました</span></div>
+    <div class="co good" id="s3-c2" style="top:470px"><span class="mk" style="color:var(--g)">✓</span><span class="jp">食べました</span></div>
     <div class="left">
       <div class="kicker"><b>03</b>AI 造句批改 × AI 家教</div>
       <div class="headline">寫錯哪裡，<br>AI <em>一眼看穿</em></div>
@@ -527,10 +658,11 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
   <!-- ================= S4 閱讀朗讀評分 ================= -->
   <section class="scene" id="s4">
+    <div class="co big gold" id="s4-c1" style="top:330px"><b>95</b><small>發音準確度</small></div>
     <div class="left">
       <div class="kicker"><b>04</b>閱讀 × 朗讀評分</div>
       <div class="headline">開口朗讀，<br>發音<em>即時評分</em></div>
-      <div class="tagline">聲學模型分析，哪個字不準一看就懂</div>
+      <div class="tagline">AI 逐字聆聽，唸錯哪裡一看就懂</div>
     </div>
     <div class="scr">
       <div class="layer" id="s4-list">
@@ -548,14 +680,14 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
         <div class="appbar"><svg class="i back"><use href="#i-back"/></svg>朗讀練習</div>
         <div class="ahead"><h2 class="jp">日本の四季</h2><span class="chip lv">N4</span></div>
         <div class="para jp" id="s4-para"><span>日本には四つの季節があります。</span><span>春には桜が咲いて、</span><span>多くの人が<em id="s4-bad">お花見</em>を楽しみます。</span><span>夏は暑いですが、</span><span>花火大会やお祭りがあります。</span></div>
-        <div class="tip" id="s4-tip"><b class="jp">お花見（おはなみ）</b><br>「はな」的音調偏高，聽聽看示範 ▶</div>
+        <div class="tip" id="s4-tip"><b class="jp">お花見（おはなみ）</b><br>你唸成「<span class="jp">おはなび</span>」，聽聽看示範 ▶</div>
         <div class="recbar"><div class="timer" id="s4-timer">00:00</div><div class="wv" id="s4-wv"></div><div class="rec"><div></div></div></div>
         <div class="score" id="s4-score">
           <div class="ringbox">
             <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="8"/><circle id="s4-arc" cx="50" cy="50" r="44" fill="none" stroke="url(#gr)" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46"/><defs><linearGradient id="gr" x1="0" x2="1"><stop offset="0" stop-color="#9BE59C"/><stop offset="1" stop-color="#F2C94C"/></linearGradient></defs></svg>
             <div class="num"><b id="s4-num">0</b><small>發音準確度</small></div>
           </div>
-          <div class="subs"><div>流暢度<b>92</b></div><div>完整度<b>98</b></div><div>音調<b>94</b></div></div>
+          <div class="subs"><div style="width:330px;text-align:left;padding:14px 18px">唸錯 1 處<b style="font:700 16px 'Microsoft JhengHei';color:#fff;margin-top:6px;line-height:1.5">整體很流暢！「お花見」再練習一下就更完美了。</b></div></div>
           <div class="fx" id="s4-fx"></div>
         </div>
       </div>
@@ -564,6 +696,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
   <!-- ================= S5 程度測驗 & 升級 ================= -->
   <section class="scene" id="s5">
+    <div id="s5-ladder"><div class="rung" data-l="N2">N2</div><div class="rung" data-l="N3">N3</div><div class="rung" data-l="N4">N4</div><div class="rung" data-l="N5">N5</div></div>
     <div class="left">
       <div class="kicker"><b>05</b>程度測驗 × 升級挑戰</div>
       <div class="headline">先測程度，<br>再一路<em>升級</em></div>
@@ -601,6 +734,8 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
   <!-- ================= S6 學習小組 ================= -->
   <section class="scene" id="s6">
+    <div class="co big gold" id="s6-c1" style="top:330px"><b style="font-size:72px">No.1</b><small>超越美咲，登上第一</small></div>
+    <div class="co" id="s6-c2" style="top:360px"><small style="color:var(--mute);font-size:15px">王老師 派發了新作業</small><span style="font-size:24px;font-weight:900">閱讀：<span class="jp">日本の四季</span></span><small>截止 10/12</small></div>
     <div class="left">
       <div class="kicker"><b>06</b>學習小組 × 線上班級</div>
       <div class="headline">找夥伴一起學，<br><em>動力翻倍</em></div>
@@ -622,6 +757,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
           <div class="lrow"><span class="rk">4</span><div class="av" style="background:#C6B13B">K</div><span class="nm">Ken</span><div class="bar"><i></i></div><span class="xp">860</span></div>
           <div class="lrow"><span class="rk">5</span><div class="av" style="background:#7E57A8">林</div><span class="nm">小林</span><div class="bar"><i></i></div><span class="xp">720</span></div>
         </div>
+        <div class="card goal"><b>小組本週目標</b><span id="s6-goal">0 / 5,000 XP</span><div class="pg"><i id="s6-gbar"></i></div></div>
       </div>
       <div class="layer" id="s6-class">
         <div class="appbar"><svg class="i back"><use href="#i-back"/></svg>線上班級</div>
@@ -636,10 +772,73 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
     </div>
   </section>
 
+  <!-- ================= 教育版：學校登入、班級代碼、老師網頁後台 ================= -->
+  <section class="scene" id="se">
+    <div class="left">
+      <div class="kicker"><b>07</b>校園教育版</div>
+      <div class="headline">老師派作業，<br>成績<em>一目了然</em></div>
+      <div class="tagline">學校 Google 登入・班級代碼・網頁後台</div>
+    </div>
+    <div class="scr" id="se-scr">
+      <div class="layer" id="se-login">
+        <div class="appbar">校園模式</div>
+        <div class="card edu-hero"><img src="logo.png"><div><b>早安，同學！</b><small>用學校帳號登入，自動建立帳號</small></div></div>
+        <div class="field"><small>學校</small><div>國立臺北商業大學<span>▾</span></div></div>
+        <div class="gbtn" id="se-gbtn"><span class="g">G</span>使用學校 Google 帳號登入</div>
+        <div class="alt">沒有學校帳號？用老師給的帳號登入</div>
+        <div class="tap" id="se-tap1" style="left:196px;top:344px"></div>
+      </div>
+      <div class="layer" id="se-join">
+        <div class="appbar">我的教室</div>
+        <div class="card joincard"><small>輸入老師給的班級代碼</small><div class="code" id="se-code"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="send" id="se-joinbtn" style="margin:16px 0 0">加入班級</div></div>
+        <div class="card joined" id="se-joined"><div class="av" style="background:var(--g)">班</div><div><b>日文（二）A 班</b><small>王老師・已加入</small></div></div>
+        <div class="tap" id="se-tap2" style="left:196px;top:272px"></div>
+      </div>
+      <div class="toast" id="se-toast">帳號建立完成！</div>
+    </div>
+    <div id="browser">
+      <div class="bbar"><i></i><i style="background:#F5BE4F"></i><i style="background:#5DC461"></i><div class="url">Snap to Learn 校園教育版</div></div>
+      <div class="bbody">
+        <div class="side"><div class="logo"><img src="logo.png">校園教育版</div><div class="nv" id="se-nv1">班級管理</div><div class="nv" id="se-nv2">出題新作業</div><div class="nv" id="se-nv3">班級報表</div><div class="nv">成績簿</div><div class="nv">公告</div></div>
+        <div class="main">
+          <div class="pane" id="se-p1">
+            <h3>班級管理<span class="btn">＋ 建立新班級</span></h3>
+            <div class="cgrid">
+              <div class="ccard" id="se-c1"><span class="bd on">開放加入中</span><b>日文（二）A 班</b><div class="cd">班級代碼<span id="se-ccode">K7Q2MX</span></div><div class="meta">學生人數：42 位・班級作業：6 份</div></div>
+              <div class="ccard" id="se-c2"><span class="bd">已關閉加入</span><b>日文會話 B 班</b><div class="cd">班級代碼<span>P4WN8T</span></div><div class="meta">學生人數：38 位・班級作業：9 份</div></div>
+            </div>
+          </div>
+          <div class="pane" id="se-p2">
+            <h3>出題新作業</h3>
+            <div class="step">步驟一：選擇作業題型</div>
+            <div class="tgrid">
+              <div class="tcard"><b>造句挑戰</b><small>指定文法與關鍵單字，AI 自動評分潤飾</small></div>
+              <div class="tcard" id="se-t2"><b>文章閱讀</b><small>挑選或上傳文章，可加選擇題、是非題</small></div>
+              <div class="tcard"><b>拍照學習</b><small>學生拍照，AI 辨識單字並生成例句</small></div>
+              <div class="tcard"><b>AI 情境對話</b><small>指定情境與輪數，老師看對話紀錄批閱</small></div>
+            </div>
+            <div class="frow"><div><small>作業標題</small><span class="jp">閱讀：日本の四季</span></div><div><small>截止時間</small><span>10/12 23:59</span></div></div>
+            <div class="chk"><i>✓</i>發布時通知學生（推播到學生手機）</div>
+            <div class="pub" id="se-pub">發布作業</div>
+          </div>
+          <div class="pane" id="se-p3">
+            <h3>班級報表<span style="font-size:14px;color:var(--mute);font-weight:700">日文（二）A 班</span></h3>
+            <div class="stats"><div><small>學期平均</small><b id="se-avg">0</b></div><div><small>及格率</small><b id="se-pass">0%</b></div><div><small>繳交率</small><b id="se-sub">0%</b></div><div><small>本週有練習</small><b id="se-week">0 位</b></div></div>
+            <div class="chart"><small>成績分布</small><div class="bars"><div><i style="height:0"></i><span>0–59</span></div><div><i style="height:0"></i><span>60–69</span></div><div><i style="height:0"></i><span>70–79</span></div><div><i style="height:0"></i><span>80–89</span></div><div><i style="height:0"></i><span>90–100</span></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cursor" id="se-cursor"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.5L9.5 21z" fill="#22313F" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+      <div class="btoast" id="se-btoast">已發布，並推播給 42 位同學</div>
+    </div>
+  </section>
+
   <!-- ================= S7 每日任務 & 徽章 ================= -->
   <section class="scene" id="s7">
+    <div class="co big gold" id="s7-c1" style="top:330px"><b>+30</b><small>J-Pts 入帳</small></div>
+    <div class="co big" id="s7-c2" style="top:310px"><div class="medal" style="background:linear-gradient(135deg,#E2B6FF,#8E44E8 60%,#5B2BB5);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(142,68,232,.45)"><svg class="i"><use href="#i-fire"/></svg></div><small style="color:var(--ink);font-size:22px">學習火種</small><small style="color:#8E44E8">白金級</small></div>
     <div class="left">
-      <div class="kicker"><b>07</b>每日任務 × 成就徽章</div>
+      <div class="kicker"><b>08</b>每日任務 × 成就徽章</div>
       <div class="headline">學習像<em>打怪升級</em>，<br>天天都想回來</div>
       <div class="tagline">完成任務領點數，點亮你的徽章牆</div>
     </div>
@@ -651,6 +850,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
         <div class="card task"><div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i></div><b>完成 1 次情境對話</b><span class="pt">+10</span></div>
         <div class="card task"><div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i></div><b>朗讀 1 篇文章</b><span class="pt">+10</span></div>
         <div class="claim" id="s7-claim">領取 30 J-Pts</div>
+        <div class="card week"><b>本週學習</b><div class="days"><div><i class="f">✓</i>一</div><div><i class="f">✓</i>二</div><div><i class="f">✓</i>三</div><div><i class="f">✓</i>四</div><div><i class="f">✓</i>五</div><div><i class="today">6</i>六</div><div><i class=""></i>日</div></div></div>
         <div id="s7-coins"></div>
         <div class="tap" id="s7-tap" style="left:196px;top:480px"></div>
       </div>
@@ -678,8 +878,10 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
   <!-- ================= S8 商城 & Premium ================= -->
   <section class="scene" id="s8">
+    <div class="co" id="s8-c1" style="top:330px"><span style="font-size:24px;font-weight:900">朗讀評分</span><small style="font-size:30px;font-family:'Segoe UI';font-weight:900">20 點／次</small></div>
+    <div class="co" id="s8-c2" style="top:470px"><span style="font-size:24px;font-weight:900">拍照辨識</span><small style="font-size:30px;font-family:'Segoe UI';font-weight:900">10 點／次</small></div>
     <div class="left" id="s8-left">
-      <div class="kicker"><b>08</b>點數商城 × Premium</div>
+      <div class="kicker"><b>09</b>點數商城 × Premium</div>
       <div class="headline">用多少買多少，<br><em>Premium</em> 無限用</div>
       <div class="tagline">J-Pts 點數加購・訂閱方案任你選</div>
     </div>
@@ -722,12 +924,13 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
       </div>
     </div>
     <div id="endcard">
-      <div class="brand">
+      <div class="endwrap">
         <img src="logo.png">
         <h1>Snap to Learn</h1>
-        <div class="slogan">開啟你的 <em>AI 日語之旅</em></div>
+        <div class="slogan">讓生活的每一刻，都成為<em>學習日語</em>的起點</div>
+        <div class="recap"><span>拍照辨識</span><span>AI 情境對話</span><span>AI 造句批改</span><span>朗讀評分</span><span>程度測驗</span><span>學習小組</span><span>校園教育版</span><span>成就徽章</span></div>
+        <div class="team" id="team"></div>
       </div>
-      <div class="qr"><img src="build/qr.png"><div>掃描立即下載</div></div>
     </div>
   </section>
 
@@ -735,6 +938,13 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 </div>
 
 <script>
+// 片尾團隊資訊（來源：系統手冊封面），一個字串一行；清空陣列就不顯示
+const TEAM=[
+  '國立臺北商業大學 資訊管理系｜第 115502 組',
+  '指導老師　林育志 老師',
+  '組長　彭婧奕　　組員　丁泳瑄・蘇品璇・廖唯岑・施品妤',
+];
+
 /* ---------- 時間軸引擎：每幀由 seek(秒) 決定畫面，錄影時逐幀呼叫 ---------- */
 const EASE={
   lin:t=>t,
@@ -765,6 +975,7 @@ function apply(tr,t){
   if(P.o)s.opacity=g('o');
   if(P.x||P.y||P.s||P.r)s.transform=`translate(${g('x',0)}px,${g('y',0)}px) scale(${g('s',1)}) rotate(${g('r',0)}deg)`;
   if(P.w)s.width=g('w')+'%';
+  if(P.h)s.height=g('h')+'%';
   if(P.bs)s.backgroundSize=g('bs')+'% 100%';
 }
 const lerp=(a,b,k)=>a+(b-a)*k, clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -777,6 +988,9 @@ function bars(box,n,cls){const b=document.querySelector(box);for(let i=0;i<n;i++
 function wave(barsEls,t,on,amp=22,base=6){barsEls.forEach((b,i)=>{const h=on?base+amp*Math.abs(Math.sin(t*9+i*1.3)*Math.sin(t*4.3+i*.7)):base;b.style.height=h+'px'});}
 const rnd=(()=>{let s=7;return()=>{s=(s*16807)%2147483647;return s/2147483647}})();
 
+const $id=id=>document.getElementById(id);
+// 從手機飛出來的卡片：tin 出現、tout 收回
+function CO(sel,tin,tout){K(sel,[[tin,{o:0,x:-140,s:.8}],[tin+.45,{o:1,x:0,s:1},'back'],[tout,{o:1,x:0,s:1}],[tout+.35,{o:0,x:40,s:.95}]]);}
 // 彩帶：從 (x,y) 往上噴
 function confetti(box,t0,x,y,n=40){const fx=document.querySelector(box);const C=['#F2C94C','#9BE59C','#FF8FA3','#8CC5E8','#fff'];const P=[];
   for(let i=0;i<n;i++){const d=document.createElement('i');d.style.background=C[i%5];fx.appendChild(d);P.push({d,vx:(rnd()-.5)*520,vy:-260-rnd()*420,rs:(rnd()-.5)*900,t0:t0+rnd()*.15});}
@@ -785,9 +999,16 @@ function confetti(box,t0,x,y,n=40){const fx=document.querySelector(box);const C=
 function sparks(box,t0,x,y,n=16){const sp=document.querySelector(box);const S=[];
   for(let i=0;i<n;i++){const d=document.createElement('div');d.className='spark';sp.appendChild(d);S.push({d,a:rnd()*Math.PI*2,r:40+rnd()*60,t0:t0+rnd()*.4,sz:.7+rnd()*.9});}
   F(t=>S.forEach(p=>{const u=t-p.t0;if(u<0||u>1.4){p.d.style.opacity=0;return}const k=EASE.out(u/1.4);p.d.style.opacity=1-k;p.d.style.left=(x+Math.cos(p.a)*p.r*k)+'px';p.d.style.top=(y+Math.sin(p.a)*p.r*k)+'px';p.d.style.transform=`scale(${p.sz}) rotate(${u*200}deg)`;}));}
-const $id=id=>document.getElementById(id);
 
 /* ======== S1 拍照 0–22.5 ======== */
+/* ======== S0 片頭 ======== */
+scene('s0',[3.2]);
+K('#intro img',[[.1,{o:0,s:.6}],[.6,{o:1,s:1},'back']]);
+K('#intro h1',[[.4,{o:0,y:30}],[.9,{o:1,y:0}]]);
+K('#intro p',[[.8,{o:0,y:20}],[1.3,{o:1,y:0}]]);
+K('#intro',[[2.4,{o:1,y:0}],[3.1,{o:0,y:-40},'io']]);
+F(t=>{const k=EASE.out(clamp((t-2.3)/.9));['phone','sb','island','s0-splash'].forEach(id=>{const e=$id(id);e.style.opacity=k;e.style.transform=`translateX(${(1-k)*700}px)`});$id('sb').classList.add('light');});
+
 scene('s1',[0.5,6.4,12.6,22.5]);
 leftIn(); screenOut();
 L('#s1-home',0,2.3);
@@ -939,6 +1160,37 @@ document.querySelectorAll('#s6-class .hw').forEach((h,i)=>K(h,[[8.3+i*.15,{o:0,x
 K('#s6-notice',[[10.9,{o:0,y:-80}],[11.4,{o:1,y:0},'back'],[14.2,{o:1,y:0}],[14.6,{o:0,y:-80}]]);
 K('#s6-class .hw:nth-child(4)',[[8.3,{o:0,x:40}],[8.7,{o:1,x:0}],[11.6,{s:1}],[11.9,{s:1.04}],[12.3,{s:1}]]);
 
+
+/* ======== 校園教育版 0–17.3 ======== */
+scene('se',[0.5,6.9,17.26]);
+leftIn();
+L('#se-login',0,2.7);
+TAP('#se-tap1',1.9);
+K('#se-gbtn',[[1.8,{s:1}],[1.95,{s:.96}],[2.2,{s:1}]]);
+K('#se-toast',[[2.3,{o:0,y:20}],[2.6,{o:1,y:0}],[3.6,{o:1}],[3.9,{o:0}]]);
+L('#se-join',2.7,6.2);
+F(t=>{const code='K7Q2MX',n=Math.round(clamp((t-3.2)/1.2)*6);document.querySelectorAll('#se-code i').forEach((b,i)=>{b.textContent=i<n?code[i]:'';b.className=i<n?'f':'';});});
+TAP('#se-tap2',4.8);
+K('#se-joinbtn',[[4.7,{s:1}],[4.85,{s:.95}],[5.1,{s:1}]]);
+K('#se-joined',[[5.2,{o:0,y:16}],[5.55,{o:1,y:0},'back']]);
+// 6.2 秒：手機退場、瀏覽器（老師網頁後台）進場；16.2 秒手機再回來接下一段
+K('#se-scr',[[6.2,{o:1,x:0}],[6.9,{o:0,x:500},'io'],[16.2,{o:0,x:500}],[17.0,{o:1,x:0},'io']]);
+F(t=>{const k=t<11?EASE.io(clamp((t-6.2)/.7)):1-EASE.io(clamp((t-16.2)/.8));['phone','sb','island'].forEach(id=>{const e=$id(id);e.style.opacity=1-k;e.style.transform=`translateX(${500*k}px)`});});
+K('#browser',[[6.4,{o:0,x:80}],[7.1,{o:1,x:0}],[16.0,{o:1,x:0}],[16.5,{o:0,x:-60}]]);
+F(t=>{['se-nv1','se-nv2','se-nv3'].forEach((id,i)=>$id(id).className='nv'+((i===0&&t<9.6)||(i===1&&t>=9.6&&t<12.6)||(i===2&&t>=12.6)?' on':''));});
+K('#se-p1',[[6.9,{o:1}],[9.6,{o:1}],[9.8,{o:0}]]);
+K('#se-c1',[[7.1,{o:0,y:16}],[7.5,{o:1,y:0}],[8.2,{s:1}],[8.45,{s:1.04}],[8.8,{s:1}]]);
+K('#se-c2',[[7.3,{o:0,y:16}],[7.7,{o:1,y:0}]]);
+K('#se-p2',[[9.7,{o:0}],[9.9,{o:1}],[12.6,{o:1}],[12.8,{o:0}]]);
+F(t=>{$id('se-t2').className='tcard'+(t>10.4?' sel':'');});
+K('#se-pub',[[11.7,{s:1}],[11.85,{s:.94}],[12.05,{s:1}]]);
+K('#se-btoast',[[11.95,{o:0,y:16}],[12.25,{o:1,y:0}],[13.2,{o:1}],[13.5,{o:0}]]);
+K('#se-p3',[[12.7,{o:0}],[12.9,{o:1}]]);
+F(t=>{const k=EASE.out(clamp((t-12.9)/1.2));$id('se-avg').textContent=(84.2*k).toFixed(1);$id('se-pass').textContent=Math.round(93*k)+'%';$id('se-sub').textContent=Math.round(97*k)+'%';$id('se-week').textContent=Math.round(36*k)+' 位';});
+document.querySelectorAll('#se-p3 .bars i').forEach((b,i)=>{const H=[16,30,62,100,56][i];K(b,[[13.1+i*.1,{h:0}],[14.0+i*.1,{h:H}]]);});
+// 游標：點「出題新作業」→ 選「文章閱讀」→ 按「發布作業」→ 點「班級報表」
+K('#se-cursor',[[7.0,{o:0,x:620,y:420}],[7.4,{o:1,x:620,y:420}],[9.2,{x:95,y:182},'io'],[9.5,{s:1}],[9.6,{s:.8}],[9.75,{s:1}],[10.0,{x:95,y:182}],[10.3,{x:690,y:182},'io'],[10.35,{s:1}],[10.45,{s:.8}],[10.6,{s:1}],[11.2,{x:690,y:182}],[11.75,{x:784,y:592},'io'],[11.8,{s:1}],[11.9,{s:.8}],[12.05,{s:1}],[12.1,{x:784,y:592}],[12.55,{x:95,y:229},'io'],[12.6,{s:1}],[12.7,{s:.8}],[12.85,{s:1}],[13.6,{o:1,x:95,y:229}],[14.0,{o:0,x:95,y:229}]]);
+
 /* ======== S7 每日任務 & 徽章 0–13.5 ======== */
 scene('s7',[0.5,6.4,13.5]);
 leftIn(); screenOut();
@@ -989,8 +1241,31 @@ K('#s8-prem .go',[[12.4,{s:1}],[12.7,{s:1.05}],[13.0,{s:1}]]);
 // 14 秒：手機退場，片尾卡出現
 K('#s8-scr',[[13.8,{o:1,x:0}],[14.5,{o:0,x:200},'io']]);
 K('#endcard',[[14.4,{o:0,y:30}],[15.2,{o:1,y:0}]]);
-K('#endcard .qr',[[14.8,{s:.8}],[15.5,{s:1},'back']]);
+document.querySelectorAll('#endcard .recap span').forEach((c,i)=>K(c,[[15.4+i*.1,{o:0,y:16}],[15.8+i*.1,{o:1,y:0}]]));
+K('#team',[[16.6,{o:0}],[17.2,{o:1}]]);
+F(()=>{const t=$id('team');if(!t.dataset.done){t.innerHTML=TEAM.map(l=>`<div>${l}</div>`).join('');t.dataset.done=1;}t.style.display=TEAM.length?'':'none';});
 F(t=>{const k=EASE.io(clamp((t-13.8)/.7));['phone','sb','island'].forEach(id=>{const e=$id(id);e.style.opacity=1-k;e.style.transform=`translateX(${200*k}px)`});});
+
+
+/* ======== 手機外的重點卡片、補充畫面 ======== */
+function use(id){cur=SCENES.find(s=>s.el.id===id)}
+use('s1'); CO('#s1-c1',6.9,11.2); CO('#s1-c2',7.2,11.2); CO('#s1-c3',7.5,11.2); CO('#s1-c4',19.7,21.9);
+use('s2'); CO('#s2-c1',13.0,17.8); CO('#s2-c2',13.3,17.8); CO('#s2-c3',13.6,17.8); CO('#s2-c4',13.9,17.8);
+use('s3'); CO('#s3-c1',3.9,8.2); CO('#s3-c2',4.8,8.2);
+use('s4'); CO('#s4-c1',7.2,12.3);
+F(t=>{document.querySelector('#s4-c1 b').textContent=Math.round(95*EASE.out(clamp((t-7.2)/1.2)));});
+use('s5');
+(()=>{const R=[...document.querySelectorAll('#s5 .rung')];
+  R.forEach((r,i)=>K(r,[[4.5+(3-i)*.12,{o:0,x:-60}],[4.9+(3-i)*.12,{o:1,x:0}],[10.3,{o:1}],[10.6,{o:0}]]));
+  K(R[1],[[4.74,{o:0,x:-60}],[5.14,{o:1,x:0}],[8.0,{s:1}],[8.3,{s:1.12}],[8.7,{s:1}],[10.3,{o:1}],[10.6,{o:0}]]);
+  F(t=>R.forEach(r=>{const l=r.dataset.l,up=t>8.05,lv=up?'N3':'N4';r.className='rung'+(l===lv?(up?' up':' cur'):'');r.innerHTML=l+(l===lv?'<small>目前程度</small>':'');}));
+})();
+use('s6'); CO('#s6-c1',6.7,7.6); CO('#s6-c2',11.5,14.8);
+K('#s6-gbar',[[3.9,{w:0}],[5.4,{w:85}]]);
+F(t=>{$id('s6-goal').textContent=Math.round(lerp(0,4260,EASE.out(clamp((t-3.9)/1.5)))).toLocaleString()+' / 5,000 XP';});
+use('s7'); CO('#s7-c1',3.9,5.8); CO('#s7-c2',10.0,13.0);
+document.querySelectorAll('#s7 .week .days div').forEach((d,i)=>K(d,[[.3+i*.08,{o:0,y:10}],[.6+i*.08,{o:1,y:0}]]));
+use('s8'); CO('#s8-c1',2.9,5.4); CO('#s8-c2',3.5,5.4);
 
 /* ---------- 字幕 ---------- */
 window.CUES=window.CUES||[];
@@ -1005,6 +1280,13 @@ function caption(T){
 function seek(T){
   const sb=document.getElementById('sb');sb.classList.remove('light');
   ['phone','sb','island'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=1;e.style.transform=''});
+  // 章節列：第 1～8 段亮起並跑進度；片頭與片尾卡時隱藏
+  const si=SCENES.findIndex(s=>T>=s.start&&T<s.start+s.dur),nav=document.getElementById('nav');
+  [...nav.children].forEach((d,k)=>{const n=k+1;d.className=n<si?'done':n===si?'on':'';d.querySelector('i').style.width=n===si?(100*(T-SCENES[si].start)/SCENES[si].dur)+'%':'0';});
+  const last=SCENES.length-1,s8=SCENES[last],endk=si===last?clamp((warp(s8,T-s8.start)-13.8)/.5):0;
+  nav.style.opacity=si<=0?0:Math.min(clamp((T-SCENES[1].start)/.6),1-endk);
+  document.getElementById('bgk').style.opacity=1-endk;
+  document.querySelectorAll('#bgk span').forEach((e,k)=>{e.style.transform=`translate(${Math.sin(T*.13+k)*18}px,${Math.cos(T*.17+k*1.7)*24}px)`;});
   for(const s of SCENES){const l=T-s.start,on=l>=0&&l<s.dur;s.el.style.display=on?'block':'none';if(!on)continue;
     const w=warp(s,l);for(const tr of s.tracks)apply(tr,w);for(const f of s.fns)f(w);}
   caption(T);

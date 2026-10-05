@@ -57,7 +57,7 @@ class FolderCard extends StatelessWidget {
     const Color textColor = Color(0xFF2C3E50);
     const Color subColor = Color(0xFF8E9AAB);
 
-    final String folderName = folder['name'] ?? '預設相簿';
+    final String folderName = folder['name'] ?? '預設單字本';
     final bool isDefault = folder['is_default'] == true;
     
     // 🌟 修正：確保取用真實的計數欄位

@@ -104,7 +104,7 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('連線失敗，請稍後再試')));
       return;
     }
-    setState(() => _folderName = _isStarred ? '預設相簿' : null);
+    setState(() => _folderName = _isStarred ? '預設單字本' : null);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_isStarred ? '已加入收藏' : '已從收藏移除')),
     );

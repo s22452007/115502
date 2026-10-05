@@ -1,22 +1,160 @@
-{# 老師端側欄：每頁 include。active_menu 指定目前項目，沒設就是「班級」 #}
+{# 老師端側欄：每頁 include。active_menu 指定目前項目，沒設就是「班級」
+   老師點上方的頭像／名字會跳出帳號小卡（像 Google 的帳號選單）：直接改名；用密碼登入的老師另有「修改密碼」 #}
+<style>
+    button.sidebar-admin { width: 100%; border: none; background: none; text-align: left; font: inherit; color: inherit; transition: background 0.2s; }
+    button.sidebar-admin:hover, button.sidebar-admin[aria-expanded="true"] { background: var(--bg); }
+    button.sidebar-admin .chev { margin-left: auto; color: #bbb; font-size: 0.75rem; }
+    .sidebar-admin-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
+    .acct-pop { position: fixed; top: 14px; left: 232px; width: 350px; z-index: 1050; background: #edf2ee; border-radius: 26px;
+                box-shadow: 0 8px 28px rgba(0,0,0,0.16), 0 1px 4px rgba(0,0,0,0.08); padding: 10px 12px 16px; font-size: 0.92rem; }
+    .acct-top { position: relative; text-align: center; font-size: 0.84rem; color: #555; padding: 10px 40px 12px; }
+    .acct-close { position: absolute; right: 2px; top: 2px; width: 36px; height: 36px; border: none; background: none; border-radius: 50%; font-size: 1.15rem; color: #444; }
+    .acct-close:hover { background: rgba(0,0,0,0.06); }
+    .acct-group { background: white; border-radius: 22px; overflow: hidden; }
+    .acct-main { display: flex; align-items: center; gap: 16px; padding: 20px 20px 18px; }
+    .acct-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--green-accent); color: white; flex-shrink: 0;
+                   display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 900; object-fit: cover; }
+    .acct-id { flex: 1; min-width: 0; }
+    .acct-name-row { display: flex; align-items: center; gap: 4px; }
+    .acct-name { font-size: 1.2rem; font-weight: 700; color: #222; word-break: break-all; line-height: 1.3; }
+    .acct-pencil { border: none; background: none; width: 30px; height: 30px; border-radius: 50%; color: #888; flex-shrink: 0; }
+    .acct-pencil:hover { background: var(--green-light); color: var(--green-accent); }
+    .acct-email { font-size: 0.83rem; color: #666; word-break: break-all; margin-top: 2px; }
+    .acct-name-form { display: flex; gap: 6px; }
+    .acct-name-form input { flex: 1; min-width: 0; border: 1px solid #cfd8d1; border-radius: 10px; padding: 5px 10px; font-weight: 700; outline: none; }
+    .acct-name-form input:focus { border-color: var(--green-accent); box-shadow: 0 0 0 3px rgba(92,131,100,0.15); }
+    .acct-name-form button { border: none; border-radius: 10px; width: 34px; flex-shrink: 0; }
+    .acct-name-form .ok { background: var(--green-accent); color: white; }
+    .acct-name-form .no { background: #f0f0f0; color: #666; }
+    .acct-msg { margin: -6px 20px 14px; font-size: 0.8rem; line-height: 1.5; }
+    .acct-msg.err { color: #c9302c; }
+    .acct-msg.ok { color: var(--green-accent); }
+    .acct-msg.hint { color: #999; }
+    .acct-msg.warn { color: #9a6a00; }
+    .acct-row { display: flex; align-items: center; gap: 18px; padding: 15px 24px; color: #333; text-decoration: none; border-top: 3px solid #edf2ee; }
+    .acct-row:hover { background: #f6f9f7; color: #222; }
+    .acct-row i { font-size: 1.2rem; color: #555; width: 22px; text-align: center; }
+    .acct-row small { display: block; color: #999; font-size: 0.76rem; margin-top: 1px; }
+                 padding: 13px; color: #333; text-decoration: none; font-weight: 600; }
+    @media (max-width: 720px) { .acct-pop { left: 12px; right: 12px; width: auto; top: 70px; } }
+</style>
 <aside class="sidebar">
+    {% if account_card %}
+    <button type="button" class="sidebar-admin" id="acctBtn" aria-haspopup="dialog" aria-expanded="false" title="帳號">
+    {% else %}
     <div class="sidebar-admin">
-        <div class="sidebar-admin-avatar"><i class="bi bi-person-fill"></i></div>
+    {% endif %}
+        <div class="sidebar-admin-avatar">
+            {% if account_card and account_card.avatar %}
+            <img src="{{ account_card.avatar }}" alt="" referrerpolicy="no-referrer">
+            {% else %}
+            <i class="bi bi-person-fill"></i>
+            {% endif %}
+        </div>
         <div class="sidebar-admin-info">
-            <div class="name">{{ session['admin_user'] }}</div>
+            <div class="name" data-teacher-name>{{ session['admin_user'] }}</div>
             <div class="role">{{ '管理者（檢視班級）' if session.get('role') == 'super_admin' else '教師' }}</div>
         </div>
+    {% if account_card %}
+        <i class="bi bi-chevron-down chev"></i>
+    </button>
+    {% else %}
     </div>
+    {% endif %}
     <ul class="sidebar-menu">
         {% if session.get('role') == 'super_admin' %}
         <li><a href="/dashboard"><i class="bi bi-arrow-left-circle"></i> 回管理者後台</a></li>
         {% endif %}
         <li><a href="/teacher/classrooms" class="{{ 'active' if (active_menu or 'classrooms') == 'classrooms' }}"><i class="bi bi-mortarboard-fill"></i> {{ '所有班級' if session.get('role') == 'super_admin' else '我的班級' }}</a></li>
-        {% if session.get('role') == 'teacher' %}
-        <li><a href="/teacher/profile" class="{{ 'active' if active_menu == 'profile' }}"><i class="bi bi-person-fill"></i> 個人資料</a></li>
-        <li><a href="/teacher/change_password" class="{{ 'active' if active_menu == 'password' }}"><i class="bi bi-key-fill"></i> 修改密碼</a></li>
-        {% endif %}
         <hr style="margin: 12px 20px 4px; border-color: rgba(0,0,0,0.07);">
         <li><a href="{{ url_for('admin_logout') }}" style="color:#d9534f;"><i class="bi bi-box-arrow-right" style="color:#d9534f;"></i> 登出系統</a></li>
     </ul>
 </aside>
+
+{% if account_card %}
+<div class="acct-pop" id="acctPop" role="dialog" aria-label="帳號" hidden>
+    <div class="acct-top">
+        {% if account_card.google_only %}由 {{ account_card.domain }} 管理{% else %}Snap to Learn 校園教育版{% endif %}
+        <button type="button" class="acct-close" id="acctClose" aria-label="關閉"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="acct-group">
+        <div class="acct-main">
+            {% if account_card.avatar %}
+            <img class="acct-avatar" src="{{ account_card.avatar }}" alt="" referrerpolicy="no-referrer">
+            {% else %}
+            <div class="acct-avatar">{{ account_card.name[:1] | upper }}</div>
+            {% endif %}
+            <div class="acct-id">
+                <div class="acct-name-row" id="acctNameRow">
+                    <span class="acct-name" data-teacher-name>{{ account_card.name }}</span>
+                    <button type="button" class="acct-pencil" id="acctPencil" title="修改顯示名稱" aria-label="修改顯示名稱"><i class="bi bi-pencil"></i></button>
+                </div>
+                <form class="acct-name-form" id="acctNameForm" hidden>
+                    <input autocomplete="off" type="text" name="username" maxlength="30" required aria-label="顯示名稱">
+                    <button type="submit" class="ok" title="儲存"><i class="bi bi-check-lg"></i></button>
+                    <button type="button" class="no" id="acctNameCancel" title="取消"><i class="bi bi-x-lg"></i></button>
+                </form>
+                <div class="acct-email">{{ account_card.email }}</div>
+            </div>
+        </div>
+        <div class="acct-msg" id="acctMsg" hidden></div>
+        {% if not account_card.google_only %}
+        {# Google 帳號沒有密碼可改，名字在小卡上就能改，所以只有 Email＋密碼登入的老師需要這一列 #}
+        <a class="acct-row" href="/teacher/profile#password">
+            <i class="bi bi-key"></i>
+            <div>修改密碼</div>
+        </a>
+        {% endif %}
+    </div>
+</div>
+<script>
+(function () {
+    var btn = document.getElementById('acctBtn'), pop = document.getElementById('acctPop');
+    var row = document.getElementById('acctNameRow'), form = document.getElementById('acctNameForm'),
+        input = form.querySelector('input'), msg = document.getElementById('acctMsg');
+    var name = {{ account_card.name | tojson }};
+
+    function show(text, kind) { msg.textContent = text || ''; msg.className = 'acct-msg ' + (kind || ''); msg.hidden = !text; }
+    function editing(on, hint) {
+        row.hidden = on; form.hidden = !on;
+        if (on) { input.value = name; input.focus(); input.select(); show(hint || '學生在 App 教室頁會看到「老師：' + name + '」', hint ? 'warn' : 'hint'); }
+        else show('');
+    }
+    function open(on) {
+        pop.hidden = !on; btn.setAttribute('aria-expanded', on);
+        if (!on) editing(false);
+    }
+    btn.addEventListener('click', function (e) { e.stopPropagation(); open(pop.hidden); });
+    document.getElementById('acctClose').addEventListener('click', function () { open(false); });
+    document.addEventListener('click', function (e) { if (!pop.hidden && !pop.contains(e.target)) open(false); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || pop.hidden) return;
+        if (!form.hidden) editing(false); else open(false);
+    });
+    document.getElementById('acctPencil').addEventListener('click', function () { editing(true); });
+    document.getElementById('acctNameCancel').addEventListener('click', function () { editing(false); });
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var body = new FormData(form);
+        fetch('/teacher/profile', { method: 'POST', body: body, headers: { 'X-Requested-With': 'fetch' } })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res.ok) { show(res.message, 'err'); input.focus(); return; }
+                name = res.name;
+                document.querySelectorAll('[data-teacher-name]').forEach(function (el) { el.textContent = name; });
+                editing(false);
+                show(res.message, 'ok');
+            })
+            .catch(function () { show('連線失敗，請稍後再試', 'err'); });
+    });
+
+    {% if account_card.prompt_name %}
+    // 名字還是預設的 Email 前段：登入後自動打開小卡請老師改名，按取消可以先跳過
+    open(true);
+    editing(true, '學生會看到「老師：' + name + '」，建議改成你的姓名，例如「王小明老師」');
+    {% endif %}
+})();
+</script>
+{% endif %}

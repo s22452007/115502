@@ -19,7 +19,8 @@ import os
 from flask import session, flash, redirect, url_for, render_template, request, jsonify
 from functools import wraps
 from utils.db import db, ensure_model_columns
-from models import Admin, Vocab, SystemLog, Article, Achievement, User, AccountType
+from models import Admin, Vocab, SystemLog, Article, Achievement, User, AccountType, School
+from school_seed import DEFAULT_STUDENT_ID_PATTERN, OLD_DEFAULT_STUDENT_ID_PATTERN
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func
 from dotenv import load_dotenv
@@ -88,16 +89,22 @@ with app.app_context():
 
 @app.context_processor
 def _inject_sidebar_badges():
-    """側欄「意見回饋」旁的紅色數字：還沒回覆的回饋筆數（管理者登入時才查）"""
+    """側欄的紅色數字：還沒回覆的回饋筆數、等待審核的老師人數（管理者登入時才查）"""
     if 'admin_user' not in session or session.get('role') == 'teacher':
-        return {'sidebar_feedback_pending': 0}
+        return {'sidebar_feedback_pending': 0, 'sidebar_teacher_pending': 0}
+    n = pending_teachers = 0
     try:
         conn = get_db_connection()
-        n = conn.execute('SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""').fetchone()[0]
-        conn.close()
+        try:
+            n = conn.execute('SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""').fetchone()[0]
+            pending_teachers = conn.execute(
+                "SELECT COUNT(*) FROM user WHERE account_type = 'teacher' AND teacher_status = 'pending'"
+            ).fetchone()[0]
+        finally:
+            conn.close()
     except sqlite3.Error:
-        n = 0
-    return {'sidebar_feedback_pending': n}
+        pass
+    return {'sidebar_feedback_pending': n, 'sidebar_teacher_pending': pending_teachers}
 
 
 @app.context_processor
@@ -106,6 +113,36 @@ def _inject_google_login_settings():
     return {'google_client_id': GOOGLE_WEB_CLIENT_ID,
             'teacher_domains': TEACHER_GOOGLE_DOMAINS,
             'teacher_domain_labels': _teacher_domain_labels()}
+
+
+@app.context_processor
+def _inject_teacher_account_card():
+    """老師端側欄點頭像跳出的帳號小卡（像 Google 的帳號選單）要用的資料"""
+    if session.get('role') != 'teacher' or not session.get('teacher_user_id'):
+        return {}
+    teacher = User.query.get(session['teacher_user_id'])
+    if not teacher:
+        return {}
+    # 判斷 Google 帳號要算一次密碼雜湊（scrypt，有點慢），每個 session 只算一次；改密碼時會更新
+    if 'teacher_google_only' not in session:
+        session['teacher_google_only'] = _teacher_google_only(teacher)
+    # 名字還是 Email 前段（App 建的帳號預設值，例如學號），學生看到「老師：11156047」認不出是誰：
+    # 每次登入後第一個頁面自動打開小卡請老師改名，可以按取消跳過，不會擋住其他功能。
+    # 還在強制改密碼或待審核時先不提醒，等能正常使用再說。
+    prompt_name = False
+    if (session.get('teacher_name_prompt') and not session.get('teacher_must_change_password')
+            and request.endpoint != 'teacher_change_password'   # 剛改完密碼那頁先讓老師看完成訊息
+            and (teacher.teacher_status or 'approved') == 'approved'):
+        session.pop('teacher_name_prompt')
+        prompt_name = (teacher.username or '') in ('', teacher.email.split('@')[0])
+    return {'account_card': {
+        'name': teacher.username or teacher.email,
+        'email': teacher.email,
+        'avatar': teacher.avatar if (teacher.avatar or '').startswith('http') else None,
+        'google_only': session['teacher_google_only'],
+        'domain': teacher.email.split('@')[-1],
+        'prompt_name': prompt_name,
+    }}
 
 
 def _teacher_domain_allowed(domain):
@@ -199,6 +236,12 @@ def teacher_required(f):
                 return redirect(url_for('admin_login'))
             if (getattr(teacher, 'teacher_status', None) or 'approved') != 'approved' and request.endpoint != 'teacher_pending':
                 return redirect(url_for('teacher_pending'))
+            # 用管理者給的密碼登入：改掉之前只能待在個人資料頁
+            if session.get('teacher_must_change_password'):
+                if not teacher.must_change_password:
+                    session.pop('teacher_must_change_password')
+                elif request.endpoint not in ('teacher_profile', 'teacher_change_password'):
+                    return redirect(url_for('teacher_profile'))
             return f(*args, **kwargs)
         if session.get('role') == 'super_admin':
             # 和管理者頁面一樣每次重查：被停用或降成 admin 之後要立刻進不來
@@ -279,7 +322,9 @@ def _teacher_login():
     password = request.form.get('password') or ''
     user = User.query.filter_by(email=email).first()
 
-    if not user or not check_password_hash(user.password_hash, password):
+    from utils import password_policy
+    if (not user or not check_password_hash(user.password_hash, password)
+            or password_policy.is_google_placeholder_input(password, user.email)):
         print(f"[FAIL] 老師登入失敗: {email} (帳號或密碼錯誤)")
         return render_template('admin_login.html', login_as='teacher', error="Email 或密碼錯誤，請重新輸入")
     if getattr(user, 'account_type', AccountType.GENERAL) != AccountType.TEACHER:
@@ -289,7 +334,12 @@ def _teacher_login():
         return render_template('admin_login.html', login_as='teacher', error="此老師帳號已被停用，請聯繫系統管理員")
 
     print(f"[OK] 老師登入成功: {email} (user_id={user.id})")
-    return _start_teacher_session(user)
+    response = _start_teacher_session(user)
+    # 只有用密碼登入才要求改密碼；用 Google 登入的人不靠這組密碼，不用擋
+    if getattr(user, 'must_change_password', False):
+        session['teacher_must_change_password'] = True
+        return redirect(url_for('teacher_profile'))
+    return response
 
 
 def _start_teacher_session(user):
@@ -298,6 +348,7 @@ def _start_teacher_session(user):
     session['admin_id'] = None                            # 老師不是 admin 表的帳號
     session['role'] = 'teacher'
     session['teacher_user_id'] = user.id
+    session['teacher_name_prompt'] = True   # 這次登入還沒提醒過改名（見 _inject_teacher_account_card）
     session.permanent = True
     return redirect(url_for('teacher_classrooms'))
 
@@ -352,9 +403,10 @@ def teacher_google_login():
     if TEACHER_GOOGLE_DOMAINS and not _teacher_domain_allowed(domain):
         allowed = '、'.join(_teacher_domain_labels())
         return fail(f'請使用學校配發的 Google 帳號（{allowed}）登入，一般 Gmail 無法作為老師帳號')
-    if (TEACHER_GOOGLE_STUDENT_PATTERN and email.lower() not in TEACHER_GOOGLE_ALLOWED_EMAILS
-            and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0])):
-        return fail(f'「{email}」是學生帳號（帳號為學號），無法登入老師後台；老師請改用學校配發的教職員帳號')
+    if _is_student_like_email(email):
+        # 有些學校的教職員帳號也是數字，這種老師請走申請表，由管理者人工確認
+        return fail(f'「{email}」看起來是學生帳號（帳號為學號），無法直接用 Google 登入老師後台；'
+                    f'如果你是老師，請點下方「申請老師帳號」，由管理者確認後開通')
 
     user = User.query.filter_by(email=email).first()
     if user is None:
@@ -384,6 +436,207 @@ def teacher_google_login():
 
     print(f"[OK] 老師 Google 登入成功: {email} (user_id={user.id})")
     return _start_teacher_session(user)
+
+
+def _is_student_like_email(email):
+    """學校信箱帳號是學號的（例如 11156047@ntub.edu.tw）視為學生，不能當老師帳號；白名單裡的例外"""
+    return bool(TEACHER_GOOGLE_STUDENT_PATTERN and email.lower() not in TEACHER_GOOGLE_ALLOWED_EMAILS
+                and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0]))
+
+
+# ==========================================
+# 老師帳號申請（Google 無法登入時）
+#   填申請表 → 寄驗證連結到學校信箱 → 點連結設定密碼，建立「待審核」帳號 → 管理者對照教職員名錄核准 → 寄信通知
+#   驗證連結是用 secret_key 簽章的 token（裡面是申請表內容），點了才建帳號，所以沒驗證的申請不會留在資料庫
+# ==========================================
+TEACHER_APPLY_LINK_MINUTES = 30
+TEACHER_APPLY_RESEND_SECONDS = 60
+
+
+def _teacher_apply_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(app.secret_key, salt='teacher-apply')
+
+
+def _teacher_apply_problem(form):
+    """檢查申請表；有問題回傳錯誤訊息。點驗證連結時會再檢查一次（這段時間內 Email 或名字可能已被用掉）"""
+    name, email = form.get('username') or '', form.get('email') or ''
+    if not name:
+        return '請輸入姓名'
+    if len(name) > 30:
+        return '姓名最多 30 個字'
+    if '@' not in email or len(email) > 120:
+        return '請輸入正確的學校 Email'
+    if not form.get('department'):
+        return '請輸入系所或單位，管理者審核時會對照學校教職員名錄'
+    if len(form['department']) > 50:
+        return '系所／單位最多 50 個字'
+    if len(form.get('note') or '') > 200:
+        return '備註最多 200 個字'
+    if TEACHER_GOOGLE_DOMAINS and not _teacher_domain_allowed(email.split('@')[-1]):
+        return f'請使用學校 Email（{"、".join(_teacher_domain_labels())}）申請，一般 Gmail 無法作為老師帳號'
+    # 不擋「帳號是數字」：其他學校的教職員帳號也可能是編號。申請一定要管理者人工審核，
+    # 學生拿學號信箱來申請會在對名錄時被拒絕；老師帳號管理的名單上會標「帳號像學號」提醒管理者
+    user = User.query.filter(func.lower(User.email) == email.lower()).first()
+    if user:
+        if user.account_type != AccountType.TEACHER:
+            return f'「{email}」已是 App 的一般使用者帳號，無法作為老師帳號，請聯繫系統管理員'
+        if (user.teacher_status or 'approved') == 'pending':
+            return '這個 Email 已經送出申請，正在等待管理者審核'
+        return '這個 Email 已經有老師帳號，請直接登入；忘記密碼請聯繫系統管理員重設'
+    if User.query.filter_by(username=name).first():
+        # username 全系統唯一，跟老師自己改名、管理者建老師帳號同一個規則
+        return f'「{name}」已經有人使用，請加上科目或系所（例如「{name}（日文）」）'
+    return None
+
+
+@app.route('/teacher/apply', methods=['GET', 'POST'])
+def teacher_apply():
+    """申請表：通過檢查就寄驗證連結到學校信箱"""
+    from utils import mailer
+    form = {k: (request.form.get(k) or '').strip() for k in ('username', 'email', 'department', 'note')}
+    form['email'] = form['email'].lower()   # Google 登入拿到的 Email 都是小寫，統一才不會變成兩個帳號
+    if request.method == 'GET':
+        return render_template('teacher/apply.html', step='form', form=form)
+
+    def fail(msg):
+        return render_template('teacher/apply.html', step='form', form=form, error=msg)
+
+    problem = _teacher_apply_problem(form)
+    if problem:
+        return fail(problem)
+    if not mailer.is_configured():
+        return fail('寄信服務尚未設定，暫時無法申請，請直接聯繫學校系統管理員')
+    waited = datetime.utcnow().timestamp() - (session.get('teacher_apply_sent_at') or 0)
+    if waited < TEACHER_APPLY_RESEND_SECONDS:
+        return fail(f'驗證信剛寄出，請 {int(TEACHER_APPLY_RESEND_SECONDS - waited) + 1} 秒後再試')
+
+    link = url_for('teacher_apply_verify', token=_teacher_apply_serializer().dumps(form), _external=True)
+    try:
+        mailer.send_mail(
+            form['email'], 'Snap to Learn 老師帳號申請：請驗證你的 Email',
+            f'{form["username"]} 老師您好：\n\n'
+            f'我們收到你的 Snap to Learn 校園教育版老師帳號申請。請在 {TEACHER_APPLY_LINK_MINUTES} 分鐘內點下面的連結，'
+            f'設定登入密碼並完成申請：\n\n{link}\n\n'
+            f'送出後會由學校系統管理員確認老師身分，核准後會再寄信通知你。\n'
+            f'如果不是你本人申請，請忽略這封信。\n\nSnap to Learn 校園教育版',
+        )
+    except Exception as e:
+        print(f"⚠️ 寄送老師申請驗證信失敗：{e}")
+        return fail('驗證信寄送失敗，請確認 Email 是否正確，或稍後再試')
+    session['teacher_apply_sent_at'] = datetime.utcnow().timestamp()
+    print(f"[APPLY] 已寄出老師申請驗證信: {form['email']}")
+    return render_template('teacher/apply.html', step='sent', form=form, minutes=TEACHER_APPLY_LINK_MINUTES)
+
+
+@app.route('/teacher/apply/verify', methods=['GET', 'POST'])
+def teacher_apply_verify():
+    """點驗證信裡的連結：證明信箱是本人的，設定密碼後建立「待審核」老師帳號"""
+    from itsdangerous import BadSignature, SignatureExpired
+    token = request.values.get('token') or ''
+    try:
+        form = _teacher_apply_serializer().loads(token, max_age=TEACHER_APPLY_LINK_MINUTES * 60)
+    except SignatureExpired:
+        return render_template('teacher/apply.html', step='invalid',
+                               error=f'驗證連結已超過 {TEACHER_APPLY_LINK_MINUTES} 分鐘，請重新填寫申請表')
+    except BadSignature:
+        return render_template('teacher/apply.html', step='invalid', error='驗證連結不正確，請確認是否完整複製信裡的連結')
+    problem = _teacher_apply_problem(form)
+    if problem:
+        return render_template('teacher/apply.html', step='invalid', error=problem)
+    if request.method == 'GET':
+        return render_template('teacher/apply.html', step='password', form=form, token=token)
+
+    password = request.form.get('password') or ''
+    error = ('兩次輸入的密碼不一致' if password != (request.form.get('confirm_password') or '')
+             else _validate_password(password, account=form['email']))
+    if error:
+        return render_template('teacher/apply.html', step='password', form=form, token=token, error=error)
+
+    teacher = User(
+        email=form['email'],
+        username=form['username'],
+        password_hash=generate_password_hash(password),
+        account_type=AccountType.TEACHER,
+        teacher_status='pending',   # 信箱證明了是本人，但是不是老師要等管理者對照名錄
+        teacher_department=form['department'],
+        teacher_apply_note=form.get('note') or None,
+    )
+    db.session.add(teacher)
+    db.session.flush()
+    db.session.add(SystemLog(
+        admin_id=None, user_id=teacher.id,
+        action='CREATE', target_table='user', target_id=teacher.id,
+        new_value={'email': teacher.email, 'username': teacher.username, 'account_type': AccountType.TEACHER,
+                   'department': teacher.teacher_department, 'via': 'apply', 'teacher_status': 'pending'}
+    ))
+    db.session.commit()
+    print(f"[NEW] 老師申請表建立待審核帳號: {teacher.email}")
+    return render_template('teacher/apply.html', step='done', form=form)
+
+
+# ==========================================
+# 老師「聯絡管理者」：登不進去、等審核太久、忘記密碼時用。存進意見回饋表（T18），
+# 管理者在「意見回饋」看到並回覆，回覆會寄信給老師。不用登入也能送
+# ==========================================
+TEACHER_CONTACT_PREFIX = '老師聯絡'
+TEACHER_CONTACT_TOPICS = ['無法登入', '帳號申請／審核', '忘記密碼', '其他']
+TEACHER_CONTACT_RESEND_SECONDS = 60
+
+
+@app.route('/teacher/contact', methods=['GET', 'POST'])
+def teacher_contact():
+    teacher = None
+    if session.get('role') == 'teacher' and session.get('teacher_user_id'):
+        teacher = User.query.get(session['teacher_user_id'])
+    form = {k: (request.form.get(k) or '').strip() for k in ('email', 'topic', 'content')}
+    if request.method == 'GET':
+        form['email'] = teacher.email if teacher else ''
+        form['topic'] = request.args.get('topic') if request.args.get('topic') in TEACHER_CONTACT_TOPICS else ''
+        return render_template('teacher/contact.html', form=form, topics=TEACHER_CONTACT_TOPICS)
+
+    def fail(msg):
+        return render_template('teacher/contact.html', form=form, topics=TEACHER_CONTACT_TOPICS, error=msg)
+
+    if '@' not in form['email'] or len(form['email']) > 120:
+        return fail('請輸入正確的 Email，管理者會回信到這裡')
+    if form['topic'] not in TEACHER_CONTACT_TOPICS:
+        return fail('請選擇問題類型')
+    if not form['content']:
+        return fail('請說明遇到的問題')
+    if len(form['content']) > 1000:
+        return fail('內容最多 1000 個字')
+    waited = datetime.utcnow().timestamp() - (session.get('teacher_contact_sent_at') or 0)
+    if waited < TEACHER_CONTACT_RESEND_SECONDS:
+        return fail(f'剛剛已經送出，請 {int(TEACHER_CONTACT_RESEND_SECONDS - waited) + 1} 秒後再送')
+
+    from models import Feedback
+    db.session.add(Feedback(
+        user_id=teacher.id if teacher else None,
+        email=form['email'],
+        feedback_type=f"{TEACHER_CONTACT_PREFIX}：{form['topic']}",
+        content=form['content'],
+    ))
+    db.session.commit()
+    session['teacher_contact_sent_at'] = datetime.utcnow().timestamp()
+    print(f"[CONTACT] 老師聯絡管理者: {form['email']} ({form['topic']})")
+    return render_template('teacher/contact.html', form=form, topics=TEACHER_CONTACT_TOPICS, sent=True)
+
+
+def _mail_teacher_contact_reply(email, question, reply):
+    """管理者回覆老師的聯絡單時寄信通知；沒設定寄信或寄失敗都不影響回覆本身"""
+    from utils import mailer
+    if not mailer.is_configured():
+        return
+    try:
+        mailer.send_mail(
+            email, 'Snap to Learn 管理者回覆了你的問題',
+            f'老師您好：\n\n管理者回覆了你在 Snap to Learn 校園教育版留下的問題。\n\n'
+            f'【你的問題】\n{question}\n\n【管理者回覆】\n{reply}\n\nSnap to Learn 校園教育版',
+        )
+    except Exception as e:
+        print(f"⚠️ 寄送聯絡單回覆失敗：{e}")
+
 
 @app.route('/logout')
 def admin_logout():
@@ -857,9 +1110,10 @@ def delete_photo(photo_id):
 def feedback_list():
     status = request.args.get('status', 'all')
     conn = get_db_connection()
+    # 老師從「聯絡管理者」送來的可能還沒有帳號（user_id 是空的），Email 改看回饋本身留的
     base = '''
         SELECT f.id, f.feedback_type, f.content, f.reply, f.replied_at, f.created_at,
-               u.username, u.email
+               u.username, COALESCE(u.email, f.email) AS email
         FROM feedback f
         LEFT JOIN user u ON f.user_id = u.id
     '''
@@ -896,8 +1150,13 @@ def feedback_reply(feedback_id):
     conn.execute(
         'INSERT INTO system_log (admin_id, user_id, action, target_table, target_id, created_at) VALUES (?, NULL, ?, ?, ?, ?)',
         (admin_id, 'UPDATE', 'feedback', feedback_id, now))
+    fb = conn.execute('''SELECT f.feedback_type, f.content, COALESCE(u.email, f.email) AS email
+                         FROM feedback f LEFT JOIN user u ON f.user_id = u.id WHERE f.id = ?''', (feedback_id,)).fetchone()
     conn.commit()
     conn.close()
+    # 老師的聯絡單：老師多半登不進後台、也不用 App，回覆要寄信才看得到（App 的回饋在 App 裡看）
+    if fb and (fb['feedback_type'] or '').startswith(TEACHER_CONTACT_PREFIX) and fb['email']:
+        _mail_teacher_contact_reply(fb['email'], fb['content'], reply)
     return redirect(url_for('feedback_list'))
 
 @app.route('/feedback/delete/<int:feedback_id>', methods=['POST'])
@@ -2013,35 +2272,66 @@ def teacher_pending():
     return render_template('teacher/pending.html', teacher=teacher)
 
 
+def _teacher_google_only(teacher):
+    """用 Google 建立、本人沒有密碼的老師帳號，個人資料頁就不顯示改密碼。有兩種來源：
+    - 舊版 App Google 登入建的帳號後來轉成老師：密碼還是固定的假密碼（沒有建立紀錄，只能從雜湊認）
+    - 後台 Google 登入第一次自動建立：密碼是隨機的，看建立紀錄
+    之後管理者幫他重設過密碼（或自己改過）就算有密碼，照樣可以改。"""
+    from utils import password_policy
+    if password_policy.has_google_placeholder_hash(teacher.password_hash, teacher.email):
+        return True
+    created_via_google = password_set = False
+    for log in SystemLog.query.filter_by(target_table='user', target_id=teacher.id).all():
+        value = log.new_value if isinstance(log.new_value, dict) else {}
+        if log.action == 'CREATE' and value.get('via') == 'google':
+            created_via_google = True
+        elif log.action == 'UPDATE' and 'password' in value:
+            password_set = True
+    return created_via_google and not password_set
+
+
+def _render_teacher_profile(teacher, name_value=None, **messages):
+    """個人資料頁：顯示名稱和密碼放在同一頁。error/success 是名稱的訊息，pw_error/pw_success 是密碼的"""
+    joined = (teacher.created_at + timedelta(hours=8)).strftime('%Y/%m/%d') if teacher.created_at else ''
+    avatar = teacher.avatar if (teacher.avatar or '').startswith('http') else None   # Google 大頭貼
+    return render_template('teacher/profile.html', teacher=teacher, active_menu='profile',
+                           name_value=(teacher.username or '') if name_value is None else name_value,
+                           google_only=_teacher_google_only(teacher), joined=joined, avatar=avatar,
+                           force_pw=bool(session.get('teacher_must_change_password')), **messages)
+
+
 @app.route('/teacher/change_password', methods=['GET', 'POST'])
 @teacher_required
 def teacher_change_password():
-    """老師改自己的密碼。管理者的 /admin/change_password 只認 admin 表，老師進不去"""
+    """老師改自己的密碼（表單在個人資料頁）。管理者的 /admin/change_password 只認 admin 表，老師進不去"""
     if session.get('role') != 'teacher':
         return redirect(url_for('change_password'))
+    if request.method == 'GET':
+        return redirect(url_for('teacher_profile'))
     teacher = User.query.get(session['teacher_user_id'])
-    error = success = None
-    if request.method == 'POST':
-        current = request.form.get('current_password', '')
-        new_pw = request.form.get('new_password', '')
-        confirm = request.form.get('confirm_password', '')
-        if not check_password_hash(teacher.password_hash, current):
-            error = '目前密碼錯誤'
-        elif new_pw != confirm:
-            error = '新密碼與確認密碼不一致'
-        elif _validate_password(new_pw, account=teacher.email, old_hash=teacher.password_hash):
-            error = _validate_password(new_pw, account=teacher.email, old_hash=teacher.password_hash)
-        else:
-            teacher.password_hash = generate_password_hash(new_pw)
-            db.session.add(SystemLog(
-                admin_id=None, user_id=teacher.id,
-                action='UPDATE', target_table='user', target_id=teacher.id,
-                new_value={'password': 'changed_by_self'}
-            ))
-            db.session.commit()
-            success = '密碼已更新，下次登入請使用新密碼'
-    return render_template('teacher/change_password.html', teacher=teacher, error=error, success=success,
-                           active_menu='password')
+    if _teacher_google_only(teacher):
+        return _render_teacher_profile(teacher, pw_error='你的帳號用學校 Google 帳號登入，沒有另外的密碼可以修改')
+    current = request.form.get('current_password', '')
+    new_pw = request.form.get('new_password', '')
+    confirm = request.form.get('confirm_password', '')
+    if not check_password_hash(teacher.password_hash, current):
+        return _render_teacher_profile(teacher, pw_error='目前密碼錯誤')
+    if new_pw != confirm:
+        return _render_teacher_profile(teacher, pw_error='新密碼與確認密碼不一致')
+    policy_error = _validate_password(new_pw, account=teacher.email, old_hash=teacher.password_hash)
+    if policy_error:
+        return _render_teacher_profile(teacher, pw_error=policy_error)
+    teacher.password_hash = generate_password_hash(new_pw)
+    teacher.must_change_password = False
+    db.session.add(SystemLog(
+        admin_id=None, user_id=teacher.id,
+        action='UPDATE', target_table='user', target_id=teacher.id,
+        new_value={'password': 'changed_by_self'}
+    ))
+    db.session.commit()
+    session['teacher_google_only'] = False
+    was_forced = session.pop('teacher_must_change_password', False)
+    return _render_teacher_profile(teacher, pw_success='密碼已更新，下次登入請使用新密碼', just_unlocked=was_forced)
 
 
 @app.route('/teacher/profile', methods=['GET', 'POST'])
@@ -2078,10 +2368,12 @@ def teacher_profile():
             db.session.commit()
             session['admin_user'] = name   # 側欄上的名字跟著換
             success = '已更新，學生在 App 重新整理教室頁就會看到新名稱'
+        if request.headers.get('X-Requested-With') == 'fetch':
+            # 側欄帳號小卡直接改名，不換頁
+            return jsonify({'ok': not error, 'name': teacher.username, 'message': error or success})
     # 存失敗時保留老師剛剛打的字，不要被換回舊名稱
-    name_value = (request.form.get('username') or '') if error else (teacher.username or '')
-    return render_template('teacher/profile.html', teacher=teacher, error=error, success=success,
-                           name_value=name_value, active_menu='profile')
+    name_value = (request.form.get('username') or '') if error else None
+    return _render_teacher_profile(teacher, name_value=name_value, error=error, success=success)
 
 
 @app.route('/teacher/classroom/create', methods=['POST'])
@@ -2507,7 +2799,7 @@ def teacher_student_remove(classroom_id, student_id):
 @app.route('/teacher/classroom/<int:classroom_id>/student/<int:student_id>/reset_password', methods=['POST'])
 @teacher_required
 def teacher_student_reset_password(classroom_id, student_id):
-    """學生忘記密碼：重設回學號（學生帳號的 email 欄位存的就是學號）。App 的忘記密碼不開放學生帳號用"""
+    """學生忘記密碼：重設成隨機的臨時密碼，只在這次顯示給老師。App 的忘記密碼不開放學生帳號用"""
     member = _own_member(classroom_id, student_id)
     student = User.query.get(student_id) if member else None
     if not student:
@@ -2516,21 +2808,43 @@ def teacher_student_reset_password(classroom_id, student_id):
     if (student.account_type or AccountType.GENERAL) != AccountType.STUDENT:
         flash("這不是校園教育版的學生帳號，無法在這裡重設密碼", "danger")
         return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
-    student.password_hash = generate_password_hash(student.email)
-    student.must_change_password = True   # 密碼是學號，任何知道學號的人都能登入，學生下次登入要自己換掉
+    if student.school_id:
+        flash("這位學生用學校 Google 帳號登入，沒有密碼可以重設；登不進去請學生確認選對學校、用學校帳號登入", "danger")
+        return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+    temp_password = _student_temp_password()
+    student.password_hash = generate_password_hash(temp_password)
+    student.must_change_password = True   # 臨時密碼老師也知道，學生下次登入要自己換掉
     student.token_version = (student.token_version or 0) + 1   # 已登入的裝置一併登出
     db.session.add(SystemLog(
         admin_id=session.get('admin_id'), user_id=student.id,
         action='UPDATE', target_table='user', target_id=student.id,
-        new_value={'password': 'reset_to_student_no', 'classroom_id': classroom_id}
+        new_value={'password': 'reset_to_temp', 'classroom_id': classroom_id}
     ))
     db.session.commit()
-    flash(f"已將「{member.display_name or student.username or student.email}」的密碼重設為學號 {student.email}，學生下次登入時會被要求設定新密碼", "success")
-    return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+    flash(f"已重設「{member.display_name or student.username or student.email}」的密碼，學生用下面的臨時密碼登入後會被要求設定新密碼", "success")
+    return _render_roster_with_passwords(classroom_id, [
+        {'account': student.email, 'name': member.display_name or student.username, 'password': temp_password}])
 
 
 # ---- 學生名冊：老師貼上名單建立學生帳號 ----
-# 教育版學生不能自己註冊，一律由老師在班級名冊加入：帳號與初始密碼都是學號，建立後自動加入該班級
+# 備用的登入方式（主要是學生在 App 選學校、用學校 Google 帳號登入）：老師在班級名冊加入，
+# 帳號是學號，初始密碼由系統隨機產生、只顯示給老師一次。以前初始密碼＝學號，
+# 知道學號的人搶先登入就能改掉密碼、佔走帳號，所以改成隨機。
+
+# 臨時密碼的字元：去掉容易看錯的 0/O/o、1/l/I，學生照著紙條打才不會打錯
+_TEMP_PASSWORD_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789'
+
+
+def _student_temp_password():
+    import secrets
+    return ''.join(secrets.choice(_TEMP_PASSWORD_CHARS) for _ in range(8))
+
+
+def _render_roster_with_passwords(classroom_id, new_passwords):
+    """直接回傳名冊頁並列出新密碼，不轉址：密碼不能放進 session（cookie 會被看到、一班太多也放不下），
+    只在這次回應出現，重新整理就消失"""
+    data = get_classroom_student_stats(classroom_id)
+    return render_template('teacher/student_progress.html', data=data, new_passwords=new_passwords)
 STUDENT_ID_RE = re.compile(r'^[A-Za-z0-9_.\-]{2,30}$')
 ROSTER_MAX_LINES = 200
 
@@ -2555,7 +2869,7 @@ def _parse_roster(text):
 @app.route('/teacher/classroom/<int:classroom_id>/students/add', methods=['POST'])
 @teacher_required
 def teacher_students_add(classroom_id):
-    """貼上名單批次加入學生：沒有帳號的建立學生帳號（帳號、密碼＝學號），已有學生帳號的直接加入班級"""
+    """貼上名單批次加入學生：沒有帳號的建立學生帳號（帳號是學號、隨機初始密碼），已有學生帳號的直接加入班級"""
     from utils.auth_helper import generate_friend_id
     classroom = _own_classroom(classroom_id)
     if not classroom:
@@ -2575,6 +2889,7 @@ def teacher_students_add(classroom_id):
         return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
     created, joined, already, conflicts = [], [], [], []
+    new_passwords = []   # 只顯示這一次的初始密碼
     seen = set()
     for student_no, name in rows:
         if student_no in seen:
@@ -2582,13 +2897,15 @@ def teacher_students_add(classroom_id):
         seen.add(student_no)
         user = User.query.filter_by(email=student_no).first()
         if user is None:
+            temp_password = _student_temp_password()
             user = User(
                 email=student_no,
-                password_hash=generate_password_hash(student_no),
+                password_hash=generate_password_hash(temp_password),
                 friend_id=generate_friend_id(),
                 account_type=AccountType.STUDENT,
-                must_change_password=True,   # 初始密碼是學號，第一次登入要自己換掉
+                must_change_password=True,   # 初始密碼老師也知道，第一次登入要自己換掉
             )
+            new_passwords.append({'account': student_no, 'name': name, 'password': temp_password})
             db.session.add(user)
             db.session.flush()
             db.session.add(SystemLog(
@@ -2619,12 +2936,14 @@ def teacher_students_add(classroom_id):
     if already:
         parts.append(f"{len(already)} 位原本就在班上")
     if parts:
-        flash("、".join(parts) + "。學生用學號當帳號與密碼，從 App 的「校園教育版」登入", "success")
+        flash("、".join(parts) + "。", "success")
     if conflicts:
         flash("以下帳號已是一般版或老師帳號，無法加入：" + "、".join(conflicts), "danger")
     if bad:
         flash("以下幾行的學號格式不正確（只能是英數字，2～30 字），已略過：" + "、".join(bad[:10])
               + (" …" if len(bad) > 10 else ""), "danger")
+    if new_passwords:
+        return _render_roster_with_passwords(classroom_id, new_passwords)
     return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
 
@@ -2843,12 +3162,41 @@ def teacher_account_list():
         'email': t.email,
         'is_suspended': bool(t.is_suspended),
         'status': t.teacher_status or 'approved',
+        'department': t.teacher_department,   # 只有填申請表的老師才有
+        'apply_note': t.teacher_apply_note,
+        'student_like': _is_student_like_email(t.email),   # 審核時提醒管理者特別確認
         'classroom_count': classroom_counts.get(t.id, 0),
         'created_at': utc_to_tw(t.created_at.strftime('%Y-%m-%d %H:%M:%S')) if t.created_at else '',
     } for t in teachers]
     rows.sort(key=lambda r: 0 if r['status'] == 'pending' else 1)  # 待審核排最前面
     pending_count = sum(1 for r in rows if r['status'] == 'pending')
     return render_template('teacher_account/list.html', teachers=rows, pending_count=pending_count)
+
+
+@app.route('/school/list')
+@super_admin_required
+def school_list():
+    """學校管理：學生在 App 選的學校清單（網域、學號格式、停用）"""
+    student_counts = dict(
+        db.session.query(User.school_id, func.count(User.id)).filter(User.school_id.isnot(None)).group_by(User.school_id).all()
+    )
+    schools = [{
+        'id': s.id,
+        'name': s.name,
+        'domains': s.domain_list(),
+        'student_domains': s.student_domains,
+        'pattern': s.student_id_pattern,
+        'pattern_custom': s.student_id_pattern not in (DEFAULT_STUDENT_ID_PATTERN, OLD_DEFAULT_STUDENT_ID_PATTERN),
+        'is_active': s.is_active is not False,
+        'student_count': student_counts.get(s.id, 0),
+        # 學生在 App 新增的學校：顯示是誰新增的，名稱打錯時管理者知道要改
+        'created_by': getattr(User.query.get(s.created_by_user_id), 'email', None) if s.created_by_user_id else None,
+    } for s in School.query.order_by(School.name).all()]
+    # 預設學校有一百多間、大部分沒人用：有學生、App 新增、停用或改過學號格式的才直接列出來，其餘收合
+    for s in schools:
+        s['featured'] = bool(s['student_count'] or s['created_by'] or not s['is_active'] or s['pattern_custom'])
+    schools.sort(key=lambda s: -s['student_count'])  # 穩定排序，同人數維持校名順序
+    return render_template('school/list.html', schools=schools, default_pattern=DEFAULT_STUDENT_ID_PATTERN)
 
 
 @app.route('/teacher_account/approve/<int:user_id>', methods=['POST'])
@@ -2864,8 +3212,29 @@ def teacher_account_approve(user_id):
         new_value={'teacher_status': 'approved'}
     ))
     db.session.commit()
-    flash(f'已核准「{teacher.username}」的老師身分，老師重新整理頁面即可建立班級', 'success')
+    mailed = _notify_teacher_approved(teacher)
+    flash(f'已核准「{teacher.username}」的老師身分，老師重新整理頁面即可建立班級'
+          + ('，已寄信通知老師' if mailed else ''), 'success')
     return redirect(url_for('teacher_account_list'))
+
+
+def _notify_teacher_approved(teacher):
+    """核准後寄信通知老師（申請表送出後老師不會一直盯著畫面）；沒設定寄信或寄失敗都不影響核准，回傳是否寄出"""
+    from utils import mailer
+    if not mailer.is_configured():
+        return False
+    how = '學校 Google 帳號' if _teacher_google_only(teacher) else 'Email 與申請時設定的密碼'
+    try:
+        mailer.send_mail(
+            teacher.email, 'Snap to Learn 老師帳號已核准',
+            f'{teacher.username} 老師您好：\n\n你的 Snap to Learn 校園教育版老師帳號已通過審核。\n'
+            f'請到 {url_for("admin_login", _external=True)} 的「老師」分頁，用{how}登入，就可以建立班級。\n\n'
+            f'Snap to Learn 校園教育版',
+        )
+        return True
+    except Exception as e:
+        print(f"⚠️ 寄送老師核准通知失敗：{e}")
+        return False
 
 
 @app.route('/teacher_account/reject/<int:user_id>', methods=['POST'])
@@ -2925,6 +3294,7 @@ def teacher_account_add():
         username=username,
         password_hash=generate_password_hash(password),
         account_type=AccountType.TEACHER,
+        must_change_password=True,   # 密碼是管理者設的，老師第一次用密碼登入要自己換掉
     )
     db.session.add(teacher)
     db.session.flush()
@@ -2949,13 +3319,14 @@ def teacher_account_reset_password(user_id):
         flash(error, 'error')
         return redirect(url_for('teacher_account_list'))
     teacher.password_hash = generate_password_hash(password)
+    teacher.must_change_password = True   # 新密碼管理者也知道，老師下次用密碼登入要先換掉
     db.session.add(SystemLog(
         admin_id=admin_id, user_id=teacher.id,
         action='UPDATE', target_table='user', target_id=teacher.id,
         new_value={'password': 'reset'}
     ))
     db.session.commit()
-    flash(f'已重設「{teacher.username}」的密碼', 'success')
+    flash(f'已重設「{teacher.username}」的密碼，老師下次用密碼登入時會被要求改成自己的密碼', 'success')
     return redirect(url_for('teacher_account_list'))
 
 
@@ -2974,6 +3345,81 @@ def teacher_account_toggle(user_id):
     db.session.commit()
     flash(('已停用「%s」' if teacher.is_suspended else '已啟用「%s」') % teacher.username, 'success')
     return redirect(url_for('teacher_account_list'))
+
+
+# ---- 學校：學生在 App 先選學校，再用學校 Google 帳號登入 ----
+SCHOOL_DOMAIN_RE = re.compile(r'^\.?[a-z0-9-]+(\.[a-z0-9-]+)+$')
+
+
+def _school_form():
+    """讀取並檢查學校表單，回傳 (資料, 錯誤訊息)"""
+    name = (request.form.get('name') or '').strip()[:50]
+    domains = [d.strip().lower().lstrip('@') for d in re.split(r'[,，\s]+', request.form.get('student_domains') or '') if d.strip()]
+    pattern = (request.form.get('student_id_pattern') or '').strip() or DEFAULT_STUDENT_ID_PATTERN
+    if not name:
+        return None, '請輸入學校名稱'
+    if not domains:
+        return None, '請輸入學生 Google 帳號的網域，例如 gm.xxx.edu.tw'
+    bad = [d for d in domains if not SCHOOL_DOMAIN_RE.match(d)]
+    if bad:
+        return None, '網域格式不正確：' + '、'.join(bad)
+    try:
+        re.compile(pattern)
+    except re.error:
+        return None, '學號格式（正規式）寫錯了，請檢查括號與符號'
+    return {'name': name, 'student_domains': ','.join(domains), 'student_id_pattern': pattern[:100]}, None
+
+
+@app.route('/school/add', methods=['POST'])
+@super_admin_required
+def school_add():
+    form, error = _school_form()
+    if not error and School.query.filter_by(name=form['name']).first():
+        error = f'已經有「{form["name"]}」了'
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('school_list'))
+    school = School(**form)
+    db.session.add(school)
+    db.session.flush()
+    db.session.add(SystemLog(admin_id=session.get('admin_id'), action='CREATE',
+                             target_table='school', target_id=school.id, new_value=form))
+    db.session.commit()
+    flash(f'已新增「{school.name}」，學生在 App 校園教育版選這間學校後，就能用學校 Google 帳號登入', 'success')
+    return redirect(url_for('school_list'))
+
+
+@app.route('/school/edit/<int:school_id>', methods=['POST'])
+@super_admin_required
+def school_edit(school_id):
+    school = School.query.get_or_404(school_id)
+    form, error = _school_form()
+    if not error and School.query.filter(School.name == form['name'], School.id != school.id).first():
+        error = f'已經有「{form["name"]}」了'
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('school_list'))
+    old = {'name': school.name, 'student_domains': school.student_domains, 'student_id_pattern': school.student_id_pattern}
+    for key, value in form.items():
+        setattr(school, key, value)
+    db.session.add(SystemLog(admin_id=session.get('admin_id'), action='UPDATE',
+                             target_table='school', target_id=school.id, old_value=old, new_value=form))
+    db.session.commit()
+    flash(f'已更新「{school.name}」', 'success')
+    return redirect(url_for('school_list'))
+
+
+@app.route('/school/toggle/<int:school_id>', methods=['POST'])
+@super_admin_required
+def school_toggle(school_id):
+    """停用後 App 的學校清單不再顯示、也不能用這間學校登入；已建立的學生帳號與班級資料保留"""
+    school = School.query.get_or_404(school_id)
+    school.is_active = not bool(school.is_active)
+    db.session.add(SystemLog(admin_id=session.get('admin_id'), action='UPDATE',
+                             target_table='school', target_id=school.id, new_value={'is_active': school.is_active}))
+    db.session.commit()
+    flash(('已啟用「%s」' if school.is_active else '已停用「%s」，學生無法再選這間學校登入') % school.name, 'success')
+    return redirect(url_for('school_list'))
 
 
 # ==========================================

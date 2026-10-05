@@ -86,7 +86,8 @@
             <li class="sidebar-section-title">營運</li>
             <li><a href="/plan/list" class="active"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
-            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
+            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理{% if sidebar_teacher_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_teacher_pending }}</span>{% endif %}</a></li>
+            <li><a href="/school/list"><i class="bi bi-building"></i> 學校管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
             <li class="sidebar-section-title">系統</li>
             <li><a href="/admin_account/list"><i class="bi bi-shield-lock-fill"></i> 管理員帳號管理</a></li>
@@ -227,25 +228,25 @@
                                 <div class="modal-body">
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">方案名稱</label>
-                                        <input type="text" name="name" class="form-control" value="{{ p.name }}" required>
+                                        <input autocomplete="off" type="text" name="name" class="form-control" value="{{ p.name }}" required>
                                     </div>
                                     <div class="row g-2 mb-3">
                                         <div class="col">
                                             <label class="form-label fw-bold">點數</label>
-                                            <input type="number" name="points" class="form-control" value="{{ p.points }}" min="1" required>
+                                            <input autocomplete="off" type="number" name="points" class="form-control" value="{{ p.points }}" min="1" required>
                                         </div>
                                         <div class="col">
                                             <label class="form-label fw-bold">售價 (NT$)</label>
-                                            <input type="number" name="price" class="form-control" value="{{ p.price }}" min="1" required>
+                                            <input autocomplete="off" type="number" name="price" class="form-control" value="{{ p.price }}" min="1" required>
                                         </div>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">標籤</label>
-                                        <input type="text" name="tag" class="form-control" value="{{ p.tag or '' }}" placeholder="如：最划算、熱門">
+                                        <input autocomplete="off" type="text" name="tag" class="form-control" value="{{ p.tag or '' }}" placeholder="如：最划算、熱門">
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">說明</label>
-                                        <input type="text" name="description" class="form-control" value="{{ p.description or '' }}">
+                                        <input autocomplete="off" type="text" name="description" class="form-control" value="{{ p.description or '' }}">
                                     </div>
                                 </div>
                                 <div class="modal-footer">
@@ -269,25 +270,25 @@
                                 <div class="modal-body">
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">方案名稱</label>
-                                        <input type="text" name="name" class="form-control" value="{{ p.name }}" required>
+                                        <input autocomplete="off" type="text" name="name" class="form-control" value="{{ p.name }}" required>
                                     </div>
                                     {% if p.billing_cycle == 'monthly' %}
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">月費 (NT$)</label>
-                                        <input type="number" name="price_monthly" class="form-control" value="{{ p.price_monthly or '' }}" min="1">
+                                        <input autocomplete="off" type="number" name="price_monthly" class="form-control" value="{{ p.price_monthly or '' }}" min="1">
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">月訂贈點</label>
-                                        <input type="number" name="points_grant_monthly" class="form-control" value="{{ p.points_grant_monthly or '' }}" min="0">
+                                        <input autocomplete="off" type="number" name="points_grant_monthly" class="form-control" value="{{ p.points_grant_monthly or '' }}" min="0">
                                     </div>
                                     {% elif p.billing_cycle == 'yearly' %}
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">年費 (NT$)</label>
-                                        <input type="number" name="price_yearly" class="form-control" value="{{ p.price_yearly or '' }}" min="1">
+                                        <input autocomplete="off" type="number" name="price_yearly" class="form-control" value="{{ p.price_yearly or '' }}" min="1">
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">年訂贈點</label>
-                                        <input type="number" name="points_grant_yearly" class="form-control" value="{{ p.points_grant_yearly or '' }}" min="0">
+                                        <input autocomplete="off" type="number" name="points_grant_yearly" class="form-control" value="{{ p.points_grant_yearly or '' }}" min="0">
                                     </div>
                                     {% endif %}
                                 </div>
@@ -312,25 +313,25 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-bold">方案名稱</label>
-                        <input type="text" name="name" class="form-control" placeholder="例：超值包" required>
+                        <input autocomplete="off" type="text" name="name" class="form-control" placeholder="例：超值包" required>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col">
                             <label class="form-label fw-bold">點數</label>
-                            <input type="number" name="points" class="form-control" placeholder="100" min="1" required>
+                            <input autocomplete="off" type="number" name="points" class="form-control" placeholder="100" min="1" required>
                         </div>
                         <div class="col">
                             <label class="form-label fw-bold">售價 (NT$)</label>
-                            <input type="number" name="price" class="form-control" placeholder="50" min="1" required>
+                            <input autocomplete="off" type="number" name="price" class="form-control" placeholder="50" min="1" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">標籤</label>
-                        <input type="text" name="tag" class="form-control" placeholder="如：最划算、熱門（選填）">
+                        <input autocomplete="off" type="text" name="tag" class="form-control" placeholder="如：最划算、熱門（選填）">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">說明</label>
-                        <input type="text" name="description" class="form-control" placeholder="選填">
+                        <input autocomplete="off" type="text" name="description" class="form-control" placeholder="選填">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -353,7 +354,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-bold">方案名稱</label>
-                        <input type="text" name="name" class="form-control" placeholder="例：Premium Pro" required>
+                        <input autocomplete="off" type="text" name="name" class="form-control" placeholder="例：Premium Pro" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">計費週期</label>
@@ -365,21 +366,21 @@
                     <div id="addMonthlyFields">
                         <div class="mb-3">
                             <label class="form-label fw-bold">月費 (NT$)</label>
-                            <input type="number" name="price_monthly" class="form-control" placeholder="149" min="1">
+                            <input autocomplete="off" type="number" name="price_monthly" class="form-control" placeholder="149" min="1">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">月訂贈點 (J-Pts)</label>
-                            <input type="number" name="points_grant_monthly" class="form-control" placeholder="0" min="0">
+                            <input autocomplete="off" type="number" name="points_grant_monthly" class="form-control" placeholder="0" min="0">
                         </div>
                     </div>
                     <div id="addYearlyFields" style="display:none;">
                         <div class="mb-3">
                             <label class="form-label fw-bold">年費 (NT$)</label>
-                            <input type="number" name="price_yearly" class="form-control" placeholder="1290" min="1">
+                            <input autocomplete="off" type="number" name="price_yearly" class="form-control" placeholder="1290" min="1">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">年訂贈點 (J-Pts)</label>
-                            <input type="number" name="points_grant_yearly" class="form-control" placeholder="0" min="0">
+                            <input autocomplete="off" type="number" name="points_grant_yearly" class="form-control" placeholder="0" min="0">
                         </div>
                     </div>
                 </div>

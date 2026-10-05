@@ -79,6 +79,8 @@ def get_folder_vocabs():
             "meaning": v.meaning,
             "scene": v.scene.name if v.scene else "未分類",
             "folder_id": uv.folder_id,
+            # 給前端排序用（最新／最舊收藏）
+            "collected_at": uv.collected_at.isoformat() if uv.collected_at else None,
         })
 
     return jsonify({"vocabs": result}), 200

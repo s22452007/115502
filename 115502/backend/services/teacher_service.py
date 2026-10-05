@@ -159,6 +159,7 @@ def get_classroom_student_stats(classroom_id):
             'username': student.username or '未命名',
             'display_name': row['display_name'],
             'email': student.email or '',
+            'google_login': bool(student.school_id),   # 學校 Google 帳號登入，沒有密碼可重設
             'joined_at': tw_fmt(m.joined_at, '%Y-%m-%d'),
             'completed_assignments': completed_count,
             'total_assignments': total_assignments,

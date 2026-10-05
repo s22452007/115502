@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 管理者登入</title>
+    <title>Snap to Learn 管理者登入</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -261,7 +261,7 @@
                 <div class="mb-4">
                     <div class="field-label">密碼</div>
                     <div class="input-group">
-                        <input type="password" name="password" id="adminPassword"
+                        <input autocomplete="off" type="password" name="password" id="adminPassword"
                                class="form-control" placeholder="輸入密碼" required>
                         <button class="btn btn-eye" type="button" id="togglePassword">
                             <i id="eyeIcon" class="bi bi-eye-slash-fill"></i>
@@ -299,18 +299,21 @@
                 <input type="hidden" name="login_as" value="teacher">
                 <div class="mb-4">
                     <div class="field-label">老師 Email</div>
-                    <input type="email" name="email" class="form-control" placeholder="輸入學校管理員提供的 Email" required>
+                    <input autocomplete="off" type="email" name="email" class="form-control" placeholder="輸入學校管理員提供的 Email" required>
                 </div>
                 <div class="mb-4">
                     <div class="field-label">密碼</div>
-                    <input type="password" name="password" class="form-control" placeholder="輸入密碼" required>
+                    <input autocomplete="off" type="password" name="password" class="form-control" placeholder="輸入密碼" required>
                 </div>
                 <button type="submit" class="btn-login">登入班級管理</button>
-                <div style="text-align:center; margin-top:16px; font-size:0.78rem; color:#aaa;">忘記密碼請聯繫學校系統管理員重設</div>
+                <div style="text-align:center; margin-top:16px; font-size:0.78rem; color:#aaa;">忘記密碼或登不進去？<a href="{{ url_for('teacher_contact') }}" style="color:#3d7a52; font-weight:700; text-decoration:none;">聯絡管理者</a></div>
+                <div style="text-align:center; margin-top:8px; font-size:0.85rem; color:#888;">
+                    Google 無法登入、也還沒有帳號？<a href="{{ url_for('teacher_apply') }}" style="color:#3d7a52; font-weight:700; text-decoration:none;">申請老師帳號</a>
+                </div>
             </form>
             </div>
 
-            <div class="form-footer">© 2026 JLens Project Team · 管理者與教師專用</div>
+            <div class="form-footer">© 2026 Snap to Learn Project Team · 管理者與教師專用</div>
         </div>
     </div>
 

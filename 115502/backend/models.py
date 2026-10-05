@@ -74,9 +74,15 @@ class User(db.Model):
     # 老師帳號審核狀態：'pending'（用學校 Google 帳號自行登入，等管理者確認是老師）／'approved'。
     # 管理者建立的老師帳號直接 approved；一般使用者與學生用不到這個欄位。
     teacher_status = db.Column(db.String(20), default='approved')
+    # Google 無法登入的老師自己填申請表時留下的資料，給管理者審核時對照教職員名錄；其他帳號都是空的
+    teacher_department = db.Column(db.String(50), nullable=True)    # 系所／單位
+    teacher_apply_note = db.Column(db.String(200), nullable=True)   # 申請備註
     # 下次登入是否要強制改密碼：老師建立學生帳號、或幫學生重設密碼時設為 True
-    # （初始密碼是學號，知道學號就能登入，所以一定要學生自己換掉），改完即清除。
+    # （初始密碼是系統產生給老師的臨時密碼，老師也知道，所以一定要學生自己換掉），改完即清除。
     must_change_password = db.Column(db.Boolean, default=False)
+    # 校園教育版學生用學校 Google 帳號登入時選的學校（School.id）。
+    # 有值＝Google 學生帳號（沒有密碼）；老師貼名單建立的學號帳號是空的
+    school_id = db.Column(db.Integer, db.ForeignKey('school.id'), nullable=True)
     # 每日任務
     daily_task_date = db.Column(db.Date, nullable=True)
     daily_task_photo = db.Column(db.Boolean, default=False)
@@ -595,6 +601,46 @@ class LatePolicy:
     REJECT = 'reject'   # 截止後不收，學生端擋下繳交
     DEDUCT = 'deduct'   # 允許遲交，但算成績時扣 late_penalty 分（原始分數保留，老師改分也照扣）
     ALL = (ALLOW, REJECT, DEDUCT)
+
+
+# T_school: 學校。學生在 App 先選學校，再用學校 Google 帳號登入（像 TronClass 選學校）。
+# 由 super_admin 在後台「學校管理」頁設定網域與學號格式。
+from school_seed import DEFAULT_STUDENT_ID_PATTERN
+
+
+class School(db.Model):
+    __tablename__ = 'school'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    # 學生 Google 帳號的網域，逗號分隔；以「.」開頭代表結尾比對（.xxx.edu.tw 包含 gm.xxx.edu.tw）
+    student_domains = db.Column(db.String(200), nullable=False)
+    # Email @ 前面要符合這個正規式才算學號；有括號群組時取第一組當學號（例如 ^s(\d{8})$）
+    student_id_pattern = db.Column(db.String(100), default=DEFAULT_STUDENT_ID_PATTERN, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    # 學生在 App 自己新增的學校記下是誰（管理者在後台新增的是空的）
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def domain_list(self):
+        return [d.strip().lower().lstrip('@') for d in (self.student_domains or '').split(',') if d.strip()]
+
+    def domain_allowed(self, domain):
+        domain = (domain or '').lower()
+        for allowed in self.domain_list():
+            if domain == allowed.lstrip('.') or (allowed.startswith('.') and domain.endswith(allowed)):
+                return True
+        return False
+
+    def student_no(self, local_part):
+        """Email @ 前面那段是學號就回傳學號，不是回傳 None"""
+        import re
+        try:
+            m = re.fullmatch(self.student_id_pattern or DEFAULT_STUDENT_ID_PATTERN, local_part or '')
+        except re.error:
+            return None
+        if not m:
+            return None
+        return m.group(1) if m.groups() else m.group(0)
 
 
 # T_classroom: 學習教室。老師建立，學生用 join_code 加入。

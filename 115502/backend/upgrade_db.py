@@ -941,6 +941,57 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ user.must_change_password 升級警告：{e}")
 
 # ==========================================
+# 老師帳號申請表：Google 無法登入的老師自己申請，留下系所與備註給管理者審核
+# ==========================================
+add_column("user", "teacher_department VARCHAR(50)")
+add_column("user", "teacher_apply_note VARCHAR(200)")
+print("✅ user.teacher_department／teacher_apply_note 欄位確認完畢")
+
+# ==========================================
+# 學生用學校 Google 帳號登入：學校表（網域、學號格式），user 記住學生選的學校
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS school (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(50) NOT NULL UNIQUE,
+        student_domains VARCHAR(200) NOT NULL,
+        student_id_pattern VARCHAR(100) NOT NULL DEFAULT '^\\d+$',
+        is_active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    print("✅ 學校表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 學校表升級警告：{e}")
+add_column("user", "school_id INTEGER")
+add_column("school", "created_by_user_id INTEGER")   # 學生在 App 新增的學校記下是誰
+# 老師建立的學生帳號以前初始密碼＝學號，知道學號的人搶先登入就能改密碼、佔走帳號。
+# 還沒換過密碼的一律改成隨機密碼（沒人知道），學生要登入請老師在班級名冊按「重設密碼」拿新的臨時密碼
+try:
+    import secrets as _secrets
+    from werkzeug.security import generate_password_hash as _gen_pw, check_password_hash as _chk_pw
+    _locked = 0
+    for _uid, _email, _hash in cursor.execute(
+            "SELECT id, email, password_hash FROM user WHERE account_type = 'student' AND school_id IS NULL").fetchall():
+        if _email and _hash and _chk_pw(_hash, _email):
+            cursor.execute(
+                "UPDATE user SET password_hash = ?, must_change_password = 1, "
+                "token_version = COALESCE(token_version, 0) + 1 WHERE id = ?;",
+                (_gen_pw(_secrets.token_hex(16)), _uid))
+            _locked += 1
+    print(f"✅ 密碼還是學號的學生帳號已改成隨機密碼：{_locked} 個（要登入請老師在班級名冊重設密碼）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 學號密碼帳號升級警告：{e}")
+try:
+    from school_seed import sync_school_seed, upgrade_default_pattern
+    print(f"✅ 預設學校清單確認完畢（新增 {sync_school_seed(cursor)} 間）")
+    # 學號有英文字母的學校（例如 b09901001）以前會被純數字的預設格式擋掉
+    print(f"✅ 學號格式預設值放寬完畢（更新 {upgrade_default_pattern(cursor)} 間）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 預設學校清單升級警告：{e}")
+
+# ==========================================
 # 程度測驗／升級測驗題庫擴充：N5～N1 每級補到 20 題（題目在 quiz_bank.py）
 # ==========================================
 try:

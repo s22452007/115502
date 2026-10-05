@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 校園教育版 - 出題新作業</title>
+    <title>Snap to Learn 校園教育版 - 出題新作業</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -107,7 +107,7 @@
                 <div class="row g-3">
                     <div class="col-md-8">
                         <label class="form-label fw-bold">作業標題 <span class="text-danger">*</span></label>
-                        <input type="text" name="title" id="assignmentTitle" class="form-control" placeholder="例如：L3 造句練習：～てもいいですか" required>
+                        <input autocomplete="off" type="text" name="title" id="assignmentTitle" class="form-control" placeholder="例如：L3 造句練習：～てもいいですか" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">截止時間 (可留空)</label>
@@ -115,7 +115,7 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-bold">作業指引 / 老師的話</label>
-                        <textarea name="instructions" class="form-control" rows="2" placeholder="請學生注意的事項或提示..."></textarea>
+                        <textarea autocomplete="off" name="instructions" class="form-control" rows="2" placeholder="請學生注意的事項或提示..."></textarea>
                     </div>
                     <div class="col-12">
                         {% with lp_id='new', lp_policy=None, lp_penalty=None %}{% include 'teacher/_late_policy_fields.html' %}{% endwith %}
@@ -135,16 +135,16 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">指定文法重點 <span class="text-danger">*</span></label>
-                        <input type="text" name="grammar_point" class="form-control" placeholder="例如：～てもいいです、～てはいけません">
+                        <input autocomplete="off" type="text" name="grammar_point" class="form-control" placeholder="例如：～てもいいです、～てはいけません">
                         <div class="form-text">學生造句必須包含此文法結構，AI 將比對此重點進行糾錯與評分。</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold">及格分數標準</label>
-                        <input type="number" name="pass_score" class="form-control" value="60" min="0" max="100">
+                        <input autocomplete="off" type="number" name="pass_score" class="form-control" value="60" min="0" max="100">
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-bold">指定必用單字 (選填，以逗號分隔)</label>
-                        <input type="text" name="required_vocabs" class="form-control" placeholder="例如：写真, 撮る">
+                        <input autocomplete="off" type="text" name="required_vocabs" class="form-control" placeholder="例如：写真, 撮る">
                     </div>
                 </div>
             </div>
@@ -180,7 +180,7 @@
                     <div class="row g-3">
                         <div class="col-md-8">
                             <label class="form-label fw-bold">文章標題 <span class="text-danger">*</span></label>
-                            <input type="text" name="new_art_title" class="form-control" placeholder="文章標題（例如：京都の紅葉狩り）">
+                            <input autocomplete="off" type="text" name="new_art_title" class="form-control" placeholder="文章標題（例如：京都の紅葉狩り）">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-bold">難度級別</label>
@@ -194,11 +194,11 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-bold">日文內文 <span class="text-danger">*</span></label>
-                            <textarea name="new_art_content" class="form-control" rows="5" placeholder="請貼上或輸入日文文章內容..."></textarea>
+                            <textarea autocomplete="off" name="new_art_content" class="form-control" rows="5" placeholder="請貼上或輸入日文文章內容..."></textarea>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-bold">中文翻譯對照 (選填)</label>
-                            <textarea name="new_art_translation" class="form-control" rows="3" placeholder="中文翻譯供學生對照..."></textarea>
+                            <textarea autocomplete="off" name="new_art_translation" class="form-control" rows="3" placeholder="中文翻譯供學生對照..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -240,7 +240,7 @@
                 <div class="row g-3">
                     <div class="col-md-8">
                         <label class="form-label fw-bold">拍攝主題 (選填)</label>
-                        <input type="text" name="photo_theme" class="form-control" list="sceneNameList" placeholder="例如：廚房裡的東西、你的書桌、便利商店">
+                        <input autocomplete="off" type="text" name="photo_theme" class="form-control" list="sceneNameList" placeholder="例如：廚房裡的東西、你的書桌、便利商店">
                         <datalist id="sceneNameList">
                             {% for name in scene_names %}<option value="{{ name }}">{% endfor %}
                         </datalist>
@@ -248,7 +248,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">最少辨識單字數</label>
-                        <input type="number" name="min_vocab_count" class="form-control" value="3" min="0" max="20">
+                        <input autocomplete="off" type="number" name="min_vocab_count" class="form-control" value="3" min="0" max="20">
                         <div class="form-text">照片辨識出的單字少於此數，學生必須換一張重拍。</div>
                     </div>
                 </div>
@@ -263,7 +263,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">對話情境主題 <span class="text-danger">*</span></label>
-                        <input type="text" name="chat_topic" id="chatTopicInput" class="form-control" placeholder="例如：在餐廳點餐、向店員問路、自我介紹">
+                        <input autocomplete="off" type="text" name="chat_topic" id="chatTopicInput" class="form-control" placeholder="例如：在餐廳點餐、向店員問路、自我介紹">
                         <div class="form-text">App 會用這個主題開啟 AI 角色扮演，學生只能在此情境下對話才算繳交。</div>
                     </div>
                     <div class="col-md-3">
@@ -277,7 +277,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">最少對話輪數</label>
-                        <input type="number" name="min_turns" class="form-control" value="6" min="1" max="50">
+                        <input autocomplete="off" type="number" name="min_turns" class="form-control" value="6" min="1" max="50">
                         <div class="form-text">只計算學生自己說的句數。</div>
                     </div>
                 </div>
@@ -373,7 +373,7 @@ function renderQuestions() {
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">題目問題描述 <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" value="${q.question}" placeholder="例如：文章中の主人公はどこへ行きましたか？" onchange="questions[${idx}].question = this.value" required>
+                    <input autocomplete="off" type="text" class="form-control" value="${q.question}" placeholder="例如：文章中の主人公はどこへ行きましたか？" onchange="questions[${idx}].question = this.value" required>
                 </div>
                 <div class="row g-2 mb-3">
                     ${['A', 'B', 'C', 'D'].map((optLabel, optIdx) => `
@@ -383,14 +383,14 @@ function renderQuestions() {
                                     <input class="form-check-input mt-0" type="radio" name="ans_q_${q.id}" value="${optLabel}" ${q.answer === optLabel ? 'checked' : ''} onchange="questions[${idx}].answer = this.value">
                                     <span class="ms-1 fw-bold">${optLabel}</span>
                                 </div>
-                                <input type="text" class="form-control" placeholder="選項 ${optLabel} 內容" value="${q.options[optIdx] || ''}" onchange="questions[${idx}].options[${optIdx}] = this.value" required>
+                                <input autocomplete="off" type="text" class="form-control" placeholder="選項 ${optLabel} 內容" value="${q.options[optIdx] || ''}" onchange="questions[${idx}].options[${optIdx}] = this.value" required>
                             </div>
                         </div>
                     `).join('')}
                 </div>
                 <div class="text-muted small mb-2"><i class="bi bi-check2-circle text-success me-1"></i>請點選上方選項前的圓圈，設定「正確答案」。</div>
                 <div>
-                    <input type="text" class="form-control form-control-sm" placeholder="解析或中文說明（選填）" value="${q.explanation}" onchange="questions[${idx}].explanation = this.value">
+                    <input autocomplete="off" type="text" class="form-control form-control-sm" placeholder="解析或中文說明（選填）" value="${q.explanation}" onchange="questions[${idx}].explanation = this.value">
                 </div>
             `;
         } else {
@@ -401,7 +401,7 @@ function renderQuestions() {
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">題目敘述 <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" value="${q.question}" placeholder="例如：主人公は新幹線で京都に行きました。" onchange="questions[${idx}].question = this.value" required>
+                    <input autocomplete="off" type="text" class="form-control" value="${q.question}" placeholder="例如：主人公は新幹線で京都に行きました。" onchange="questions[${idx}].question = this.value" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold me-3">正確答案：</label>
@@ -415,7 +415,7 @@ function renderQuestions() {
                     </div>
                 </div>
                 <div>
-                    <input type="text" class="form-control form-control-sm" placeholder="解析或中文說明（選填）" value="${q.explanation}" onchange="questions[${idx}].explanation = this.value">
+                    <input autocomplete="off" type="text" class="form-control form-control-sm" placeholder="解析或中文說明（選填）" value="${q.explanation}" onchange="questions[${idx}].explanation = this.value">
                 </div>
             `;
         }

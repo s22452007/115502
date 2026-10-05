@@ -208,7 +208,7 @@
             {% for q in questions %}
             <div class="quiz-card">
                 <div class="quiz-card-header">
-                    <span class="level-tag">{{ q.level_tag }}</span>
+                    <span class="level-tag">{{ q.level_tag|level_label }}</span>
                     <span class="stage-tag">{{ q.stage }}</span>
                     <span class="id-tag">#{{ q.id }}</span>
                 </div>
@@ -267,7 +267,7 @@
                                 <label class="form-label fw-bold">難度標籤</label>
                                 <select name="level_tag" class="form-select" required>
                                     {% for lv in ['N5', 'N4', 'N3', 'N2', 'N1'] %}
-                                    <option value="{{ lv }}" {% if q.level_tag == lv %}selected{% endif %}>{{ lv }}</option>
+                                    <option value="{{ lv }}" {% if q.level_tag == lv %}selected{% endif %}>{{ lv|level_label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -341,11 +341,11 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">難度標籤</label>
                                 <select name="level_tag" class="form-select" required>
-                                    <option value="N5">N5</option>
-                                    <option value="N4">N4</option>
-                                    <option value="N3">N3</option>
-                                    <option value="N2">N2</option>
-                                    <option value="N1">N1</option>
+                                    <option value="N5">入門</option>
+                                    <option value="N4">初級</option>
+                                    <option value="N3">中級</option>
+                                    <option value="N2">中高級</option>
+                                    <option value="N1">高級</option>
                                 </select>
                             </div>
                             <div class="col-12">

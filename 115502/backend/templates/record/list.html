@@ -255,7 +255,7 @@
                                 <td style="white-space:nowrap; color:#999; font-size:0.85rem;">{{ r.created_at }}</td>
                                 <td><a class="user-link" href="/user/{{ r.user_id }}">{{ r.username or (r.email or '已刪除的使用者').split('@')[0] }}</a></td>
                                 <td>
-                                    {% if r.level %}<span class="chip chip-grey me-1">{{ r.level }}</span>{% endif %}
+                                    {% if r.level %}<span class="chip chip-grey me-1">{{ r.level|level_label }}</span>{% endif %}
                                     <span class="jp">{{ (r.title or '已刪除的文章') | striptags }}</span>
                                 </td>
                                 <td>{{ score_chip(r.score) }}</td>

@@ -218,7 +218,7 @@
                     <div class="user-name">
                         {{ u.username or '未設定暱稱' }}
                         {% if u.japanese_level %}
-                        <span class="badge-level">{{ u.japanese_level }}</span>
+                        <span class="badge-level">{{ u.japanese_level|level_title }}</span>
                         {% endif %}
                         {% if u.account_type == 'student' %}
                         <span class="badge-level" style="background:#e3eefc;color:#2f5f9e;"><i class="bi bi-mortarboard-fill"></i> 教育版學生</span>

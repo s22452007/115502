@@ -197,7 +197,7 @@
                                                     <a href="/user/{{ m.user_id }}">{{ m.username or (m.email or '已刪除的使用者').split('@')[0] }}</a>
                                                     <div class="sub">{{ m.email or '' }}</div>
                                                 </td>
-                                                <td>{{ m.japanese_level or '—' }}</td>
+                                                <td>{{ m.japanese_level|level_title if m.japanese_level else '—' }}</td>
                                                 <td>{{ m.contribution if m.contribution is not none else '—' }}</td>
                                                 <td>{% if m.deposit %}{{ m.deposit }} 點{% else %}<span class="text-muted">免費額度</span>{% endif %}</td>
                                                 <td>{% if m.has_claimed %}<span class="chip chip-gold">已領獎</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>

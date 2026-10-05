@@ -42,6 +42,26 @@ from services.teacher_service import (
 from services.student_assignment import submit_assignment, auto_submit_chat, my_assignments
 from werkzeug.security import generate_password_hash
 
+# AI 建議分數：測試不連外，用模擬回應；並改成同步執行，繳交後馬上就能檢查
+from utils import gemini_client, assignment_ai
+
+
+class _FakeAI:
+    def __init__(self, text):
+        self.text = text
+
+
+def _fake_generate(feature, prompt, config=None, model=None):
+    if '主題' in prompt and '"score"' in prompt and 'grammar' not in prompt:
+        return _FakeAI('{"score": 28, "reason": "冰箱、菜刀、鍋子都是廚房用品"}')
+    return _FakeAI('{"grammar": {"score": 35, "reason": "助詞正確"}, "natural": {"score": 16, "reason": "禮貌得體"},'
+                   ' "task": {"score": 27, "reason": "完成點餐"}, "effort": {"score": 8, "reason": "句子完整"},'
+                   ' "comment": "點餐用語正確"}')
+
+
+gemini_client.generate_content = _fake_generate
+assignment_ai.RUN_IN_BACKGROUND = False
+
 with app.app_context():
     assert db.engine.url.database == tmp, db.engine.url.database
     db.create_all()
@@ -120,6 +140,18 @@ with app.app_context():
     assert s0['detail']['messages'][0]['content'] == 'すみません、注文（ちゅうもん）をお願（ねが）いします。', s0['detail']['messages'][0]
     assert strip_furigana('[食|た]べる') == '食（た）べる'
 
+    print("=== [6b] AI 建議分數：繳交後自動產生，老師確認前不算成績 ===")
+    d = get_assignment_submissions_list(pa.id)
+    s0 = d['submissions'][0]
+    # 拍照：完成 60 + 符合主題 28（模擬 AI）+ 額外單字 2（要求 2 個、辨識出 3 個）
+    assert s0['ai_score'] == 90 and s0['score'] is None and s0['status'] == 'submitted', s0
+    assert [i['label'] for i in s0['ai_feedback']['items']] == ['完成任務', '符合主題', '額外單字'], s0['ai_feedback']
+    d = get_assignment_submissions_list(ca.id)
+    s0 = d['submissions'][0]
+    # 對話：35 + 16 + 27 + 8
+    assert s0['ai_score'] == 86 and s0['score'] is None and len(s0['ai_feedback']['items']) == 4, s0
+    assert s0['ai_feedback']['comment'] == '點餐用語正確'
+
     print("=== [7] 後台頁面：出題表單 / 列表 / 批閱頁 都能渲染 ===")
     app.config['TESTING'] = True
     client = app.test_client()
@@ -140,6 +172,8 @@ with app.app_context():
     r = client.get(f'/teacher/assignment/{pa.id}/submissions')
     html = r.get_data(as_text=True)
     assert r.status_code == 200 and '/static/photos/ok.jpg' in html and '冷蔵庫' in html, r.status_code
+    # 批閱頁顯示 AI 建議分數與理由，分數欄預先填好建議分數
+    assert 'AI 建議 90 分' in html and '符合主題 28/30' in html and 'value="90"' in html
     r = client.get(f'/teacher/assignment/{ca.id}/submissions')
     html = r.get_data(as_text=True)
     assert r.status_code == 200 and '查看對話紀錄' in html and 'ラーメンをください。' in html and '注文（ちゅうもん）' in html

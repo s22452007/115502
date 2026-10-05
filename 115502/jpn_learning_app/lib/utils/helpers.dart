@@ -20,11 +20,13 @@ class AppHelpers {
     }
   }
 
-  /// 內容難度（文章、題目等）的顯示文字：初級／中級／中高級／高級。
+  /// 內容難度（文章、題目等）的顯示文字：入門／初級／中級／中高級／高級。
   /// N5～N1 只是系統內部的參考分級，不代表真正的日語檢定程度，所以畫面上不直接顯示代碼。
+  /// 跟後台、老師端用同一套名稱（backend/utils/level_names.py）。
   static String getDifficultyLabel(String? level) {
     switch ((level ?? '').toUpperCase().trim()) {
       case 'N5':
+        return '入門';
       case 'N4':
         return '初級';
       case 'N3':

@@ -168,7 +168,7 @@
                     <label class="form-label fw-bold">選擇文章</label>
                     <select name="article_id" class="form-select">
                         {% for art in existing_articles %}
-                            <option value="{{ art.id }}">[{{ art.level }}] {{ art.title }} ({{ art.theme }})</option>
+                            <option value="{{ art.id }}">[{{ art.level|level_label }}] {{ art.title }} ({{ art.theme }})</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -184,11 +184,11 @@
                         <div class="col-md-4">
                             <label class="form-label fw-bold">難度級別</label>
                             <select name="new_art_level" class="form-select">
-                                <option value="N5">N5 入門</option>
-                                <option value="N4">N4 初級</option>
-                                <option value="N3" selected>N3 中級</option>
-                                <option value="N2">N2 中高級</option>
-                                <option value="N1">N1 高級</option>
+                                <option value="N5">入門</option>
+                                <option value="N4">初級</option>
+                                <option value="N3" selected>中級</option>
+                                <option value="N2">中高級</option>
+                                <option value="N1">高級</option>
                             </select>
                         </div>
                         <div class="col-12">

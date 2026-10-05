@@ -159,7 +159,7 @@
                 </a>
                 {% for s in level_stats %}
                 <a class="level-tab {{ 'active' if current_level == s.level }}" href="{{ url_for('article_list', level=s.level, keyword=keyword) }}">
-                    {{ s.level }} <span class="count">上架 {{ s.published }} / 共 {{ s.total }} 篇．付費 {{ s.paid }}</span>
+                    {{ s.level|level_label }} <span class="count">上架 {{ s.published }} / 共 {{ s.total }} 篇．付費 {{ s.paid }}</span>
                 </a>
                 {% endfor %}
             </div>
@@ -167,7 +167,7 @@
             <div class="panel">
                 <div class="panel-header">
                     <i class="bi bi-journal-richtext me-1"></i>
-                    文章清單{% if current_level %}（{{ current_level }}）{% endif %}
+                    文章清單{% if current_level %}（{{ current_level|level_label }}）{% endif %}
                 </div>
                 <div class="p-0 table-responsive">
                     <table class="table table-hover mb-0 align-middle">
@@ -187,7 +187,7 @@
                             {% for a in articles %}
                             <tr>
                                 <td><span class="text-muted small">#{{ a.id }}</span></td>
-                                <td><span class="lv-badge">{{ a.level }}</span></td>
+                                <td><span class="lv-badge">{{ a.level|level_label }}</span></td>
                                 <td><span class="text-muted" style="font-size:0.85rem;">{{ a.theme }}</span></td>
                                 <td>
                                     <div class="article-title">{{ a.title | striptags }}</div>
@@ -259,7 +259,7 @@
                                 <label class="form-label">發布等級</label>
                                 <select name="level" class="form-select" required>
                                     {% for lv in levels %}
-                                    <option value="{{ lv }}" {{ 'selected' if current_level == lv }}>{{ lv }}</option>
+                                    <option value="{{ lv }}" {{ 'selected' if current_level == lv }}>{{ lv|level_label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -358,7 +358,7 @@
                                 <label class="form-label">發布等級</label>
                                 <select name="level" class="form-select" required>
                                     {% for lv in levels %}
-                                    <option value="{{ lv }}" {{ 'selected' if a.level == lv }}>{{ lv }}</option>
+                                    <option value="{{ lv }}" {{ 'selected' if a.level == lv }}>{{ lv|level_label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>

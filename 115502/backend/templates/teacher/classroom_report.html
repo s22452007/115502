@@ -42,7 +42,8 @@
 
         .panel { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; margin-top: 20px; height: calc(100% - 20px); display: flex; flex-direction: column; }
         .panel-header { padding: 14px 22px; background-color: var(--green-dark); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .panel-header select { font-size: 0.82rem; border-radius: 6px; border: none; padding: 3px 8px; max-width: 220px; }
+        /* 右邊要留空間給下拉箭頭，不然箭頭會壓到「學期成績」這些字 */
+        .panel-header select { font-size: 0.82rem; border-radius: 6px; border: none; padding: 3px 30px 3px 10px; background-position: right 8px center; max-width: 220px; }
         .panel-body { padding: 18px 22px; flex: 1; }
         .panel-body.tight { padding: 0; }
         .empty { color: #999; text-align: center; padding: 36px 16px; font-size: 0.9rem; }

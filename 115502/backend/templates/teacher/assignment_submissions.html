@@ -45,6 +45,11 @@
         .quiz-wrong { font-size: 0.8rem; margin-top: 4px; }
         .quiz-wrong summary { color: #c9302c; font-weight: 700; cursor: pointer; }
         .quiz-wrong .item { margin-top: 4px; padding-left: 8px; border-left: 2px solid #f0d0d0; }
+        /* AI 建議分數（拍照、對話作業） */
+        .ai-suggest { background: #f4f9f4; border: 1px solid #d7e8d8; border-radius: 10px; padding: 8px 10px; }
+        .ai-badge { background: #e3f0e4; color: #3f7a47; font-weight: 700; }
+        .ai-items { margin: 4px 0 2px; padding-left: 18px; font-size: 0.8rem; color: #444; }
+        .ai-items li { margin-bottom: 2px; }
     </style>
 </head>
 <body>
@@ -230,11 +235,35 @@
                             </td>
                             <td>
                                 {% if s.submission_id %}
+                                {# 拍照、對話作業的 AI 建議分數：只供參考，老師按「儲存批閱」才算數 #}
+                                {% if data.assignment.task_type in ('photo', 'chat') and s.detail %}
+                                    {% if s.ai_score is not none %}
+                                    <div class="ai-suggest mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge ai-badge"><i class="bi bi-stars me-1"></i>AI 建議 {{ s.ai_score }} 分</span>
+                                            {% if s.score is none %}<span class="small text-muted">尚未確認，請檢查後按「儲存批閱」</span>{% endif %}
+                                        </div>
+                                        {% if s.ai_feedback %}
+                                        <details class="mt-1">
+                                            <summary class="small text-muted">評分理由</summary>
+                                            <ul class="ai-items">
+                                                {% for it in s.ai_feedback.get('items', []) %}
+                                                <li><strong>{{ it.label }} {{ it.score }}/{{ it.max }}</strong>{% if it.reason %}：{{ it.reason }}{% endif %}</li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% if s.ai_feedback.get('comment') %}<div class="small text-muted">{{ s.ai_feedback.comment }}</div>{% endif %}
+                                        </details>
+                                        {% endif %}
+                                    </div>
+                                    {% elif s.score is none %}
+                                    <div class="small text-muted mb-2"><i class="bi bi-hourglass-split me-1"></i>AI 建議分數產生中，稍後重新整理即可看到</div>
+                                    {% endif %}
+                                {% endif %}
                                 <form action="/teacher/submission/{{ s.submission_id }}/grade" method="POST" class="d-flex flex-column gap-2">
                                     <div class="d-flex gap-2 align-items-center">
                                         <div class="input-group input-group-sm" style="width: 130px;">
                                             <span class="input-group-text">分數</span>
-                                            <input autocomplete="off" type="number" name="score" class="form-control" value="{{ s.score if s.score is not none else '' }}" placeholder="0-100" min="0" max="100" required>
+                                            <input autocomplete="off" type="number" name="score" class="form-control" value="{{ s.score if s.score is not none else (s.ai_score if s.ai_score is not none else '') }}" placeholder="0-100" min="0" max="100" required>
                                         </div>
                                         <button type="submit" class="btn btn-sm btn-success fw-bold flex-shrink-0" style="background-color: var(--green-accent); border: none;">
                                             <i class="bi bi-check2"></i> 儲存批閱
@@ -291,7 +320,7 @@
   <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
     <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
       <div class="modal-header" style="background-color: var(--green-dark); color: white;">
-        <h5 class="modal-title fw-bold"><i class="bi bi-book-half me-2"></i>{{ data.article_info.title }} ({{ data.article_info.level }})</h5>
+        <h5 class="modal-title fw-bold"><i class="bi bi-book-half me-2"></i>{{ data.article_info.title }} （{{ data.article_info.level|level_label }}）</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4">

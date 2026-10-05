@@ -3,6 +3,7 @@ import secrets
 import string
 from datetime import datetime, timedelta
 from utils.db import db
+from utils.level_names import level_label  # 報表裡的文章難度不直接顯示 N5～N1
 from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
     TaskType, SubmissionStatus, AccountType, LatePolicy, ClassroomAnnouncement,
@@ -559,6 +560,9 @@ def get_assignment_submissions_list(assignment_id):
             'submission_id': sub.id if sub else None,
             'status': sub.status if sub else SubmissionStatus.PENDING,
             'score': sub.score if sub else None,
+            # 拍照、對話作業的 AI 建議分數（老師確認後才算數）
+            'ai_score': sub.ai_score if sub else None,
+            'ai_feedback': sub.ai_feedback if sub else None,
             'teacher_comment': sub.teacher_comment if sub else '',
             'attempt_count': sub.attempt_count if sub else 0,
             'submitted_at': tw_fmt(sub.submitted_at) if sub and sub.submitted_at else '尚未繳交',
@@ -1286,7 +1290,7 @@ def get_student_report(classroom_id, student_id):
     for r in aq.all():
         art = Article.query.get(r.article_id)
         timeline.append({'type': 'article', 'label': '閱讀', 'at': r.completed_at, 'title': art.title if art else '文章',
-                         'detail': f"程度 {art.level}" if art and art.level else '', 'sub': '', 'score': r.score})
+                         'detail': f"難度 {level_label(art.level)}" if art and art.level else '', 'sub': '', 'score': r.score})
     for r in pq.all():
         vocab_n = UserPhotoVocab.query.filter_by(photo_id=r.id).count()
         timeline.append({'type': 'photo', 'label': '拍照', 'at': r.created_at, 'title': r.custom_title or '拍照學習',

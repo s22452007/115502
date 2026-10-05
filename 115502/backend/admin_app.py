@@ -44,6 +44,12 @@ def utc_to_tw(utc_str):
 
 app = Flask(__name__)
 
+# N5～N1 只是參考分級，畫面上不直接顯示：內容難度用 {{ x|level_label }}（入門…高級），
+# 使用者程度用 {{ x|level_title }}（新手上路…日語大師，跟 App 的稱號一致）
+from utils.level_names import level_label, level_title
+app.add_template_filter(level_label, 'level_label')
+app.add_template_filter(level_title, 'level_title')
+
 app.secret_key = 'jlens_admin_secure_key_2024'
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -1777,7 +1783,7 @@ def _read_article_form(form):
     if not title or not content:
         raise ValueError('標題與日文內容為必填欄位')
     if level not in ARTICLE_LEVELS:
-        raise ValueError('請選擇正確的等級 (N5~N1)')
+        raise ValueError('請選擇正確的難度（入門～高級）')
     if not theme:
         raise ValueError('請選擇或輸入文章主題')
 
@@ -1883,7 +1889,7 @@ def article_add():
                    'unlock_cost': article.unlock_cost, 'is_published': article.is_published}
     ))
     db.session.commit()
-    flash('已新增 %s 文章「%s」，需 %d J-pts 解鎖' % (article.level, article.title, article.unlock_cost), 'success')
+    flash('已新增%s文章「%s」，需 %d J-pts 解鎖' % (level_label(article.level), article.title, article.unlock_cost), 'success')
     return redirect(url_for('article_list', level=article.level))
 
 

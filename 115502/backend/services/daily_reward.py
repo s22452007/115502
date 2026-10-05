@@ -17,6 +17,22 @@ def _ensure_today(user):
         user.daily_reward_claimed = False
 
 
+def _practice_done_today(user):
+    """今天有沒有做過造句批改、文章朗讀評分（各至少一次）。
+
+    直接看今天的紀錄，不另外加旗標欄位：造句批改成功會留下 SentencePracticeRecord、
+    朗讀評分成功會留下 ReadingEvaluation，AI 失敗沒有紀錄也就不算完成。
+    """
+    from models import SentencePracticeRecord, ReadingEvaluation
+    from utils.account_helper import today_start_utc
+    start = today_start_utc()
+    sentence_done = SentencePracticeRecord.query.filter(
+        SentencePracticeRecord.user_id == user.id, SentencePracticeRecord.created_at >= start).first() is not None
+    reading_done = ReadingEvaluation.query.filter(
+        ReadingEvaluation.user_id == user.id, ReadingEvaluation.created_at >= start).first() is not None
+    return sentence_done, reading_done
+
+
 def _reward_range(streak_days):
     if streak_days >= 30:
         return 50, 80, 1   # pts_min, pts_max, bonus_photo
@@ -42,14 +58,19 @@ def get_status():
     pts_min, pts_max, bonus_photo = _reward_range(streak)
     photo_done = bool(user.daily_task_photo)
     ai_done = bool(user.daily_task_ai)
+    sentence_done, reading_done = _practice_done_today(user)
     claimed = bool(user.daily_reward_claimed)
+    # 四項都至少用過一次才能領獎：拍照辨識、AI 對話、造句批改、文章朗讀
+    all_done = photo_done and ai_done and sentence_done and reading_done
 
     return jsonify({
         'photo_done': photo_done,
         'ai_done': ai_done,
-        'all_done': photo_done and ai_done,
+        'sentence_done': sentence_done,
+        'reading_done': reading_done,
+        'all_done': all_done,
         'claimed': claimed,
-        'can_claim': photo_done and ai_done and not claimed,
+        'can_claim': all_done and not claimed,
         'streak_days': streak,
         'reward_preview': {
             'pts_min': pts_min,
@@ -72,7 +93,8 @@ def claim_reward():
 
     _ensure_today(user)
 
-    if not (user.daily_task_photo and user.daily_task_ai):
+    sentence_done, reading_done = _practice_done_today(user)
+    if not (user.daily_task_photo and user.daily_task_ai and sentence_done and reading_done):
         return jsonify({'error': '今日任務尚未完成'}), 400
 
     if user.daily_reward_claimed:

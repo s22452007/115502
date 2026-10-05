@@ -39,7 +39,8 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
 
   // 🌟 追蹤今日免費次數
   int _todayCount = 0;
-  final int _maxFreeCount = 5;
+  // 每日免費批改次數由後端依方案決定（免費版 3、Premium 10），載入題目時更新
+  int _maxFreeCount = 3;
 
   @override
   void initState() {
@@ -102,6 +103,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
               _grammarMeaning = taskResult['data']['meaning'] ?? '';
               _examples = List<String>.from(taskResult['data']['examples'] ?? []);
               _todayCount = taskResult['today_count'] ?? 0;
+              _maxFreeCount = (taskResult['daily_limit'] as num?)?.toInt() ?? _maxFreeCount;
             });
           }
         }

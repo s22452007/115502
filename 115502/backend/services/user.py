@@ -828,7 +828,20 @@ def get_usage_status(user_id):
         UserVocab.collected_at.isnot(None),
     ).count()
 
+    # 造句批改、文章朗讀評分的每日次數（免費版 3/1、Premium 10/5）
+    from models import SentencePracticeRecord, ReadingEvaluation
+    from utils.account_helper import sentence_daily_limit, reading_daily_limit, today_start_utc
+    day_start = today_start_utc()
+    sentence_today = SentencePracticeRecord.query.filter(
+        SentencePracticeRecord.user_id == user_id, SentencePracticeRecord.created_at >= day_start).count()
+    reading_today = ReadingEvaluation.query.filter(
+        ReadingEvaluation.user_id == user_id, ReadingEvaluation.created_at >= day_start).count()
+
     return jsonify({
+        "sentence_daily_limit": sentence_daily_limit(user),
+        "sentence_count_today": sentence_today,
+        "reading_daily_limit": reading_daily_limit(user),
+        "reading_count_today": reading_today,
         "is_premium": user.is_premium,
         # 前端靠這兩個欄位決定要不要顯示剩餘次數與加購入口：
         # unlimited 為 true 時整個次數 UI 都不該出現

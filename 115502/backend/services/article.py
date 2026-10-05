@@ -11,7 +11,7 @@ from models import db, User, Article, UnlockedArticle
 from datetime import datetime
 from models import db, User, Article, ArticleProgress, ScoreRecord, ReadingEvaluation, PointTransaction, TransactionType
 from utils.group_helper import add_group_progress_and_check_reward
-from utils.account_helper import is_payment_free
+from utils.account_helper import is_payment_free, has_unlimited_usage, reading_daily_limit, today_start_utc
 
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
@@ -116,6 +116,24 @@ def evaluate_audio():
     # 還沒解鎖的付費文章不能朗讀評分（否則不付解鎖點數也能朗讀領點）
     if eval_user_id and eval_article and not _can_read(eval_user_id, eval_article):
         return jsonify({"status": "error", "message": "請先解鎖這篇文章再朗讀"}), 403
+
+    # 每日朗讀評分次數：免費版 1 次、Premium 5 次，教育版不限。
+    # 以今天存下的評分紀錄計算，AI 失敗或聽不清楚沒有產生紀錄，就不會被算進去。
+    if eval_user_id:
+        eval_user = User.query.get(eval_user_id)
+        if eval_user and not has_unlimited_usage(eval_user):
+            limit = reading_daily_limit(eval_user)
+            used = ReadingEvaluation.query.filter(
+                ReadingEvaluation.user_id == eval_user_id,
+                ReadingEvaluation.created_at >= today_start_utc(),
+            ).count()
+            if used >= limit:
+                tip = '' if eval_user.is_premium else '升級 Premium 每天可以朗讀 5 次。'
+                return jsonify({
+                    "status": "quota_exceeded",
+                    "message": f"今天的 {limit} 次朗讀評分已經用完了，明天再來挑戰吧！{tip}",
+                    "daily_limit": limit,
+                }), 200
 
     # 音檔直接讀進記憶體、以 bytes 內嵌送給 Gemini（新版 SDK）。
     # 不再存成固定檔名的暫存檔再 upload_file：

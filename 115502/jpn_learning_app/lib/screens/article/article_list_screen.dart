@@ -21,12 +21,55 @@ class ArticleListScreen extends StatefulWidget {
 class _ArticleListScreenState extends State<ArticleListScreen> {
   Future<List<Article>>? _articlesFuture;
 
+  // 今日朗讀評分次數（免費版 1、Premium 5，教育版不限），跟造句挑戰一樣顯示在右上角
+  int? _readingLimit;
+  int _readingUsed = 0;
+  bool _readingUnlimited = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadArticles();
+      _loadReadingQuota();
     });
+  }
+
+  Future<void> _loadReadingQuota() async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+    final res = await ApiClient.getUsageStatus(userId);
+    if (!mounted || res.containsKey('error')) return;
+    setState(() {
+      _readingUnlimited = res['unlimited'] == true;
+      _readingLimit = (res['reading_daily_limit'] as num?)?.toInt();
+      _readingUsed = (res['reading_count_today'] as num?)?.toInt() ?? 0;
+    });
+  }
+
+  /// 右上角的剩餘次數標籤，樣式跟造句挑戰的「免費: n/3」一致
+  Widget _buildQuotaBadge() {
+    if (!_readingUnlimited && _readingLimit == null) return const SizedBox.shrink();
+    final left = _readingUnlimited ? null : (_readingLimit! - _readingUsed).clamp(0, _readingLimit!);
+    final outOfQuota = left == 0;
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: outOfQuota ? Colors.red.withOpacity(0.1) : AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          _readingUnlimited ? '不限次數' : '朗讀: $left/$_readingLimit',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: outOfQuota ? Colors.red : AppColors.primary,
+          ),
+        ),
+      ),
+    );
   }
 
   void _loadArticles() {
@@ -54,7 +97,23 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SubPageTemplate(title: '文章練習', body: _buildBody());
+    return SubPageTemplate(
+      title: '文章練習',
+      // 跟造句挑戰一樣：右上角放剩餘次數與歷史紀錄圖示（原本歷史紀錄是列表最上面的一顆大按鈕）
+      actions: [
+        _buildQuotaBadge(),
+        IconButton(
+          icon: const Icon(Icons.history_rounded, color: AppColors.primary),
+          tooltip: '歷史成績紀錄',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ArticleHistoryScreen()),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
+      body: _buildBody(),
+    );
   }
 
   Widget _buildBody() {
@@ -106,45 +165,8 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
 
         return ListView.builder(
           padding: const EdgeInsets.all(20),
-          // 列表數量加 1，用來放頂部的歷史紀錄按鈕
-          itemCount: articles.length + 1,
-          itemBuilder: (context, index) {
-            // 第 0 項顯示「歷史成績紀錄」按鈕
-            if (index == 0) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.primary,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: AppColors.primary.withOpacity(0.3),
-                      ),
-                    ),
-                  ),
-                  icon: const Icon(Icons.history_rounded),
-                  label: const Text(
-                    '查看我的歷史成績紀錄',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ArticleHistoryScreen(),
-                      ),
-                    );
-                  },
-                ),
-              );
-            }
-            // 剩下的項目照常顯示文章卡片 (index 要減 1)
-            return _buildArticleCard(articles[index - 1]);
-          },
+          itemCount: articles.length,
+          itemBuilder: (context, index) => _buildArticleCard(articles[index]),
         );
       },
     );
@@ -171,12 +193,15 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
           borderRadius: BorderRadius.circular(16),
           onTap: () {
             if (isUnlocked) {
+              // 讀完回來重新查剩餘次數（在文章裡朗讀過會用掉一次）
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ArticleDetailScreen(article: article),
                 ),
-              );
+              ).then((_) {
+                if (mounted) _loadReadingQuota();
+              });
             } else if (!isEduStudent) {
               _showUnlockDialog(
                 context,

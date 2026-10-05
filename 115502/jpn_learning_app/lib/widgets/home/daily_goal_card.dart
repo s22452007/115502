@@ -54,11 +54,14 @@ class DailyGoalCard extends StatelessWidget {
     final userProvider = context.watch<UserProvider>();
     final photoDone = userProvider.dailyPhotoDone;
     final aiDone = userProvider.dailyAiDone;
+    final sentenceDone = userProvider.dailySentenceDone;
+    final readingDone = userProvider.dailyReadingDone;
     final claimed = userProvider.dailyRewardClaimed;
     final ptsMin = userProvider.dailyPtsMin;
     final ptsMax = userProvider.dailyPtsMax;
     final bonusPhoto = userProvider.dailyBonusPhoto;
-    final allDone = photoDone && aiDone;
+    // 四項都至少用過一次才能領獎（跟後端 services/daily_reward.py 一致）
+    final allDone = photoDone && aiDone && sentenceDone && readingDone;
 
     return Container(
       width: double.infinity,
@@ -130,6 +133,22 @@ class DailyGoalCard extends StatelessWidget {
               userProvider.aiDailyLimit,
               userProvider.aiExtraCount,
             ),
+            unlimited: userProvider.isEduStudent,
+          ),
+          const SizedBox(height: 10),
+          _TaskRow(
+            icon: Icons.edit_note_rounded,
+            label: '完成造句挑戰',
+            done: sentenceDone,
+            remaining: _remaining(userProvider.sentenceCountToday, userProvider.sentenceDailyLimit, 0),
+            unlimited: userProvider.isEduStudent,
+          ),
+          const SizedBox(height: 10),
+          _TaskRow(
+            icon: Icons.record_voice_over_outlined,
+            label: '完成文章朗讀',
+            done: readingDone,
+            remaining: _remaining(userProvider.readingCountToday, userProvider.readingDailyLimit, 0),
             unlimited: userProvider.isEduStudent,
           ),
           if (!claimed) ...[
@@ -222,19 +241,18 @@ class _TaskRow extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        // 剩餘次數：用完時改成紅底提示，避免使用者點進去才發現不能用
+        // 剩餘次數：用完只是變淡顯示「剩 0 次」。原本用紅底「已用完」，
+        // 尤其任務已經打勾時看起來像出了錯
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
-            color: usedUp
-                ? Colors.red.shade400.withValues(alpha: 0.85)
-                : Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withValues(alpha: usedUp ? 0.12 : 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            usedUp ? '已用完' : (unlimited ? '不限次數' : '剩 $remaining 次'),
-            style: const TextStyle(
-              color: Colors.white,
+            unlimited ? '不限次數' : '剩 ${usedUp ? 0 : remaining} 次',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: usedUp ? 0.6 : 1),
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),

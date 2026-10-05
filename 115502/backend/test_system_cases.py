@@ -2047,7 +2047,7 @@ def _(c):
 
 
 @case('A07', '每日任務未完成不可領取獎勵',
-      pre='使用者 U3 今日尚未拍照、未使用 AI 對話',
+      pre='使用者 U3 今日尚未拍照、未使用 AI 對話、未造句、未朗讀',
       steps='POST /api/daily/claim，user_id=U3',
       expect='HTTP 400，「今日任務尚未完成」')
 def _(c):
@@ -2059,22 +2059,37 @@ def _(c):
 
 
 @case('A07', '完成每日任務領取點數獎勵',
-      pre='U3 今日完成拍照 1 次與 AI 對話 1 次（連續登入未滿 7 天）',
-      steps='1. GET /api/daily/status?user_id=U3\n2. POST /api/daily/claim',
-      expect='1. photo_done=true、ai_done=true、can_claim=true\n2. HTTP 200，「獎勵領取成功！」，隨機獲得 10～30 點並寫入交易紀錄（reward）')
+      pre='U3 今日完成拍照 1 次與 AI 對話 1 次（連續登入未滿 7 天）；造句與朗讀以模擬 AI 完成',
+      steps='1. 只完成拍照與 AI 對話時 POST /api/daily/claim\n2. 再完成造句批改與文章朗讀評分各 1 次後 GET /api/daily/status\n3. POST /api/daily/claim',
+      expect='1. HTTP 400，「今日任務尚未完成」（四項都要完成）\n2. photo_done、ai_done、sentence_done、reading_done 皆為 true，can_claim=true\n'
+             '3. HTTP 200，「獎勵領取成功！」，隨機獲得 10～30 點並寫入交易紀錄（reward）')
 def _(c):
     u3 = STATE['daily']
     scan(u3)
     use_ai(u3)
+    r_half = SC.post('/api/daily/claim', json={'user_id': u3['id']})
+    # 造句批改、文章朗讀評分各做一次（AI 以模擬資料替代）
+    evaluate_sentence(u3)
+    ensure_articles()
+    GEMINI_FAKE['handler'] = fake_reading_ai
+    try:
+        SC.post('/api/articles/evaluate', data={'audio': (io.BytesIO(M4A_BYTES), 'reading.m4a'),
+                                                'user_id': str(u3['id']), 'article_id': str(STATE['art_free'])},
+                content_type='multipart/form-data')
+    finally:
+        GEMINI_FAKE['handler'] = None
+    # 造句可能帶來獎勵點數，但要等「領取」才入帳，這裡的點數仍只會來自每日任務
     st = J(SC.get(f'/api/daily/status?user_id={u3["id"]}'))
     r = SC.post('/api/daily/claim', json={'user_id': u3['id']})
     pts = J(r).get('pts_earned')
     row = user_row(u3['id'])
     n_tx = count(PointTransaction, user_id=u3['id'], transaction_type='reward', related_feature='daily_task_reward')
     STATE['daily_pts'] = row['j_pts']
-    c.log(f'1. photo_done={st.get("photo_done")}、ai_done={st.get("ai_done")}、can_claim={st.get("can_claim")}；'
-          f'2. {http(r, "message", "pts_earned", "j_pts")}；獎勵交易 {n_tx} 筆')
-    check(st.get('can_claim') is True, '任務狀態不正確')
+    c.log(f'1. {http(r_half, "error")}；2. photo_done={st.get("photo_done")}、ai_done={st.get("ai_done")}、'
+          f'sentence_done={st.get("sentence_done")}、reading_done={st.get("reading_done")}、can_claim={st.get("can_claim")}；'
+          f'3. {http(r, "message", "pts_earned", "j_pts")}；獎勵交易 {n_tx} 筆')
+    check(r_half.status_code == 400 and J(r_half).get('error') == '今日任務尚未完成', '只完成兩項就能領獎')
+    check(st.get('sentence_done') is True and st.get('reading_done') is True and st.get('can_claim') is True, '任務狀態不正確')
     check(r.status_code == 200 and isinstance(pts, int) and 10 <= pts <= 30 and row['j_pts'] == pts, '獎勵不正確')
     check(n_tx == 1, '未寫入交易紀錄')
 
@@ -2842,46 +2857,89 @@ def _(c):
           f'W2 領走了 W1 的造句獎勵（HTTP {r.status_code}，W2 點數變 {pts}）：/claim 未檢查紀錄擁有者')
 
 
-@case('A12', '每日免費造句 5 次，超過需付 10 點',
-      pre='使用者 W3 今日已造句 5 次（AI 以模擬資料替代），目前 0 點',
-      steps='1. 第 6 次 POST /api/sentence/evaluate（不付點）\n2. 第 6 次帶 pay_with_points=true（0 點）\n3. 購買 20 點後，第 6 次帶 pay_with_points=true',
+@case('A12', '免費版每日造句 3 次，超過需付 10 點',
+      pre='使用者 W3 今日已造句 3 次（AI 以模擬資料替代），目前 0 點',
+      steps='1. 第 4 次 POST /api/sentence/evaluate（不付點）\n2. 第 4 次帶 pay_with_points=true（0 點）\n3. 購買 20 點後，第 4 次帶 pay_with_points=true',
       expect='1. HTTP 400，status=quota_exceeded、「今日免費次數已用盡」\n2. HTTP 400，status=insufficient_points、「點數不足」\n3. HTTP 200 批改成功，扣 10 點（餘額 10），交易紀錄有 -10（spend）',
       note='AI 回應以模擬資料替代')
 def _(c):
     w3 = register('writer3')
-    first5 = [evaluate_sentence(w3).status_code for _ in range(5)]
+    first3 = [evaluate_sentence(w3).status_code for _ in range(3)]
     r1 = evaluate_sentence(w3)
     r2 = evaluate_sentence(w3, pay=True)
     SC.post('/api/user/add_points', json={'user_id': w3['id'], 'points': 20, 'price': 0, 'payment_method': 'credit_card'})
     r3 = evaluate_sentence(w3, pay=True)
     pts = user_row(w3['id'])['j_pts']
     tx = [(t['points'], t['transaction_type']) for t in J(SC.get(f'/api/user/transactions/{w3["id"]}')).get('transactions', [])]
-    c.log(f'前 5 次狀態碼={first5}；1. {http(r1, "status", "error")}；2. {http(r2, "status", "error")}；'
+    c.log(f'前 3 次狀態碼={first3}；1. {http(r1, "status", "error")}；2. {http(r2, "status", "error")}；'
           f'3. {http(r3, "status", "score")}，點數={pts}；交易紀錄={tx}')
-    check(first5 == [200] * 5, '前 5 次未全部成功')
+    check(first3 == [200] * 3, '前 3 次未全部成功')
     check((-10, 'spend') in tx, '付費造句扣除的 10 點沒有寫入交易紀錄')
-    check(r1.status_code == 400 and J(r1).get('status') == 'quota_exceeded' and J(r1).get('error') == '今日免費次數已用盡', '未擋下第 6 次')
+    check(r1.status_code == 400 and J(r1).get('status') == 'quota_exceeded' and J(r1).get('error') == '今日免費次數已用盡', '未擋下第 4 次')
     check(r2.status_code == 400 and J(r2).get('status') == 'insufficient_points', '點數不足未擋下')
     check(r3.status_code == 200 and J(r3).get('status') == 'success' and pts == 10, '付費造句不正確')
 
 
 @case('A12', '付費造句 AI 批改失敗時退還點數',
-      pre='使用者 W4 今日已造句 5 次（AI 以模擬資料替代），購買 20 點',
-      steps='第 6 次 POST /api/sentence/evaluate，pay_with_points=true，AI 批改失敗',
+      pre='使用者 W4 今日已造句 3 次（AI 以模擬資料替代），購買 20 點',
+      steps='第 4 次 POST /api/sentence/evaluate，pay_with_points=true，AI 批改失敗',
       expect='HTTP 500；扣除的 10 點退還（餘額 20），交易紀錄有 -10（spend）與 +10（退還）',
       note='AI 失敗以模擬方式產生')
 def _(c):
     w4 = register('writer4')
-    first5 = [evaluate_sentence(w4).status_code for _ in range(5)]
+    first3 = [evaluate_sentence(w4).status_code for _ in range(3)]
     SC.post('/api/user/add_points', json={'user_id': w4['id'], 'points': 20, 'price': 0, 'payment_method': 'credit_card'})
     r = SC.post('/api/sentence/evaluate', json={'user_id': w4['id'], 'grammar_point': '〜ために', 'selected_vocabs': [],
                                                'user_sentence': '健康のために走ります。', 'pay_with_points': True})
     pts = user_row(w4['id'])['j_pts']
     tx = [(t['points'], t['related_feature']) for t in J(SC.get(f'/api/user/transactions/{w4["id"]}')).get('transactions', [])]
-    c.log(f'前 5 次狀態碼={first5}；第 6 次 HTTP {r.status_code}，點數={pts}；交易紀錄={tx}')
-    check(first5 == [200] * 5, '前 5 次未全部成功')
+    c.log(f'前 3 次狀態碼={first3}；第 4 次 HTTP {r.status_code}，點數={pts}；交易紀錄={tx}')
+    check(first3 == [200] * 3, '前 3 次未全部成功')
     check(r.status_code == 500 and pts == 20, 'AI 失敗後點數沒有退還')
     check((-10, 'sentence_extra') in tx and (10, 'sentence_extra_refund') in tx, '扣點與退點沒有寫入交易紀錄')
+
+
+@case('A12', '造句批改與朗讀評分的每日次數依方案不同',
+      pre='免費版使用者 F、Premium 使用者 P（AI 以模擬資料替代）',
+      steps='1. GET /api/user/usage_status 查兩人的每日上限\n2. P 造句 10 次後再造第 11 次\n'
+            '3. F 朗讀評分 1 次後再朗讀第 2 次\n4. P 朗讀評分 5 次後再朗讀第 6 次',
+      expect='1. F：造句 3、朗讀 1；P：造句 10、朗讀 5\n2. 前 10 次成功，第 11 次 HTTP 400 quota_exceeded\n'
+             '3. 第 2 次 status=quota_exceeded，提示升級 Premium\n4. 前 5 次成功，第 6 次 status=quota_exceeded',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    ensure_articles()
+    aid = STATE['art_free']
+    f, p = register('quotaF'), register('quotaP')
+    set_user(p['id'], is_premium=True, subscription_end_date=datetime.utcnow() + timedelta(days=30))
+    uf = J(SC.get(f'/api/user/usage_status/{f["id"]}'))
+    up = J(SC.get(f'/api/user/usage_status/{p["id"]}'))
+
+    p_sentences = [evaluate_sentence(p).status_code for _ in range(10)]
+    r_p11 = evaluate_sentence(p)
+
+    def read(u):
+        return SC.post('/api/articles/evaluate', data={'audio': (io.BytesIO(M4A_BYTES), 'reading.m4a'),
+                                                       'user_id': str(u['id']), 'article_id': str(aid)},
+                       content_type='multipart/form-data')
+
+    GEMINI_FAKE['handler'] = fake_reading_ai
+    try:
+        f_reads = [J(read(f)).get('status') for _ in range(2)]
+        f_second = J(read(f))
+        p_reads = [J(read(p)).get('status') for _ in range(6)]
+    finally:
+        GEMINI_FAKE['handler'] = None
+    c.log(f'1. F 造句 {uf.get("sentence_daily_limit")}、朗讀 {uf.get("reading_daily_limit")}；'
+          f'P 造句 {up.get("sentence_daily_limit")}、朗讀 {up.get("reading_daily_limit")}；'
+          f'2. P 前 10 次={p_sentences}、第 11 次 {http(r_p11, "status")}；'
+          f'3. F 朗讀={f_reads}，提示={f_second.get("message")}；4. P 朗讀={p_reads}')
+    check(uf.get('sentence_daily_limit') == 3 and uf.get('reading_daily_limit') == 1, '免費版上限不正確')
+    check(up.get('sentence_daily_limit') == 10 and up.get('reading_daily_limit') == 5, 'Premium 上限不正確')
+    check(p_sentences == [200] * 10 and r_p11.status_code == 400 and J(r_p11).get('status') == 'quota_exceeded',
+          'Premium 造句次數不是 10 次')
+    check(f_reads == ['success', 'quota_exceeded'] and 'Premium' in (f_second.get('message') or ''),
+          '免費版朗讀次數不是 1 次')
+    check(p_reads == ['success'] * 5 + ['quota_exceeded'], 'Premium 朗讀次數不是 5 次')
 
 
 # ======================================================================

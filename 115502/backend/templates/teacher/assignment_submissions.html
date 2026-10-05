@@ -142,7 +142,7 @@
                         <tr id="stu-{{ s.student_id }}" class="{{ 'table-success' if saved_id == s.student_id }}">
                             <td>
                                 <div class="fw-bold">{{ s.display_name }}</div>
-                                <div class="text-muted small">{{ s.email }}</div>
+                                <div class="text-muted small">{{ s.student_no }}</div>
                             </td>
                             <td>
                                 {% if s.status == 'graded' %}

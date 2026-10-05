@@ -19,7 +19,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _scenes = [];
 
-  // 角色清單資料：官方角色由後端提供（含是否已購買），這裡只是載入前的預設值；
+  // 角色清單資料：預設老師＋自訂角色都由後端提供，這裡只是載入前的預設值；
   // 使用者自訂的角色會加在後面
   List<Map<String, dynamic>> _characters = [
     {
@@ -39,8 +39,8 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   // 預設選中的角色
   String _selectedCharacterName = '預設老師';
 
-  // 腔調：每買一個官方角色可以解鎖一種（選了不能換）；null 代表標準語
-  bool _ownsCharacter = false; // 買過角色才能用男聲
+  // 腔調：每新增一個自訂角色可以解鎖一種（選了不能換）；null 代表標準語
+  bool _ownsCharacter = false; // 新增過自訂角色才能用男聲
   Set<int> _unlockedDialectIds = {};
   int _freeDialectSlots = 0; // 買了角色但還沒選腔調的名額
   List<Map<String, dynamic>> _dialects = [];
@@ -81,7 +81,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     final res = await ApiClient.getCharacters(userId);
     if (!mounted || !res.containsKey('characters')) return;
     setState(() {
-      // 官方角色在前、自己花點數新增的自訂角色在後（都存在後端）
+      // 預設老師在前、自己花點數新增的自訂角色在後
       _characters = [
         ...List<Map<String, dynamic>>.from(res['characters']),
         ...List<Map<String, dynamic>>.from(res['custom_characters'] ?? []),
@@ -164,16 +164,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     });
   }
 
-  String get _dialectHint {
-    if (_freeDialectSlots > 0) {
-      return '你還有 $_freeDialectSlots 個腔調名額，點想要的腔調就能解鎖（選了不能換）。';
-    }
-    if (!_ownsCharacter) {
-      return '可以先試聽。每購買一位角色，可以解鎖一種腔調，也能改用男聲；目前對話是標準語女聲。';
-    }
-    return '每購買一位角色可以再解鎖一種腔調。';
-  }
-
   // 還沒解鎖的付費腔調
   List<Map<String, dynamic>> get _lockedDialects => _dialects
       .where(
@@ -186,7 +176,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   // 點到鎖住的腔調：有名額就確認後解鎖，沒有就提示要買角色
   Future<void> _onLockedDialectTap(Map<String, dynamic> d) async {
     if (_freeDialectSlots <= 0) {
-      _showSnack('每購買一位角色可以解鎖一種腔調，可以先按右邊試聽');
+      _showSnack('新增自訂角色可以解鎖一種腔調');
       return;
     }
     final confirmed = await showDialog<bool>(
@@ -267,7 +257,17 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
           ])
             Padding(
               padding: const EdgeInsets.only(left: 8),
+              // 沒解鎖時還是可以切換來試聽，但對話用的是基本語音
               child: ChoiceChip(
+                avatar: _ownsCharacter
+                    ? null
+                    : Icon(
+                        Icons.lock_outline,
+                        size: 14,
+                        color: _voiceGender == g[0]
+                            ? Colors.white
+                            : Colors.grey,
+                      ),
                 label: Text(g[1]),
                 selected: _voiceGender == g[0],
                 showCheckmark: false,
@@ -284,17 +284,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
             ),
         ],
       ),
-      Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Text(
-          _dialectHint,
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey.shade600,
-            height: 1.5,
+      if (_freeDialectSlots > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            '還有 $_freeDialectSlots 個腔調名額，選了不能換',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
         ),
-      ),
       const SizedBox(height: 12),
       ..._dialects.map(_buildDialectRow),
     ];
@@ -395,9 +392,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     );
   }
 
-  bool _isLocked(Map<String, dynamic> char) =>
-      char['id'] != null && char['owned'] != true;
-
   void _showSnack(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -405,148 +399,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
         backgroundColor: isError ? Colors.redAccent : AppColors.primary,
       ),
     );
-  }
-
-  // 點到還沒買的官方角色：選一種要解鎖的腔調，確認後用點數購買
-  Future<void> _confirmBuyCharacter(Map<String, dynamic> char) async {
-    final cost = (char['cost'] as num).toInt();
-    final choices = _lockedDialects;
-    int? pickedDialectId;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            '購買「${char['name']}」',
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${char['role']}\n\n$cost J-Pts 永久擁有這位角色，並附贈一種腔調（也能改用男聲）。',
-                  style: const TextStyle(height: 1.5),
-                ),
-                if (choices.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    '選一種要解鎖的腔調（選了不能換）',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  // 選了不能換，所以每一種旁邊都放試聽鈕，聽過再決定
-                  for (final d in choices)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: ChoiceChip(
-                              label: Text(d['name']),
-                              selected: pickedDialectId == d['id'],
-                              showCheckmark: false,
-                              selectedColor: AppColors.primary,
-                              backgroundColor: Colors.white,
-                              labelStyle: TextStyle(
-                                color: pickedDialectId == d['id']
-                                    ? Colors.white
-                                    : AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              onSelected: (_) => setDialogState(
-                                () =>
-                                    pickedDialectId = (d['id'] as num).toInt(),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if ((d['samples'] as Map?)?[_voiceGender] != null)
-                          TextButton.icon(
-                            onPressed: () => _togglePreview(
-                              (d['samples'] as Map)[_voiceGender] as String,
-                            ),
-                            icon: const Icon(
-                              Icons.play_circle_outline,
-                              size: 20,
-                            ),
-                            label: const Text('試聽'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                            ),
-                          ),
-                      ],
-                    ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              // 還有腔調可以選的時候，要先選一種才能買
-              onPressed: choices.isNotEmpty && pickedDialectId == null
-                  ? null
-                  : () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: Text(
-                '花 $cost 點購買',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    // 視窗關掉時，裡面按的試聽也一起停
-    _previewTicket++;
-    _previewPlayer.stop();
-    if (mounted) setState(() => _previewingPath = null);
-    if (confirmed != true || !mounted) return;
-
-    final user = context.read<UserProvider>();
-    final userId = user.userId;
-    if (userId == null) return;
-    if (user.jPts < cost) {
-      _showSnack('點數不足喔！需要 $cost 點，請先儲值', isError: true);
-      return;
-    }
-
-    final res = await ApiClient.buyCharacter(
-      userId: userId,
-      characterId: char['id'] as String,
-      dialectId: pickedDialectId,
-    );
-    if (!mounted) return;
-    if (res.containsKey('error')) {
-      _showSnack(res['error'].toString(), isError: true);
-      return;
-    }
-    user.setJPts((res['total_points'] as num?)?.toInt() ?? user.jPts - cost);
-    setState(() => _selectedCharacterName = char['name']);
-    _showSnack(res['message']?.toString() ?? '購買成功！');
-    await _loadCharacters();
-    if (mounted && pickedDialectId != null) {
-      setState(() => _selectedDialectId = pickedDialectId);
-    }
   }
 
   @override
@@ -586,6 +438,9 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       context: context,
       builder: (_) => _AddCharacterDialog(
         cost: _customCost,
+        dialects: _lockedDialects,
+        voiceGender: _voiceGender,
+        onPreview: _togglePreview,
         onSubmit: (fields) async {
           if (user.jPts < _customCost) {
             return {'error': '點數不足喔！需要 $_customCost 點，請先儲值'};
@@ -597,6 +452,10 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
         },
       ),
     );
+    // 視窗關掉時，裡面按的試聽也一起停
+    _previewTicket++;
+    _previewPlayer.stop();
+    if (mounted) setState(() => _previewingPath = null);
     if (created == null || !mounted) return;
     user.setJPts(
       (created['total_points'] as num?)?.toInt() ?? user.jPts - _customCost,
@@ -605,7 +464,17 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     await _loadCharacters();
     if (!mounted) return;
     final name = (created['character'] as Map?)?['name'];
-    if (name != null) setState(() => _selectedCharacterName = name);
+    final unlocked = (created['unlocked_dialect_ids'] as List? ?? []).map(
+      (e) => (e as num).toInt(),
+    );
+    setState(() {
+      if (name != null) _selectedCharacterName = name;
+      // 新增時順便解鎖的腔調直接選起來
+      final picked = int.tryParse('${created['_picked_dialect_id'] ?? ''}');
+      if (picked != null && unlocked.contains(picked)) {
+        _selectedDialectId = picked;
+      }
+    });
   }
 
   // 長按自訂角色：刪除（不退點數）
@@ -814,18 +683,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                             final char = _characters[index];
                             final isSelected =
                                 _selectedCharacterName == char['name'];
-                            final isLocked = _isLocked(char);
 
                             return GestureDetector(
                               onLongPress: char['custom_id'] == null
                                   ? null
                                   : () => _confirmDeleteCustom(char),
-                              onTap: () => isLocked
-                                  ? _confirmBuyCharacter(char)
-                                  : setState(
-                                      () =>
-                                          _selectedCharacterName = char['name'],
-                                    ),
+                              onTap: () => setState(
+                                () => _selectedCharacterName = char['name'],
+                              ),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 margin: const EdgeInsets.only(right: 8),
@@ -869,9 +734,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      isLocked
-                                          ? '🔒 ${char['cost']} 點解鎖'
-                                          : char['role'],
+                                      char['role'],
                                       style: TextStyle(
                                         color: isSelected
                                             ? Colors.white70
@@ -972,10 +835,21 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 /// controller 要跟著彈窗的 State 一起釋放：以前是 showDialog 一結束就 dispose，
 /// 但彈窗關閉動畫還在跑、輸入框還會重畫，用到已釋放的 controller 就整個畫面變紅。
 class _AddCharacterDialog extends StatefulWidget {
-  const _AddCharacterDialog({required this.cost, required this.onSubmit});
+  const _AddCharacterDialog({
+    required this.cost,
+    required this.dialects,
+    required this.voiceGender,
+    required this.onPreview,
+    required this.onSubmit,
+  });
 
   /// 新增一個自訂角色要花的點數
   final int cost;
+
+  /// 還沒解鎖、可以附贈的腔調（含試聽音檔）
+  final List<Map<String, dynamic>> dialects;
+  final String voiceGender;
+  final Future<void> Function(String path) onPreview;
 
   /// 送出六個欄位，回傳後端結果；有 'error' 就留在彈窗顯示，成功就把結果帶回去
   final Future<Map<String, dynamic>> Function(Map<String, String> fields)
@@ -995,6 +869,7 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
   bool _attemptedSubmit = false;
   bool _submitting = false;
   String? _submitError;
+  int? _dialectId; // null = 之後再選
 
   Future<void> _submit() async {
     setState(() {
@@ -1019,6 +894,7 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
       'gender': genderCtrl.text.trim(),
       'personality': personalityCtrl.text.trim(),
       'special_traits': traitsCtrl.text.trim(),
+      if (_dialectId != null) 'dialect_id': '$_dialectId',
     });
     if (!mounted) return;
     if (res.containsKey('error')) {
@@ -1028,7 +904,7 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
       });
       return;
     }
-    Navigator.pop(context, res);
+    Navigator.pop(context, {...res, '_picked_dialect_id': _dialectId});
   }
 
   @override
@@ -1081,6 +957,38 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
         borderSide: BorderSide(color: isMissing ? Colors.red : Colors.grey),
       ),
       focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: color)),
+    );
+  }
+
+  Widget _dialectOption(int? id, String label, String? samplePath) {
+    final selected = _dialectId == id;
+    return Row(
+      children: [
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ChoiceChip(
+              label: Text(label),
+              selected: selected,
+              showCheckmark: false,
+              selectedColor: AppColors.primary,
+              backgroundColor: Colors.white,
+              labelStyle: TextStyle(
+                color: selected ? Colors.white : AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+              onSelected: (_) => setState(() => _dialectId = id),
+            ),
+          ),
+        ),
+        if (samplePath != null)
+          IconButton(
+            tooltip: '試聽',
+            icon: const Icon(Icons.play_circle_outline),
+            color: AppColors.primary,
+            onPressed: () => widget.onPreview(samplePath),
+          ),
+      ],
     );
   }
 
@@ -1165,11 +1073,24 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
               maxLines: 2,
               cursorColor: AppColors.primary,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'AI 會照這些設定扮演角色。新增後可在角色上長按刪除（不退點數）。',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
+            if (widget.dialects.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '附贈腔調（選了不能換）',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 4),
+              _dialectOption(null, '之後再選', null),
+              for (final d in widget.dialects)
+                _dialectOption(
+                  (d['id'] as num).toInt(),
+                  d['name'] as String,
+                  (d['samples'] as Map?)?[widget.voiceGender] as String?,
+                ),
+            ],
             if (_submitError != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

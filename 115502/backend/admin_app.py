@@ -858,7 +858,6 @@ def admin_dashboard():
     weekly_max = max(list(weekly.values()) + [1])
 
     return render_template('index.html',
-                           lan_url=_lan_url(request.host),
                            dashboard_todo=todo, weekly=weekly, content=content, edu=edu,
                            todo_count=todo_count, weekly_max=weekly_max,
                            daily_chart=daily_chart,
@@ -1708,7 +1707,7 @@ def vocab_delete(id):
 ARTICLE_LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1']
 ARTICLE_THEMES = ['日常生活', '日本文化', '旅遊觀光', '職場應用', '流行動漫',
                   '日本美食', '台灣文化', '日本傳說']
-DEFAULT_ARTICLE_COST = 50
+DEFAULT_ARTICLE_COST = 150   # 與 services/store.py ITEM_COSTS['unlock_article'] 一致
 
 
 def _parse_grammar_points(raw_json, grammars_text, vocabs_text):
@@ -1886,6 +1885,49 @@ def article_add():
     db.session.commit()
     flash('已新增 %s 文章「%s」，需 %d J-pts 解鎖' % (article.level, article.title, article.unlock_cost), 'success')
     return redirect(url_for('article_list', level=article.level))
+
+
+@app.route('/article/auto_ruby', methods=['POST'])
+@admin_login_required
+def article_auto_ruby():
+    """新增／編輯文章時的「自動標註讀音」：請 AI 幫漢字加上 <ruby> 讀音標記，回傳給表單填回去（不會直接存檔）"""
+    from utils.ruby_helper import add_ruby, RubyError
+    text = (request.get_json(silent=True) or {}).get('text', '')
+    try:
+        content, count = add_ruby(text)
+    except RubyError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify({'content': content, 'count': count})
+
+
+@app.route('/article/auto_translate', methods=['POST'])
+@admin_login_required
+def article_auto_translate():
+    """新增／編輯文章時的「自動產生中文翻譯」：回傳翻譯給表單填回去（不會直接存檔）"""
+    from utils.ruby_helper import translate_to_zh, RubyError
+    text = (request.get_json(silent=True) or {}).get('text', '')
+    try:
+        translation = translate_to_zh(text)
+    except RubyError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify({'translation': translation})
+
+
+@app.route('/article/auto_points', methods=['POST'])
+@admin_login_required
+def article_auto_points():
+    """新增／編輯文章時的「自動產生重點文法與單字」：回傳表單用的「a | b | c」一行一筆格式（不會直接存檔）"""
+    from utils.ruby_helper import extract_points, RubyError
+    data = request.get_json(silent=True) or {}
+    level = data.get('level') if data.get('level') in ARTICLE_LEVELS else 'N5'
+    try:
+        points = extract_points(data.get('text', ''), level)
+    except RubyError as e:
+        return jsonify({'error': str(e)}), 400
+    grammars_text = '\n'.join(' | '.join([g['expression'], g['meaning'], g['example']]) for g in points['grammars'])
+    vocabs_text = '\n'.join(' | '.join([v['word'], v['reading'], v['meaning']]) for v in points['vocabularies'])
+    return jsonify({'grammars_text': grammars_text, 'vocabs_text': vocabs_text,
+                    'grammar_count': len(points['grammars']), 'vocab_count': len(points['vocabularies'])})
 
 
 @app.route('/article/edit/<int:article_id>', methods=['POST'])

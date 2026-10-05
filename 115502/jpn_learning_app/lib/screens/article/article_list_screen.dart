@@ -24,6 +24,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
   // 今日朗讀評分次數（免費版 1、Premium 5，教育版不限），跟造句挑戰一樣顯示在右上角
   int? _readingLimit;
   int _readingUsed = 0;
+  int _readingExtra = 0; // 商城加購的朗讀次數
   bool _readingUnlimited = false;
 
   @override
@@ -44,13 +45,14 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
       _readingUnlimited = res['unlimited'] == true;
       _readingLimit = (res['reading_daily_limit'] as num?)?.toInt();
       _readingUsed = (res['reading_count_today'] as num?)?.toInt() ?? 0;
+      _readingExtra = (res['reading_extra_count'] as num?)?.toInt() ?? 0;
     });
   }
 
   /// 右上角的剩餘次數標籤，樣式跟造句挑戰的「免費: n/3」一致
   Widget _buildQuotaBadge() {
     if (!_readingUnlimited && _readingLimit == null) return const SizedBox.shrink();
-    final left = _readingUnlimited ? null : (_readingLimit! - _readingUsed).clamp(0, _readingLimit!);
+    final left = _readingUnlimited ? null : (_readingLimit! - _readingUsed).clamp(0, _readingLimit!) + _readingExtra;
     final outOfQuota = left == 0;
     return Center(
       child: Container(

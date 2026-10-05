@@ -145,7 +145,7 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
                 child: Text(
-                  jPts < 60 ? '點數不足（需 60 點，目前 $jPts 點）' : '花 60 點加購 +5 次（永久）',
+                  jPts < 10 ? '點數不足（需 10 點，目前 $jPts 點）' : '花 10 點加購 +1 次（永久）',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -194,7 +194,7 @@ class _CameraScreenState extends State<CameraScreen>
 
     final buyRes = await ApiClient.spendPoints(
       userId: userId,
-      points: 60,
+      points: 10,
       feature: feature,
     );
     if (!mounted) return;

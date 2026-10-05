@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -47,22 +49,24 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
   }
 
   /// 載入學校清單（不預選，每次都讓使用者自己選）
-  Future<void> _loadSchools() async {
+  Future<List<Map<String, dynamic>>> _loadSchools() async {
     final res = await ApiClient.getSchools();
     final list = (res['schools'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? [];
-    if (!mounted) return;
-    setState(() => _schools = list);
+    if (mounted && list.isNotEmpty) setState(() => _schools = list);
+    return list;
   }
 
   Future<void> _pickSchool() async {
-    // 打開登入頁時沒抓到（後端還沒啟動、網路不穩）就再抓一次，不然清單一直是空的
-    if (_schools.isEmpty) {
-      await _loadSchools();
-      if (!mounted) return;
-    }
+    // 打開登入頁時沒抓到（後端還沒啟動、網路不穩）由搜尋頁自己再抓，不然清單一直是空的
     final picked = await Navigator.push<Map<String, dynamic>>(
       context,
-      MaterialPageRoute(builder: (_) => _SchoolSearchPage(schools: _schools, accent: _eduBlue)),
+      MaterialPageRoute(
+        builder: (_) => _SchoolSearchPage(
+          schools: _schools,
+          loadSchools: _loadSchools,
+          accent: _eduBlue,
+        ),
+      ),
     );
     if (picked == null || !mounted) return;
     if (picked['add_new'] == true) {
@@ -102,7 +106,10 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
     setState(() => _isGoogleLoading = true);
     try {
       final credential = await AuthService()
-          .signInWithGoogle(hostedDomain: school?['hd']?.toString());
+          .signInWithGoogle(
+            hostedDomain: school?['hd']?.toString(),
+            schoolAccount: true,
+          );
       final user = credential.user;
       final idToken = await user?.getIdToken();
       if (!mounted) return;
@@ -130,6 +137,13 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
         account: result['email']?.toString() ?? user.email ?? '',
         isNew: result['is_new'] == true,
       );
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      if (mounted) _showMessage('Google 登入失敗：${e.description ?? e.code.name}');
+    } on FirebaseAuthException catch (e) {
+      // 學生自己關掉登入頁，不用跳錯誤
+      if (e.code == 'web-context-canceled' || e.code == 'canceled') return;
+      if (mounted) _showMessage('Google 登入失敗：${e.message ?? e.code}');
     } catch (e) {
       if (mounted) _showMessage('Google 登入失敗：$e');
     } finally {
@@ -592,9 +606,14 @@ class _AddSchoolDialogState extends State<_AddSchoolDialog> {
 /// 選學校的全螢幕搜尋頁（像 TronClass），選好回傳那間學校
 class _SchoolSearchPage extends StatefulWidget {
   final List<Map<String, dynamic>> schools;
+  final Future<List<Map<String, dynamic>>> Function() loadSchools;
   final Color accent;
 
-  const _SchoolSearchPage({required this.schools, required this.accent});
+  const _SchoolSearchPage({
+    required this.schools,
+    required this.loadSchools,
+    required this.accent,
+  });
 
   @override
   State<_SchoolSearchPage> createState() => _SchoolSearchPageState();
@@ -603,6 +622,24 @@ class _SchoolSearchPage extends StatefulWidget {
 class _SchoolSearchPageState extends State<_SchoolSearchPage> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _query = '';
+  late List<Map<String, dynamic>> _schools = widget.schools;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_schools.isEmpty) _reload();
+  }
+
+  Future<void> _reload() async {
+    setState(() => _loading = true);
+    final list = await widget.loadSchools();
+    if (!mounted) return;
+    setState(() {
+      _schools = list;
+      _loading = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -619,13 +656,28 @@ class _SchoolSearchPageState extends State<_SchoolSearchPage> {
     final zhuyin = RegExp('[㄀-ㄯˊˇˋ˙]');
     final composing = zhuyin.hasMatch(_query);
     final q = norm(_query.replaceAll(zhuyin, '').trim());
-    final matches = widget.schools.where((s) {
+    final matches = _schools.where((s) {
       final name = norm(s['name']?.toString() ?? '');
       final domains = (s['domains'] as List?)?.join(' ').toLowerCase() ?? '';
       return name.contains(q) || domains.contains(q);
     }).toList();
     final Widget results;
-    if (q.isEmpty) {
+    if (_loading) {
+      results = const Center(child: CircularProgressIndicator());
+    } else if (_schools.isEmpty) {
+      results = Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('無法載入學校清單', style: TextStyle(color: Colors.grey)),
+            TextButton(
+              onPressed: _reload,
+              child: Text('重試', style: TextStyle(color: widget.accent)),
+            ),
+          ],
+        ),
+      );
+    } else if (q.isEmpty) {
       // 跟 TronClass 一樣，還沒打字不列出整份清單（六百多間太長），搜尋框已有提示
       results = const SizedBox.shrink();
     } else {

@@ -66,7 +66,7 @@ class _PremiumTabState extends State<PremiumTab> {
       priceYearly: (plan['price_yearly'] as num?)?.toInt() ?? 1290,
       features: List<String>.from(plan['features_json'] ?? [
         '每日 10 次拍照辨識', '每日 10 次 AI 對話', '每日 5 次造句 AI 批改', '每日 5 次文章朗讀評分',
-        '單字收藏擴充 7 折', '小組押金 5 折'
+        '單字收藏擴充半價', '小組押金 5 折'
       ]),
       pointsGrantMonthly: (plan['points_grant_monthly'] as num?)?.toInt() ?? 20,
       pointsGrantYearly: (plan['points_grant_yearly'] as num?)?.toInt() ?? 300,
@@ -150,7 +150,7 @@ class _PremiumTabState extends State<PremiumTab> {
           isCurrent: isPremium && currentCycle == 'monthly',
           badgeText: '每月贈送 20 點', 
           priceText: 'NT\$ 149 / 月',
-          features: ['享 7 天免費試用，隨時可取消', '每日 10 次拍照辨識', '每日 10 次 AI 對話', '每日 5 次造句 AI 批改', '每日 5 次文章朗讀評分', '單字擴充 7 折、小組押金 5 折'],
+          features: ['享 7 天免費試用，隨時可取消', '每日 10 次拍照辨識', '每日 10 次 AI 對話', '每日 5 次造句 AI 批改', '每日 5 次文章朗讀評分', '單字擴充半價、小組押金 5 折'],
           btnText: monthlyBtnText,
           btnSubText: monthlyBtnSubText,
           btnColor: AppColors.primary,

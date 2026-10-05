@@ -35,11 +35,6 @@
 
         /* ===== Main ===== */
         .main-content { flex: 1; overflow-x: hidden; }
-        .lan-url { font-size: 0.85rem; color: #666; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .lan-url code { background: #f1f4f1; color: #333; padding: 2px 8px; border-radius: 6px; font-size: 0.85rem; }
-        .lan-copy { border: 1px solid #cfd8cf; background: white; color: #555; border-radius: 6px; font-size: 0.78rem; padding: 1px 10px; }
-        .lan-copy:hover { background: #f1f4f1; }
-        .lan-note { color: #aaa; font-size: 0.75rem; }
 
         /* ===== Page Header ===== */
         .page-header {
@@ -255,14 +250,6 @@
 
     <main class="main-content">
         <div class="dash">
-
-            {% if lan_url %}
-            <div class="lan-url">
-                <i class="bi bi-wifi"></i>
-                同一個 Wi-Fi 的組員請連：<code id="lanUrl">{{ lan_url }}</code>
-                <button type="button" class="lan-copy" onclick="navigator.clipboard.writeText(document.getElementById('lanUrl').textContent).then(() => { this.textContent = '已複製'; setTimeout(() => this.textContent = '複製', 1500); })">複製</button>
-            </div>
-            {% endif %}
 
             <div class="panel">
                 <div class="panel-body figures-body">

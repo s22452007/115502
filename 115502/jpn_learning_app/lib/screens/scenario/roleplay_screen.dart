@@ -221,11 +221,13 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       final response = await ApiClient.client.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        // 老師有指定腔調時，語音也用該腔調的語調朗讀
+        // 腔調與男女聲由後端判斷能不能用（沒解鎖就是基本語音）；
+        // 帶作業編號，老師指定的腔調就算沒解鎖也能用
         body: jsonEncode({
           'text': t,
+          'voice': widget.voiceGender,
           if (widget.dialectId != null) 'dialect_id': widget.dialectId,
-          if (widget.voiceGender == 'male') 'voice': 'male',
+          if (_isAssignment) 'assignment_id': widget.assignmentId,
         }),
       );
 
@@ -272,8 +274,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       setState(() {
         _aiUsed = (res['ai_count_today'] as num?)?.toInt() ?? 0;
         _aiExtra = (res['ai_extra_count'] as num?)?.toInt() ?? 0;
-        _aiMax = (res['ai_daily_limit'] as num?)?.toInt()
-            ?? (res['is_premium'] == true ? 10 : 3);
+        _aiMax =
+            (res['ai_daily_limit'] as num?)?.toInt() ??
+            (res['is_premium'] == true ? 10 : 3);
       });
     }
   }
@@ -362,7 +365,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   ),
                 ),
                 child: Text(
-                  jPts < 60 ? '點數不足（需 60 點，目前 $jPts 點）' : '花 60 點加購 +5 次（永久）',
+                  jPts < 15 ? '點數不足（需 15 點，目前 $jPts 點）' : '花 15 點加購 +1 次（永久）',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -411,7 +414,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
 
     final buyRes = await ApiClient.spendPoints(
       userId: userId,
-      points: 60,
+      points: 15,
       feature: 'ai_extra',
     );
     if (!mounted) return;
@@ -561,14 +564,18 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
           'session_id': (sessionId ?? '').toString(),
           'history': _buildChatHistory(), // 中途再按開場時，讓 AI 知道前面聊過什麼
-          if (widget.dialectId != null) 'dialect_id': widget.dialectId.toString(),
+          if (widget.dialectId != null)
+            'dialect_id': widget.dialectId.toString(),
           if (_isAssignment) 'assignment_id': widget.assignmentId.toString(),
         },
       );
 
       if (response.statusCode == 200 && mounted) {
         setState(() {
-          _messages.add({'text': _unwrapReply(response.body), 'isUserMessage': false});
+          _messages.add({
+            'text': _unwrapReply(response.body),
+            'isUserMessage': false,
+          });
         });
         _scrollToBottom();
 
@@ -631,7 +638,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           // 帶上 session_id：後端會把這次問答存進對話紀錄（失敗則不存）
           'session_id': (sessionId ?? '').toString(),
           'history': history, // 帶入最近的對話，讓 AI 記得前文
-          if (widget.dialectId != null) 'dialect_id': widget.dialectId.toString(),
+          if (widget.dialectId != null)
+            'dialect_id': widget.dialectId.toString(),
           if (_isAssignment) 'assignment_id': widget.assignmentId.toString(),
         },
       );
@@ -739,7 +747,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       final decoded = jsonDecode(body);
       if (decoded is Map) {
         final result = decoded['assignment_result'];
-        if (result is Map) _applyAssignmentResult(result.cast<String, dynamic>());
+        if (result is Map)
+          _applyAssignmentResult(result.cast<String, dynamic>());
         return (decoded['reply'] ?? '').toString();
       }
     } catch (_) {
@@ -760,14 +769,18 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     String? text;
     if (justSubmitted) {
       text = '已繳交作業！';
-    } else if (!submitted && r['error'] != null && r['status'] != 'in_progress') {
+    } else if (!submitted &&
+        r['error'] != null &&
+        r['status'] != 'in_progress') {
       text = '尚未交到作業：${r['error']}';
     }
     if (text != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(text),
-          backgroundColor: justSubmitted ? const Color(0xFF10B981) : Colors.orange,
+          backgroundColor: justSubmitted
+              ? const Color(0xFF10B981)
+              : Colors.orange,
         ),
       );
     }
@@ -781,18 +794,30 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     final text = done
         ? '作業已繳交，可以繼續練習'
         : need > 0
-            ? '作業進度：已對話 $_assignmentTurns / $need 輪'
-            : '作業模式';
+        ? '作業進度：已對話 $_assignmentTurns / $need 輪'
+        : '作業模式';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: color.withValues(alpha: 0.12),
       child: Row(
         children: [
-          Icon(done ? Icons.assignment_turned_in_rounded : Icons.assignment_outlined,
-              size: 18, color: color),
+          Icon(
+            done
+                ? Icons.assignment_turned_in_rounded
+                : Icons.assignment_outlined,
+            size: 18,
+            color: color,
+          ),
           const SizedBox(width: 8),
-          Text(text, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

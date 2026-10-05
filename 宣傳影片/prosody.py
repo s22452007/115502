@@ -22,6 +22,18 @@ STYLE = {
 }
 DEFAULT = ("+3%", "+0Hz", "+0%", 0.3)
 
+# 活潑版：整體更快更高、問句驚嘆起伏更大、停頓更短
+LIVELY = {
+    "？": ("+0%", "+26Hz", "+5%", 0.26),
+    "！": ("+14%", "+20Hz", "+18%", 0.30),
+    "。": ("+8%", "+6Hz", "+5%", 0.32),
+    "；": ("+8%", "+8Hz", "+5%", 0.24),
+    "，": ("+10%", "+12Hz", "+5%", 0.10),
+    "、": ("+10%", "+10Hz", "+5%", 0.06),
+}
+LIVELY_DEFAULT = ("+9%", "+10Hz", "+5%", 0.2)
+STYLES = {"normal": (STYLE, DEFAULT), "lively": (LIVELY, LIVELY_DEFAULT)}
+
 
 def phrases(text):
     out = re.findall(r"[^，、；。！？]+[，、；。！？]?", text)
@@ -41,11 +53,12 @@ async def tts_pcm(text, voice, rate, pitch, volume, words):
     return pcm
 
 
-async def synth_phrased(text, voice, base_rate, out_path):
+async def synth_phrased(text, voice, base_rate, out_path, style="normal"):
     """回傳 (字詞邊界清單, 總長秒數)；字詞時間已換算成整段音檔的時間。"""
     pcm_all, words_all, t = bytearray(), [], 0.0
     for ph in phrases(text):
-        rate, pitch, vol, pause = STYLE.get(ph[-1], DEFAULT)
+        table, default = STYLES[style]
+        rate, pitch, vol, pause = table.get(ph[-1], default)
         r = int(rate.rstrip("%")) + int(base_rate.rstrip("%"))
         words = []
         pcm = await tts_pcm(ph, voice, f"{r:+d}%", pitch, vol, words)

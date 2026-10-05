@@ -46,7 +46,7 @@
         .gradebook-wrap { overflow-x: auto; }
         table.gradebook { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 640px; font-size: 0.9rem; }
         table.gradebook th, table.gradebook td { padding: 10px 12px; border-bottom: 1px solid #eef1ef; white-space: nowrap; vertical-align: middle; }
-        table.gradebook thead th { background: #f8faf8; font-weight: 700; color: #555; border-bottom: 2px solid #e2e8e3; vertical-align: bottom; }
+        table.gradebook thead th { background: #f8faf8; font-weight: 700; color: #555; border-bottom: 2px solid #e2e8e3; vertical-align: middle; }
         table.gradebook th.sticky, table.gradebook td.sticky { position: sticky; left: 0; background: white; z-index: 2; box-shadow: 4px 0 8px -6px rgba(0,0,0,0.12); }
         table.gradebook thead th.sticky { background: #f8faf8; z-index: 3; }
         table.gradebook tbody tr:hover td { background: #fbfcfb; }
@@ -54,10 +54,15 @@
         table.gradebook tfoot td { background: #f8faf8; font-weight: 700; color: #555; border-top: 2px solid #e2e8e3; }
         table.gradebook tfoot td.sticky { background: #f8faf8; }
         .assign-th { min-width: 96px; max-width: 150px; }
-        .assign-th .t { display: block; overflow: hidden; text-overflow: ellipsis; color: #333; max-width: 150px; }
+        .assign-th .t { display: block; overflow: hidden; text-overflow: ellipsis; color: #333; max-width: 150px; margin: 0 auto; }
         .assign-th .m { display: block; font-size: 0.72rem; color: #999; font-weight: 600; margin-top: 2px; }
         .type-chip { display: inline-block; font-size: 0.68rem; padding: 0 6px; border-radius: 4px; background: var(--green-light); color: var(--green-dark); margin-right: 4px; }
         .col-num { text-align: right; }
+        /* 作業欄：標題、分數格、班平均都置中對齊在同一條線上 */
+        .col-score { text-align: center; }
+        /* 統計欄（平均、學期成績）固定寬度並和作業欄隔開 */
+        .col-sum { width: 104px; }
+        .sum-first { border-left: 1px solid #e2e8e3; }
         .stu-name { font-weight: 700; color: #222; }
         .stu-id { font-size: 0.75rem; color: #999; }
 
@@ -70,7 +75,7 @@
         .score-input.saved { border-color: #5c8364; background: #eef5ef; }
         .score-input.error { border-color: #c9302c; background: #fbeaea; }
         td.late-cell { position: relative; }
-        td.late-cell::after { content: attr(data-late); position: absolute; top: 2px; right: 3px; font-size: 0.6rem; font-weight: 800; color: #b7791f; }
+        td.late-cell::after { content: attr(data-late); position: absolute; top: 2px; left: calc(50% + 34px); font-size: 0.6rem; font-weight: 800; color: #b7791f; }
         .avg-cell { font-weight: 700; }
         .final-cell { font-weight: 900; font-size: 1rem; color: var(--green-dark); }
         .final-cell.bad { color: #c9302c; }
@@ -94,7 +99,7 @@
         <div class="page-header">
             <div>
                 <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ data.classroom.name }}</h1>
-                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 各作業分數與學期成績，分數可直接在表格上修改</div>
+                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong></div>
             </div>
         </div>
         {% set tab_actions %}
@@ -148,15 +153,15 @@
                         <tr>
                             <th class="sticky">學生</th>
                             {% for a in data.assignments %}
-                            <th class="assign-th col-num" id="th-a-{{ a.id }}" title="{{ a.title }}">
+                            <th class="assign-th col-score" id="th-a-{{ a.id }}" title="{{ a.title }}｜權重 {{ '%g' % a.weight }}{% if a.due_at %}｜截止 {{ a.due_at }}{% if a.late_policy == 'reject' %}｜不收遲交{% elif a.late_policy == 'deduct' %}｜遲交扣 {{ a.late_penalty }}{% endif %}{% endif %}">
                                 <span class="t">{{ a.title }}</span>
-                                <span class="m"><span class="type-chip">{{ a.type_label }}</span>權重 {{ '%g' % a.weight }}{% if a.due_at %} · 截止 {{ a.due_at }}{% if a.late_policy == 'reject' %} · 不收遲交{% elif a.late_policy == 'deduct' %} · 遲交扣 {{ a.late_penalty }}{% endif %}{% endif %}</span>
+                                <span class="m"><span class="type-chip">{{ a.type_label }}</span>{% if a.weight != 1 %}×{{ '%g' % a.weight }} {% endif %}{% if a.due_at %}{{ a.due_at }} 截止{% endif %}</span>
                             </th>
                             {% endfor %}
-                            <th class="col-num">作業平均</th>
-                            {% if cfg.sentence_pct %}<th class="col-num">造句均分</th>{% endif %}
-                            {% if cfg.quiz_pct %}<th class="col-num">文章測驗</th>{% endif %}
-                            <th class="col-num">學期成績</th>
+                            <th class="col-num col-sum sum-first">作業平均</th>
+                            {% if cfg.sentence_pct %}<th class="col-num col-sum">造句均分</th>{% endif %}
+                            {% if cfg.quiz_pct %}<th class="col-num col-sum">文章測驗</th>{% endif %}
+                            <th class="col-num col-sum">學期成績</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -168,7 +173,7 @@
                             </td>
                             {% for a in data.assignments %}
                             {% set cell = s.cells[a.id] %}
-                            <td class="col-num{{ ' late-cell' if cell.late }}"{% if cell.late %} data-late="{{ ('−%d' % cell.deduct) if cell.deduct else '遲' }}"{% endif %}>
+                            <td class="col-score{{ ' late-cell' if cell.late }}"{% if cell.late %} data-late="{{ ('−%d' % cell.deduct) if cell.deduct else '遲' }}"{% endif %}>
                                 <input autocomplete="off" type="number" min="0" max="100" step="1"
                                        class="score-input {{ cell.status if cell.status != 'graded' else '' }}"
                                        value="{{ cell.score if cell.score is not none else '' }}"
@@ -177,7 +182,7 @@
                                        title="{{ s.display_name }}／{{ a.title }}{% if cell.status == 'ungraded' %}（已繳交，尚未評分）{% elif cell.status == 'missing' %}（缺交，可直接補分）{% endif %}{% if cell.late %}（遲交{% if cell.deduct %}，扣 {{ cell.deduct }} 分{% if cell.effective is not none %}，計入 {{ cell.effective }} 分{% endif %}{% endif %}）{% endif %}">
                             </td>
                             {% endfor %}
-                            <td class="col-num avg-cell" data-field="assignment_avg">{{ s.assignment_avg if s.assignment_avg is not none else '—' }}</td>
+                            <td class="col-num avg-cell sum-first" data-field="assignment_avg">{{ s.assignment_avg if s.assignment_avg is not none else '—' }}</td>
                             {% if cfg.sentence_pct %}
                             <td class="col-num" data-field="sentence_avg">{% if s.sentence_avg is not none %}{{ s.sentence_avg }} <span class="stu-id">({{ s.sentence_count }} 篇)</span>{% else %}<span class="muted-dash">—</span>{% endif %}</td>
                             {% endif %}
@@ -192,9 +197,9 @@
                         <tr>
                             <td class="sticky">班平均</td>
                             {% for a in data.assignments %}
-                            <td class="col-num" id="avg-a-{{ a.id }}" title="已評分 {{ a.graded_count }} 人，缺交 {{ a.missing_count }} 人">{{ a.class_avg if a.class_avg is not none else '—' }}</td>
+                            <td class="col-score" id="avg-a-{{ a.id }}" title="已評分 {{ a.graded_count }} 人，缺交 {{ a.missing_count }} 人">{{ a.class_avg if a.class_avg is not none else '—' }}</td>
                             {% endfor %}
-                            <td></td>
+                            <td class="sum-first"></td>
                             {% if cfg.sentence_pct %}<td></td>{% endif %}
                             {% if cfg.quiz_pct %}<td></td>{% endif %}
                             <td class="col-num" id="avg-final">{{ data.summary.class_final_avg if data.summary.class_final_avg is not none else '—' }}</td>
@@ -203,11 +208,11 @@
                 </table>
             </div>
             <div class="legend">
-                <span><span class="sw" style="background:#fbf4f4; border-color:#ecd6d6;"></span>缺交（可直接補分）</span>
-                <span><span class="sw" style="background:#f3f6fb; border-color:#d3dcea;"></span>已繳交、尚未評分（不列入平均）</span>
-                <span><b style="color:#b7791f; font-size:0.7rem;">遲</b> 超過截止時間才繳交；<b style="color:#b7791f; font-size:0.7rem;">−10</b> 遲交扣分（格子裡是原始分數，平均與學期成績用扣完的分數）</span>
-                <span><i class="bi bi-info-circle me-1"></i>改完分數按 Enter 或點別處即自動儲存；清空欄位可收回分數</span>
-                <span><i class="bi bi-clock-history me-1"></i>造句與文章測驗只計入學生加入本班之後的紀錄</span>
+                <span><span class="sw" style="background:#fbf4f4; border-color:#ecd6d6;"></span>缺交</span>
+                <span><span class="sw" style="background:#f3f6fb; border-color:#d3dcea;"></span>待批（不列入平均）</span>
+                <span><b style="color:#b7791f; font-size:0.7rem;">遲</b> 遲交</span>
+                <span><b style="color:#b7791f; font-size:0.7rem;">−10</b> 遲交扣分（格內為原始分數，平均用扣完的分數）</span>
+                {% if cfg.sentence_pct or cfg.quiz_pct %}<span>造句與文章測驗只計入加入本班之後的紀錄</span>{% endif %}
             </div>
             {% endif %}
         </div>

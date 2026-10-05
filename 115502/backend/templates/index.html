@@ -261,7 +261,6 @@
                 <i class="bi bi-wifi"></i>
                 同一個 Wi-Fi 的組員請連：<code id="lanUrl">{{ lan_url }}</code>
                 <button type="button" class="lan-copy" onclick="navigator.clipboard.writeText(document.getElementById('lanUrl').textContent).then(() => { this.textContent = '已複製'; setTimeout(() => this.textContent = '複製', 1500); })">複製</button>
-                <span class="lan-note">換網路後網址會變，以這裡顯示的為準</span>
             </div>
             {% endif %}
 
@@ -280,7 +279,7 @@
             </div>
 
             <div class="panel chart">
-                <div class="panel-header"><i class="bi bi-graph-up"></i> 最近 14 天的每日活躍使用者<span class="hdr-note">當天做過拍照、AI 對話、造句或朗讀任一項的人數；14 天內共 {{ daily_chart.total }} 位使用者活躍</span></div>
+                <div class="panel-header"><i class="bi bi-graph-up"></i> 最近 14 天的每日活躍使用者<span class="hdr-note">14 天內共 {{ daily_chart.total }} 位活躍</span></div>
                 <div class="panel-body">
                 <div class="chart-wrap">
                     <svg viewBox="0 0 {{ daily_chart.w }} {{ daily_chart.h }}" preserveAspectRatio="none" role="img" aria-label="最近 14 天每日活躍使用者折線圖">

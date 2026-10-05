@@ -58,6 +58,9 @@
         }
         .img-preview:hover { transform: scale(1.15); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
         .img-missing { display: flex; align-items: center; justify-content: center; background: #f1f3f1; color: #aaa; font-size: 0.72rem; }
+        .search-input { border-radius: 8px; border: 1px solid #ddd; padding: 0.45rem 1rem; font-size: 0.9rem; width: 240px; }
+        .submission-badge { background-color: #fff3cd; color: #8a6d1a; font-weight: bold; padding: 2px 8px; border-radius: 8px; font-size: 0.72rem; }
+        .pager { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; font-size: 0.85rem; color: #888; }
     </style>
 </head>
 <body>
@@ -109,8 +112,25 @@
                 <h3 class="page-title"><i class="bi bi-image me-2"></i>照片管控管理</h3>
             </div>
 
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                <div data-flash class="alert {{ 'alert-danger' if category == 'error' else 'alert-success' }} py-2" style="border-radius:10px; font-size:0.9rem;">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <div class="d-flex justify-content-end mb-3">
+                <form method="GET" action="{{ url_for('photo_list') }}" class="d-flex gap-2">
+                    <input autocomplete="off" type="text" name="q" class="search-input" value="{{ keyword }}"
+                           placeholder="搜尋使用者、場景或標題...">
+                    <button class="btn btn-outline-secondary" style="border-radius:8px;" type="submit"><i class="bi bi-search"></i></button>
+                    {% if keyword %}<a class="btn btn-outline-secondary" style="border-radius:8px;" href="{{ url_for('photo_list') }}">清除</a>{% endif %}
+                </form>
+            </div>
+
             <div class="panel">
-                <div class="panel-header"><i class="bi bi-camera-fill me-1"></i> 影像紀錄明細</div>
+                <div class="panel-header"><i class="bi bi-camera-fill me-1"></i> 影像紀錄明細（{% if keyword %}搜尋：{{ keyword }}，{% endif %}共 {{ total }} 張）</div>
                 <div class="p-0">
                     <table class="table table-hover mb-0 align-middle">
                         <thead>
@@ -137,24 +157,40 @@
                                 </td>
                                 <td>
                                     <div class="fw-bold" style="color: #333; font-size: 0.9rem;">{{ p.username or '未知使用者' }}</div>
+                                    {% if p.email %}<div class="small text-muted">{{ p.email }}</div>{% endif %}
                                 </td>
                                 <td>
-                                    <div><span class="scene-badge">{{ p.scene_name or '未分類' }}</span></div>
+                                    <div>
+                                        <span class="scene-badge">{{ p.scene_name or '未分類' }}</span>
+                                        {% if p.is_submission %}<span class="submission-badge">作業繳交</span>{% endif %}
+                                    </div>
                                     <div class="small text-muted mt-1">{{ p.custom_title or '（無標題）' }}</div>
                                 </td>
                                 <td><small class="text-muted">{{ p.created_at }}</small></td>
                                 <td class="text-center">
-                                    <form action="/photo/delete/{{ p.id }}" method="POST" onsubmit="return confirm('確定要刪除這張照片嗎？');">
+                                    <form action="/photo/delete/{{ p.id }}" method="POST"
+                                          onsubmit="return confirm('{{ '這張照片是拍照作業的繳交內容，刪除後老師將看不到這份作業的照片。確定要刪除嗎？' if p.is_submission else '確定要刪除這張照片嗎？照片檔案會一併刪除，無法復原。' }}');">
+                                        <input type="hidden" name="q" value="{{ keyword }}">
+                                        <input type="hidden" name="page" value="{{ page }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger px-3" style="border-radius: 8px;">刪除</button>
                                     </form>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="6" class="text-center py-5 text-muted">目前尚無照片上傳紀錄。</td></tr>
+                            <tr><td colspan="6" class="text-center py-5 text-muted">{{ '找不到符合的照片。' if keyword else '目前尚無照片上傳紀錄。' }}</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% if pages > 1 %}
+                <div class="pager">
+                    <span>第 {{ page }} / {{ pages }} 頁</span>
+                    <div class="d-flex gap-2">
+                        {% if page > 1 %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('photo_list', q=keyword, page=page-1) }}">上一頁</a>{% endif %}
+                        {% if page < pages %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('photo_list', q=keyword, page=page+1) }}">下一頁</a>{% endif %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </main>

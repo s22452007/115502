@@ -52,6 +52,9 @@
         .apply-warn { font-size: 0.78rem; color: #b26a00; margin-top: 3px; }
         .apply-note { color: #888; margin-top: 2px; max-width: 360px; white-space: normal; }
         .pending-note { background: #fff8e6; border: 1px solid #f3e2a8; border-radius: 12px; padding: 12px 16px; font-size: 0.88rem; color: #7a5c00; margin-bottom: 16px; }
+        .temp-pw { background: white; border: 1.5px solid var(--green-mid); border-radius: 12px; padding: 14px 18px; font-size: 0.88rem; color: #444; margin-bottom: 16px; }
+        .temp-pw code { display: inline-block; margin: 8px 0 6px; padding: 6px 14px; background: var(--green-light); border-radius: 8px; color: #2d5a3d; font-size: 1.25rem; font-weight: 700; letter-spacing: 2px; user-select: all; }
+        .temp-pw-note { font-size: 0.78rem; color: #999; }
         .form-hint { font-size: 0.75rem; color: #999; margin-top: 4px; }
         .modal-body label.form-label { font-size: 0.82rem; color: #777; margin-bottom: 4px; }
         .how-to { font-size: 0.82rem; color: #888; line-height: 1.8; margin-bottom: 16px; }
@@ -107,7 +110,6 @@
             <div class="page-title-box d-flex justify-content-between align-items-end">
                 <div>
                     <h3 class="page-title"><i class="bi bi-person-video3 me-2"></i>教師帳號管理</h3>
-                    <div class="text-muted small mt-1">老師從登入頁的「老師」分頁登入，管理自己的班級與班級代碼</div>
                 </div>
                 <button class="btn btn-snap px-3" data-bs-toggle="modal" data-bs-target="#addModal">
                     <i class="bi bi-plus-lg me-1"></i> 建立老師帳號
@@ -120,14 +122,17 @@
               {% endfor %}
             {% endwith %}
 
-            <div class="how-to">
-                <i class="bi bi-info-circle me-1"></i>
-                老師可由管理者在這裡建立、用學校 Google 帳號登入後自動建立，或在登入頁填申請表（Google 無法登入時）；後兩種<b>需在此核准</b>才能使用。停用後無法登入，班級與學生資料會保留。
+            {% if temp_password %}
+            <div class="temp-pw">
+                <div><i class="bi bi-key-fill me-1"></i>「{{ temp_password.username }}」的臨時密碼（{{ temp_password.email }}）</div>
+                <code>{{ temp_password.password }}</code>
+                <div class="temp-pw-note">離開這一頁就看不到了。老師用它登入後會被要求換成自己的密碼。</div>
             </div>
+            {% endif %}
 
             {% if pending_count %}
             <div class="pending-note">
-                <i class="bi bi-hourglass-split me-1"></i>有 <b>{{ pending_count }}</b> 位老師等待審核。請先確認對方確實是學校老師（用姓名、系所對照學校網站的教職員名錄，必要時打分機確認），再按「核准」；不是老師就按「拒絕」。核准後系統會寄信通知老師。
+                <i class="bi bi-hourglass-split me-1"></i>有 <b>{{ pending_count }}</b> 位老師等待審核，確認是學校老師再核准（核准後會寄信通知）。
             </div>
             {% endif %}
 
@@ -224,7 +229,7 @@
                         <div class="mb-3">
                             <label class="form-label">老師姓名</label>
                             <input autocomplete="off" type="text" name="username" class="form-control" placeholder="例：王老師" required>
-                            <div class="form-hint">會顯示在班級資料上，不能與其他帳號重複</div>
+                            <div class="form-hint">不能和其他老師重複</div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">登入 Email</label>
@@ -233,7 +238,6 @@
                         <div class="mb-3">
                             <label class="form-label">初始密碼</label>
                             <input autocomplete="off" type="text" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
-                            <div class="form-hint">建立後請把 Email 與密碼交給老師</div>
                         </div>
                     </div>
                     <div class="modal-footer border-0">
@@ -249,18 +253,27 @@
     <div class="modal fade" id="pwModal{{ t.id }}" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content" style="border-radius: 16px;">
-                <form action="{{ url_for('teacher_account_reset_password', user_id=t.id) }}" method="POST" autocomplete="off">
+                {# 管理者不能自己指定密碼：寄連結讓老師自己設；老師收不到信才由系統產生臨時密碼 #}
+                <form action="{{ url_for('teacher_account_reset_password', user_id=t.id) }}" method="POST">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold" style="color: var(--green-accent);"><i class="bi bi-key-fill me-2"></i>重設「{{ t.username }}」的密碼</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body p-4">
-                        <label class="form-label">新密碼</label>
-                        <input autocomplete="off" type="text" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
-                        <div class="form-hint">老師忘記密碼時由管理者在這裡重設，再把新密碼告訴老師</div>
+                    <div class="modal-body p-4 pb-2">
+                        <label class="form-label">老師信箱</label>
+                        <div class="fw-bold" style="color:#333; word-break:break-all;">{{ t.email }}</div>
+                        {% if mail_ready %}
+                        <div class="form-hint">連結 {{ reset_minutes }} 分鐘內有效；老師設定新密碼前，原本的密碼仍可使用</div>
+                        {% else %}
+                        <div class="form-hint" style="color:#b26a00;">寄信服務尚未設定，無法寄重設連結</div>
+                        {% endif %}
                     </div>
-                    <div class="modal-footer border-0">
-                        <button type="submit" class="btn btn-snap w-100 py-2">確認重設</button>
+                    <div class="modal-footer border-0 flex-column align-items-stretch gap-1">
+                        {% if mail_ready %}
+                        <button type="submit" name="mode" value="link" class="btn btn-snap py-2">寄重設連結</button>
+                        {% endif %}
+                        <button type="submit" name="mode" value="temp" class="btn {{ 'btn-outline-secondary' if mail_ready else 'btn-snap' }} py-2" style="border-radius:8px;"
+                                onclick="return confirm('產生臨時密碼？「{{ t.username }}」原本的密碼會立刻失效。');">{{ '老師收不到信，改產生臨時密碼' if mail_ready else '產生臨時密碼' }}</button>
                     </div>
                 </form>
             </div>

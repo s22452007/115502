@@ -393,11 +393,20 @@ def get_announcements(classroom_id):
     } for r in rows]
 
 
+def _push_title(classroom, text):
+    """班級推播的標題「101・林老師：xxx」：學生可能同時在好幾個班，標題就看得出是哪班、哪位老師發的。"""
+    teacher = User.query.get(classroom.teacher_id)
+    name = (teacher.username or teacher.email.split('@')[0]) if teacher else ''
+    if name and not name.endswith('老師'):
+        name += '老師'
+    return f'{classroom.name}・{name}：{text}' if name else f'{classroom.name}：{text}'
+
+
 def push_announcement(announcement):
     """新公告推播給全班。回傳推到幾支手機（沒設定推播時是 0）。"""
     classroom = Classroom.query.get(announcement.classroom_id)
     body = (announcement.content or '').strip().replace('\n', ' ')[:80] or '老師發布了一則新公告'
-    return push.notify_classroom(classroom.id, f'{classroom.name}：{announcement.title}', body, {
+    return push.notify_classroom(classroom.id, _push_title(classroom, announcement.title), body, {
         'type': 'announcement', 'classroom_id': classroom.id, 'classroom_name': classroom.name,
         'announcement_id': announcement.id})
 
@@ -412,7 +421,7 @@ def push_new_assignment(assignment):
         body += f"，{assignment.due_at.strftime('%m/%d %H:%M')} 截止"
         if late_policy_of(assignment) != LatePolicy.ALLOW:
             body += f'（{late_policy_text(assignment)}）'
-    return push.notify_classroom(classroom.id, f'{classroom.name}：新作業', body, {
+    return push.notify_classroom(classroom.id, _push_title(classroom, '新作業'), body, {
         'type': 'assignment', 'assignment_id': assignment.id, 'classroom_id': classroom.id})
 
 

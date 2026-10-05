@@ -3116,22 +3116,19 @@ def _(c):
     check(r2.status_code == 200 and J(r2).get('count') == 1 and rooms == [('一年甲班', 1, 1)], '我的教室列表不正確')
 
 
-@case('A13', '退出教室',
+@case('A13', '學生無法自行退出教室',
       pre='學生在「一年甲班」中',
-      steps='1. POST /api/classroom/leave，user_id、classroom_id=一年甲班\n2. GET /api/classroom/my/{學生 id}\n3. 再退出一次\n4. POST /api/classroom/leave 未帶 classroom_id',
-      expect='1. HTTP 200，「已退出教室」\n2. count=0\n3. HTTP 404，「你不在這個教室裡」\n4. HTTP 400，「缺少使用者 ID 或教室 ID」')
+      steps='1. POST /api/classroom/leave，user_id、classroom_id=一年甲班\n2. GET /api/classroom/my/{學生 id}',
+      expect='1. HTTP 404，沒有退出教室的功能\n2. count=1，仍在一年甲班；要離開班級須由老師在班級名冊移出')
 def _(c):
     ensure_edu()
     st, rid = STATE['edu_student'], STATE['edu_rooms']['open']
     r1 = SC.post('/api/classroom/leave', json={'user_id': st['id'], 'classroom_id': rid})
     my = J(SC.get(f'/api/classroom/my/{st["id"]}'))
-    r3 = SC.post('/api/classroom/leave', json={'user_id': st['id'], 'classroom_id': rid})
-    r4 = SC.post('/api/classroom/leave', json={'user_id': st['id']})
-    c.log(f'1. {http(r1, "status", "message")}；2. count={my.get("count")}；3. {http(r3, "error")}；4. {http(r4, "error")}')
-    check(r1.status_code == 200 and J(r1).get('message') == '已退出教室', '退出失敗')
-    check(my.get('count') == 0, '退出後仍顯示教室')
-    check(r3.status_code == 404 and J(r3).get('error') == '你不在這個教室裡', '重複退出未回 404')
-    check(r4.status_code == 400 and J(r4).get('error') == '缺少使用者 ID 或教室 ID', '缺少參數未擋下')
+    rooms = [x.get('name') for x in my.get('classrooms', [])]
+    c.log(f'1. HTTP {r1.status_code}；2. count={my.get("count")}，教室={rooms}')
+    check(r1.status_code == 404, '學生仍可自行退出教室')
+    check(my.get('count') == 1 and rooms == ['一年甲班'], '學生不在原本的教室裡')
 
 
 # ----------------------------------------------------------------------
@@ -3184,7 +3181,9 @@ def _(c):
           '學生帳號資料不正確')
     check(r3.status_code == 200 and J(r3).get('is_new') is False and J(r3).get('user_id') == uid and n == 1, '重複建立帳號')
     check(r4.status_code == 201 and J(r4).get('status') == 'success', '新學生無法用班級代碼加入教室')
-    SC.post('/api/classroom/leave', json={'user_id': uid, 'classroom_id': STATE['edu_rooms']['open']})
+    with S.app_context():   # 還原：讓後面的個案看到的一年甲班成員數不受影響
+        ClassroomMember.query.filter_by(classroom_id=STATE['edu_rooms']['open'], student_id=uid).delete()
+        db.session.commit()
 
 
 @case('A13', '學校 Google 登入的限制',
@@ -3496,7 +3495,7 @@ def _(c):
       pre='「三年丙班」學生甲、乙都已登記手機；學生甲有一份已繳交、待批閱的造句作業',
       steps='1. 老師發布公告「明天停課」\n2. 老師出一份作業並勾選「通知學生」，再出一份不勾選\n3. 老師在批閱頁替學生甲的作業打 88 分\n'
             '4. 學生乙的手機已移除 App，老師再發一則公告\n5. 伺服器沒有設定推播金鑰時，老師再發一則公告',
-      expect='1. 推播給甲、乙兩支手機，標題「三年丙班：明天停課」\n2. 勾選通知的作業推播「三年丙班：新作業」，沒勾選的不推播\n'
+      expect='1. 推播給甲、乙兩支手機，標題「三年丙班・林老師：明天停課」\n2. 勾選通知的作業推播「三年丙班・林老師：新作業」，沒勾選的不推播\n'
              '3. 只推播給學生甲，標題「作業已批改」，內容含 88 分\n4. 乙的手機登記被清除，之後不再推給他\n5. 公告照常發布，不推播也不出錯',
       note='推播以模擬方式進行，未連線 Firebase')
 def _(c):
@@ -3547,9 +3546,9 @@ def _(c):
     c.log(f'1. 提示={f1}，推播={[(p["tokens"], p["title"]) for p in p1]}；2. 推播={[(p["title"], p["body"]) for p in p2]}；'
           f'3. 提示={f3}，推播={[(p["tokens"], p["title"], p["body"]) for p in p3]}；'
           f'4. 乙的手機登記={s2_token}，之後的推播對象={[p["tokens"] for p in p4]}；5. 提示={f5}，推播 {n_after - n_before} 則，公告 {n_ann} 則')
-    check(len(p1) == 1 and p1[0]['tokens'] == ['tok-s1', 'tok-s2'] and p1[0]['title'] == '三年丙班：明天停課'
+    check(len(p1) == 1 and p1[0]['tokens'] == ['tok-s1', 'tok-s2'] and p1[0]['title'] == '三年丙班・林老師：明天停課'
           and p1[0]['data'].get('type') == 'announcement' and '已推播到 2 位學生的手機' in f1[0], '公告推播不正確')
-    check(len(p2) == 1 and p2[0]['title'] == '三年丙班：新作業' and p2[0]['body'].startswith('第五課造句'), '新作業推播不正確')
+    check(len(p2) == 1 and p2[0]['title'] == '三年丙班・林老師：新作業' and p2[0]['body'].startswith('第五課造句'), '新作業推播不正確')
     check(len(p3) == 1 and p3[0]['tokens'] == ['tok-s1'] and p3[0]['title'] == '作業已批改' and '88 分' in p3[0]['body'],
           '批改推播不正確')
     check(s2_token is None and [p['tokens'] for p in p4] == [['tok-s1', 'tok-s2'], ['tok-s1']], '收不到的手機沒有清除')

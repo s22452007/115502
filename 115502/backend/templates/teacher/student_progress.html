@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 校園教育版 - 學生學習狀況</title>
+    <title>Snap to Learn 校園教育版 - 學生學習狀況</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -83,6 +83,36 @@
           {% endfor %}
         {% endwith %}
 
+        {% if new_passwords %}
+        <!-- 初始／臨時密碼：只在這次顯示，重新整理就不見，系統也不會再顯示 -->
+        <div class="panel mb-4" id="newPasswords" style="border: 2px solid #f3e2a8;">
+            <div class="panel-header" style="background: #fff8e6; color: #7a5c00; display:flex; justify-content:space-between; align-items:center;">
+                <div><i class="bi bi-key-fill me-2"></i>學生的初始密碼（只顯示這一次）</div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;" onclick="window.print()"><i class="bi bi-printer me-1"></i>列印</button>
+            </div>
+            <div class="px-4 pt-3 small text-muted">
+                請現在抄下或列印發給學生。離開這一頁就看不到了，忘記的話只能再按「重設密碼」產生新的。學生從 App 校園教育版的「老師給的帳號登入」登入，第一次登入會被要求換成自己的密碼。
+            </div>
+            <table class="table mb-0 mt-2">
+                <thead><tr><th>帳號（學號）</th><th>姓名</th><th>初始密碼</th></tr></thead>
+                <tbody>
+                {% for p in new_passwords %}
+                    <tr><td>{{ p.account }}</td><td>{{ p.name or '' }}</td><td><code style="font-size:1rem; letter-spacing:1px;">{{ p.password }}</code></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <style>
+            /* 列印時只印密碼單 */
+            @media print {
+                body * { visibility: hidden; }
+                #newPasswords, #newPasswords * { visibility: visible; }
+                #newPasswords { position: absolute; left: 0; top: 0; width: 100%; }
+                #newPasswords button { display: none; }
+            }
+        </style>
+        {% endif %}
+
         <!-- 學生名冊與學習狀況表格 -->
         <div class="panel">
             <div class="panel-header">
@@ -93,7 +123,7 @@
                 <div class="p-5 text-center text-muted">
                     <i class="bi bi-person-x" style="font-size: 2.5rem;"></i>
                     {% if session.get('role') == 'teacher' %}
-                    <p class="mt-2 mb-3">目前尚無學生加入本班級。<br>請按「新增學生」貼上班級名單，學生即可用學號登入 App 的校園教育版。</p>
+                    <p class="mt-2 mb-3">目前尚無學生加入本班級。<br>把班級代碼 <b>{{ data.classroom.join_code }}</b> 給學生：學生在 App 校園教育版選學校、用學校帳號登入後，輸入代碼就會加入。<br>學生沒有學校 Google 帳號時，可以按「新增學生」貼上名單，幫他們建立帳號。</p>
                     <button type="button" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
                         <i class="bi bi-person-plus me-1"></i>新增學生
                     </button>
@@ -158,10 +188,12 @@
                                     </a>
                                     <div class="d-flex gap-1 justify-content-center mt-1">
                                         <button class="btn btn-sm btn-outline-secondary" style="white-space: nowrap;" data-bs-toggle="modal" data-bs-target="#renameStu{{ s.student_id }}">改名稱</button>
+                                        {% if not s.google_login %}
                                         <form action="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/reset_password" method="POST"
-                                              onsubmit="return confirm('把「{{ s.display_name }}」的密碼重設為學號？學生忘記密碼時使用，App 的「忘記密碼」不開放校園教育版帳號。');">
+                                              onsubmit="return confirm('幫「{{ s.display_name }}」產生新的臨時密碼？學生忘記密碼時使用，App 的「忘記密碼」不開放校園教育版帳號。');">
                                             <button type="submit" class="btn btn-sm btn-outline-secondary" style="white-space: nowrap;">重設密碼</button>
                                         </form>
+                                        {% endif %}
                                         <form action="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/remove" method="POST"
                                               onsubmit="return confirm('將「{{ s.display_name }}」移出班級？學生之後可用班級代碼重新加入，已繳交的作業紀錄會保留。');">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" style="white-space: nowrap;">移除</button>
@@ -193,7 +225,7 @@
       <form action="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/rename" method="POST">
         <div class="modal-body p-4">
           <label class="form-label fw-bold">顯示名稱</label>
-          <input type="text" name="display_name" class="form-control" value="{{ s.display_name }}" placeholder="例：01 王小明" maxlength="50">
+          <input autocomplete="off" type="text" name="display_name" class="form-control" value="{{ s.display_name }}" placeholder="例：01 王小明" maxlength="50">
           <div class="form-text">只影響老師這邊的名冊，例如改成座號＋真名；留空則顯示學生在 App 的暱稱。</div>
         </div>
         <div class="modal-footer bg-light">
@@ -218,12 +250,13 @@
       <form action="/teacher/classroom/{{ data.classroom.id }}/students/add" method="POST">
         <div class="modal-body p-4">
           <label class="form-label fw-bold">學生名單（每行一位：學號 姓名）</label>
-          <textarea name="roster" class="form-control" rows="8" required
+          <textarea autocomplete="off" name="roster" class="form-control" rows="8" required
                     placeholder="11156001 王小明&#10;11156002 李小華&#10;11156003 陳大文"
                     style="font-family: Consolas, monospace; border-radius: 10px;"></textarea>
           <div class="small text-muted mt-2" style="line-height: 1.7;">
             <i class="bi bi-info-circle me-1"></i>可直接從 Excel 複製兩欄貼上；姓名可省略，之後也能用「改名稱」修改。<br>
-            <i class="bi bi-key me-1"></i>學生的<strong>帳號與密碼都是學號</strong>，從 App 的「校園教育版」登入。<br>
+            <i class="bi bi-google me-1"></i>有學校 Google 帳號的學生<strong>不用加在這裡</strong>：給他們班級代碼，自己登入後加入就好。<br>
+            <i class="bi bi-key me-1"></i>這裡建立的帳號是學號，<strong>初始密碼由系統隨機產生</strong>，加入後只顯示一次，請抄下或列印發給學生。<br>
             <i class="bi bi-arrow-repeat me-1"></i>已經有帳號的學生會直接加入本班，不會重複建立。
           </div>
         </div>

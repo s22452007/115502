@@ -129,7 +129,8 @@
                 <li class="sidebar-section-title">營運</li>
                 <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
-            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
+            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理{% if sidebar_teacher_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_teacher_pending }}</span>{% endif %}</a></li>
+            <li><a href="/school/list"><i class="bi bi-building"></i> 學校管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
             <li class="sidebar-section-title">系統</li>
             <li><a href="/admin_account/list"><i class="bi bi-shield-lock-fill"></i> 管理員帳號管理</a></li>
@@ -180,7 +181,7 @@
             <div class="feedback-card {% if f.reply %}replied{% else %}unreplied{% endif %}">
                 <div class="card-header-row">
                     <div class="user-info">
-                        #{{ f.id }} · {{ f.username or '未設定' }}
+                        #{{ f.id }} · {{ f.username or ('未登入的老師' if (f.feedback_type or '').startswith('老師聯絡') else '未設定') }}
                         <small>{{ f.email }}</small>
                     </div>
                     <div class="d-flex gap-2">
@@ -241,8 +242,11 @@
                         </div>
                         <div class="mb-2">
                             <label class="form-label fw-bold">你的回覆：</label>
-                            <textarea name="reply" class="form-control" rows="5" required>{{ f.reply or '' }}</textarea>
+                            <textarea autocomplete="off" name="reply" class="form-control" rows="5" required>{{ f.reply or '' }}</textarea>
                         </div>
+                        {% if (f.feedback_type or '').startswith('老師聯絡') %}
+                        <div class="small text-muted"><i class="bi bi-envelope me-1"></i>這是老師的聯絡單，送出後會寄信到 {{ f.email }}</div>
+                        {% endif %}
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>

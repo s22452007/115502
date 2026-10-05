@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Snap to Learn 校園教育版 - 個人資料</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        html { scrollbar-gutter: stable; }
+        :root {
+            --green-dark: #4a7a54;
+            --green-mid: #6a9e72;
+            --green-light: #dce7de;
+            --green-accent: #5c8364;
+            --bg: #f4f7f5;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: "微軟正黑體", sans-serif; color: #333; margin: 0; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.04); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #666; text-decoration: none; font-size: 0.95rem; transition: 0.2s; }
+        .sidebar-menu a:hover { background: var(--bg); color: var(--green-accent); }
+        .sidebar-menu a.active { background: var(--green-light); color: var(--green-accent); font-weight: bold; border-right: 4px solid var(--green-accent); }
+        .sidebar-menu a i { color: var(--green-accent); font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-admin { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+        .sidebar-admin-avatar { width: 34px; height: 34px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--green-accent); flex-shrink: 0; }
+        .sidebar-admin-info .name { font-size: 0.88rem; font-weight: bold; color: #333; }
+        .sidebar-admin-info .role { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+
+        .main-content { flex: 1; padding: 32px 48px; overflow-x: hidden; }
+        .page-title { color: var(--green-dark); font-weight: 900; margin: 0; font-size: 1.6rem; }
+        .pf-wrap { max-width: 620px; margin-top: 24px; }
+
+        /* 頂部：大頭貼＋名稱，背景一條淡綠色帶，不做統計卡片 */
+        .pf-head { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .pf-band { height: 64px; background: linear-gradient(120deg, var(--green-light), #eef3ef); }
+        .pf-head-body { display: flex; align-items: flex-end; gap: 18px; padding: 0 28px 22px; margin-top: -36px; }
+        .pf-avatar { width: 84px; height: 84px; border-radius: 50%; border: 4px solid white; background: var(--green-accent); color: white;
+                     display: flex; align-items: center; justify-content: center; font-size: 2.1rem; font-weight: 900; flex-shrink: 0; object-fit: cover; }
+        .pf-name { font-size: 1.35rem; font-weight: 900; color: #2f3b32; line-height: 1.3; word-break: break-all; }
+        .pf-meta { font-size: 0.85rem; color: #888; margin-top: 2px; word-break: break-all; }
+        .pf-meta .dot { margin: 0 6px; color: #ccc; }
+        .pf-id { flex: 1; min-width: 0; }
+        .pf-name-row { display: flex; align-items: center; gap: 6px; }
+        .pf-edit { border: none; background: none; color: #aaa; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .pf-edit:hover { background: var(--green-light); color: var(--green-accent); }
+        .pf-name-form { display: flex; gap: 8px; align-items: center; max-width: 420px; }
+        .pf-name-form .form-control { flex: 1; font-weight: 700; }
+        .pf-name-form .pf-btn { padding: 6px 18px; }
+        .pf-name-note { padding: 0 28px 20px; }
+
+        .pf-card { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-top: 18px; }
+        .pf-section { padding: 22px 28px; }
+        .pf-section + .pf-section { border-top: 1px solid #f0f0f0; }
+        .pf-section h2 { font-size: 1rem; font-weight: 900; color: #2f3b32; margin: 0 0 4px; }
+        .pf-hint { font-size: 0.83rem; color: #8a8a8a; line-height: 1.6; }
+
+        .pf-btn { background-color: var(--green-accent); border: none; color: white; font-weight: 700; border-radius: 10px; padding: 0 22px; white-space: nowrap; }
+        .pf-btn:hover { background-color: var(--green-dark); color: white; }
+        .pf-btn-outline { background: white; border: 1px solid var(--green-accent); color: var(--green-accent); font-weight: 700; border-radius: 10px; padding: 6px 16px; font-size: 0.88rem; }
+        .pf-btn-outline:hover { background: var(--green-light); color: var(--green-dark); }
+
+        .pf-login-row { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+        .pf-login-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; color: var(--green-accent); flex-shrink: 0; }
+        .pf-login-row .title { font-weight: 700; font-size: 0.93rem; }
+        .pf-login-row .sub { font-size: 0.82rem; color: #8a8a8a; word-break: break-all; }
+
+        .pf-pw-form { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e3e3e3; }
+        .pf-pw-form .form-label { font-weight: 700; font-size: 0.86rem; margin-bottom: 4px; }
+        .msg { border-radius: 10px; font-size: 0.88rem; padding: 8px 12px; margin: 12px 0 0; }
+        .pf-force { display: flex; gap: 12px; align-items: flex-start; background: #fff8e6; border: 1px solid #f1dfb0; color: #7a5b12;
+                    border-radius: 14px; padding: 14px 18px; margin-top: 18px; font-size: 0.9rem; line-height: 1.6; }
+        .pf-force i { font-size: 1.2rem; margin-top: 1px; }
+        .pf-force a { color: var(--green-dark); font-weight: 700; }
+
+        @media (max-width: 720px) {
+            .main-content { padding: 24px 16px; }
+            .pf-head-body { padding: 0 18px 18px; }
+            .pf-section { padding: 20px 18px; }
+            .pf-name-note { padding: 0 18px 18px; }
+            .pf-head-body { align-items: center; }
+            .pf-name-form { flex-wrap: wrap; }
+            .pf-btn { padding: 8px 22px; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    {% include 'teacher/_sidebar.html' %}
+
+    <main class="main-content">
+        <h1 class="page-title"><i class="bi bi-person-fill me-2"></i>個人資料</h1>
+
+        <div class="pf-wrap">
+            <div class="pf-head">
+                <div class="pf-band"></div>
+                <div class="pf-head-body">
+                    {% if avatar %}
+                    <img class="pf-avatar" src="{{ avatar }}" alt="" referrerpolicy="no-referrer">
+                    {% else %}
+                    <div class="pf-avatar">{{ (teacher.username or teacher.email)[:1] | upper }}</div>
+                    {% endif %}
+                    <div class="pf-id">
+                        {# 名稱直接在這裡改：點鉛筆換成輸入框，存失敗時保持在輸入狀態 #}
+                        <div class="pf-name-row" id="nameView" {% if error %}hidden{% endif %}>
+                            <span class="pf-name" data-teacher-name>{{ teacher.username or teacher.email }}</span>
+                            <button type="button" class="pf-edit" id="nameEdit" title="修改顯示名稱" aria-label="修改顯示名稱"><i class="bi bi-pencil"></i></button>
+                        </div>
+                        <form method="POST" action="/teacher/profile" class="pf-name-form" id="nameForm" {% if not error %}hidden{% endif %}>
+                            <input autocomplete="off" type="text" name="username" class="form-control" value="{{ name_value }}" required maxlength="30" placeholder="例：王小明老師">
+                            <button type="submit" class="btn pf-btn">儲存</button>
+                            <button type="button" class="btn btn-link text-muted text-decoration-none px-2" id="nameCancel">取消</button>
+                        </form>
+                        <div class="pf-meta">
+                            {{ teacher.email }}{% if joined %}<span class="dot">·</span>{{ joined }} 加入{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-name-note" id="nameNote" {% if not (error or success) %}hidden{% endif %}>
+                    {% if error %}<div class="alert alert-danger msg mt-0 mb-2"><i class="bi bi-x-circle-fill me-1"></i>{{ error }}</div>
+                    {% elif success %}<div class="alert alert-success msg mt-0 mb-2"><i class="bi bi-check-circle-fill me-1"></i>{{ success }}</div>{% endif %}
+                    <div class="pf-hint">學生在 App 教室頁看到的「老師：XXX」就是這個名稱。最多 30 個字，不能和其他人重複，撞名時可以加上全名或科目。</div>
+                </div>
+            </div>
+
+            {% if force_pw %}
+            <div class="pf-force">
+                <i class="bi bi-shield-lock-fill"></i>
+                <div><strong>請先設定你自己的密碼</strong><br>
+                目前的密碼是系統管理員設定的，改成只有你知道的密碼之後，才能開始使用班級功能。</div>
+            </div>
+            {% elif just_unlocked %}
+            <div class="pf-force" style="background:#eef6ef; border-color:#cfe3d3; color:#3d6545;">
+                <i class="bi bi-check-circle-fill"></i>
+                <div><strong>密碼設定完成</strong><br><a href="/teacher/classrooms">前往我的班級 →</a></div>
+            </div>
+            {% endif %}
+
+            <div class="pf-card">
+                <section class="pf-section">
+                    <h2>登入方式</h2>
+                    {% if google_only %}
+                    <div class="pf-login-row">
+                        <div class="pf-login-icon"><i class="bi bi-google"></i></div>
+                        <div>
+                            <div class="title">學校 Google 帳號</div>
+                            <div class="sub">{{ teacher.email }}</div>
+                        </div>
+                    </div>
+                    <div class="pf-hint mt-3">登入由學校 Google 帳號負責，這個系統沒有另外的密碼，不需要設定。Google 帳號的密碼請到學校資訊中心處理。</div>
+                    {% else %}
+                    <div class="pf-login-row">
+                        <div class="pf-login-icon"><i class="bi bi-envelope-fill"></i></div>
+                        <div class="flex-grow-1">
+                            <div class="title">Email ＋ 密碼</div>
+                            <div class="sub">{{ teacher.email }}</div>
+                        </div>
+                        <button type="button" class="btn pf-btn-outline" id="pwToggle"
+                                {% if pw_error or force_pw %}hidden{% endif %}>修改密碼</button>
+                    </div>
+                    {% if pw_success %}<div class="alert alert-success msg"><i class="bi bi-check-circle-fill me-1"></i>{{ pw_success }}</div>{% endif %}
+                    <form method="POST" action="/teacher/change_password" class="pf-pw-form" id="pwForm" {% if not (pw_error or force_pw) %}hidden{% endif %}>
+                        {% if pw_error %}<div class="alert alert-danger msg mt-0 mb-3"><i class="bi bi-x-circle-fill me-1"></i>{{ pw_error }}</div>{% endif %}
+                        <div class="mb-3">
+                            <label class="form-label">目前密碼</label>
+                            <input type="password" name="current_password" class="form-control" required autocomplete="current-password">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">新密碼</label>
+                            <input type="password" name="new_password" class="form-control" required minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" autocomplete="new-password">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">確認新密碼</label>
+                            <input type="password" name="confirm_password" class="form-control" required minlength="8" autocomplete="new-password">
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <button type="submit" class="btn pf-btn py-2">更新密碼</button>
+                            {% if not force_pw %}
+                            <button type="button" class="btn btn-link text-muted text-decoration-none" id="pwCancel">取消</button>
+                            {% endif %}
+                            <span class="pf-hint ms-auto">忘記目前密碼？<a href="{{ url_for('teacher_contact', topic='忘記密碼') }}" style="color:#5c8364; font-weight:700; text-decoration:none;">聯絡管理者</a></span>
+                        </div>
+                    </form>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+(function () {
+    var view = document.getElementById('nameView'), form = document.getElementById('nameForm'),
+        note = document.getElementById('nameNote'), input = form.querySelector('input');
+    var original = {{ (teacher.username or '') | tojson }};
+    function edit(on) {
+        view.hidden = on; form.hidden = !on; note.hidden = !on;
+        if (on) { input.focus(); input.select(); }
+        else { input.value = original; note.querySelectorAll('.alert').forEach(function (a) { a.remove(); }); }
+    }
+    document.getElementById('nameEdit').addEventListener('click', function () { edit(true); });
+    document.getElementById('nameCancel').addEventListener('click', function () { edit(false); });
+    input.addEventListener('keydown', function (e) { if (e.key === 'Escape') edit(false); });
+})();
+</script>
+{% if not google_only %}
+{% include 'admin/_password_strength.html' %}
+<script>
+(function () {
+    var toggle = document.getElementById('pwToggle'), form = document.getElementById('pwForm');
+    toggle.addEventListener('click', function () {
+        form.hidden = false; toggle.hidden = true;
+        form.querySelector('input').focus();
+    });
+    var cancel = document.getElementById('pwCancel');
+    if (cancel) cancel.addEventListener('click', function () {
+        form.reset(); form.hidden = true; toggle.hidden = false;
+    });
+    // 從側欄帳號小卡的「修改密碼」進來（/teacher/profile#password）：直接展開密碼表單
+    function openFromHash() { if (location.hash === '#password' && form.hidden) toggle.click(); }
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+})();
+</script>
+{% endif %}
+</body>
+</html>

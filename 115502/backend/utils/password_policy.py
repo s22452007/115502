@@ -131,3 +131,19 @@ def validate(pw, account=None, require_medium=False, old_hash=None):
         return '新密碼不可與目前密碼相同'
 
     return None
+
+
+# 舊版 App 用 Google 登入建帳號時，塞的假密碼是固定的「GOOGLE_OAUTH_ + Email」，知道 Email 就算得出來。
+# 新帳號已改成隨機假密碼；舊帳號的密碼雜湊還在，所以所有密碼登入都要擋掉這個字串，
+# 同時也拿它來認出「這是 Google 帳號，本人沒有密碼」。
+GOOGLE_PLACEHOLDER_PREFIX = 'GOOGLE_OAUTH_'
+
+
+def is_google_placeholder_input(password, email):
+    """使用者輸入的密碼剛好是舊版 Google 假密碼：一律當成密碼錯誤"""
+    return bool(email) and password == GOOGLE_PLACEHOLDER_PREFIX + email
+
+
+def has_google_placeholder_hash(password_hash, email):
+    """帳號的密碼還是舊版 Google 假密碼（本人從沒設過密碼）"""
+    return bool(password_hash) and bool(email) and check_password_hash(password_hash, GOOGLE_PLACEHOLDER_PREFIX + email)

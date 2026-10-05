@@ -159,6 +159,48 @@ class ApiClient {
     }
   }
 
+  /// 校園教育版登入頁的學校清單：[{school_id, name, domains}]
+  static Future<Map<String, dynamic>> getSchools() async {
+    final url = Uri.parse('$baseUrl/auth/schools');
+    try {
+      final response = await client.get(url).timeout(const Duration(seconds: 15));
+      return jsonDecode(response.body);
+    } catch (e) {
+      return _netError(e, url);
+    }
+  }
+
+  /// 校園教育版：選好學校後用學校 Google 帳號登入。
+  /// 後端檢查 Email 網域是不是這間學校、@ 前面是不是學號；第一次登入自動建立學生帳號（回傳 is_new = true）。
+  /// 清單裡沒有自己的學校時，不傳 [schoolId]、改傳 [newSchoolName]：
+  /// 後端用這個 Google 帳號的信箱網域（限 .edu.tw）新增學校，回傳 school_id 給 App 記住。
+  static Future<Map<String, dynamic>> eduGoogleLogin(
+    String idToken, {
+    int? schoolId,
+    String? newSchoolName,
+    String? avatar,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/edu_google_login');
+    try {
+      final body = <String, dynamic>{
+        'id_token': idToken,
+        'school_id': ?schoolId,
+        'new_school_name': ?newSchoolName,
+      };
+      if (avatar != null && avatar.isNotEmpty) body['avatar'] = avatar;
+      final response = await client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+      return _keepToken(jsonDecode(response.body));
+    } catch (e) {
+      return _netError(e, url);
+    }
+  }
+
   /// 忘記密碼第一步：寄 6 位數驗證碼到註冊信箱
   static Future<Map<String, dynamic>> sendResetCode(String email) async {
     final url = Uri.parse('$baseUrl/auth/forgot_password');
@@ -1709,10 +1751,13 @@ class ApiClient {
   // ==========================================
 
   /// 學生所有教室的作業清單，後端已排序（未交的在前、截止日近的優先）。
+  /// 帶 [classroomId] 只看那一間（教室頁的「作業」分頁）。
   /// 每筆欄位：assignment_id / classroom_name / title / task_type / due_at /
   /// is_overdue / submission{status, score, ...}
-  static Future<List<dynamic>> getStudentAssignments(int userId) async {
-    final url = Uri.parse('$baseUrl/assignment/my/$userId');
+  static Future<List<dynamic>> getStudentAssignments(int userId, {int? classroomId}) async {
+    final url = Uri.parse(
+      '$baseUrl/assignment/my/$userId${classroomId != null ? '?classroom_id=$classroomId' : ''}',
+    );
     final response = await client.get(url);
 
     if (response.statusCode == 200) {
@@ -1812,6 +1857,19 @@ class ApiClient {
       return jsonDecode(utf8.decode(response.bodyBytes));
     } catch (e) {
       debugPrint('❌ 教室公告連線失敗: $e');
+      return {'status': 'error', 'error': '連線失敗'};
+    }
+  }
+
+  /// 自己在這班的成績：assignments[{title, status, score, effective, deduct, teacher_comment, ...}]、
+  /// summary{total, submitted, graded, graded_avg}
+  static Future<Map<String, dynamic>> getClassroomGrades(int classroomId, int userId) async {
+    final url = Uri.parse('$baseUrl/classroom/$classroomId/grades?user_id=$userId');
+    try {
+      final response = await client.get(url);
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      debugPrint('❌ 教室成績連線失敗: $e');
       return {'status': 'error', 'error': '連線失敗'};
     }
   }

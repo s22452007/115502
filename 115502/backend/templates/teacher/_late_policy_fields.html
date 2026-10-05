@@ -15,7 +15,7 @@
     <div class="form-check mb-0 d-flex align-items-center gap-2">
         <input class="form-check-input" type="radio" name="late_policy" id="lpDeduct{{ lp_id }}" value="deduct" {{ 'checked' if lp == 'deduct' }}>
         <label class="form-check-label" for="lpDeduct{{ lp_id }}">遲交扣</label>
-        <input type="number" name="late_penalty" class="form-control form-control-sm" style="width: 72px;" min="1" max="100" step="1"
+        <input autocomplete="off" type="number" name="late_penalty" class="form-control form-control-sm" style="width: 72px;" min="1" max="100" step="1"
                value="{{ lp_penalty if lp == 'deduct' and lp_penalty else 10 }}"
                onfocus="document.getElementById('lpDeduct{{ lp_id }}').checked = true">
         <span>分</span>

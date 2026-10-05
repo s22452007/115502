@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 校園教育版 - 班級管理</title>
+    <title>Snap to Learn 校園教育版 - 班級管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -229,11 +229,11 @@
         <div class="modal-body p-4">
           <div class="mb-3">
             <label class="form-label fw-bold">班級名稱 <span class="text-danger">*</span></label>
-            <input type="text" name="name" class="form-control" value="{{ c.name }}" required>
+            <input autocomplete="off" type="text" name="name" class="form-control" value="{{ c.name }}" required>
           </div>
           <div class="mb-0">
             <label class="form-label fw-bold">班級說明</label>
-            <textarea name="description" class="form-control" rows="3">{{ c.description }}</textarea>
+            <textarea autocomplete="off" name="description" class="form-control" rows="3">{{ c.description }}</textarea>
           </div>
         </div>
         <div class="modal-footer bg-light">
@@ -258,11 +258,11 @@
         <div class="modal-body p-4">
           <div class="mb-3">
             <label class="form-label fw-bold">班級名稱 <span class="text-danger">*</span></label>
-            <input type="text" name="name" class="form-control" placeholder="例如：日文系大一A班、實用觀光日語班" required autofocus>
+            <input autocomplete="off" type="text" name="name" class="form-control" placeholder="例如：日文系大一A班、實用觀光日語班" required autofocus>
           </div>
           <div class="mb-3">
             <label class="form-label fw-bold">班級說明</label>
-            <textarea name="description" class="form-control" rows="3" placeholder="例如：授課教師 Emily、週三第 3-4 節、學習教材範圍等"></textarea>
+            <textarea autocomplete="off" name="description" class="form-control" rows="3" placeholder="例如：授課教師 Emily、週三第 3-4 節、學習教材範圍等"></textarea>
           </div>
           <div class="alert alert-success d-flex align-items-center p-2 mb-0" style="font-size: 0.85rem;">
             <i class="bi bi-info-circle-fill me-2"></i>建立後系統將自動生成唯一的 6 碼大寫英數班級代碼。

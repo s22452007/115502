@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 成就徽章</title>
+    <title>Snap to Learn 成就徽章</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -77,7 +77,8 @@
             <li class="sidebar-section-title">營運</li>
             <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
-            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
+            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理{% if sidebar_teacher_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_teacher_pending }}</span>{% endif %}</a></li>
+            <li><a href="/school/list"><i class="bi bi-building"></i> 學校管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
             <li class="sidebar-section-title">系統</li>
             <li><a href="/admin_account/list"><i class="bi bi-shield-lock-fill"></i> 管理員帳號管理</a></li>
@@ -192,7 +193,7 @@
                 </div>
             </div>
 
-            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 Snap to Learn Project Team. All rights reserved.</p>
         </div>
     </main>
 </div>

@@ -1,7 +1,8 @@
 """校園教育版 —— 學生端的教室 API。
 
 老師端（建立教室、產生 join_code、管理成員）由另一位同學負責，
-這個檔案只處理學生這一側：用代碼加入、看自己加入了哪些教室、看班級公告、退出教室。
+這個檔案只處理學生這一側：用代碼加入、看自己加入了哪些教室、
+教室頁的公告／成績分頁、退出教室。
 
 join_code 的產生規則在老師端，這裡不產生、只負責比對，
 但必須容忍學生手動輸入的各種寫法（小寫、前後空白、中間的空格或連字號）。
@@ -13,8 +14,12 @@ from flask import Blueprint, request, jsonify
 
 from utils.db import db
 from utils.account_helper import is_edu_student
-from models import User, Classroom, ClassroomMember, Assignment, ClassroomAnnouncement
-from services.student_assignment import tw_iso
+from models import (
+    User, Classroom, ClassroomMember, Assignment, AssignmentSubmission, ClassroomAnnouncement,
+    SubmissionStatus,
+)
+from services.student_assignment import tw_iso, _is_late, _is_closed
+from services.teacher_service import get_my_grades
 
 classroom_bp = Blueprint('classroom', __name__)
 
@@ -139,9 +144,40 @@ def join_classroom():
     }), 201
 
 
+def _todo_stats(classroom_id, student_id):
+    """教室卡片上的待辦：幾份還沒交、其中幾份已逾期、最近一份的截止時間。
+
+    截止後不收的作業已經交不了，不算待交，免得學生看到永遠消不掉的數字。
+    """
+    assignments = Assignment.query.filter_by(classroom_id=classroom_id, is_published=True).all()
+    done = {s.assignment_id for s in AssignmentSubmission.query.filter(
+        AssignmentSubmission.student_id == student_id,
+        AssignmentSubmission.assignment_id.in_([a.id for a in assignments] or [0]),
+        AssignmentSubmission.status != SubmissionStatus.PENDING,
+    )}
+    todo = [a for a in assignments if a.id not in done and not _is_closed(a)]
+    upcoming = [a.due_at for a in todo if a.due_at and not _is_late(a)]
+    return {
+        "assignment_count": len(assignments),
+        "pending_count": len(todo),
+        "overdue_count": sum(1 for a in todo if _is_late(a)),
+        # 老師設定的台灣時間，前端直接顯示
+        "next_due_at": min(upcoming).isoformat() if upcoming else None,
+    }
+
+
+def _member_of(classroom_id, user_id):
+    """學生在這間（未封存）教室的成員資料；不是成員回 (None, None)。"""
+    classroom = Classroom.query.get(classroom_id)
+    member = ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=user_id).first()
+    if not classroom or classroom.is_archived or not member:
+        return None, None
+    return classroom, member
+
+
 @classroom_bp.route('/my/<int:user_id>', methods=['GET'])
 def my_classrooms(user_id):
-    """學生加入的所有教室，附上每間還沒完成的作業數。"""
+    """學生加入的所有教室，附上作業總數、待交數、最近截止時間與未讀公告數。"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "找不到此使用者"}), 404
@@ -155,9 +191,7 @@ def my_classrooms(user_id):
             continue  # 老師已封存的教室不顯示
 
         brief = _classroom_brief(classroom, member)
-        brief["assignment_count"] = Assignment.query.filter_by(
-            classroom_id=classroom.id, is_published=True
-        ).count()
+        brief.update(_todo_stats(classroom.id, user_id))
         brief["unread_count"] = _unread_announcements(classroom.id, member)
         result.append(brief)
 
@@ -198,9 +232,8 @@ def classroom_announcements(classroom_id):
     if not user_id:
         return jsonify({"error": "缺少使用者 ID"}), 400
 
-    classroom = Classroom.query.get(classroom_id)
-    member = ClassroomMember.query.filter_by(classroom_id=classroom_id, student_id=user_id).first()
-    if not classroom or classroom.is_archived or not member:
+    classroom, member = _member_of(classroom_id, user_id)
+    if not classroom:
         return jsonify({"error": "找不到這個教室"}), 404
 
     since = _seen_since(member)
@@ -228,6 +261,23 @@ def classroom_announcements(classroom_id):
         "classroom": _classroom_brief(classroom, member),
         "announcements": announcements,
     }), 200
+
+
+@classroom_bp.route('/<int:classroom_id>/grades', methods=['GET'])
+def classroom_grades(classroom_id):
+    """學生自己在這班的成績：各作業分數（含遲交扣分、老師評語）與繳交進度。
+
+    分數算法跟老師端成績總表共用（teacher_service.get_my_grades），兩邊看到的數字一樣。
+    """
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({"error": "缺少使用者 ID"}), 400
+
+    classroom, _ = _member_of(classroom_id, user_id)
+    if not classroom:
+        return jsonify({"error": "找不到這個教室"}), 404
+
+    return jsonify({"status": "success", **get_my_grades(classroom_id, user_id)}), 200
 
 
 @classroom_bp.route('/leave', methods=['POST'])

@@ -43,6 +43,8 @@ class User(db.Model):
     # AI 服務限制
     ai_count_today = db.Column(db.Integer, default=0)
     ai_extra_count = db.Column(db.Integer, default=0)
+    # 文章朗讀評分的加購次數（每日次數用完後才會扣）
+    reading_extra_count = db.Column(db.Integer, default=0)
     last_reset_date = db.Column(db.Date, nullable=True)
     # 已扣次數、還沒用掉的拍照辨識／AI 回覆憑證：increment_scan、use_ai 成功各 +1，
     # /api/scenario/analyze、/api/chat 每次呼叫 AI 前各用掉 1。沒有憑證就不呼叫 AI，
@@ -446,7 +448,7 @@ class Article(db.Model):
 
     # === 後台上架用欄位 ===
     is_free = db.Column(db.Boolean, default=False)      # 是否免費閱讀；後台新增的文章一律付費 (False)
-    unlock_cost = db.Column(db.Integer, default=50)     # 解鎖所需的 J-pts
+    unlock_cost = db.Column(db.Integer, default=150)    # 解鎖所需的 J-pts（預設見 services/store.py ITEM_COSTS）
     is_published = db.Column(db.Boolean, default=True)  # 是否已上架，下架後 App 端看不到
     created_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True) # 由哪位管理者新增
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -789,3 +791,6 @@ class ClassroomAnnouncement(db.Model):
     assignment_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True)   # 老師編輯過才有
+
+# 註：文章解鎖紀錄用上面的 UnlockedArticle（unlocked_articles 表，services/article.py 的 /unlock），
+#     不另外開 user_article_unlock 表。

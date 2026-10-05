@@ -19,7 +19,8 @@ from utils.account_helper import is_payment_free, sentence_daily_limit, today_st
 
 sentence_bp = Blueprint('sentence', __name__)
 
-PAID_SENTENCE_COST = 10   # 超過每日免費次數後，每次造句的點數
+from services.store import ITEM_COSTS
+PAID_SENTENCE_COST = ITEM_COSTS['sentence_extra']   # 超過每日免費次數後，每次造句的點數
 
 
 def _today_start_utc():

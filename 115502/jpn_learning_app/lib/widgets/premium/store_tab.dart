@@ -26,7 +26,9 @@ class _StoreTabState extends State<StoreTab> {
     if (!mounted) return;
     setState(() {
       _isLoading = false;
-      if (res.containsKey('items')) _items = List<Map<String, dynamic>>.from(res['items']);
+      if (res.containsKey('items')) {
+        _items = List<Map<String, dynamic>>.from(res['items']);
+      }
     });
   }
 
@@ -106,7 +108,7 @@ class _StoreTabState extends State<StoreTab> {
         context.read<UserProvider>().setJPts(newPts);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('兌換成功！${item['description']}', style: const TextStyle(fontWeight: FontWeight.bold)), 
+            content: Text('兌換成功！${item['description'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)), 
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -136,14 +138,15 @@ class _StoreTabState extends State<StoreTab> {
     }).toList();
   }
 
-  // 🌟 將圖示微調為帶有圓角的質感 Icon
+  // 🌟 自動辨識後端傳來的新功能代號，並給予對應的精美圖示
   IconData _iconFor(String id) {
-    switch (id) {
-      case 'photo_extra': return Icons.camera_alt_rounded;
-      case 'ai_extra': return Icons.smart_toy_rounded;
-      case 'group_deposit': return Icons.groups_rounded;
-      default: return Icons.bookmark_add_rounded;
-    }
+    if (id.contains('photo')) return Icons.camera_alt_rounded;
+    if (id.contains('ai') || id.contains('chat')) return Icons.chat_bubble_rounded;
+    if (id.contains('sentence') || id.contains('write')) return Icons.edit_note_rounded;
+    if (id.contains('read') || id.contains('voice')) return Icons.record_voice_over_rounded;
+    if (id.contains('article')) return Icons.menu_book_rounded;
+    if (id.contains('group')) return Icons.groups_rounded;
+    return Icons.bookmark_add_rounded;
   }
 
   @override
@@ -197,11 +200,15 @@ class _StoreTabState extends State<StoreTab> {
     );
   }
 
-  // 🛍️ 商品項目卡片 (純白底色，移除外框線)
+ // 🛍️ 商品項目卡片 (純白底色，移除外框線)
   Widget _buildStoreItemCard(Map<String, dynamic> item) {
     final String itemId = item['id'] as String;
-    final String cost = item['cost'].toString();
+    
+    // 🌟 動態讀取當前價格並計算原價
+    final int currentCost = (item['cost'] as num).toInt();
+    final String costText = currentCost.toString();
     final bool isDiscounted = (itemId == 'vocab_expand_premium');
+    final int originalCost = isDiscounted ? currentCost * 2 : currentCost;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -222,9 +229,9 @@ class _StoreTabState extends State<StoreTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item['name'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textDark)),
+                Text(item['name'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textDark)),
                 const SizedBox(height: 4),
-                Text(item['description'], style: const TextStyle(fontSize: 12, color: _subText, fontWeight: FontWeight.w600)),
+                Text(item['description'] ?? '', style: const TextStyle(fontSize: 12, color: _subText, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -233,12 +240,12 @@ class _StoreTabState extends State<StoreTab> {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 如果是會員打折商品，顯示亮橘色的原價刪除線
+              // 🌟 顯示動態計算出來的原價刪除線
               if (isDiscounted)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4, right: 4),
                   child: Text(
-                    '50 點', 
+                    '$originalCost 點', 
                     style: TextStyle(
                       fontSize: 11,
                       color: const Color(0xFFFF7043).withOpacity(0.8),
@@ -249,7 +256,6 @@ class _StoreTabState extends State<StoreTab> {
                 ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  // 打折商品使用扁平橘色，普通商品使用淡綠底色
                   backgroundColor: isDiscounted ? const Color(0xFFFF7043) : AppColors.primary.withOpacity(0.1), 
                   elevation: 0, 
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -257,7 +263,7 @@ class _StoreTabState extends State<StoreTab> {
                 ),
                 onPressed: () => _showConfirmPurchaseDialog(item),
                 child: Text(
-                  '$cost 點', 
+                  '$costText 點', 
                   style: TextStyle(
                     color: isDiscounted ? Colors.white : AppColors.primary, 
                     fontWeight: FontWeight.w900,

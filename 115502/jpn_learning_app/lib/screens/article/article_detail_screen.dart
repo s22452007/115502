@@ -48,10 +48,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   // 用完就在開始錄音「之前」擋下，不要錄完才告訴使用者不能評分。
   int? _readingLimit;
   int _readingUsed = 0;
+  int _readingExtra = 0; // 商城加購的朗讀次數，每日次數用完後才會扣
   bool _readingUnlimited = false;
 
   int? get _readingLeft =>
-      (_readingUnlimited || _readingLimit == null) ? null : (_readingLimit! - _readingUsed).clamp(0, _readingLimit!);
+      (_readingUnlimited || _readingLimit == null) ? null : (_readingLimit! - _readingUsed).clamp(0, _readingLimit!) + _readingExtra;
 
   @override
   void initState() {
@@ -68,6 +69,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       _readingUnlimited = res['unlimited'] == true;
       _readingLimit = (res['reading_daily_limit'] as num?)?.toInt();
       _readingUsed = (res['reading_count_today'] as num?)?.toInt() ?? 0;
+      _readingExtra = (res['reading_extra_count'] as num?)?.toInt() ?? 0;
     });
   }
 
@@ -82,8 +84,8 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         content: Text(
           message ??
               (isPremium
-                  ? '今天的 ${_readingLimit ?? 5} 次朗讀評分已經用完了，明天再來挑戰吧！'
-                  : '免費版每天可以朗讀評分 ${_readingLimit ?? 1} 次，明天再來挑戰吧！\n升級 Premium 每天可以朗讀 5 次。'),
+                  ? '今天的 ${_readingLimit ?? 5} 次朗讀評分已經用完了，明天再來挑戰吧！\n也可以到商城花 20 點加購 1 次。'
+                  : '免費版每天可以朗讀評分 ${_readingLimit ?? 1} 次，明天再來挑戰吧！\n升級 Premium 每天可以朗讀 5 次，也可以到商城花 20 點加購 1 次。'),
           style: const TextStyle(height: 1.5),
         ),
         actions: [
@@ -695,13 +697,17 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           setState(() {
             _isAnalyzing = false;
             if (_readingLimit != null) _readingUsed = _readingLimit!;
+            _readingExtra = 0;
           });
           _showReadingQuotaDialog(result['message']?.toString());
           return;
         }
 
         if (result['status'] == 'success') {
-          setState(() => _readingUsed++);
+          setState(() {
+            if (result['used_extra'] == true && _readingExtra > 0) _readingExtra--;
+            _readingUsed++;
+          });
           // 🛡️ 防呆：確保分數是整數
           final int score = double.tryParse(result['score']?.toString() ?? '0')?.toInt() ?? 0;
 

@@ -4,7 +4,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 
 /// 加入教室彈窗，分兩步：
 ///   1. 輸入老師給的 6 碼代碼 → 查詢
-///   2. 顯示「這是哪一班、哪位老師」讓學生確認 → 真正加入
+///   2. 顯示「這是哪一班、哪位老師」讓學生確認、填真實姓名 → 真正加入
 /// 避免打錯一個字就加進別班，事後還要老師手動移除。
 /// 加入成功會 pop(true)，呼叫端據此刷新。
 class JoinClassroomDialog extends StatefulWidget {
@@ -18,6 +18,8 @@ class JoinClassroomDialog extends StatefulWidget {
 
 class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
   final TextEditingController _codeController = TextEditingController();
+  // 老師名冊上的名字，跟暱稱分開
+  final TextEditingController _nameController = TextEditingController();
   bool _isLoading = false;
   Map<String, dynamic>? _preview; // 查到的教室；null 表示還在第一步
 
@@ -34,11 +36,12 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
       return;
     }
     setState(() => _isLoading = true);
-    final res = await ApiClient.previewClassroom(code);
+    final res = await ApiClient.previewClassroom(code, userId: widget.studentId);
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (res['status'] == 'success' && res['classroom'] is Map) {
+      _nameController.text = (res['suggested_name'] ?? '').toString();
       setState(() => _preview = Map<String, dynamic>.from(res['classroom']));
     } else {
       _showError(res['error'] ?? '找不到這個教室代碼，請再確認一次');
@@ -46,10 +49,16 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
   }
 
   Future<void> _join() async {
+    final realName = _nameController.text.trim();
+    if (realName.isEmpty) {
+      _showError('請填寫真實姓名');
+      return;
+    }
     setState(() => _isLoading = true);
     final res = await ApiClient.joinClassroom(
       userId: widget.studentId,
       joinCode: _codeController.text.trim(),
+      realName: realName,
     );
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -69,6 +78,7 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
   @override
   void dispose() {
     _codeController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -166,6 +176,19 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
           const Text(
             '這個教室目前沒有開放加入，請聯絡老師。',
             style: TextStyle(color: Colors.redAccent, fontSize: 13),
+          ),
+        ] else ...[
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameController,
+            maxLength: 50,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _isLoading ? null : _join(),
+            decoration: InputDecoration(
+              labelText: '真實姓名',
+              counterText: '',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           ),
         ],
       ],

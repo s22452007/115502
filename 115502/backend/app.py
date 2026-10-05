@@ -164,13 +164,13 @@ with app.app_context():
     except Exception as _e:
         print(f"⚠️ user_subscription 欄位修正警告：{_e}")
 
-    # 跟 utils/account_helper.py 的每日次數一致；單字收藏擴充實際是 35/50 點＝7 折
+    # 跟 utils/account_helper.py 的每日次數一致；單字收藏擴充實際是 50/100 點＝半價（services/store.py）
     _FEATURES = [
         '每天10次拍照辨識',
         '每天10次AI對話',
         '每天5次造句AI批改',
         '每天5次文章朗讀評分',
-        '單字收藏擴充7折',
+        '單字收藏擴充半價',
         '學習小組押金5折',
         '學習小組獎勵加倍',
     ]
@@ -280,7 +280,8 @@ def chat():
     #     次數用完後跳過扣次 API 直接打這支，就能無限對話。
     from services.user import consume_ai_credit
     if not user_id or not consume_ai_credit(user_id):
-        quota_msg = "今日 AI 對話次數已用完，請花 60 點加購 5 次"
+        from services.user import AI_QUOTA_MSG
+        quota_msg = AI_QUOTA_MSG
         if request.form.get('assignment_id', type=int):
             return jsonify({"error": quota_msg, "quota_exceeded": True}), 403
         return quota_msg, 403

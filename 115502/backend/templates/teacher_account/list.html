@@ -237,7 +237,8 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">初始密碼</label>
-                            <input autocomplete="off" type="text" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
+                            <input autocomplete="off" type="password" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
+                            <div class="form-hint">建立後請把 Email 與密碼交給老師</div>
                         </div>
                     </div>
                     <div class="modal-footer border-0">
@@ -259,14 +260,10 @@
                         <h5 class="modal-title fw-bold" style="color: var(--green-accent);"><i class="bi bi-key-fill me-2"></i>重設「{{ t.username }}」的密碼</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body p-4 pb-2">
-                        <label class="form-label">老師信箱</label>
-                        <div class="fw-bold" style="color:#333; word-break:break-all;">{{ t.email }}</div>
-                        {% if mail_ready %}
-                        <div class="form-hint">連結 {{ reset_minutes }} 分鐘內有效；老師設定新密碼前，原本的密碼仍可使用</div>
-                        {% else %}
-                        <div class="form-hint" style="color:#b26a00;">寄信服務尚未設定，無法寄重設連結</div>
-                        {% endif %}
+                    <div class="modal-body p-4">
+                        <label class="form-label">新密碼</label>
+                        <input autocomplete="off" type="password" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
+                        <div class="form-hint">老師忘記密碼時由管理者在這裡重設，再把新密碼告訴老師</div>
                     </div>
                     <div class="modal-footer border-0 flex-column align-items-stretch gap-1">
                         {% if mail_ready %}
@@ -286,5 +283,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {% include 'admin/_flash_autohide.html' %}
 {% include 'admin/_password_strength.html' %}
+{% include 'admin/_password_toggle.html' %}
 </body>
 </html>

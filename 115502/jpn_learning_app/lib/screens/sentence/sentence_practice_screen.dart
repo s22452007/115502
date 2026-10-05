@@ -188,10 +188,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     if (result['status'] == 'success') {
       _todayCount++;
 
-      // 如果是用點數支付的，立刻同步本地點數顯示扣 10 點
+      // 如果是用點數支付的，立刻同步本地點數顯示扣 5 點
       if (payWithPoints) {
         final currentPts = context.read<UserProvider>().jPts ?? 0;
-        context.read<UserProvider>().setJPts(currentPts - 10);
+        context.read<UserProvider>().setJPts(currentPts - 5);
       }
 
       _showEvaluationResultDialog(result);
@@ -207,7 +207,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     final userProvider = context.read<UserProvider>();
     if (userProvider.isEduStudent) return;
     final currentPts = userProvider.jPts ?? 0;
-    final int cost = 10;
+    final int cost = 5;
     final bool hasEnoughPoints = currentPts >= cost;
 
     showDialog(

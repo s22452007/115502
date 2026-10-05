@@ -990,13 +990,15 @@ try:
     print(f"✅ 學號格式預設值放寬完畢（更新 {upgrade_default_pattern(cursor)} 間）")
 except sqlite3.OperationalError as e:
     print(f"⚠️ 預設學校清單升級警告：{e}")
-# 訂閱方案功能說明：加上造句批改、文章朗讀的每日次數，並更正單字收藏擴充為 7 折。
+# 訂閱方案功能說明：同步造句批改每日 5 次上限及文章朗讀次數。
 # 只更新「還是舊預設內容」的方案，管理者在後台改過的不動。
 # ==========================================
 try:
     import json as _json
     _OLD_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '單字收藏擴充6折', '學習小組押金5折', '學習小組獎勵加倍']
-    _NEW_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '每天10次造句AI批改', '每天5次文章朗讀評分',
+    _PREVIOUS_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '每天10次造句AI批改', '每天5次文章朗讀評分',
+                          '單字收藏擴充7折', '學習小組押金5折', '學習小組獎勵加倍']
+    _NEW_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '每天5次造句AI批改', '每天5次文章朗讀評分',
                      '單字收藏擴充7折', '學習小組押金5折', '學習小組獎勵加倍']
     _updated = 0
     for _pid, _fj in cursor.execute("SELECT id, features_json FROM subscription_plan").fetchall():
@@ -1004,7 +1006,7 @@ try:
             _cur = _json.loads(_fj) if isinstance(_fj, str) else _fj
         except Exception:
             continue
-        if _cur == _OLD_FEATURES:
+        if _cur in (_OLD_FEATURES, _PREVIOUS_FEATURES):
             cursor.execute("UPDATE subscription_plan SET features_json = ? WHERE id = ?;",
                            (_json.dumps(_NEW_FEATURES, ensure_ascii=False), _pid))
             _updated += 1

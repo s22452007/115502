@@ -25,6 +25,8 @@ PUBLIC_ENDPOINTS = {
     ('POST', '/api/auth/register'),
     ('POST', '/api/auth/login'),
     ('POST', '/api/auth/google_login'),
+    ('POST', '/api/auth/edu_google_login'),
+    ('GET', '/api/auth/schools'),
     ('POST', '/api/auth/forgot_password'),
     ('POST', '/api/auth/reset_password'),
     ('GET', '/api/store/packages'),

@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 校園教育版 - 班級公告</title>
+    <title>Snap to Learn 校園教育版 - 班級公告</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -70,8 +70,8 @@
 
         {% if session.get('role') == 'teacher' %}
         <form class="compose" action="/teacher/classroom/{{ classroom.id }}/announcements" method="POST">
-            <input type="text" name="title" class="form-control fw-bold mb-2" placeholder="公告標題，例如：下週三小考範圍" maxlength="100" required>
-            <textarea name="content" class="form-control mb-2" rows="3" placeholder="公告內容（可留空）"></textarea>
+            <input autocomplete="off" type="text" name="title" class="form-control fw-bold mb-2" placeholder="公告標題，例如：下週三小考範圍" maxlength="100" required>
+            <textarea autocomplete="off" name="content" class="form-control mb-2" rows="3" placeholder="公告內容（可留空）"></textarea>
             <div class="d-flex justify-content-between align-items-center">
                 <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>發布後會推播到學生手機；出新作業時勾選「通知學生」就會自動發，不用另外寫</span>
                 <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
@@ -135,9 +135,9 @@
       <form action="/teacher/announcement/{{ n.id }}/edit" method="POST">
         <div class="modal-body p-4">
           <label class="form-label fw-bold">標題 <span class="text-danger">*</span></label>
-          <input type="text" name="title" class="form-control mb-3" value="{{ n.title }}" maxlength="100" required>
+          <input autocomplete="off" type="text" name="title" class="form-control mb-3" value="{{ n.title }}" maxlength="100" required>
           <label class="form-label fw-bold">內容</label>
-          <textarea name="content" class="form-control" rows="5">{{ n.content }}</textarea>
+          <textarea autocomplete="off" name="content" class="form-control" rows="5">{{ n.content }}</textarea>
           <div class="form-text">修改不會讓學生重新收到紅點；重要的更動建議另發一則公告。</div>
         </div>
         <div class="modal-footer bg-light">

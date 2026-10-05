@@ -17,7 +17,7 @@ from utils import password_policy
 from models import (
     User, UserAchievement, Achievement,
     UserVocab, UserFolder, FriendRequest, Friendship,
-    StudyGroup, GroupMember, GroupInvite, AccountType
+    StudyGroup, GroupMember, GroupInvite, AccountType, School, SystemLog
 )
 
 # 建立 auth 的 Blueprint
@@ -40,8 +40,8 @@ def register():
 
     # 自行註冊只能建立一般版帳號：
     #   - 'teacher' 必須由後台建立，否則任何人都能把自己變成老師去建教室、看學生資料
-    #   - 'student' 由老師在後台班級名冊貼上學生名單建立（帳號、密碼＝學號），
-    #     學生不能自己註冊，才能確保只有老師名單上的學生登得進校園教育版
+    #   - 'student' 只能用學校 Google 帳號登入（/edu_google_login，檢查學校網域與學號），
+    #     或由老師在後台班級名冊建立（帳號是學號、初始密碼隨機），不能在這裡自己註冊
     account_type = (data.get('account_type') or AccountType.GENERAL).strip().lower()
     if account_type == AccountType.STUDENT:
         return jsonify({"error": "校園教育版帳號由老師建立，請向老師確認你的帳號"}), 403
@@ -113,7 +113,8 @@ def login():
     if getattr(user, 'is_suspended', False):
         return jsonify({"error": "此帳號已被停用，請聯繫客服"}), 403
 
-    pw_match = check_password_hash(user.password_hash, password)
+    pw_match = (check_password_hash(user.password_hash, password)
+                and not password_policy.is_google_placeholder_input(password, user.email))
     print("密碼比對結果:", pw_match)
     print("=== [DEBUG end] ===")
 
@@ -208,7 +209,7 @@ def login():
             "is_premium": bool(getattr(user, 'is_premium', False)),
             # 前端靠這個欄位決定進一般版還是校園教育版
             "account_type": getattr(user, 'account_type', 'general'),
-            # 老師建立的學生帳號（初始密碼是學號）或被重設過密碼：App 要先帶去改密碼
+            # 老師建立的學生帳號（初始密碼是老師拿到的臨時密碼）或被重設過密碼：App 要先帶去改密碼
             "must_change_password": bool(getattr(user, 'must_change_password', False)),
             "subscription_end_date": end_date.isoformat() if end_date else None,
             "auto_renew": bool(getattr(user, 'auto_renew', False)),
@@ -353,7 +354,8 @@ def change_password():
     user = User.query.get(current_user_id())
     if user is None:
         return jsonify({"error": "請先登入"}), 401
-    if not check_password_hash(user.password_hash, current):
+    if (not check_password_hash(user.password_hash, current)
+            or password_policy.is_google_placeholder_input(current, user.email)):
         return jsonify({"error": "目前密碼錯誤"}), 400
 
     account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
@@ -415,7 +417,8 @@ def google_login():
         # 狀況 A：這是一個全新的使用者，自動幫他在資料庫建檔！
         new_friend_id = generate_friend_id()
         # 因為是用 Google 登入，不需要輸入密碼，所以隨機塞一個極高強度的假密碼給他
-        dummy_pwd = generate_password_hash("GOOGLE_OAUTH_" + email) 
+        # 以前是固定的 "GOOGLE_OAUTH_" + email，知道 Email 就能用密碼登入，改成隨機
+        dummy_pwd = generate_password_hash(password_policy.GOOGLE_PLACEHOLDER_PREFIX + os.urandom(16).hex())
         
         user = User(email=email, username=default_username(email), password_hash=dummy_pwd,
                     friend_id=new_friend_id, avatar=avatar)
@@ -425,8 +428,11 @@ def google_login():
         # 停用與帳號類型的檢查要跟 Email 登入一致，否則被停用的帳號換成 Google 登入就能繞過。
         if getattr(user, 'is_suspended', False):
             return jsonify({"error": "此帳號已被停用，請聯繫客服"}), 403
-        # 學生帳號由老師建立、老師帳號是後台帳號，都只能用密碼從各自的入口登入
+        # 這裡是一般版入口：學生帳號要從校園教育版登入，老師帳號是後台帳號
         account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
+        if account_type == AccountType.STUDENT:
+            return jsonify({"status": "wrong_portal",
+                            "error": "這是校園教育版的學生帳號，請改從「校園教育版」登入"}), 403
         if account_type != AccountType.GENERAL:
             return jsonify({"error": "這個帳號不能使用 Google 登入，請改用帳號密碼登入"}), 403
 
@@ -439,7 +445,12 @@ def google_login():
         if not user.username:
             user.username = default_username(user.email)
 
-    # ----- 登入天數與任務重置邏輯 -----
+    _record_social_login(user)
+    return jsonify({"message": "Google 登入成功！", **_social_login_payload(user)}), 200
+
+
+def _record_social_login(user):
+    """Google 登入（一般版、校園教育版）共用：登入天數、小組登入目標、每日拍照次數、訂閱過期"""
     today = date.today()
 
     # 只要今天還沒登入過，馬拉松總天數就 +1
@@ -473,9 +484,10 @@ def google_login():
     # 登入時同步訂閱過期狀態
     check_and_expire_subscription(user)
 
+
+def _social_login_payload(user):
     end_date = getattr(user, 'subscription_end_date', None)
-    return jsonify({
-        "message": "Google 登入成功！",
+    return {
         "token": issue_token(user),   # 登入通行證：之後呼叫 API 都要帶在 Authorization 標頭
         "user_id": user.id,
         "email": user.email,
@@ -491,4 +503,156 @@ def google_login():
         "account_type": getattr(user, 'account_type', 'general'),
         "subscription_end_date": end_date.isoformat() if end_date else None,
         "auto_renew": bool(getattr(user, 'auto_renew', False)),
+    }
+
+
+# ==========================================
+# 校園教育版：先選學校，再用學校 Google 帳號登入
+# ==========================================
+# 學生不用等老師貼名單：第一次登入自動建立學生帳號，之後用老師給的班級代碼加入班級。
+# 清單裡沒有自己的學校時，學生可以在 App 直接新增：輸入學校名稱後用學校 Google 帳號登入，
+# 網域取自 Google 驗證過的 Email，不讓學生自己打（打錯或亂填 gmail.com 都不行）。
+# super_admin 可以在後台「學校管理」頁修改學號格式、停用學校。
+
+# App 新增學校時允許的網域結尾。只收學校網域，否則有人把 gmail.com 登記成學校，
+# 任何 Gmail 都能登入教育版、免費不限次數使用
+EDU_SCHOOL_DOMAIN_SUFFIXES = [d.strip().lower() for d in
+                              (os.getenv('EDU_SCHOOL_DOMAIN_SUFFIXES') or '.edu.tw').split(',') if d.strip()]
+
+
+def _is_school_domain(domain):
+    return any(domain.endswith(suffix) for suffix in EDU_SCHOOL_DOMAIN_SUFFIXES)
+
+@auth_bp.route('/schools', methods=['GET'])
+def list_schools():
+    """App 校園教育版登入頁的學校清單（只列啟用中的）"""
+    schools = School.query.filter_by(is_active=True).order_by(School.name).all()
+    result = []
+    for s in schools:
+        domains = s.domain_list()
+        result.append({
+            "school_id": s.id,
+            "name": s.name,
+            # 顯示「用 xxx.edu.tw 的學校信箱登入」，搜尋也比對這個（模擬器只能打英文時很好用）
+            "domains": [d.lstrip('.') for d in domains],
+            # 網頁版 Google 帳號選單的網域篩選：只有一個、而且不含子網域時才篩，
+            # 否則學生信箱在子網域（g.xxx.edu.tw）的人會在選單裡找不到自己的帳號
+            "hd": domains[0] if len(domains) == 1 and not domains[0].startswith('.') else None,
+        })
+    return jsonify({"schools": result}), 200
+
+
+@auth_bp.route('/edu_google_login', methods=['POST'])
+def edu_google_login():
+    data = request.get_json() or {}
+    id_token_str = (data.get('id_token') or '').strip()
+    if not id_token_str:
+        return jsonify({"error": "沒有收到 Google 登入資料，請再試一次"}), 400
+
+    # 兩種情況：從清單選學校（school_id），或清單裡沒有、在 App 新增學校（new_school_name）
+    new_school_name = (data.get('new_school_name') or '').strip()[:50]
+    school = None
+    if data.get('school_id'):
+        school = School.query.get(data.get('school_id'))
+        if not school or not school.is_active:
+            return jsonify({"status": "school_required", "error": "請先選擇學校"}), 400
+    elif not new_school_name:
+        return jsonify({"status": "school_required", "error": "請先選擇學校"}), 400
+
+    try:
+        claims = verify_google_id_token(id_token_str)
+    except Exception as e:
+        print(f"⚠️ Google 身分憑證驗證失敗：{e}")
+        return jsonify({"error": "Google 登入驗證失敗，請重新登入"}), 401
+    # Google 登入拿到的 Email 都是小寫，統一才不會同一個人變成兩個帳號
+    email = (claims.get('email') or '').strip().lower()
+    if not email or not claims.get('email_verified', False):
+        return jsonify({"error": "這個 Google 帳號沒有已驗證的 Email"}), 401
+
+    # 網域與學號都以 Google 驗證過的 Email 判斷；App 端的帳號篩選只是方便，擋人靠這裡
+    local, _, domain = email.partition('@')
+    creating_school = False
+    if school is None:
+        if not _is_school_domain(domain):
+            return jsonify({"status": "wrong_domain",
+                            "error": f"要用學校配發的 Google 帳號（{'、'.join(EDU_SCHOOL_DOMAIN_SUFFIXES)} 結尾）才能新增學校，一般 Gmail 不行"}), 403
+        # 這個網域已經有學校了（可能名稱打得不一樣）：直接用那一間，不重複建立
+        school = next((s for s in School.query.all() if s.domain_allowed(domain)), None)
+        if school is not None and not school.is_active:
+            return jsonify({"error": f"{school.name}目前沒有開放登入，請聯繫老師或系統管理員"}), 403
+        if school is None:
+            if School.query.filter_by(name=new_school_name).first():
+                return jsonify({"error": f"已經有「{new_school_name}」，但信箱網域不一樣。請確認學校名稱，或從清單選這間學校"}), 409
+            # 先不寫進資料庫，確定這個人可以登入（是學生、不是一般版帳號）才建立
+            school = School(name=new_school_name, student_domains=domain)
+            creating_school = True
+    elif not school.domain_allowed(domain):
+        other = next((s for s in School.query.filter_by(is_active=True).all()
+                      if s.id != school.id and s.domain_allowed(domain)), None)
+        if other:
+            return jsonify({"status": "wrong_school",
+                            "error": f"「{email}」是{other.name}的帳號，請重新選擇學校"}), 403
+        allowed = '、'.join('@' + d.lstrip('.') for d in school.domain_list())
+        return jsonify({"status": "wrong_domain",
+                        "error": f"請使用{school.name}配發的 Google 帳號（{allowed}）登入，一般 Gmail 不能登入校園教育版"}), 403
+    if not school.student_no(local):
+        return jsonify({"status": "not_student",
+                        "error": f"「{email}」不是學生帳號（帳號不是學號）。老師請從網頁後台登入"}), 403
+
+    avatar = data.get('avatar') or claims.get('picture') or ''
+    user = User.query.filter(db.func.lower(User.email) == email).first()
+    is_new = user is None
+
+    if not is_new:
+        if getattr(user, 'is_suspended', False):
+            return jsonify({"error": "此帳號已被停用，請聯繫老師或系統管理員"}), 403
+        account_type = getattr(user, 'account_type', None) or AccountType.GENERAL
+        if account_type == AccountType.GENERAL:
+            return jsonify({"status": "wrong_portal",
+                            "error": "這個 Google 帳號已經是一般自主學習版的帳號，請改從「一般自主學習」登入"}), 403
+        if account_type != AccountType.STUDENT:
+            return jsonify({"status": "wrong_portal", "error": "這是老師帳號，請從網頁後台登入"}), 403
+
+    if creating_school:
+        db.session.add(school)
+        db.session.flush()
+        print(f"[NEW] 學生從 App 新增學校: {school.name}（@{domain}，{email}）")
+
+    if is_new:
+        user = User(
+            email=email,
+            username=(claims.get('name') or '').strip()[:30] or default_username(email),
+            # 用 Google 登入沒有密碼，塞一組隨機的，密碼登入永遠對不上
+            password_hash=generate_password_hash(password_policy.GOOGLE_PLACEHOLDER_PREFIX + os.urandom(16).hex()),
+            friend_id=generate_friend_id(),
+            avatar=avatar or None,
+            account_type=AccountType.STUDENT,
+            school_id=school.id,
+        )
+        db.session.add(user)
+        db.session.flush()
+        print(f"[NEW] 以學校 Google 帳號建立學生: {email}（{school.name}）")
+    else:
+        if not user.school_id:
+            user.school_id = school.id
+        if avatar and not user.avatar:
+            user.avatar = avatar
+        if not user.friend_id:
+            user.friend_id = generate_friend_id()
+
+    if creating_school:
+        # 記下是哪個學生新增的，管理者在後台看得到，名稱打錯可以改
+        school.created_by_user_id = user.id
+        db.session.add(SystemLog(user_id=user.id, action='CREATE', target_table='school', target_id=school.id,
+                                 new_value={'name': school.name, 'student_domains': domain, 'via': 'app'}))
+
+    _record_social_login(user)   # 裡面會 commit，學校、學生帳號一起寫進去
+    return jsonify({
+        "message": "登入成功！",
+        **_social_login_payload(user),
+        # 第一次登入還沒加入任何班級，App 提示輸入老師給的班級代碼
+        "is_new": is_new,
+        "school_id": school.id,       # App 記住這間學校，下次直接選好
+        "school_name": school.name,
+        "school_created": creating_school,
     }), 200

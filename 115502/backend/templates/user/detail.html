@@ -70,7 +70,8 @@
             <li class="sidebar-section-title">營運</li>
             <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
-            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
+            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理{% if sidebar_teacher_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_teacher_pending }}</span>{% endif %}</a></li>
+            <li><a href="/school/list"><i class="bi bi-building"></i> 學校管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
             <li class="sidebar-section-title">系統</li>
             <li><a href="/admin_account/list"><i class="bi bi-shield-lock-fill"></i> 管理員帳號管理</a></li>
@@ -142,7 +143,7 @@
             <div style="text-align:right;">
                 <form action="/user/suspend/{{ user.id }}" method="POST"
                       onsubmit="return confirm('{% if user.is_suspended %}確定解除停用「{{ user.username or user.email }}」？{% else %}確定停用「{{ user.username or user.email }}」？該帳號將無法登入。{% endif %}');">
-                    <button class="btn btn-sm {% if user.is_suspended %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                    <button class="btn btn-sm {% if user.is_suspended %}btn-outline-success{% else %}btn-outline-danger{% endif %}">
                         <i class="bi bi-{% if user.is_suspended %}unlock-fill{% else %}slash-circle{% endif %} me-1"></i>
                         {% if user.is_suspended %}解除停用{% else %}停用帳號{% endif %}
                     </button>
@@ -307,8 +308,8 @@
                 <span class="text-muted" style="font-size:0.8rem;">最近 30 筆</span>
                 <form action="/customer/adjust_pts/{{ user.id }}" method="POST" class="ms-auto d-flex gap-2 align-items-center"
                       onsubmit="return confirm('確定調整「{{ user.username or user.email }}」的點數 ' + this.amount.value + ' 點？');">
-                    <input type="number" name="amount" class="form-control form-control-sm" style="width:110px;" placeholder="＋加 / －扣" required>
-                    <input type="text" name="reason" class="form-control form-control-sm" style="width:180px;" placeholder="原因（例：活動獎勵）" maxlength="100">
+                    <input autocomplete="off" type="number" name="amount" class="form-control form-control-sm" style="width:110px;" placeholder="＋加 / －扣" required>
+                    <input autocomplete="off" type="text" name="reason" class="form-control form-control-sm" style="width:180px;" placeholder="原因（例：活動獎勵）" maxlength="100">
                     <button type="submit" class="btn btn-sm btn-outline-secondary" style="white-space:nowrap;"><i class="bi bi-coin"></i> 調整點數</button>
                 </form>
             </div>

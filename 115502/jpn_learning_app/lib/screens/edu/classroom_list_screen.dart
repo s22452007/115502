@@ -5,7 +5,8 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/dialogs/join_classroom_dialog.dart';
-import 'package:jpn_learning_app/screens/edu/classroom_announcement_screen.dart';
+import 'package:jpn_learning_app/widgets/edu/assignment_tile.dart';
+import 'package:jpn_learning_app/screens/edu/classroom_detail_screen.dart';
 
 class ClassroomListScreen extends StatefulWidget {
   const ClassroomListScreen({super.key});
@@ -73,19 +74,29 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
     if (joined == true) _loadClassrooms();
   }
 
-  /// 點教室卡片看公告；回來時重新整理，讀過的紅點就會消失
-  void _openAnnouncements(Map<String, dynamic> classroom) {
-    final int? classroomId = (classroom['classroom_id'] as num?)?.toInt();
-    if (classroomId == null) return;
+  /// 點教室卡片進教室頁；回來時重新整理，讀過的公告紅點、交掉的作業數就會更新
+  void _openClassroom(Map<String, dynamic> classroom) {
+    if (classroom['classroom_id'] is! num) return;
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ClassroomAnnouncementScreen(
-          classroomId: classroomId,
-          classroomName: classroom['name']?.toString() ?? '教室公告',
-        ),
-      ),
-    ).then((_) => _loadClassrooms());
+      MaterialPageRoute(builder: (_) => ClassroomDetailScreen(classroom: classroom)),
+    ).then((_) => _loadClassrooms(showSpinner: false));
+  }
+
+  /// 卡片上的待辦一行：「2 份待交 · 1 份已逾期 · 最近 10/5 23:59 截止」
+  String _todoText(Map<String, dynamic> classroom) {
+    final total = (classroom['assignment_count'] as num?)?.toInt() ?? 0;
+    final pending = (classroom['pending_count'] as num?)?.toInt();
+    final overdue = (classroom['overdue_count'] as num?)?.toInt() ?? 0;
+    final nextDue = classroom['next_due_at']?.toString();
+    if (total == 0) return '還沒有作業';
+    if (pending == null) return '作業 $total 項'; // 舊版後端沒有待交數
+    if (pending == 0) return '作業都交了';
+    return [
+      '$pending 份待交',
+      if (overdue > 0) '$overdue 份已逾期',
+      if (nextDue != null) '最近 ${AssignmentTile.formatDue(nextDue)}',
+    ].join(' · ');
   }
 
   Future<void> _confirmLeave(Map<String, dynamic> classroom) async {
@@ -196,7 +207,6 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
           final classroom = _classrooms[index];
           final name = classroom['name']?.toString() ?? '未命名教室';
           final teacher = classroom['teacher_name']?.toString() ?? '老師';
-          final assignmentCount = classroom['assignment_count'] as num?;
           final unread = (classroom['unread_count'] as num?)?.toInt() ?? 0;
 
           return Material(
@@ -204,7 +214,7 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
             borderRadius: BorderRadius.circular(16),
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => _openAnnouncements(classroom),
+              onTap: () => _openClassroom(classroom),
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Row(
@@ -262,25 +272,25 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
                               fontSize: 13,
                             ),
                           ),
-                          if (assignmentCount != null) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            _todoText(classroom),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (unread > 0) ...[
                             const SizedBox(height: 3),
                             Text(
-                              '作業 ${assignmentCount.toInt()} 項',
+                              '$unread 則新公告',
                               style: const TextStyle(
-                                color: Colors.white70,
+                                color: Colors.white,
                                 fontSize: 13,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
-                          const SizedBox(height: 3),
-                          Text(
-                            unread > 0 ? '$unread 則新公告，點開查看' : '點開查看班級公告',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: unread > 0 ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
                         ],
                       ),
                     ),

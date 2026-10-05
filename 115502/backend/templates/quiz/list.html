@@ -149,7 +149,8 @@
                 <li class="sidebar-section-title">營運</li>
                 <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
-            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
+            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理{% if sidebar_teacher_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_teacher_pending }}</span>{% endif %}</a></li>
+            <li><a href="/school/list"><i class="bi bi-building"></i> 學校管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
             <li class="sidebar-section-title">系統</li>
             <li><a href="/admin_account/list"><i class="bi bi-shield-lock-fill"></i> 管理員帳號管理</a></li>
@@ -186,7 +187,7 @@
             <form method="GET" action="/quiz/list" class="search-bar">
                 <div class="row g-2">
                     <div class="col-md-6">
-                        <input type="text" name="q" value="{{ keyword }}" class="form-control"
+                        <input autocomplete="off" type="text" name="q" value="{{ keyword }}" class="form-control"
                                placeholder="搜尋題目或選項關鍵字...">
                     </div>
                     <div class="col-md-3">
@@ -272,23 +273,23 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-bold">題目</label>
-                                <textarea name="question" class="form-control" rows="2" required>{{ q.question }}</textarea>
+                                <textarea autocomplete="off" name="question" class="form-control" rows="2" required>{{ q.question }}</textarea>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 A</label>
-                                <input type="text" name="option_a" class="form-control" value="{{ q.option_a }}" required>
+                                <input autocomplete="off" type="text" name="option_a" class="form-control" value="{{ q.option_a }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 B</label>
-                                <input type="text" name="option_b" class="form-control" value="{{ q.option_b }}" required>
+                                <input autocomplete="off" type="text" name="option_b" class="form-control" value="{{ q.option_b }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 C</label>
-                                <input type="text" name="option_c" class="form-control" value="{{ q.option_c }}" required>
+                                <input autocomplete="off" type="text" name="option_c" class="form-control" value="{{ q.option_c }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 D</label>
-                                <input type="text" name="option_d" class="form-control" value="{{ q.option_d }}" required>
+                                <input autocomplete="off" type="text" name="option_d" class="form-control" value="{{ q.option_d }}" required>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-bold">正確答案</label>
@@ -349,23 +350,23 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-bold">題目</label>
-                                <textarea name="question" class="form-control" rows="2" required></textarea>
+                                <textarea autocomplete="off" name="question" class="form-control" rows="2" required></textarea>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 A</label>
-                                <input type="text" name="option_a" class="form-control" required>
+                                <input autocomplete="off" type="text" name="option_a" class="form-control" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 B</label>
-                                <input type="text" name="option_b" class="form-control" required>
+                                <input autocomplete="off" type="text" name="option_b" class="form-control" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 C</label>
-                                <input type="text" name="option_c" class="form-control" required>
+                                <input autocomplete="off" type="text" name="option_c" class="form-control" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">選項 D</label>
-                                <input type="text" name="option_d" class="form-control" required>
+                                <input autocomplete="off" type="text" name="option_d" class="form-control" required>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-bold">正確答案</label>

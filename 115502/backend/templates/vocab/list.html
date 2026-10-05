@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>JLens 教材單字管理</title>
+    <title>Snap to Learn 教材單字管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -75,7 +75,8 @@
             <li class="sidebar-section-title">營運</li>
             <li><a href="/plan/list"><i class="bi bi-card-checklist"></i> 方案管理</a></li>
             <li class="sidebar-section-title">校園教育版</li>
-            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理</a></li>
+            <li><a href="/teacher_account/list"><i class="bi bi-person-video3"></i> 教師帳號管理{% if sidebar_teacher_pending %}<span style="margin-left:auto; background:#e5484d; color:white; font-size:0.7rem; font-weight:700; border-radius:50px; padding:1px 7px; min-width:20px; text-align:center; line-height:1.4;">{{ sidebar_teacher_pending }}</span>{% endif %}</a></li>
+            <li><a href="/school/list"><i class="bi bi-building"></i> 學校管理</a></li>
             <li><a href="/teacher/classrooms"><i class="bi bi-mortarboard-fill"></i> 班級總覽</a></li>
             <li class="sidebar-section-title">系統</li>
             <li><a href="/admin_account/list"><i class="bi bi-shield-lock-fill"></i> 管理員帳號管理</a></li>
@@ -106,7 +107,7 @@
                     <h3 class="page-title"><i class="bi bi-book-half me-2"></i>教材單字庫管理</h3>
                 </div>
                 <div class="d-flex gap-2">
-                    <input type="text" id="searchInput" class="search-input" placeholder="搜尋單字、假名或意思...">
+                    <input autocomplete="off" type="text" id="searchInput" class="search-input" placeholder="搜尋單字、假名或意思...">
                     <button class="btn btn-snap px-3" data-bs-toggle="modal" data-bs-target="#addModal">
                         <i class="bi bi-plus-lg me-1"></i> 新增單字
                     </button>
@@ -155,7 +156,7 @@
                 </div>
             </div>
 
-            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 JLens Project Team. All rights reserved.</p>
+            <p class="mt-4 text-muted" style="font-size:0.78rem;">© 2026 Snap to Learn Project Team. All rights reserved.</p>
         </div>
     </main>
 
@@ -169,9 +170,9 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
-                        <input type="text" name="word" class="form-control mb-3" placeholder="日文單字" required>
-                        <input type="text" name="kana" class="form-control mb-3" placeholder="讀音(假名)" required>
-                        <input type="text" name="meaning" class="form-control mb-3" placeholder="中文意思" required>
+                        <input autocomplete="off" type="text" name="word" class="form-control mb-3" placeholder="日文單字" required>
+                        <input autocomplete="off" type="text" name="kana" class="form-control mb-3" placeholder="讀音(假名)" required>
+                        <input autocomplete="off" type="text" name="meaning" class="form-control mb-3" placeholder="中文意思" required>
                     </div>
                     <div class="modal-footer border-0">
                         <button type="submit" class="btn btn-snap w-100 py-2">儲存變更</button>
@@ -192,15 +193,15 @@
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label text-muted small">日文單字</label>
-                            <input type="text" name="word" class="form-control" placeholder="例：猫" required>
+                            <input autocomplete="off" type="text" name="word" class="form-control" placeholder="例：猫" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small">讀音 (假名)</label>
-                            <input type="text" name="kana" class="form-control" placeholder="例：ねこ" required>
+                            <input autocomplete="off" type="text" name="kana" class="form-control" placeholder="例：ねこ" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small">中文意思</label>
-                            <input type="text" name="meaning" class="form-control" placeholder="例：貓咪" required>
+                            <input autocomplete="off" type="text" name="meaning" class="form-control" placeholder="例：貓咪" required>
                         </div>
                     </div>
                     <div class="modal-footer border-0">

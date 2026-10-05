@@ -23,10 +23,89 @@ class FolderDetailScreen extends StatefulWidget {
   State<FolderDetailScreen> createState() => _FolderDetailScreenState();
 }
 
+/// 單字本裡的排序方式
+enum _VocabSort { newest, oldest, kana, shortest, longest }
+
+const Map<_VocabSort, String> _sortLabels = {
+  _VocabSort.newest: '最新收藏',
+  _VocabSort.oldest: '最舊收藏',
+  _VocabSort.kana: '五十音順',
+  _VocabSort.shortest: '字數少 → 多',
+  _VocabSort.longest: '字數多 → 少',
+};
+
 class _FolderDetailScreenState extends State<FolderDetailScreen> {
+  // 用 static 記住上次選的排序，換一個單字本進來也沿用（App 重開會回到預設）
+  static _VocabSort _lastSort = _VocabSort.newest;
+
   bool _isLoading = true;
   List<Map<String, dynamic>> _vocabs = [];
+  _VocabSort _sort = _lastSort;
   final FlutterTts _flutterTts = FlutterTts();
+
+  /// 片假名轉平假名，讓「ラーメン」和「らいねん」能排在一起比
+  String _kanaKey(Map<String, dynamic> vocab) {
+    final kana = (vocab['kana'] ?? '').toString();
+    final source = kana.isNotEmpty ? kana : (vocab['word'] ?? '').toString();
+    return String.fromCharCodes(
+      source.runes.map((c) => (c >= 0x30A1 && c <= 0x30F6) ? c - 0x60 : c),
+    );
+  }
+
+  int _compareCollected(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final ta = DateTime.tryParse((a['collected_at'] ?? '').toString());
+    final tb = DateTime.tryParse((b['collected_at'] ?? '').toString());
+    if (ta != null && tb != null) {
+      final c = ta.compareTo(tb);
+      if (c != 0) return c;
+    } else if (ta != null || tb != null) {
+      // 沒有收藏時間的舊資料當作最早收藏
+      return ta == null ? -1 : 1;
+    }
+    return ((a['user_vocab_id'] ?? 0) as num).compareTo((b['user_vocab_id'] ?? 0) as num);
+  }
+
+  int _compareLength(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final la = (a['word'] ?? '').toString().runes.length;
+    final lb = (b['word'] ?? '').toString().runes.length;
+    return la.compareTo(lb);
+  }
+
+  void _applySort() {
+    int byKana(Map<String, dynamic> a, Map<String, dynamic> b) => _kanaKey(a).compareTo(_kanaKey(b));
+
+    switch (_sort) {
+      case _VocabSort.newest:
+        _vocabs.sort((a, b) => _compareCollected(b, a));
+        break;
+      case _VocabSort.oldest:
+        _vocabs.sort(_compareCollected);
+        break;
+      case _VocabSort.kana:
+        _vocabs.sort(byKana);
+        break;
+      case _VocabSort.shortest:
+        _vocabs.sort((a, b) {
+          final c = _compareLength(a, b);
+          return c != 0 ? c : byKana(a, b);
+        });
+        break;
+      case _VocabSort.longest:
+        _vocabs.sort((a, b) {
+          final c = _compareLength(b, a);
+          return c != 0 ? c : byKana(a, b);
+        });
+        break;
+    }
+  }
+
+  void _changeSort(_VocabSort sort) {
+    setState(() {
+      _sort = sort;
+      _lastSort = sort;
+      _applySort();
+    });
+  }
 
   Future<void> _initTts() async {
     await _flutterTts.setLanguage("ja-JP");
@@ -55,6 +134,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       _isLoading = false;
       if (res.containsKey('vocabs')) {
         _vocabs = List<Map<String, dynamic>>.from(res['vocabs']);
+        _applySort();
       }
     });
   }
@@ -208,27 +288,95 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : _vocabs.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.bookmark_border_rounded, size: 56, color: AppColors.mutedLight),
-                      SizedBox(height: 12),
-                      Text('這個單字本還沒有單字', style: TextStyle(color: AppColors.textGrey, fontSize: 16)),
-                      SizedBox(height: 4),
-                      Text('在單字頁按星星就能收藏進來', style: TextStyle(color: AppColors.textSubtle, fontSize: 13)),
-                    ],
-                  ),
+              ? Column(
+                  children: [
+                    // 空的單字本也照樣顯示排序鈕，位置跟有單字時一致
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: _buildSortBar(),
+                    ),
+                    const Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.bookmark_border_rounded, size: 56, color: AppColors.mutedLight),
+                          SizedBox(height: 12),
+                          Text('這個單字本還沒有單字', style: TextStyle(color: AppColors.textGrey, fontSize: 16)),
+                          SizedBox(height: 4),
+                          Text('在單字頁按星星就能收藏進來', style: TextStyle(color: AppColors.textSubtle, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ],
                 )
               : RefreshIndicator(
                   color: AppColors.primary,
                   onRefresh: _loadVocabs,
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: _vocabs.length,
-                    itemBuilder: (context, index) => _buildVocabCard(_vocabs[index]),
+                    itemCount: _vocabs.length + 1,
+                    itemBuilder: (context, index) =>
+                        index == 0 ? _buildSortBar() : _buildVocabCard(_vocabs[index - 1]),
                   ),
                 ),
+    );
+  }
+
+  /// 清單最上面的排序鈕：直接顯示目前的排序方式，點了跳出選單
+  Widget _buildSortBar() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: PopupMenuButton<_VocabSort>(
+          tooltip: '排序方式',
+          color: Colors.white,
+          position: PopupMenuPosition.under,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          initialValue: _sort,
+          onSelected: _changeSort,
+          itemBuilder: (_) => _VocabSort.values.map((s) {
+            final selected = s == _sort;
+            return PopupMenuItem<_VocabSort>(
+              value: s,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _sortLabels[s]!,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                        color: selected ? AppColors.primary : AppColors.textDark,
+                      ),
+                    ),
+                  ),
+                  if (selected) const Icon(Icons.check_rounded, size: 18, color: AppColors.primary),
+                ],
+              ),
+            );
+          }).toList(),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 9, 8, 9),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.swap_vert_rounded, size: 20, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  _sortLabels[_sort]!,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary),
+                ),
+                const Icon(Icons.arrow_drop_down_rounded, size: 24, color: AppColors.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

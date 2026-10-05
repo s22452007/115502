@@ -1052,10 +1052,10 @@ def _(c):
     check(r.status_code == 400 and J(r).get('error') == '缺少使用者 ID', '未正確拒絕')
 
 
-@case('A01', '校園教育版帳號不可使用 Google 登入或自行刪除帳號',
+@case('A01', '校園教育版帳號不可從一般版 Google 登入或自行刪除帳號',
       pre='老師已建立學生帳號 11156099@school.test（account_type=student）',
-      steps='1. POST /api/auth/google_login，帶學生帳號 Email 的 Google 身分憑證\n2. POST /api/user/delete_account，user_id=學生帳號',
-      expect='1. HTTP 403，「這個帳號不能使用 Google 登入，請改用帳號密碼登入」\n2. HTTP 403，「校園教育版帳號無法在 App 刪除，請聯繫老師或系統管理員」，帳號仍存在')
+      steps='1. POST /api/auth/google_login（一般版入口），帶學生帳號 Email 的 Google 身分憑證\n2. POST /api/user/delete_account，user_id=學生帳號',
+      expect='1. HTTP 403，「這是校園教育版的學生帳號，請改從「校園教育版」登入」\n2. HTTP 403，「校園教育版帳號無法在 App 刪除，請聯繫老師或系統管理員」，帳號仍存在')
 def _(c):
     ensure_edu()
     st = STATE['edu_student']
@@ -1063,7 +1063,7 @@ def _(c):
     r2 = SC.post('/api/user/delete_account', json={'user_id': st['id']})
     still = user_row(st['id']) is not None
     c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}，帳號仍存在={still}')
-    check(r1.status_code == 403 and J(r1).get('error') == '這個帳號不能使用 Google 登入，請改用帳號密碼登入', 'Google 登入未擋下學生帳號')
+    check(r1.status_code == 403 and J(r1).get('error') == '這是校園教育版的學生帳號，請改從「校園教育版」登入', 'Google 登入未擋下學生帳號')
     check(r2.status_code == 403 and still, '學生帳號可以在 App 自行刪除')
 
 

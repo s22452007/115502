@@ -180,6 +180,9 @@ def _fake_or_blocked_generate_content(feature, contents, config=None, model=None
 _genai.Client = _NoNetworkClient
 gemini_client.generate_content = _fake_or_blocked_generate_content
 gemini_client.run_with_legacy_keys = _blocked_ai
+# 新單字補例句平常在背景執行；測試改成同步，才能在個案裡直接檢查結果
+from utils import vocab_sentences as _vocab_sentences
+_vocab_sentences.RUN_IN_BACKGROUND = False
 
 # ----------------------------------------------------------------------
 # 暫存資料庫先建好空的資料表，訂閱方案與點數方案交給 app.py 啟動時建立，
@@ -1166,15 +1169,15 @@ def _(c):
 @case('A03', '收藏單字成功',
       pre='一般會員 V 尚未收藏任何單字；字典已有測試單字（テスト語01～60）',
       steps='1. POST /api/vocab/collect，user_id=V、vocab_id=テスト語01\n2. GET /api/vocab/favorites/{V}',
-      expect='1. HTTP 201，「收藏成功！」並回傳 user_vocab_id\n2. 「預設相簿」count=1')
+      expect='1. HTTP 201，「收藏成功！」並回傳 user_vocab_id\n2. 「預設單字本」count=1')
 def _(c):
     u = register('vocab')
     STATE['vocab'] = u
     r = SC.post('/api/vocab/collect', json={'user_id': u['id'], 'vocab_id': VOCAB_IDS[0]})
     fav = favorites(u)
-    c.log(f'1. {http(r, "message", "user_vocab_id")}；2. 預設相簿 count={fav.get("預設相簿", {}).get("count")}')
+    c.log(f'1. {http(r, "message", "user_vocab_id")}；2. 預設單字本 count={fav.get("預設單字本", {}).get("count")}')
     check(r.status_code == 201 and J(r).get('user_vocab_id'), '收藏失敗')
-    check(fav.get('預設相簿', {}).get('count') == 1, '預設相簿數量不正確')
+    check(fav.get('預設單字本', {}).get('count') == 1, '預設單字本數量不正確')
 
 
 @case('A03', '重複收藏同一單字被拒',
@@ -1185,15 +1188,15 @@ def _(c):
     u = STATE['vocab']
     r = SC.post('/api/vocab/collect', json={'user_id': u['id'], 'vocab_id': VOCAB_IDS[0]})
     fav = favorites(u)
-    c.log(http(r, 'error') + f'；預設相簿 count={fav.get("預設相簿", {}).get("count")}')
+    c.log(http(r, 'error') + f'；預設單字本 count={fav.get("預設單字本", {}).get("count")}')
     check(r.status_code == 400 and J(r).get('error') == '已經收藏過囉！', '未擋下重複收藏')
-    check(fav.get('預設相簿', {}).get('count') == 1, '收藏數改變')
+    check(fav.get('預設單字本', {}).get('count') == 1, '收藏數改變')
 
 
 @case('A03', '取消收藏（保留圖鑑解鎖狀態）',
       pre='V 已收藏テスト語01',
       steps='1. POST /api/vocab/uncollect，user_id=V、vocab_id=テスト語01\n2. GET /api/vocab/favorites/{V}',
-      expect='1. HTTP 200，「已從資料夾移除，但保留圖鑑解鎖狀態」\n2. 預設相簿 count=0；資料庫保留該單字紀錄（collected_at 清空）')
+      expect='1. HTTP 200，「已從資料夾移除，但保留圖鑑解鎖狀態」\n2. 預設單字本 count=0；資料庫保留該單字紀錄（collected_at 清空）')
 def _(c):
     u = STATE['vocab']
     r = SC.post('/api/vocab/uncollect', json={'user_id': u['id'], 'vocab_id': VOCAB_IDS[0]})
@@ -1201,15 +1204,15 @@ def _(c):
     with S.app_context():
         uv = UserVocab.query.filter_by(user_id=u['id'], vocab_id=VOCAB_IDS[0]).first()
         kept = uv is not None and uv.collected_at is None
-    c.log(f'1. {http(r, "message")}；2. 預設相簿 count={fav.get("預設相簿", {}).get("count")}；資料庫保留解鎖紀錄={kept}')
+    c.log(f'1. {http(r, "message")}；2. 預設單字本 count={fav.get("預設單字本", {}).get("count")}；資料庫保留解鎖紀錄={kept}')
     check(r.status_code == 200, '取消收藏失敗')
-    check(fav.get('預設相簿', {}).get('count') == 0 and kept, '取消收藏結果不正確')
+    check(fav.get('預設單字本', {}).get('count') == 0 and kept, '取消收藏結果不正確')
 
 
 @case('A03', '已解鎖單字重新收藏',
       pre='テスト語01 已解鎖但未收藏（A03-03）',
       steps='POST /api/vocab/collect，vocab_id=テスト語01',
-      expect='HTTP 200，「收藏成功！」，沿用原本的紀錄（user_vocab_id 不變）；預設相簿 count=1')
+      expect='HTTP 200，「收藏成功！」，沿用原本的紀錄（user_vocab_id 不變）；預設單字本 count=1')
 def _(c):
     u = STATE['vocab']
     with S.app_context():
@@ -1217,9 +1220,9 @@ def _(c):
     r = SC.post('/api/vocab/collect', json={'user_id': u['id'], 'vocab_id': VOCAB_IDS[0]})
     fav = favorites(u)
     STATE['vocab_uv_id'] = J(r).get('user_vocab_id')
-    c.log(http(r, 'message', 'user_vocab_id') + f'（原紀錄 id={old_id}）；預設相簿 count={fav.get("預設相簿", {}).get("count")}')
+    c.log(http(r, 'message', 'user_vocab_id') + f'（原紀錄 id={old_id}）；預設單字本 count={fav.get("預設單字本", {}).get("count")}')
     check(r.status_code == 200 and J(r).get('user_vocab_id') == old_id, '未沿用原紀錄')
-    check(fav.get('預設相簿', {}).get('count') == 1, '收藏數不正確')
+    check(fav.get('預設單字本', {}).get('count') == 1, '收藏數不正確')
 
 
 @case('A03', '建立自訂資料夾',
@@ -1248,38 +1251,38 @@ def _(c):
     r1 = SC.post('/api/vocab/rename_folder', json={'folder_id': fid, 'name': '常用動詞'})
     r2 = SC.post('/api/vocab/rename_folder', json={'folder_id': fid, 'name': '   '})
     fav = favorites(u)
-    c.log(f'1. {http(r1, "message")}；2. {http(r2, "error")}；目前資料夾={[k for k in fav if k != "預設相簿"]}')
+    c.log(f'1. {http(r1, "message")}；2. {http(r2, "error")}；目前資料夾={[k for k in fav if k != "預設單字本"]}')
     check(r1.status_code == 200 and '常用動詞' in fav, '改名失敗')
     check(r2.status_code == 400, '空白名稱未被擋下')
 
 
 @case('A03', '移動單字到資料夾',
-      pre='V 的テスト語01 在預設相簿，另有「常用動詞」資料夾',
+      pre='V 的テスト語01 在預設單字本，另有「常用動詞」資料夾',
       steps='1. POST /api/vocab/move_vocab，user_vocab_id、target_folder_id=常用動詞\n2. GET /api/vocab/favorites/{V}\n3. POST /api/vocab/folder_vocabs，folder_id=常用動詞',
-      expect='1. HTTP 200，「移動成功」\n2. 「常用動詞」count=1、預設相簿 count=0\n3. 資料夾內含テスト語01')
+      expect='1. HTTP 200，「移動成功」\n2. 「常用動詞」count=1、預設單字本 count=0\n3. 資料夾內含テスト語01')
 def _(c):
     u = STATE['vocab']
     r = SC.post('/api/vocab/move_vocab', json={'user_vocab_id': STATE['vocab_uv_id'], 'target_folder_id': STATE['folder_id']})
     fav = favorites(u)
     fv = J(SC.post('/api/vocab/folder_vocabs', json={'user_id': u['id'], 'folder_id': STATE['folder_id']})).get('vocabs', [])
-    c.log(f'1. {http(r, "message")}；2. 常用動詞 count={fav.get("常用動詞", {}).get("count")}、預設相簿 count={fav.get("預設相簿", {}).get("count")}；'
+    c.log(f'1. {http(r, "message")}；2. 常用動詞 count={fav.get("常用動詞", {}).get("count")}、預設單字本 count={fav.get("預設單字本", {}).get("count")}；'
           f'3. 資料夾內單字={[v["word"] for v in fv]}')
     check(r.status_code == 200, '移動失敗')
-    check(fav.get('常用動詞', {}).get('count') == 1 and fav.get('預設相簿', {}).get('count') == 0, '數量不正確')
+    check(fav.get('常用動詞', {}).get('count') == 1 and fav.get('預設單字本', {}).get('count') == 0, '數量不正確')
     check([v['word'] for v in fv] == ['テスト語01'], '資料夾內容不正確')
 
 
-@case('A03', '刪除資料夾後單字移回預設相簿',
+@case('A03', '刪除資料夾後單字移回預設單字本',
       pre='「常用動詞」資料夾內有 1 個單字',
       steps='1. POST /api/vocab/delete_folder，folder_id=常用動詞\n2. GET /api/vocab/favorites/{V}',
-      expect='1. HTTP 200，「資料夾已刪除，單字已移回預設相簿」\n2. 資料夾消失，預設相簿 count=1（單字仍為收藏狀態）')
+      expect='1. HTTP 200，「資料夾已刪除，單字已移回預設單字本」\n2. 資料夾消失，預設單字本 count=1（單字仍為收藏狀態）')
 def _(c):
     u = STATE['vocab']
     r = SC.post('/api/vocab/delete_folder', json={'folder_id': STATE['folder_id']})
     fav = favorites(u)
-    c.log(f'1. {http(r, "message")}；2. 資料夾清單={list(fav)}、預設相簿 count={fav.get("預設相簿", {}).get("count")}')
+    c.log(f'1. {http(r, "message")}；2. 資料夾清單={list(fav)}、預設單字本 count={fav.get("預設單字本", {}).get("count")}')
     check(r.status_code == 200, '刪除資料夾失敗')
-    check('常用動詞' not in fav and fav.get('預設相簿', {}).get('count') == 1, '單字未移回預設相簿')
+    check('常用動詞' not in fav and fav.get('預設單字本', {}).get('count') == 1, '單字未移回預設單字本')
 
 
 @case('A03', '收藏達上限（預設 50 個）時被擋',
@@ -2642,21 +2645,45 @@ def _(c):
 @case('A11', '文章單字長按收藏',
       pre='R 尚未收藏任何單字；「紅葉」不在系統字典中',
       steps='1. POST /api/vocab/collect_from_article，user_id=R、word=紅葉、kana=こうよう、meaning=楓葉\n2. GET /api/vocab/favorites/{R}\n3. 再收藏一次同一個字',
-      expect='1. HTTP 200，「✅ 成功加入收藏夾！」，字典新增「紅葉」並歸到主題「其他」\n2. 預設相簿 count=1\n3. HTTP 400，「這個單字已經在收藏夾囉！」')
+      expect='1. HTTP 200，「✅ 成功加入收藏夾！」，字典新增「紅葉」並歸到主題「其他」，並由 AI 補上四個難度的例句與翻譯\n'
+             '2. 預設單字本 count=1\n3. HTTP 400，「這個單字已經在收藏夾囉！」\n'
+             '4. GET /api/vocab/lookup?word=紅葉：found=true、有初級例句、is_favorited=true',
+      note='AI 例句以模擬資料替代')
 def _(c):
     u = STATE['reader']
     body = {'user_id': u['id'], 'word': '紅葉', 'kana': 'こうよう', 'meaning': '楓葉'}
-    r1 = SC.post('/api/vocab/collect_from_article', json=body)
+    fake = {'sentence_basic': '[紅葉|こうよう]がきれいです。', 'sentence_basic_zh': '楓葉很漂亮。',
+            'sentence_inter': '[秋|あき]になると[紅葉|こうよう]を[見|み]に[行|い]く。', 'sentence_inter_zh': '一到秋天就去賞楓。',
+            'sentence_upper_inter': '[紅葉|こうよう]の[名所|めいしょ]は[観光客|かんこうきゃく]で[賑|にぎ]わう。', 'sentence_upper_inter_zh': '賞楓名勝擠滿觀光客。',
+            'sentence_advanced': '[山|やま]一面が[紅葉|こうよう]に[染|そ]まる[光景|こうけい]は[圧巻|あっかん]だ。', 'sentence_advanced_zh': '整座山染紅的景象令人嘆為觀止。'}
+
+    def fake_sentences(feature, contents):
+        import re as _re
+        vid = int(_re.search(r'"id": (\d+)', contents).group(1))
+        return json.dumps([dict(fake, id=vid)], ensure_ascii=False)
+
+    GEMINI_FAKE['handler'] = fake_sentences
+    try:
+        r1 = SC.post('/api/vocab/collect_from_article', json=body)
+    finally:
+        GEMINI_FAKE['handler'] = None
     fav = favorites(u)
     r3 = SC.post('/api/vocab/collect_from_article', json=body)
+    r4 = SC.get(f'/api/vocab/lookup?user_id={u["id"]}&word=紅葉')
     with S.app_context():
         v = Vocab.query.filter_by(word='紅葉', kana='こうよう').first()
         scene_name = v.scene.name if v and v.scene else None
-    c.log(f'1. {http(r1, "status", "message")}，字典新增紅葉={v is not None}（歸入場景「{scene_name}」）；'
-          f'2. 預設相簿 count={fav.get("預設相簿", {}).get("count")}；3. {http(r3, "error")}')
+        filled = bool(v and v.sentence_basic and v.sentence_advanced_zh)
+    c.log(f'1. {http(r1, "status", "message")}，字典新增紅葉={v is not None}（歸入場景「{scene_name}」），補上例句={filled}；'
+          f'2. 預設單字本 count={fav.get("預設單字本", {}).get("count")}；3. {http(r3, "error")}；'
+          f'4. {http(r4, "found", "sentence", "is_favorited")}')
     check(r1.status_code == 200 and J(r1).get('status') == 'success' and v is not None, '收藏失敗')
+    check(filled, '文章新字沒有補上分級例句')
+    check(J(r4).get('found') is True and J(r4).get('sentence') == fake['sentence_basic'] and J(r4).get('is_favorited') is True
+          and J(r4).get('folder_name') == '預設單字本' and J(r4).get('user_vocab_id'),
+          '字典查詢結果不正確')
     check(scene_name == '其他', f'文章新字被歸到「{scene_name}」，應歸到主題收集冊的「其他」')
-    check(fav.get('預設相簿', {}).get('count') == 1, '收藏數不正確')
+    check(fav.get('預設單字本', {}).get('count') == 1, '收藏數不正確')
     check(r3.status_code == 400 and J(r3).get('error') == '這個單字已經在收藏夾囉！', '未擋下重複收藏')
 
 

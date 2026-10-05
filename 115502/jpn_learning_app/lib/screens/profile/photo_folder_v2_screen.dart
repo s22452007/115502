@@ -179,7 +179,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
           ],
         ),
         content: Text(
-          '確定要刪除「${folder['name']}」嗎？\n裡面的單字會移回預設相簿。',
+          '確定要刪除「${folder['name']}」嗎？\n裡面的單字會移回預設單字本。',
           style: const TextStyle(color: textColor, fontWeight: FontWeight.w600, height: 1.5),
         ),
         actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
@@ -267,7 +267,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
                               MaterialPageRoute(
                                 builder: (_) => FolderDetailScreen(
                                   folderId: f['id'],
-                                  folderName: f['name'] ?? '預設相簿',
+                                  folderName: f['name'] ?? '預設單字本',
                                   allFolders: _folders,
                                 ),
                               ),

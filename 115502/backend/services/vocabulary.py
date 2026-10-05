@@ -10,7 +10,7 @@ vocab_bp = Blueprint('vocab', __name__)
 
 
 def _folder_denied(folder_id, user_id):
-    """指定的資料夾必須是這個使用者自己的（None＝預設相簿，不用檢查）"""
+    """指定的資料夾必須是這個使用者自己的（None＝預設單字本，不用檢查）"""
     if folder_id in (None, ''):
         return None
     folder = UserFolder.query.get(folder_id)
@@ -30,7 +30,7 @@ def get_user_favorites(user_id):
     
     result = [{
         "id": None,
-        "name": "預設相簿",
+        "name": "預設單字本",
         "is_default": True,
         "count": default_count,
     }]
@@ -222,7 +222,7 @@ def delete_folder():
     db.session.delete(folder)
     db.session.commit()
 
-    return jsonify({"message": "資料夾已刪除，單字已移回預設相簿"}), 200
+    return jsonify({"message": "資料夾已刪除，單字已移回預設單字本"}), 200
 
 
 # 重新命名資料夾
@@ -275,6 +275,36 @@ def get_scene_vocabs(scene_id):
         })
         
     return jsonify({"vocabs": results}), 200
+
+
+@vocab_bp.route('/lookup', methods=['GET'])
+def lookup_vocab():
+    """文章字典用：用單字文字查字庫，回傳初級例句與是否已收藏。字庫沒有這個字時 found=false。"""
+    user_id = request.args.get('user_id', type=int)
+    word = (request.args.get('word') or '').strip()
+    if not user_id or not word:
+        return jsonify({"error": "缺少 user_id 或 word"}), 400
+
+    v = Vocab.query.filter_by(word=word).first()
+    if not v:
+        return jsonify({"found": False, "is_favorited": False}), 200
+    uv = UserVocab.query.filter_by(user_id=user_id, vocab_id=v.id).first()
+    favorited = uv is not None and uv.collected_at is not None
+    folder_name = None
+    if favorited:
+        folder = UserFolder.query.get(uv.folder_id) if uv.folder_id else None
+        folder_name = folder.name if folder else '預設單字本'
+    return jsonify({
+        "found": True,
+        "vocab_id": v.id,
+        "sentence": v.sentence_basic or None,
+        "translation": v.sentence_basic_zh or None,
+        "is_favorited": favorited,
+        # 已收藏時，字典可以直接換單字本或移出（換單字本要用 user_vocab_id）
+        "user_vocab_id": uv.id if favorited else None,
+        "folder_id": uv.folder_id if favorited else None,
+        "folder_name": folder_name,
+    }), 200
 
 
 @vocab_bp.route('/practice_words', methods=['GET'])
@@ -387,7 +417,7 @@ def get_vocab_detail(vocab_id):
     folder_name = None
     if is_favorited:
         folder = UserFolder.query.get(uv.folder_id) if uv.folder_id else None
-        folder_name = folder.name if folder else '預設相簿'
+        folder_name = folder.name if folder else '預設單字本'
 
     return jsonify({
         "vocab_id": v.id,
@@ -450,6 +480,7 @@ def collect_from_article():
     # 4. 字庫沒有這個字就新增。vocab.scene_id 不能是空的，文章單字沒有主題資訊，
     #    歸到主題收集冊的「其他」。原本抓資料庫第一個場景，結果文章單字全跑到「一蘭拉麵」。
     #    source 維持 'ai'，不算進主題收集冊的官方字數。
+    is_new_word = vocab is None
     if not vocab:
         from services.scenario import get_or_create_theme_scene
         vocab = Vocab(
@@ -473,8 +504,14 @@ def collect_from_article():
             collected_at=datetime.utcnow()
         )
         db.session.add(new_uv)
-        
+
     db.session.commit()
+
+    # 新字沒有例句：在背景請 AI 補上四個難度的例句（原本永遠不會補，單字本一直顯示「生成中」）
+    if is_new_word or not (vocab.sentence_basic or '').strip():
+        from utils.vocab_sentences import fill_sentences_in_background
+        fill_sentences_in_background([vocab.id])
+
     return jsonify({"status": "success", "message": "✅ 成功加入收藏夾！"}), 200
 
 

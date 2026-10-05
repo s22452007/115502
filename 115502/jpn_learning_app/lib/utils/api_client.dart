@@ -985,6 +985,19 @@ class ApiClient {
     throw Exception('無法載入');
   }
 
+  /// 文章字典用：用單字查字庫的初級例句與是否已收藏。
+  /// 回傳 {found, vocab_id, sentence, translation, is_favorited}；失敗時回傳 {found: false}。
+  static Future<Map<String, dynamic>> lookupVocab(int userId, String word) async {
+    try {
+      final url = Uri.parse('$baseUrl/vocab/lookup?user_id=$userId&word=${Uri.encodeQueryComponent(word)}');
+      final response = await client.get(url);
+      if (response.statusCode == 200) return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('查詢單字失敗: $e');
+    }
+    return {'found': false};
+  }
+
   /// 造句練習可以勾選的單字：收藏過的字 + 拍照辨識過的字（後端已去重複，收藏的排前面）。
   /// 每筆有 word、kana、meaning、source（collected / photo）；失敗時回傳空清單。
   static Future<List<dynamic>> getPracticeWords(int userId) async {

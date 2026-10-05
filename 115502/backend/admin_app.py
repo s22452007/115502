@@ -576,6 +576,66 @@ def teacher_apply_verify():
 
 
 # ==========================================
+# 老師忘記密碼：管理者在「教師帳號管理」按重設 → 寄連結到老師信箱 → 老師點連結自己設定新密碼
+#   連結是用 secret_key 簽章的 token，裡面有老師 id 和「目前密碼雜湊的指紋」：
+#   密碼一換（用掉連結、自己改密碼、管理者改發臨時密碼），指紋就對不上，舊連結全部失效，不用另外存資料表
+# ==========================================
+TEACHER_RESET_LINK_MINUTES = 30
+
+
+def _teacher_reset_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(app.secret_key, salt='teacher-reset')
+
+
+def _teacher_reset_fingerprint(teacher):
+    import hashlib
+    return hashlib.sha256((teacher.password_hash or '').encode()).hexdigest()[:16]
+
+
+def _teacher_reset_token(teacher):
+    return _teacher_reset_serializer().dumps({'uid': teacher.id, 'fp': _teacher_reset_fingerprint(teacher)})
+
+
+@app.route('/teacher/reset_password', methods=['GET', 'POST'])
+def teacher_reset_password():
+    """點重設信裡的連結：設定新密碼。不用登入，憑連結裡的 token 認人"""
+    from itsdangerous import BadSignature, SignatureExpired
+
+    def invalid(msg):
+        return render_template('teacher/reset_password.html', step='invalid', error=msg)
+
+    token = request.values.get('token') or ''
+    try:
+        data = _teacher_reset_serializer().loads(token, max_age=TEACHER_RESET_LINK_MINUTES * 60)
+    except SignatureExpired:
+        return invalid(f'重設連結已超過 {TEACHER_RESET_LINK_MINUTES} 分鐘，請聯絡管理者重新寄送')
+    except BadSignature:
+        return invalid('重設連結不正確，請確認是否完整複製信裡的連結')
+    teacher = User.query.filter_by(id=data.get('uid'), account_type=AccountType.TEACHER).first()
+    if not teacher or data.get('fp') != _teacher_reset_fingerprint(teacher):
+        return invalid('這個重設連結已經使用過或已失效，需要的話請聯絡管理者重新寄送')
+    if request.method == 'GET':
+        return render_template('teacher/reset_password.html', step='password', teacher=teacher, token=token)
+
+    password = request.form.get('password') or ''
+    error = ('兩次輸入的密碼不一致' if password != (request.form.get('confirm_password') or '')
+             else _validate_password(password, account=teacher.email))
+    if error:
+        return render_template('teacher/reset_password.html', step='password', teacher=teacher, token=token, error=error)
+    teacher.password_hash = generate_password_hash(password)
+    teacher.must_change_password = False
+    db.session.add(SystemLog(
+        admin_id=None, user_id=teacher.id,
+        action='UPDATE', target_table='user', target_id=teacher.id,
+        new_value={'password': 'reset_by_link'}
+    ))
+    db.session.commit()
+    print(f"[OK] 老師用重設連結設定了新密碼: {teacher.email}")
+    return render_template('teacher/reset_password.html', step='done', teacher=teacher)
+
+
+# ==========================================
 # 老師「聯絡管理者」：登不進去、等審核太久、忘記密碼時用。存進意見回饋表（T18），
 # 管理者在「意見回饋」看到並回覆，回覆會寄信給老師。不用登入也能送
 # ==========================================
@@ -1071,30 +1131,96 @@ def purchase_list():
 # ==========================================
 # [照片管控]
 # ==========================================
+PHOTO_PAGE_SIZE = 30
+
+
 @app.route('/photo/list')
 @admin_login_required
 def photo_list():
-    conn = get_db_connection()
-    # 修正點：將 p.filename 改為 p.image_path
-    query = '''
-        SELECT p.id, p.image_path, u.username, s.name as scene_name, p.custom_title, p.created_at 
+    keyword = (request.args.get('q') or '').strip()
+    page = max(1, request.args.get('page', 1, type=int) or 1)
+    offset = (page - 1) * PHOTO_PAGE_SIZE
+    pattern = '%' + keyword + '%'
+    where = ('WHERE (u.email LIKE ? OR u.username LIKE ? OR p.custom_title LIKE ? OR s.name LIKE ?)'
+             if keyword else '')
+    params = (pattern,) * 4 if keyword else ()
+    joins = '''
         FROM user_photo p
         LEFT JOIN user u ON p.user_id = u.id
         LEFT JOIN scene s ON p.scene_id = s.id
     '''
-    photos = conn.execute(query).fetchall()
-    conn.close()
-    return render_template('photo/list.html', photos=photos)
+
+    photos, total = [], 0
+    conn = get_db_connection()
+    try:
+        total = conn.execute('SELECT COUNT(*) ' + joins + where, params).fetchone()[0]
+        rows = conn.execute('''
+            SELECT p.id, p.user_id, p.image_path, u.username, u.email, s.name as scene_name,
+                   p.custom_title, p.created_at
+            ''' + joins + where + '''
+            ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?
+        ''', params + (PHOTO_PAGE_SIZE, offset)).fetchall()
+        photos = [{**dict(r), 'created_at': utc_to_tw(r['created_at'] or ''), 'is_submission': False}
+                  for r in rows]
+
+        # 被拍照作業當成繳交內容的照片要標出來，刪掉後老師那邊會看不到這份作業的照片
+        ids = [p['id'] for p in photos]
+        if ids:
+            try:
+                used = {r[0] for r in conn.execute('''
+                    SELECT sub.result_ref_id
+                    FROM assignment_submission sub JOIN assignment a ON a.id = sub.assignment_id
+                    WHERE a.task_type = 'photo' AND sub.result_ref_id IN (%s)
+                ''' % ','.join('?' * len(ids)), ids).fetchall()}
+            except sqlite3.Error:
+                used = set()
+            for p in photos:
+                p['is_submission'] = p['id'] in used
+    except sqlite3.Error:
+        photos, total = [], 0
+    finally:
+        conn.close()
+
+    pages = max(1, -(-total // PHOTO_PAGE_SIZE))
+    return render_template('photo/list.html', photos=photos, keyword=keyword,
+                           total=total, page=page, pages=pages)
 
 @app.route('/photo/delete/<int:photo_id>', methods=['POST'])
 @admin_login_required
 def delete_photo(photo_id):
+    back = url_for('photo_list', q=request.form.get('q') or None,
+                   page=request.form.get('page', type=int) or None)
     conn = get_db_connection()
-    conn.execute('DELETE FROM user_photo_vocab WHERE photo_id = ?', (photo_id,))
-    conn.execute('DELETE FROM user_photo WHERE id = ?', (photo_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('photo_list'))
+    try:
+        row = conn.execute('SELECT image_path FROM user_photo WHERE id = ?', (photo_id,)).fetchone()
+        if not row:
+            flash('找不到這張照片，可能已經被刪除', 'error')
+            return redirect(back)
+        image_path = row['image_path']
+        conn.execute('DELETE FROM user_photo_vocab WHERE photo_id = ?', (photo_id,))
+        conn.execute('DELETE FROM user_photo WHERE id = ?', (photo_id,))
+        conn.commit()
+        # 照片檔案：其他紀錄沒有用到同一個檔案才刪（種子資料可能多人共用同一張示範圖）
+        still_used = image_path and conn.execute(
+            'SELECT 1 FROM user_photo WHERE image_path = ? LIMIT 1', (image_path,)).fetchone()
+    finally:
+        conn.close()
+
+    file_error = False
+    filename = os.path.basename(image_path or '')
+    if filename and not still_used and not image_path.startswith('http'):
+        file_path = os.path.join(PHOTO_DIR, filename)
+        try:
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+        except OSError:
+            file_error = True
+
+    if file_error:
+        flash('照片紀錄已刪除，但照片檔案刪除失敗：%s' % filename, 'error')
+    else:
+        flash('已刪除照片 #%d' % photo_id, 'success')
+    return redirect(back)
 
 # ==========================================
 # [教材單字管理] 
@@ -3194,6 +3320,12 @@ def teacher_announcement_delete(announcement_id):
 @app.route('/teacher_account/list')
 @super_admin_required
 def teacher_account_list():
+    return _render_teacher_account_list()
+
+
+def _render_teacher_account_list(temp_password=None):
+    """temp_password：剛產生的臨時密碼（{'username', 'email', 'password'}），只在這次回應顯示"""
+    from utils import mailer
     teachers = User.query.filter_by(account_type=AccountType.TEACHER).order_by(User.created_at.desc()).all()
     classroom_counts = dict(
         db.session.query(Classroom.teacher_id, func.count(Classroom.id)).group_by(Classroom.teacher_id).all()
@@ -3212,7 +3344,9 @@ def teacher_account_list():
     } for t in teachers]
     rows.sort(key=lambda r: 0 if r['status'] == 'pending' else 1)  # 待審核排最前面
     pending_count = sum(1 for r in rows if r['status'] == 'pending')
-    return render_template('teacher_account/list.html', teachers=rows, pending_count=pending_count)
+    return render_template('teacher_account/list.html', teachers=rows, pending_count=pending_count,
+                           mail_ready=mailer.is_configured(), temp_password=temp_password,
+                           reset_minutes=TEACHER_RESET_LINK_MINUTES)
 
 
 @app.route('/school/list')
@@ -3353,22 +3487,53 @@ def teacher_account_add():
 @app.route('/teacher_account/reset_password/<int:user_id>', methods=['POST'])
 @super_admin_required
 def teacher_account_reset_password(user_id):
+    """老師忘記密碼。管理者不能自己指定密碼，只有兩種做法：
+    - mode=link（預設）：寄重設連結到老師信箱，老師自己設定新密碼，管理者完全碰不到密碼
+    - mode=temp：老師收不到信（信箱是假的、寄信服務沒設定）時，由系統產生隨機臨時密碼，
+      只在這次顯示，老師下次登入要先換掉
+    """
+    from utils import mailer
     admin_id = session.get('admin_id')
     teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
-    password = request.form.get('password') or ''
-    error = _validate_password(password, account=teacher.email)
-    if error:
-        flash(error, 'error')
+
+    if request.form.get('mode') == 'temp':
+        temp_password = _student_temp_password()
+        teacher.password_hash = generate_password_hash(temp_password)
+        teacher.must_change_password = True   # 臨時密碼管理者也知道，老師下次用密碼登入要先換掉
+        db.session.add(SystemLog(
+            admin_id=admin_id, user_id=teacher.id,
+            action='UPDATE', target_table='user', target_id=teacher.id,
+            new_value={'password': 'reset_to_temp'}
+        ))
+        db.session.commit()
+        return _render_teacher_account_list(temp_password={
+            'username': teacher.username, 'email': teacher.email, 'password': temp_password})
+
+    if not mailer.is_configured():
+        flash('寄信服務尚未設定，無法寄重設連結，請改用「產生臨時密碼」', 'error')
         return redirect(url_for('teacher_account_list'))
-    teacher.password_hash = generate_password_hash(password)
-    teacher.must_change_password = True   # 新密碼管理者也知道，老師下次用密碼登入要先換掉
+    link = url_for('teacher_reset_password', token=_teacher_reset_token(teacher), _external=True)
+    try:
+        mailer.send_mail(
+            teacher.email, 'Snap to Learn 老師帳號：重設密碼',
+            f'{teacher.username} 老師您好：\n\n'
+            f'學校系統管理員為你的 Snap to Learn 校園教育版老師帳號寄出了重設密碼連結。'
+            f'請在 {TEACHER_RESET_LINK_MINUTES} 分鐘內點下面的連結，設定新的登入密碼：\n\n{link}\n\n'
+            f'連結只能使用一次。如果你沒有要求重設密碼，請忽略這封信，原本的密碼不會改變。\n\n'
+            f'Snap to Learn 校園教育版',
+        )
+    except Exception as e:
+        print(f"⚠️ 寄送老師重設密碼連結失敗：{e}")
+        flash(f'重設連結寄送失敗（{teacher.email}），請稍後再試，或改用「產生臨時密碼」', 'error')
+        return redirect(url_for('teacher_account_list'))
+    # 只是寄出連結、密碼還沒變，所以不用 'password' 這個 key（_teacher_google_only 靠它判斷帳號有沒有密碼）
     db.session.add(SystemLog(
         admin_id=admin_id, user_id=teacher.id,
         action='UPDATE', target_table='user', target_id=teacher.id,
-        new_value={'password': 'reset'}
+        new_value={'password_reset': 'link_sent'}
     ))
     db.session.commit()
-    flash(f'已重設「{teacher.username}」的密碼，老師下次用密碼登入時會被要求改成自己的密碼', 'success')
+    flash(f'已寄出重設連結到 {teacher.email}，{TEACHER_RESET_LINK_MINUTES} 分鐘內有效', 'success')
     return redirect(url_for('teacher_account_list'))
 
 

@@ -120,7 +120,7 @@
                 <div class="pf-name-note" id="nameNote" {% if not (error or success) %}hidden{% endif %}>
                     {% if error %}<div class="alert alert-danger msg mt-0 mb-2"><i class="bi bi-x-circle-fill me-1"></i>{{ error }}</div>
                     {% elif success %}<div class="alert alert-success msg mt-0 mb-2"><i class="bi bi-check-circle-fill me-1"></i>{{ success }}</div>{% endif %}
-                    <div class="pf-hint">學生在 App 教室頁看到的「老師：XXX」就是這個名稱。最多 30 個字，不能和其他人重複，撞名時可以加上全名或科目。</div>
+                    <div class="pf-hint">學生在 App 看到的老師名稱，不能和其他老師重複。</div>
                 </div>
             </div>
 
@@ -148,7 +148,7 @@
                             <div class="sub">{{ teacher.email }}</div>
                         </div>
                     </div>
-                    <div class="pf-hint mt-3">登入由學校 Google 帳號負責，這個系統沒有另外的密碼，不需要設定。Google 帳號的密碼請到學校資訊中心處理。</div>
+                    <div class="pf-hint mt-3">用學校 Google 帳號登入，沒有另外的密碼。</div>
                     {% else %}
                     <div class="pf-login-row">
                         <div class="pf-login-icon"><i class="bi bi-envelope-fill"></i></div>

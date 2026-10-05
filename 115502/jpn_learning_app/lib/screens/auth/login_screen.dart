@@ -669,6 +669,12 @@ class _LoginScreenState extends State<LoginScreen> {
               'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
               width: 24,
               height: 24,
+              // 沒網路抓不到圖時改顯示替代圖示，否則錯誤訊息會直接印在按鈕上把版面撐爆
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.g_mobiledata,
+                size: 24,
+                color: Color(0xFF4285F4),
+              ),
             ),
             const SizedBox(width: 12),
             const Text(

@@ -577,7 +577,8 @@ def edu_google_login():
             return jsonify({"status": "wrong_domain",
                             "error": f"要用學校配發的 Google 帳號（{'、'.join(EDU_SCHOOL_DOMAIN_SUFFIXES)} 結尾）才能新增學校，一般 Gmail 不行"}), 403
         # 這個網域已經有學校了（可能名稱打得不一樣）：直接用那一間，不重複建立
-        school = next((s for s in School.query.all() if s.domain_allowed(domain)), None)
+        school = max((s for s in School.query.all() if s.domain_allowed(domain)),
+                     key=lambda s: s.domain_match_len(domain), default=None)
         if school is not None and not school.is_active:
             return jsonify({"error": f"{school.name}目前沒有開放登入，請聯繫老師或系統管理員"}), 403
         if school is None:
@@ -587,8 +588,9 @@ def edu_google_login():
             school = School(name=new_school_name, student_domains=domain)
             creating_school = True
     elif not school.domain_allowed(domain):
-        other = next((s for s in School.query.filter_by(is_active=True).all()
-                      if s.id != school.id and s.domain_allowed(domain)), None)
+        other = max((s for s in School.query.filter_by(is_active=True).all()
+                     if s.id != school.id and s.domain_allowed(domain)),
+                    key=lambda s: s.domain_match_len(domain), default=None)
         if other:
             return jsonify({"status": "wrong_school",
                             "error": f"「{email}」是{other.name}的帳號，請重新選擇學校"}), 403

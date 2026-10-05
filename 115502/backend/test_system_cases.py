@@ -206,6 +206,7 @@ S = student_module.app      # 學生端 App API（正式環境 port 5050）
 A = admin_module.app        # 管理後台（正式環境 port 5001）
 admin_module.DB_FILE_PATH = TMP_DB          # 後台直接用 sqlite3 的頁面也改用暫存檔
 scenario_module.UPLOAD_FOLDER = UPLOAD_DIR  # 拍照上傳改存暫存資料夾
+admin_module.PHOTO_DIR = UPLOAD_DIR         # 後台刪照片也只動暫存資料夾，不碰真實的 static/photos
 
 with S.app_context():
     assert db.engine.url.database == TMP_DB, db.engine.url.database
@@ -219,6 +220,7 @@ from models import (
     Feedback, PointPackage, SubscriptionPlan, UserSubscription, PointTransaction, ChatSession,
     ChatMessage, SystemLog, AccountType, Article, ScoreRecord, ReadingEvaluation, UnlockedArticle,
     SentencePracticeRecord, Classroom, ClassroomMember, Assignment, TaskType,
+    School, Dialect, ClassroomAnnouncement, AssignmentSubmission, SubmissionStatus, LatePolicy,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -246,7 +248,9 @@ def fake_analyze_image_from_path(file_path):
     }}
 
 
-def fake_get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=None):
+def fake_get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=None, persona=None):
+    FAKE['last_dialect'] = dialect_id   # 讓個案檢查這次對話實際套用的腔調
+    FAKE['last_persona'] = persona      # 以及套用的角色人設
     if FAKE['chat_ok']:
         return FAKE_CHAT_REPLY, True
     return 'AI 服務目前使用人數較多，請稍等幾秒再試一次。', False
@@ -286,7 +290,27 @@ def _fake_verify_google_id_token(token):
 
 
 auth_module.verify_google_id_token = _fake_verify_google_id_token
+auth_module.EDU_SCHOOL_DOMAIN_SUFFIXES = ['.edu.tw']   # 不受本機 .env 影響
 os.environ['DEMO_PAYMENT'] = 'on'
+
+# ----------------------------------------------------------------------
+# 模擬手機推播：不連線 Firebase。PUSH_FAKE['ready'] 代表伺服器有沒有設定推播金鑰，
+# 送出的內容存在 PUSHED；PUSH_FAKE['dead'] 裡的 token 視為「這支手機已經收不到」。
+# ----------------------------------------------------------------------
+import utils.push as push_module
+
+PUSH_FAKE = {'ready': False, 'dead': []}
+PUSHED = []
+
+
+def _fake_send_multicast(tokens, title, body, data):
+    PUSHED.append({'tokens': sorted(tokens), 'title': title, 'body': body, 'data': data})
+    return [t for t in tokens if t in PUSH_FAKE['dead']]
+
+
+push_module.RUN_IN_BACKGROUND = False
+push_module._firebase_ready = lambda: PUSH_FAKE['ready']
+push_module._send_multicast = _fake_send_multicast
 
 
 def last_reset_code(email):
@@ -2024,7 +2048,7 @@ def _(c):
       pre='U2 已訂閱，今日尚未使用 AI 對話',
       steps='POST /api/user/use_ai 十一次',
       expect='前 10 次 HTTP 200（daily_limit=10），第 11 次 HTTP 403',
-      note='需求清單 A07 寫 Premium「無限 AI 對話」，程式與方案功能清單為「每天10次AI對話」，依本測試規格（訂閱 10 次）判定，需求清單文字需更新')
+      note='Premium 的 AI 對話為每天 10 次（2026-10-05 組內討論定案，需求清單已同步修正）')
 def _(c):
     u2 = STATE['premU']
     rs = [use_ai(u2) for _ in range(11)]
@@ -3103,6 +3127,2028 @@ def _(c):
     check(my.get('count') == 0, '退出後仍顯示教室')
     check(r3.status_code == 404 and J(r3).get('error') == '你不在這個教室裡', '重複退出未回 404')
     check(r4.status_code == 400 and J(r4).get('error') == '缺少使用者 ID 或教室 ID', '缺少參數未擋下')
+
+
+# ----------------------------------------------------------------------
+# A13 校園教育版：學校 Google 帳號登入（services/auth.py）
+# ----------------------------------------------------------------------
+def ensure_schools():
+    """前置：管理者已在後台「學校管理」建立學校"""
+    if 'schools' in STATE:
+        return STATE['schools']
+    with S.app_context():
+        uni = School(name='測試科技大學', student_domains='tust.edu.tw')
+        hs = School(name='範例高中', student_domains='.example-hs.edu.tw')
+        closed = School(name='停用學院', student_domains='closed.edu.tw', is_active=False)
+        db.session.add_all([uni, hs, closed])
+        db.session.commit()
+        STATE['schools'] = {'uni': uni.id, 'hs': hs.id, 'closed': closed.id}
+    return STATE['schools']
+
+
+def edu_google(token, **body):
+    return SC.post('/api/auth/edu_google_login', json={'id_token': token, **body})
+
+
+@case('A13', '選擇學校後以學校 Google 帳號登入，自動建立學生帳號',
+      pre='後台已建立「測試科技大學」（@tust.edu.tw）與已停用的「停用學院」；11156001@tust.edu.tw 尚未有帳號；老師的「一年甲班」代碼 K7M3P9',
+      steps='1. GET /api/auth/schools\n2. POST /api/auth/edu_google_login，school_id=測試科技大學、Google 身分憑證為 11156001@tust.edu.tw\n'
+            '3. 同一個帳號再登入一次\n4. 以班級代碼 K7M3P9 加入教室',
+      expect='1. 清單有「測試科技大學」與網域 tust.edu.tw，沒有已停用的學校\n2. HTTP 200，is_new=true、account_type=student，自動建立學生帳號並記下學校\n'
+             '3. HTTP 200，is_new=false，沿用同一個帳號\n4. HTTP 201，成功加入教室',
+      note='Google 身分憑證驗證以模擬方式進行')
+def _(c):
+    ensure_edu()
+    sch = ensure_schools()
+    r1 = SC.get('/api/auth/schools')
+    names = {s['name']: s for s in J(r1).get('schools', [])}
+    r2 = edu_google('valid:11156001@tust.edu.tw', school_id=sch['uni'])
+    r3 = edu_google('valid:11156001@tust.edu.tw', school_id=sch['uni'])
+    uid = J(r2).get('user_id')
+    row = user_row(uid) if uid else {}
+    n = count(User, email='11156001@tust.edu.tw')
+    r4 = SC.post('/api/classroom/join', json={'user_id': uid, 'join_code': 'K7M3P9'})
+    c.log(f'1. HTTP {r1.status_code}，測試科技大學 domains={(names.get("測試科技大學") or {}).get("domains")}、停用學院在清單={"停用學院" in names}；'
+          f'2. {http(r2, "message", "account_type", "is_new", "school_name")}；3. {http(r3, "is_new")}，帳號 {n} 筆；'
+          f'4. {http(r4, "status", "message")}')
+    check(r1.status_code == 200 and (names.get('測試科技大學') or {}).get('domains') == ['tust.edu.tw']
+          and '停用學院' not in names, '學校清單不正確')
+    check(r2.status_code == 200 and J(r2).get('is_new') is True and J(r2).get('account_type') == 'student'
+          and J(r2).get('school_name') == '測試科技大學' and J(r2).get('token'), '第一次登入沒有建立學生帳號')
+    check(row.get('account_type') == 'student' and row.get('school_id') == sch['uni'] and len(row.get('friend_id') or '') == 8,
+          '學生帳號資料不正確')
+    check(r3.status_code == 200 and J(r3).get('is_new') is False and J(r3).get('user_id') == uid and n == 1, '重複建立帳號')
+    check(r4.status_code == 201 and J(r4).get('status') == 'success', '新學生無法用班級代碼加入教室')
+    SC.post('/api/classroom/leave', json={'user_id': uid, 'classroom_id': STATE['edu_rooms']['open']})
+
+
+@case('A13', '學校 Google 登入的限制',
+      pre='「測試科技大學」（@tust.edu.tw）、「範例高中」（.example-hs.edu.tw）、已停用的「停用學院」；11156777@tust.edu.tw 已是一般版帳號',
+      steps='POST /api/auth/edu_google_login：\n1. 沒有選學校\n2. 選已停用的學校\n3. Google 身分憑證無效\n4. 選測試科技大學，用一般 Gmail\n'
+            '5. 選測試科技大學，用範例高中的帳號\n6. 用不是學號的帳號 wang.teacher@tust.edu.tw\n7. 用已經是一般版帳號的 11156777@tust.edu.tw',
+      expect='1、2. HTTP 400，status=school_required、「請先選擇學校」\n3. HTTP 401\n4. HTTP 403，status=wrong_domain\n'
+             '5. HTTP 403，status=wrong_school，提示是範例高中的帳號\n6. HTTP 403，status=not_student\n7. HTTP 403，status=wrong_portal；皆不建立帳號',
+      note='Google 身分憑證驗證以模擬方式進行')
+def _(c):
+    sch = ensure_schools()
+    with S.app_context():
+        db.session.add(User(email='11156777@tust.edu.tw', username='一般版使用者', account_type=AccountType.GENERAL,
+                            password_hash=generate_password_hash('Pass1234')))
+        db.session.commit()
+        before = User.query.count()
+    r1 = edu_google('valid:11156002@tust.edu.tw')
+    r2 = edu_google('valid:11156002@closed.edu.tw', school_id=sch['closed'])
+    r3 = edu_google('not-a-token', school_id=sch['uni'])
+    r4 = edu_google('valid:someone@gmail.com', school_id=sch['uni'])
+    r5 = edu_google('valid:11156002@stu.example-hs.edu.tw', school_id=sch['uni'])
+    r6 = edu_google('valid:wang.teacher@tust.edu.tw', school_id=sch['uni'])
+    r7 = edu_google('valid:11156777@tust.edu.tw', school_id=sch['uni'])
+    after = count(User)
+    c.log(f'1. {http(r1, "status", "error")}；2. {http(r2, "status")}；3. {http(r3, "error")}；4. {http(r4, "status", "error")}；'
+          f'5. {http(r5, "status", "error")}；6. {http(r6, "status", "error")}；7. {http(r7, "status", "error")}；帳號數 {before} → {after}')
+    check(r1.status_code == 400 and J(r1).get('status') == 'school_required' and J(r1).get('error') == '請先選擇學校', '沒選學校未擋下')
+    check(r2.status_code == 400 and J(r2).get('status') == 'school_required', '已停用的學校仍可登入')
+    check(r3.status_code == 401, '無效的身分憑證未擋下')
+    check(r4.status_code == 403 and J(r4).get('status') == 'wrong_domain', '一般 Gmail 可登入教育版')
+    check(r5.status_code == 403 and J(r5).get('status') == 'wrong_school' and '範例高中' in J(r5).get('error', ''), '別校帳號未擋下')
+    check(r6.status_code == 403 and J(r6).get('status') == 'not_student', '非學號帳號未擋下')
+    check(r7.status_code == 403 and J(r7).get('status') == 'wrong_portal', '一般版帳號可登入教育版')
+    check(before == after, '被拒絕的登入卻建立了帳號')
+
+
+@case('A13', '清單沒有自己的學校時在 App 新增學校',
+      pre='學校清單沒有「新設大學」',
+      steps='POST /api/auth/edu_google_login，帶 new_school_name：\n1. 「新設大學」，用一般 Gmail\n2. 「新設大學」，用 b1234567@newuni.edu.tw\n'
+            '3. 「新設大學」，用另一個網域 b7654321@another.edu.tw\n4. 名稱打成「新社大學」，用同網域 b2222222@newuni.edu.tw\n5. GET /api/auth/schools',
+      expect='1. HTTP 403，status=wrong_domain（只收學校網域）\n2. HTTP 200，school_created=true，學校網域取自 Google 驗證過的 Email，並寫入操作日誌\n'
+             '3. HTTP 409（同名但網域不同）\n4. HTTP 200，school_created=false，歸到既有的「新設大學」，不重複建立\n5. 清單出現「新設大學」',
+      note='Google 身分憑證驗證以模擬方式進行')
+def _(c):
+    ensure_schools()
+    r1 = edu_google('valid:b1234567@gmail.com', new_school_name='新設大學')
+    n1 = count(School, name='新設大學')
+    r2 = edu_google('valid:b1234567@newuni.edu.tw', new_school_name='新設大學')
+    with S.app_context():
+        s = School.query.filter_by(name='新設大學').first()
+        info = (s.student_domains, s.created_by_user_id, s.id) if s else (None, None, None)
+        n_log = SystemLog.query.filter_by(target_table='school', target_id=info[2], action='CREATE').count()
+    r3 = edu_google('valid:b7654321@another.edu.tw', new_school_name='新設大學')
+    r4 = edu_google('valid:b2222222@newuni.edu.tw', new_school_name='新社大學')
+    n_typo = count(School, name='新社大學')
+    names = [x['name'] for x in J(SC.get('/api/auth/schools')).get('schools', [])]
+    c.log(f'1. {http(r1, "status")}，建立學校 {n1} 間；2. {http(r2, "school_created", "school_name", "is_new")}，網域={info[0]}、操作日誌 {n_log} 筆；'
+          f'3. {http(r3, "error")}；4. {http(r4, "school_created", "school_name")}，「新社大學」{n_typo} 間；5. 清單有新設大學={"新設大學" in names}')
+    check(r1.status_code == 403 and J(r1).get('status') == 'wrong_domain' and n1 == 0, '一般 Gmail 可以新增學校')
+    check(r2.status_code == 200 and J(r2).get('school_created') is True and J(r2).get('school_name') == '新設大學'
+          and info[0] == 'newuni.edu.tw' and info[1] == J(r2).get('user_id') and n_log == 1, '新增學校不正確')
+    check(r3.status_code == 409, '同名不同網域未擋下')
+    check(r4.status_code == 200 and J(r4).get('school_created') is False and J(r4).get('school_name') == '新設大學' and n_typo == 0,
+          '同網域重複建立學校')
+    check('新設大學' in names, '新學校沒有出現在清單')
+
+
+# ----------------------------------------------------------------------
+# A13 校園教育版：班級公告、遲交規則、手機推播（老師端網頁 + 學生端 App API）
+# ----------------------------------------------------------------------
+def ensure_class():
+    """前置：林老師的「三年丙班」有學生甲、乙兩人；另有陳老師與不在班上的學生丙"""
+    if 'cls' in STATE:
+        return STATE['cls']
+    with S.app_context():
+        def user(email, name, kind):
+            u = User(email=email, username=name, account_type=kind, password_hash=generate_password_hash('Pass@1234'))
+            db.session.add(u)
+            db.session.flush()
+            return u.id
+        t = user('teacher_lin@school.test', '林老師', AccountType.TEACHER)
+        t2 = user('teacher_chen@school.test', '陳老師', AccountType.TEACHER)
+        s1 = user('11156101@school.test', '學生甲', AccountType.STUDENT)
+        s2 = user('11156102@school.test', '學生乙', AccountType.STUDENT)
+        s3 = user('11156103@school.test', '學生丙', AccountType.STUDENT)
+        room = Classroom(teacher_id=t, name='三年丙班', join_code='P3C7X2', is_open=True)
+        db.session.add(room)
+        db.session.flush()
+        db.session.add_all([ClassroomMember(classroom_id=room.id, student_id=s1, display_name='學生甲'),
+                            ClassroomMember(classroom_id=room.id, student_id=s2, display_name='學生乙')])
+        db.session.commit()
+        STATE['cls'] = {'teacher': t, 'teacher2': t2, 's1': s1, 's2': s2, 's3': s3, 'room': room.id}
+    return STATE['cls']
+
+
+def teacher_client(teacher_id, name):
+    """老師已登入老師後台的瀏覽器"""
+    c = A.test_client()
+    with c.session_transaction() as sess:
+        sess['role'] = 'teacher'
+        sess['teacher_user_id'] = teacher_id
+        sess['admin_user'] = name
+    return c
+
+
+def flashes(client):
+    """取出這次操作後網頁要顯示的提示訊息"""
+    with client.session_transaction() as sess:
+        return [m for _, m in sess.pop('_flashes', [])]
+
+
+def announcements_of(uid, room):
+    return SC.get(f'/api/classroom/{room}/announcements?user_id={uid}')
+
+
+def unread_of(uid, room):
+    rooms = J(SC.get(f'/api/classroom/my/{uid}')).get('classrooms', [])
+    return next((x.get('unread_count') for x in rooms if x['classroom_id'] == room), None)
+
+
+@case('A13', '老師發布班級公告，學生看到未讀紅點',
+      pre='林老師的「三年丙班」有學生甲、乙；學生丙不在班上',
+      steps='1. 老師於後台公告頁送出沒有標題的公告\n2. 老師發布公告「期中考範圍」\n3. 學生甲 GET /api/classroom/my/{甲}\n'
+            '4. 學生甲 GET /api/classroom/{班級}/announcements，之後再查一次我的教室與公告\n5. 老師端查看已讀人數\n6. 學生丙查看公告',
+      expect='1. 提示「請填寫公告標題」，不建立公告\n2. 提示公告已發布\n3. unread_count=1\n4. 列出 1 則公告且 is_new=true；看過之後 unread_count=0、is_new=false\n'
+             '5. 已讀 1 人／全班 2 人\n6. HTTP 404，「找不到這個教室」')
+def _(c):
+    k = ensure_class()
+    web = teacher_client(k['teacher'], '林老師')
+    url = f'/teacher/classroom/{k["room"]}/announcements'
+    web.post(url, data={'title': '   ', 'content': '沒有標題'})
+    f1 = flashes(web)
+    n1 = count(ClassroomAnnouncement, classroom_id=k['room'])
+    web.post(url, data={'title': '期中考範圍', 'content': '第 1～5 課，請帶學生證。'})
+    f2 = flashes(web)
+    unread1 = unread_of(k['s1'], k['room'])
+    r4 = announcements_of(k['s1'], k['room'])
+    first = J(r4).get('announcements', [])
+    unread2 = unread_of(k['s1'], k['room'])
+    again = J(announcements_of(k['s1'], k['room'])).get('announcements', [])
+    with A.app_context():
+        from services.teacher_service import get_announcements
+        t_view = get_announcements(k['room'])
+    r6 = announcements_of(k['s3'], k['room'])
+    STATE['ann_id'] = first[0]['announcement_id'] if first else None
+    c.log(f'1. 提示={f1}，公告 {n1} 則；2. 提示={f2}；3. unread_count={unread1}；'
+          f'4. HTTP {r4.status_code}，{[(a["title"], a["is_new"]) for a in first]}，之後 unread_count={unread2}、is_new={[a["is_new"] for a in again]}；'
+          f'5. 已讀 {t_view[0]["read_count"]}／{t_view[0]["member_count"]}；6. {http(r6, "error")}')
+    check(f1 == ['請填寫公告標題'] and n1 == 0, '沒有標題的公告未擋下')
+    check(len(f2) == 1 and f2[0].startswith('公告已發布'), '公告發布失敗')
+    check(unread1 == 1, '學生沒有看到未讀紅點')
+    check(r4.status_code == 200 and [(a['title'], a['content'], a['is_new']) for a in first]
+          == [('期中考範圍', '第 1～5 課，請帶學生證。', True)], '公告內容不正確')
+    check(unread2 == 0 and [a['is_new'] for a in again] == [False], '看過之後仍顯示未讀')
+    check(t_view[0]['read_count'] == 1 and t_view[0]['member_count'] == 2, '老師端已讀人數不正確')
+    check(r6.status_code == 404 and J(r6).get('error') == '找不到這個教室', '非成員可以看公告')
+
+
+@case('A13', '公告修改、刪除與權限',
+      pre='「三年丙班」有 1 則公告「期中考範圍」，學生甲已讀；陳老師不是這班的老師',
+      steps='1. 林老師修改公告標題與內容\n2. 陳老師修改、刪除這則公告\n3. 最高管理者於這班的公告頁發布公告\n4. 林老師刪除公告',
+      expect='1. 提示「公告已更新」，學生看到新內容，但不會重新變成未讀\n2. 提示「找不到該公告」，公告不變\n'
+             '3. 提示管理者無法代替老師發公告，不建立公告\n4. 提示「公告已刪除」，學生端公告為 0 則，並寫入操作日誌')
+def _(c):
+    k = ensure_class()
+    aid = STATE['ann_id']
+    web = teacher_client(k['teacher'], '林老師')
+    web.post(f'/teacher/announcement/{aid}/edit', data={'title': '期中考範圍（更新）', 'content': '改為第 1～6 課。'})
+    f1 = flashes(web)
+    unread = unread_of(k['s1'], k['room'])
+    seen = J(announcements_of(k['s1'], k['room'])).get('announcements', [])
+    other = teacher_client(k['teacher2'], '陳老師')
+    other.post(f'/teacher/announcement/{aid}/edit', data={'title': '被別人改掉', 'content': ''})
+    f2a = flashes(other)
+    other.post(f'/teacher/announcement/{aid}/delete')
+    f2b = flashes(other)
+    with S.app_context():
+        row = db.session.get(ClassroomAnnouncement, aid)
+        kept = (row.title, row.updated_at is not None) if row else None
+    boss = admin_client('sys_super', 'Admin@1234')
+    boss.post(f'/teacher/classroom/{k["room"]}/announcements', data={'title': '管理者代發', 'content': ''})
+    f3 = flashes(boss)
+    n3 = count(ClassroomAnnouncement, classroom_id=k['room'])
+    web.post(f'/teacher/announcement/{aid}/delete')
+    f4 = flashes(web)
+    left = J(announcements_of(k['s1'], k['room'])).get('announcements', [])
+    n_log = count(SystemLog, target_table='classroom_announcement', target_id=aid, action='DELETE')
+    c.log(f'1. 提示={f1}，學生看到「{seen[0]["title"] if seen else None}」、unread_count={unread}；2. 提示={f2a + f2b}，公告仍為「{kept[0] if kept else None}」；'
+          f'3. 提示={f3}，公告 {n3} 則；4. 提示={f4}，學生端公告 {len(left)} 則、操作日誌 {n_log} 筆')
+    check(f1 == ['公告已更新'] and unread == 0 and seen and seen[0]['title'] == '期中考範圍（更新）'
+          and seen[0]['content'] == '改為第 1～6 課。' and seen[0]['is_new'] is False, '修改公告不正確')
+    check(f2a == ['找不到該公告'] and f2b == ['找不到該公告'] and kept == ('期中考範圍（更新）', True), '別班老師可以動這則公告')
+    check(len(f3) == 1 and '管理者無法代替老師發公告' in f3[0] and n3 == 1, '管理者可以代發公告')
+    check(f4 == ['公告已刪除'] and left == [] and n_log == 1, '刪除公告不正確')
+
+
+@case('A13', '出作業時設定遲交規則並自動發公告',
+      pre='林老師的「三年丙班」',
+      steps='老師於後台「出題新作業」發布造句作業（截止時間為 3 天後）：\n1. 遲交規則選「遲交扣分」、扣 10 分，勾選「通知學生」\n'
+            '2. 遲交規則選「遲交扣分」，扣分填「abc」\n3. 遲交規則選「截止後不收」，不勾選通知',
+      expect='1. 作業存為遲交扣 10 分；自動發一則「新作業：第二課造句」公告，內文含截止時間與「遲交扣 10 分」，學生可從公告點進作業\n'
+             '2. 作業照常發布，提示扣分要填 1～100 的數字，並先設為允許遲交\n3. 作業存為截止後不收，不發公告')
+def _(c):
+    k = ensure_class()
+    web = teacher_client(k['teacher'], '林老師')
+    url = f'/teacher/classroom/{k["room"]}/assignment/create'
+    due = (datetime.utcnow() + timedelta(hours=8, days=3)).replace(second=0, microsecond=0)
+
+    def create(title, **extra):
+        web.post(url, data={'task_type': 'sentence', 'title': title, 'instructions': '用今天教的文法造句',
+                            'grammar_point': '〜てください', 'due_at': due.isoformat(timespec='minutes'), **extra})
+        msgs = flashes(web)
+        with S.app_context():
+            a = Assignment.query.filter_by(classroom_id=k['room'], title=title).first()
+            return msgs, (a.id, a.late_policy, a.late_penalty) if a else None
+
+    f1, a1 = create('第二課造句', late_policy='deduct', late_penalty='10', announce='1')
+    f2, a2 = create('第三課造句', late_policy='deduct', late_penalty='abc')
+    f3, a3 = create('第四課造句', late_policy='reject')
+    anns = J(announcements_of(k['s1'], k['room'])).get('announcements', [])
+    STATE['late_assignments'] = {'deduct': a1[0], 'reject': a3[0]}
+    c.log(f'1. 提示={f1}，遲交規則={a1[1:]}；2. 提示={f2}，遲交規則={a2[1:]}；3. 提示={f3}，遲交規則={a3[1:]}；'
+          f'公告={[(x["title"], x["content"], x["assignment_id"] == a1[0]) for x in anns]}')
+    check(a1[1:] == ('deduct', 10) and a2[1:] == ('allow', 0) and a3[1:] == ('reject', 0), '遲交規則儲存不正確')
+    check(any('遲交扣分要填 1～100 的數字' in m and '允許遲交' in m for m in f2), '扣分填錯沒有提醒')
+    check(len(anns) == 1 and anns[0]['title'] == '新作業：第二課造句' and anns[0]['assignment_id'] == a1[0]
+          and '遲交扣 10 分' in anns[0]['content'] and due.strftime('%Y-%m-%d %H:%M') in anns[0]['content'], '自動公告不正確')
+
+
+@case('A13', '截止後不收遲交與遲交扣分',
+      pre='「三年丙班」有 4 份文章測驗作業（各 2 題）：A 昨天截止、截止後不收；B 昨天截止、遲交扣 10 分；C 昨天截止、允許遲交；D 明天截止、截止後不收',
+      steps='學生甲全部答對：\n1. POST /api/assignment/submit_quiz 繳交 A，並 GET /api/assignment/{A}\n2. 繳交 B\n3. 繳交 C\n4. 繳交 D\n'
+            '5. GET /api/classroom/{班級}/grades',
+      expect='1. HTTP 403，status=closed、「已超過截止時間，老師設定這份作業不收遲交」，不產生繳交紀錄；作業 is_closed=true\n'
+             '2. HTTP 200，得 100 分、遲交扣 10 分、計入 90 分\n3. HTTP 200，100 分不扣分\n4. HTTP 200（還沒截止）\n'
+             '5. 成績分頁：A 未交；B 原始 100、計入 90、標示遲交；C 100 分、標示遲交；D 100 分')
+def _(c):
+    k = ensure_class()
+    now_tw = datetime.utcnow() + timedelta(hours=8)   # 截止時間存的是老師輸入的台灣時間
+    quiz = {'questions': [{'type': 'choice', 'question': '「ねこ」是什麼？', 'options': ['貓', '狗', '鳥', '魚'], 'answer': 'A'},
+                          {'type': 'truefalse', 'question': '「いぬ」是狗。', 'answer': 'O'}]}
+    ids = {}
+    with S.app_context():
+        for key, days, policy, pen in [('A', -1, LatePolicy.REJECT, 0), ('B', -1, LatePolicy.DEDUCT, 10),
+                                       ('C', -1, LatePolicy.ALLOW, 0), ('D', 1, LatePolicy.REJECT, 0)]:
+            a = Assignment(classroom_id=k['room'], title=f'閱讀測驗 {key}', task_type=TaskType.ARTICLE, config=dict(quiz),
+                           due_at=now_tw + timedelta(days=days), late_policy=policy, late_penalty=pen, is_published=True)
+            db.session.add(a)
+            db.session.flush()
+            ids[key] = a.id
+        db.session.commit()
+
+    def hand_in(key):
+        return SC.post('/api/assignment/submit_quiz', json={'user_id': k['s1'], 'assignment_id': ids[key], 'answers': ['A', 'O']})
+
+    rs = {key: hand_in(key) for key in 'ABCD'}
+    detail = J(SC.get(f'/api/assignment/{ids["A"]}?user_id={k["s1"]}')).get('assignment', {})
+    n_a = count(AssignmentSubmission, assignment_id=ids['A'])
+    grades = {g['assignment_id']: g for g in
+              J(SC.get(f'/api/classroom/{k["room"]}/grades?user_id={k["s1"]}')).get('assignments', [])}
+    cell = {key: (grades[ids[key]]['status'], grades[ids[key]]['score'], grades[ids[key]]['effective'],
+                  grades[ids[key]]['deduct'], grades[ids[key]]['late']) for key in 'ABCD'}
+    STATE['quiz_ids'] = ids
+    c.log(f'1. {http(rs["A"], "status", "error")}，繳交紀錄 {n_a} 筆，is_closed={detail.get("is_closed")}；'
+          f'2. {http(rs["B"], "score", "late_deduction", "message")}；3. {http(rs["C"], "score", "late_deduction")}；'
+          f'4. {http(rs["D"], "score", "late_deduction")}；5. 成績（狀態, 原始, 計入, 扣分, 遲交）={cell}')
+    check(rs['A'].status_code == 403 and J(rs['A']).get('status') == 'closed'
+          and J(rs['A']).get('error') == '已超過截止時間，老師設定這份作業不收遲交' and n_a == 0 and detail.get('is_closed') is True,
+          '截止後不收的作業仍可繳交')
+    check(rs['B'].status_code == 200 and J(rs['B']).get('score') == 100 and J(rs['B']).get('late_deduction') == 10
+          and '計入 90 分' in J(rs['B']).get('message', ''), '遲交扣分不正確')
+    check(rs['C'].status_code == 200 and J(rs['C']).get('late_deduction') == 0, '允許遲交的作業被扣分')
+    check(rs['D'].status_code == 200 and J(rs['D']).get('late_deduction') == 0, '還沒截止的作業被擋下或扣分')
+    check(cell['A'][0] == 'missing' and cell['B'] == ('graded', 100, 90, 10, True)
+          and cell['C'] == ('graded', 100, 100, 0, True) and cell['D'] == ('graded', 100, 100, 0, False), '成績分頁不正確')
+
+
+def push_token(uid, token, logout=False):
+    return SC.post('/api/user/push_token', json={'user_id': uid, 'token': token, 'logout': logout})
+
+
+@case('A13', '登記與清除手機推播通知',
+      pre='學生甲、乙；手機 A 的推播代碼為 tok-phone-A',
+      steps='1. 學生甲在手機 A 登入，POST /api/user/push_token 登記 tok-phone-A\n2. 學生乙改用同一支手機登入並登記\n'
+            '3. 學生乙在另一支舊手機（tok-old）登出\n4. 學生乙在手機 A 登出',
+      expect='1. 甲的帳號記下這支手機\n2. 這支手機改記在乙的帳號，甲的清空（通知不會推錯人）\n3. 乙的登記不受影響\n4. 乙的登記清除')
+def _(c):
+    k = ensure_class()
+
+    def tokens():
+        return user_row(k['s1'])['push_token'], user_row(k['s2'])['push_token']
+
+    r1 = push_token(k['s1'], 'tok-phone-A')
+    t1 = tokens()
+    r2 = push_token(k['s2'], 'tok-phone-A')
+    t2 = tokens()
+    push_token(k['s2'], 'tok-old', logout=True)
+    t3 = tokens()
+    push_token(k['s2'], 'tok-phone-A', logout=True)
+    t4 = tokens()
+    c.log(f'1. HTTP {r1.status_code}，（甲, 乙）={t1}；2. HTTP {r2.status_code}，{t2}；3. {t3}；4. {t4}')
+    check(r1.status_code == 200 and t1 == ('tok-phone-A', None), '登記失敗')
+    check(r2.status_code == 200 and t2 == (None, 'tok-phone-A'), '同一支手機換人登入後沒有移轉')
+    check(t3 == (None, 'tok-phone-A'), '在別支手機登出卻清掉了這支手機的登記')
+    check(t4 == (None, None), '登出後沒有清除登記')
+
+
+@case('A13', '公告、新作業與批改完成時推播通知學生',
+      pre='「三年丙班」學生甲、乙都已登記手機；學生甲有一份已繳交、待批閱的造句作業',
+      steps='1. 老師發布公告「明天停課」\n2. 老師出一份作業並勾選「通知學生」，再出一份不勾選\n3. 老師在批閱頁替學生甲的作業打 88 分\n'
+            '4. 學生乙的手機已移除 App，老師再發一則公告\n5. 伺服器沒有設定推播金鑰時，老師再發一則公告',
+      expect='1. 推播給甲、乙兩支手機，標題「三年丙班：明天停課」\n2. 勾選通知的作業推播「三年丙班：新作業」，沒勾選的不推播\n'
+             '3. 只推播給學生甲，標題「作業已批改」，內容含 88 分\n4. 乙的手機登記被清除，之後不再推給他\n5. 公告照常發布，不推播也不出錯',
+      note='推播以模擬方式進行，未連線 Firebase')
+def _(c):
+    k = ensure_class()
+    web = teacher_client(k['teacher'], '林老師')
+    push_token(k['s1'], 'tok-s1')
+    push_token(k['s2'], 'tok-s2')
+    with S.app_context():
+        hw = Assignment(classroom_id=k['room'], title='第一課造句', task_type=TaskType.SENTENCE,
+                        config={'grammar_point': '〜ます'}, is_published=True)
+        db.session.add(hw)
+        db.session.flush()
+        sub = AssignmentSubmission(assignment_id=hw.id, student_id=k['s1'], status=SubmissionStatus.SUBMITTED,
+                                   submitted_at=datetime.utcnow())
+        db.session.add(sub)
+        db.session.commit()
+        sub_id = sub.id
+    ann_url = f'/teacher/classroom/{k["room"]}/announcements'
+    hw_url = f'/teacher/classroom/{k["room"]}/assignment/create'
+    PUSH_FAKE.update(ready=True, dead=[])
+    del PUSHED[:]
+    try:
+        web.post(ann_url, data={'title': '明天停課', 'content': '颱風假，作業順延。'})
+        f1 = flashes(web)
+        p1 = list(PUSHED)
+        web.post(hw_url, data={'task_type': 'sentence', 'title': '第五課造句', 'grammar_point': '〜たい', 'announce': '1'})
+        web.post(hw_url, data={'task_type': 'sentence', 'title': '第六課造句', 'grammar_point': '〜たい'})
+        flashes(web)
+        p2 = PUSHED[len(p1):]
+        web.post(f'/teacher/submission/{sub_id}/grade', data={'score': '88', 'teacher_comment': '助詞用得很好'})
+        f3 = flashes(web)
+        p3 = PUSHED[len(p1) + len(p2):]
+        PUSH_FAKE['dead'] = ['tok-s2']
+        web.post(ann_url, data={'title': '補課時間', 'content': '週六上午。'})
+        flashes(web)
+        s2_token = user_row(k['s2'])['push_token']
+        web.post(ann_url, data={'title': '補課教室', 'content': '改到 301 教室。'})
+        flashes(web)
+        p4 = PUSHED[len(p1) + len(p2) + len(p3):]
+        PUSH_FAKE['ready'] = False
+        n_before = len(PUSHED)
+        web.post(ann_url, data={'title': '期末考日期', 'content': '下週三。'})
+        f5 = flashes(web)
+        n_after = len(PUSHED)
+    finally:
+        PUSH_FAKE.update(ready=False, dead=[])
+    n_ann = count(ClassroomAnnouncement, classroom_id=k['room'], title='期末考日期')
+    c.log(f'1. 提示={f1}，推播={[(p["tokens"], p["title"]) for p in p1]}；2. 推播={[(p["title"], p["body"]) for p in p2]}；'
+          f'3. 提示={f3}，推播={[(p["tokens"], p["title"], p["body"]) for p in p3]}；'
+          f'4. 乙的手機登記={s2_token}，之後的推播對象={[p["tokens"] for p in p4]}；5. 提示={f5}，推播 {n_after - n_before} 則，公告 {n_ann} 則')
+    check(len(p1) == 1 and p1[0]['tokens'] == ['tok-s1', 'tok-s2'] and p1[0]['title'] == '三年丙班：明天停課'
+          and p1[0]['data'].get('type') == 'announcement' and '已推播到 2 位學生的手機' in f1[0], '公告推播不正確')
+    check(len(p2) == 1 and p2[0]['title'] == '三年丙班：新作業' and p2[0]['body'].startswith('第五課造句'), '新作業推播不正確')
+    check(len(p3) == 1 and p3[0]['tokens'] == ['tok-s1'] and p3[0]['title'] == '作業已批改' and '88 分' in p3[0]['body'],
+          '批改推播不正確')
+    check(s2_token is None and [p['tokens'] for p in p4] == [['tok-s1', 'tok-s2'], ['tok-s1']], '收不到的手機沒有清除')
+    check(n_after == n_before and n_ann == 1 and f5 and f5[0].startswith('公告已發布') and '推播' not in f5[0],
+          '沒有推播金鑰時公告發布不正常')
+
+
+# ----------------------------------------------------------------------
+# A04 AI對話練習：對話角色與腔調（services/character.py、services/dialect.py）
+# ----------------------------------------------------------------------
+def characters_of(u):
+    d = J(SC.get(f'/api/character/list?user_id={u["id"]}'))
+    return {x['id']: x for x in d.get('characters', [])}, d.get('dialect_unlocked')
+
+
+def buy_character(u, character_id):
+    return SC.post('/api/character/buy', json={'user_id': u['id'], 'character_id': character_id})
+
+
+@case('A04', '官方角色清單與以點數購買角色',
+      pre='使用者 C 目前 0 點，尚未購買任何角色；官方角色「瀨戶 景」售價 300 點',
+      steps='1. GET /api/character/list?user_id=C\n2. 0 點時 POST /api/character/buy，character_id=seto_kei\n3. 購買 350 點後再買一次\n'
+            '4. 再查角色清單與交易紀錄\n5. 重複購買同一個角色\n6. 購買免費的「預設老師」、購買不存在的角色',
+      expect='1. 「預設老師」免費且已擁有，「瀨戶 景」300 點未擁有，尚無腔調名額\n2. HTTP 400，「點數不足，需要 300 點」\n'
+             '3. HTTP 200，扣 300 點（餘 50），取得一個腔調名額\n4. 「瀨戶 景」已擁有，交易紀錄有 -300\n5. HTTP 400，「已經擁有這個角色了」，不重複扣點\n'
+             '6. 皆 HTTP 400')
+def _(c):
+    u = register('chara')
+    STATE['chara'] = u
+    chars, unlocked = characters_of(u)
+    r2 = buy_character(u, 'seto_kei')
+    SC.post('/api/user/add_points', json={'user_id': u['id'], 'points': 350, 'price': 0, 'payment_method': 'credit_card'})
+    r3 = buy_character(u, 'seto_kei')
+    chars2, unlocked2 = characters_of(u)
+    tx = [(t['points'], t['transaction_type']) for t in J(SC.get(f'/api/user/transactions/{u["id"]}')).get('transactions', [])]
+    r5 = buy_character(u, 'seto_kei')
+    pts = user_row(u['id'])['j_pts']
+    r6a, r6b = buy_character(u, 'default_teacher'), buy_character(u, 'no_such_character')
+    c.log(f'1. 角色（名稱, 售價, 已擁有）={[(x["name"], x["cost"], x["owned"]) for x in chars.values()]}，dialect_unlocked={unlocked}；'
+          f'2. {http(r2, "error")}；3. {http(r3, "message", "total_points", "dialect_unlocked")}；'
+          f'4. 瀨戶 景 owned={chars2["seto_kei"]["owned"]}、dialect_unlocked={unlocked2}、交易紀錄={tx}；'
+          f'5. {http(r5, "error")}，點數={pts}；6. {http(r6a, "error")}；{http(r6b, "error")}')
+    check(chars['default_teacher']['owned'] is True and chars['default_teacher']['cost'] == 0
+          and chars['seto_kei']['owned'] is False and chars['seto_kei']['cost'] == 300 and unlocked is False, '角色清單不正確')
+    check(r2.status_code == 400 and J(r2).get('error') == '點數不足，需要 300 點', '點數不足未擋下')
+    check(r3.status_code == 200 and J(r3).get('total_points') == 50 and J(r3).get('dialect_unlocked') is True, '購買角色失敗')
+    check(chars2['seto_kei']['owned'] is True and unlocked2 is True and (-300, 'spend') in tx, '購買後的狀態或交易紀錄不正確')
+    check(r5.status_code == 400 and J(r5).get('error') == '已經擁有這個角色了' and pts == 50, '可以重複購買')
+    check(r6a.status_code == 400 and r6b.status_code == 400, '免費或不存在的角色未擋下')
+
+
+@case('A04', '每買一個角色可解鎖一種對話腔調',
+      pre='系統有啟用中的腔調「關西腔」「博多腔」；使用者 N 沒買過角色，使用者 C 已買過一個角色、尚未選腔調（A04-04）',
+      steps='1. GET /api/dialect/list\n2. N 指定關西腔與 AI 對話（POST /api/chat，dialect_id=關西腔）\n3. N 解鎖關西腔（POST /api/character/choose_dialect）\n'
+            '4. C 還沒選腔調就指定關西腔與 AI 對話\n5. C 解鎖關西腔\n6. C 指定關西腔與 AI 對話\n7. C 再解鎖博多腔\n8. C 指定博多腔與 AI 對話',
+      expect='1. 清單有「關西腔」，並附男女聲試聽音檔欄位\n2. 對話正常，但以標準語回覆（腔調不套用）\n3. HTTP 400，沒有可用的腔調名額\n'
+             '4. 以標準語回覆\n5. HTTP 200，已解鎖的腔調為關西腔、名額剩 0\n6. 對話套用關西腔\n7. HTTP 400，沒有可用的腔調名額\n8. 以標準語回覆',
+      note='AI 回應以模擬資料替代，檢查的是交給 AI 的腔調設定')
+def _(c):
+    with S.app_context():
+        d = Dialect.query.filter_by(name='關西腔', is_active=True).first()
+        if d is None:
+            d = Dialect(name='關西腔', jp_name='関西弁', region='大阪、京都、神戶', description='最有名的方言',
+                        prompt_instruction='請用關西腔回覆', is_active=True)
+            db.session.add(d)
+            db.session.commit()
+        did = d.id
+        d2 = Dialect.query.filter_by(name='博多腔', is_active=True).first()
+        if d2 is None:
+            d2 = Dialect(name='博多腔', jp_name='博多弁', region='福岡博多', description='九州最有代表性',
+                         prompt_instruction='請用博多腔回覆', is_active=True)
+            db.session.add(d2)
+            db.session.commit()
+        did2 = d2.id
+    r1 = SC.get('/api/dialect/list')
+    row = next((x for x in (r1.get_json() or []) if x['id'] == did), {})
+    n, buyer = register('nodialect'), STATE['chara']
+
+    def talk(u, dialect_id=did):
+        use_ai(u)
+        FAKE['last_dialect'] = 'unset'
+        r = SC.post('/api/chat', data={'user_id': str(u['id']), 'message': 'こんにちは', 'topic': '日常對話',
+                                       'level': 'N5', 'dialect_id': str(dialect_id)})
+        return r, FAKE['last_dialect']
+
+    def choose(u, dialect_id):
+        return SC.post('/api/character/choose_dialect', json={'user_id': u['id'], 'dialect_id': dialect_id})
+
+    r2, used2 = talk(n)
+    r3 = choose(n, did)
+    r4, used4 = talk(buyer)
+    r5 = choose(buyer, did)
+    r6, used6 = talk(buyer)
+    r7 = choose(buyer, did2)
+    r8, used8 = talk(buyer, did2)
+    c.log(f'1. HTTP {r1.status_code}，{row.get("name")}（{row.get("jp_name")}），試聽欄位={sorted((row.get("samples") or {}).keys())}；'
+          f'2. HTTP {r2.status_code}，套用腔調={used2}；3. {http(r3, "error")}；4. HTTP {r4.status_code}，套用腔調={used4}；'
+          f'5. {http(r5, "message", "unlocked_dialect_ids", "free_dialect_slots")}；'
+          f'6. HTTP {r6.status_code}，套用腔調={"關西腔" if used6 == did else used6}；7. {http(r7, "error")}；'
+          f'8. HTTP {r8.status_code}，套用腔調={used8}')
+    check(r1.status_code == 200 and row.get('name') == '關西腔' and sorted((row.get('samples') or {}).keys()) == ['female', 'male'],
+          '腔調清單不正確')
+    check(r2.status_code == 200 and used2 is None, '沒買過角色卻套用了腔調')
+    check(r3.status_code == 400 and r7.status_code == 400, '沒有名額卻能解鎖腔調')
+    check(r4.status_code == 200 and used4 is None, '還沒解鎖腔調卻套用了')
+    check(r5.status_code == 200 and J(r5).get('unlocked_dialect_ids') == [did] and J(r5).get('free_dialect_slots') == 0,
+          '用名額解鎖腔調失敗')
+    check(r6.status_code == 200 and used6 == did, '解鎖後卻沒有套用腔調')
+    check(r8.status_code == 200 and used8 is None, '套用了沒解鎖的腔調')
+
+
+@case('A04', '花點數新增自訂角色，對話時套用角色人設',
+      pre='使用者 K 目前 0 點、沒買過官方角色；使用者 C 已買過「瀨戶 景」；自訂角色售價 200 點',
+      steps='1. 0 點時新增自訂角色\n2. 儲值 450 點後，缺「個性」新增\n3. 六欄都填好新增「佐藤 美咲」\n4. 再新增同名角色、新增名為「預設老師」的角色\n'
+            '5. 查角色清單\n6. K 用「佐藤 美咲」對話；K 用沒買的「瀨戶 景」對話；C 用「瀨戶 景」對話；C 冒用 K 的「佐藤 美咲」對話\n'
+            '7. 刪除「佐藤 美咲」後再用它對話',
+      expect='1. HTTP 400，「點數不足，需要 200 點」\n2. HTTP 400，「請填寫個性」，不扣點\n3. HTTP 200，扣 200 點（餘 250），交易紀錄有 -200\n'
+             '4. 皆 HTTP 400，「已經有同名的角色了」\n5. 自訂角色清單有「佐藤 美咲」\n'
+             '6. 依序套用佐藤 美咲的人設、不套用、套用瀨戶 景的人設、不套用\n7. HTTP 200 刪除成功，之後對話不套用人設',
+      note='AI 回應以模擬資料替代，檢查的是交給 AI 的角色人設')
+def _(c):
+    k, buyer = register('custom'), register('custombuyer')
+    SC.post('/api/user/add_points', json={'user_id': buyer['id'], 'points': 300, 'price': 0, 'payment_method': 'credit_card'})
+    buy_character(buyer, 'seto_kei')
+    form = {'user_id': k['id'], 'name': '佐藤 美咲', 'origin': '大阪', 'age': '25', 'gender': '女',
+            'personality': '開朗健談', 'special_traits': '章魚燒店的店員'}
+
+    def create(**override):
+        return SC.post('/api/character/custom/create', json={**form, **override})
+
+    def talk(u, character):
+        use_ai(u)
+        FAKE['last_persona'] = 'unset'
+        r = SC.post('/api/chat', data={'user_id': str(u['id']), 'message': 'こんにちは', 'topic': '日常對話',
+                                       'level': 'N5', 'character': character})
+        persona = FAKE['last_persona']
+        return r.status_code, persona.get('name') if isinstance(persona, dict) else persona
+
+    r1 = create()
+    SC.post('/api/user/add_points', json={'user_id': k['id'], 'points': 450, 'price': 0, 'payment_method': 'credit_card'})
+    r2 = create(personality='')
+    pts2 = user_row(k['id'])['j_pts']
+    r3 = create()
+    pts3 = user_row(k['id'])['j_pts']
+    r4a, r4b = create(), create(name='預設老師')
+    customs = J(SC.get(f'/api/character/list?user_id={k["id"]}')).get('custom_characters', [])
+    tx = [(t['points'], t['related_feature']) for t in J(SC.get(f'/api/user/transactions/{k["id"]}')).get('transactions', [])]
+    t1, t2, t3, t4 = talk(k, '佐藤 美咲'), talk(k, '瀨戶 景'), talk(buyer, '瀨戶 景'), talk(buyer, '佐藤 美咲')
+    cid = (J(r3).get('character') or {}).get('custom_id')
+    r7 = SC.post('/api/character/custom/delete', json={'user_id': k['id'], 'custom_id': cid})
+    t7 = talk(k, '佐藤 美咲')
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}，點數={pts2}；3. {http(r3, "message", "total_points")}，點數={pts3}，交易紀錄={tx}；'
+          f'4. {http(r4a, "error")}；{http(r4b, "error")}；5. 自訂角色={[x["name"] for x in customs]}；'
+          f'6. 套用人設={[t1, t2, t3, t4]}；7. {http(r7, "message")}，之後套用人設={t7}')
+    check(r1.status_code == 400 and J(r1).get('error') == '點數不足，需要 200 點', '點數不足未擋下')
+    check(r2.status_code == 400 and J(r2).get('error') == '請填寫個性' and pts2 == 450, '缺欄位未擋下')
+    check(r3.status_code == 200 and pts3 == 250 and (-200, f'custom_character:{cid}') in tx, '新增自訂角色失敗')
+    check(r4a.status_code == 400 and r4b.status_code == 400 and '同名' in J(r4a).get('error', ''), '重名未擋下')
+    check([x['name'] for x in customs] == ['佐藤 美咲'], '自訂角色清單不正確')
+    check([t1, t2, t3, t4] == [(200, '佐藤 美咲'), (200, None), (200, '瀨戶 景'), (200, None)], '角色人設套用不正確')
+    check(r7.status_code == 200 and t7 == (200, None), '刪除自訂角色後仍套用人設')
+
+
+def kansai_id():
+    with S.app_context():
+        return Dialect.query.filter_by(name='關西腔', is_active=True).first().id
+
+
+@case('A04', '以腔調與男女聲朗讀對話內容',
+      pre='系統有啟用中的腔調「關西腔」；語音合成以模擬方式進行（腔調與男聲用 AI 語音模型，標準語女聲用一般語音）',
+      steps='POST /api/tts/synthesize：\n1. 沒有文字\n2. 標準語女聲朗讀「おはよう」\n3. 指定關西腔朗讀「おおきに」\n4. 同一句關西腔再朗讀一次\n'
+            '5. 標準語男聲朗讀「こんばんは」\n6. AI 語音模型無法使用時，指定關西腔朗讀「ほんまに」',
+      expect='1. HTTP 400\n2. 回傳 mp3，dialect_voice=false，不使用 AI 語音模型\n3. 回傳 wav，dialect_voice=true，以関西弁、女聲合成\n'
+             '4. cached=true，不重複合成\n5. 回傳 wav，以標準語、男聲合成\n6. 自動退回標準語音：回傳 mp3，dialect_voice=false',
+      note='語音合成以模擬資料替代，未連線語音服務')
+def _(c):
+    import services.tts as tts_module
+    did = kansai_id()
+    calls = []
+    state = {'ok': True}
+
+    def fake_gemini(text, jp_name, voice='female'):
+        calls.append((text, jp_name, voice))
+        return (b'RIFF' + b'\x00' * 40) if state['ok'] else None
+
+    class FakeGTTS:
+        def __init__(self, text, lang):
+            self.text = text
+
+        def write_to_fp(self, fp):
+            fp.write(b'ID3' + self.text.encode('utf-8'))
+
+    orig = tts_module.synthesize_with_gemini, tts_module.gTTS
+    tts_module.synthesize_with_gemini, tts_module.gTTS = fake_gemini, FakeGTTS
+
+    def say(**body):
+        n = len(calls)
+        r = SC.post('/api/tts/synthesize', json=body)
+        return r, calls[n:]
+
+    try:
+        r1, _ = say(text='  ')
+        r2, c2 = say(text='おはよう')
+        r3, c3 = say(text='おおきに', dialect_id=did)
+        r4, c4 = say(text='おおきに', dialect_id=did)
+        r5, c5 = say(text='こんばんは', voice='male')
+        state['ok'] = False
+        r6, c6 = say(text='ほんまに', dialect_id=did)
+    finally:
+        tts_module.synthesize_with_gemini, tts_module.gTTS = orig
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "format", "dialect_voice")}，AI 語音呼叫 {len(c2)} 次；'
+          f'3. {http(r3, "format", "cached", "dialect_voice")}，合成參數={c3}；4. {http(r4, "cached")}，AI 語音呼叫 {len(c4)} 次；'
+          f'5. {http(r5, "format", "dialect_voice")}，合成參數={c5}；6. {http(r6, "format", "dialect_voice")}')
+    check(r1.status_code == 400, '沒有文字未擋下')
+    check(r2.status_code == 200 and J(r2).get('format') == 'mp3' and J(r2).get('dialect_voice') is False and c2 == [], '標準語女聲不正確')
+    check(r3.status_code == 200 and J(r3).get('format') == 'wav' and J(r3).get('dialect_voice') is True
+          and c3 == [('おおきに', '関西弁', 'female')], '腔調語音不正確')
+    check(J(r4).get('cached') is True and c4 == [], '相同內容沒有使用快取')
+    check(J(r5).get('format') == 'wav' and c5 == [('こんばんは', '標準語', 'male')], '男聲不正確')
+    check(r6.status_code == 200 and J(r6).get('format') == 'mp3' and J(r6).get('dialect_voice') is False, 'AI 語音失敗時沒有退回標準語音')
+
+
+@case('A13', '老師在對話作業指定的腔調不受角色限制',
+      pre='「三年丙班」學生乙沒有買過任何角色；系統有腔調「關西腔」',
+      steps='1. 老師出一份 AI 情境對話作業「車站問路」，指定腔調選「關西腔」，最少 1 輪\n2. 學生乙查看作業內容\n'
+            '3. 學生乙從作業進入對話並送出一句話\n4. 學生乙在一般對話（不是作業）指定關西腔送出一句話',
+      expect='1. 作業建立成功並記下指定的腔調\n2. 作業內容帶有老師指定的腔調\n3. 對話套用關西腔，達到輪數後自動繳交\n4. 沒買過角色，一般對話不套用腔調',
+      note='AI 回應以模擬資料替代，檢查的是交給 AI 的腔調設定')
+def _(c):
+    k = ensure_class()
+    did = kansai_id()
+    s2 = {'id': k['s2']}
+    web = teacher_client(k['teacher'], '林老師')
+    web.post(f'/teacher/classroom/{k["room"]}/assignment/create',
+             data={'task_type': 'chat', 'title': '車站問路', 'chat_topic': '在車站問路', 'dialect_id': str(did), 'min_turns': '1'})
+    f1 = flashes(web)
+    with S.app_context():
+        a = Assignment.query.filter_by(classroom_id=k['room'], title='車站問路').first()
+        aid, cfg = a.id, dict(a.config or {})
+    detail = J(SC.get(f'/api/assignment/{aid}?user_id={k["s2"]}')).get('assignment', {})
+    sid = J(SC.post('/api/chat_history/session', json={'user_id': k['s2'], 'topic': '在車站問路', 'dialect_id': did})).get('session_id')
+
+    def talk(**extra):
+        use_ai(s2)
+        FAKE['last_dialect'] = 'unset'
+        r = SC.post('/api/chat', data={'user_id': str(k['s2']), 'message': 'すみません、駅はどこですか', 'topic': '在車站問路',
+                                       'level': 'N5', 'dialect_id': str(did), **extra})
+        return r, FAKE['last_dialect']
+
+    r3, used3 = talk(session_id=str(sid), assignment_id=str(aid))
+    result = J(r3).get('assignment_result') or {}
+    r4, used4 = talk()
+    c.log(f'1. 提示={f1}，作業設定={cfg}；2. 作業內容的腔調={(detail.get("config") or {}).get("dialect_id")}；'
+          f'3. HTTP {r3.status_code}，套用腔調={"關西腔" if used3 == did else used3}，繳交={result.get("submitted")}（{result.get("turns")}/{result.get("min_turns")} 輪）；'
+          f'4. HTTP {r4.status_code}，套用腔調={used4}')
+    check(cfg.get('dialect_id') == did and cfg.get('topic') == '在車站問路', '作業沒有記下指定腔調')
+    check((detail.get('config') or {}).get('dialect_id') == did, '學生端作業內容沒有腔調')
+    check(r3.status_code == 200 and used3 == did and result.get('submitted') is True, '作業對話沒有套用老師指定的腔調或沒有自動繳交')
+    check(r4.status_code == 200 and used4 is None, '一般對話不該套用腔調')
+
+
+@case('A13', '把作業複製到老師自己的其他班',
+      pre='林老師有「三年丙班」與「三年丁班」（學生丙在丁班）；丙班的「第二課造句」為遲交扣 10 分，已有學生繳交其他作業；陳老師有「二年戊班」',
+      steps='於丙班作業列表對「第二課造句」點「複製到其他班」：\n1. 沒有勾選任何班級\n2. 以測試工具把目標指定為陳老師的班\n'
+            '3. 勾選丁班、重設截止時間、立即發布並通知學生\n4. 再複製一次到丁班，不勾選立即發布\n5. 最高管理者執行複製',
+      expect='1、2. 提示「請勾選要複製到哪個班級」，不建立作業\n3. 丁班多一份同名作業，題目與遲交規則照抄、截止時間為新設定，並自動發公告；不複製繳交紀錄\n'
+             '4. 建立為未發布的草稿，不發公告，學生看不到\n5. 提示管理者無法代替老師出題')
+def _(c):
+    k = ensure_class()
+    with S.app_context():
+        room_d = Classroom(teacher_id=k['teacher'], name='三年丁班', join_code='D4E8Y6', is_open=True)
+        room_e = Classroom(teacher_id=k['teacher2'], name='二年戊班', join_code='E5F9Z7', is_open=True)
+        db.session.add_all([room_d, room_e])
+        db.session.flush()
+        db.session.add(ClassroomMember(classroom_id=room_d.id, student_id=k['s3'], display_name='學生丙'))
+        db.session.commit()
+        rd, re_ = room_d.id, room_e.id
+        src = db.session.get(Assignment, STATE['late_assignments']['deduct'])
+        src_info = (src.title, src.config, src.late_policy, src.late_penalty)
+    aid = STATE['late_assignments']['deduct']
+    web = teacher_client(k['teacher'], '林老師')
+    url = f'/teacher/assignment/{aid}/copy'
+    due = (datetime.utcnow() + timedelta(hours=8, days=10)).replace(second=0, microsecond=0)
+
+    def in_room(room):
+        with S.app_context():
+            return [(a.title, a.config, a.late_policy, a.late_penalty, a.due_at, a.is_published, a.id)
+                    for a in Assignment.query.filter_by(classroom_id=room).order_by(Assignment.id).all()]
+
+    web.post(url, data={})
+    f1 = flashes(web)
+    web.post(url, data={'target_classroom_ids': str(re_), 'publish': 'on'})
+    f2 = flashes(web)
+    n12 = len(in_room(rd)) + len(in_room(re_))
+    web.post(url, data={'target_classroom_ids': str(rd), 'due_at': due.isoformat(timespec='minutes'), 'publish': 'on', 'announce': 'on'})
+    f3 = flashes(web)
+    copied = in_room(rd)
+    anns = J(announcements_of(k['s3'], rd)).get('announcements', [])
+    n_sub = count(AssignmentSubmission, assignment_id=copied[0][6]) if copied else None
+    web.post(url, data={'target_classroom_ids': str(rd), 'announce': 'on'})
+    f4 = flashes(web)
+    after4 = in_room(rd)
+    anns4 = J(announcements_of(k['s3'], rd)).get('announcements', [])
+    seen = [x['title'] for x in J(SC.get(f'/api/assignment/my/{k["s3"]}')).get('assignments', [])]
+    boss = admin_client('sys_super', 'Admin@1234')
+    boss.post(url, data={'target_classroom_ids': str(rd), 'publish': 'on'})
+    f5 = flashes(boss)
+    c.log(f'1. 提示={f1}；2. 提示={f2}，新增作業 {n12} 份；3. 提示={f3}，丁班作業（名稱, 遲交規則, 扣分, 截止, 已發布）='
+          f'{[(x[0], x[2], x[3], str(x[4]), x[5]) for x in copied]}，公告={[x["title"] for x in anns]}，繳交紀錄 {n_sub} 筆；'
+          f'4. 提示={f4}，丁班作業 {len(after4)} 份（第 2 份已發布={after4[-1][5] if len(after4) > 1 else None}）、公告 {len(anns4)} 則、學生看到={seen}；'
+          f'5. 提示={f5}，丁班作業 {len(in_room(rd))} 份')
+    check(f1 == ['請勾選要複製到哪個班級'] and f2 == ['請勾選要複製到哪個班級'] and n12 == 0, '沒選班級或別人的班未擋下')
+    check(len(copied) == 1 and copied[0][:4] == src_info and copied[0][4] == due and copied[0][5] is True and n_sub == 0,
+          '複製出來的作業不正確')
+    check(len(f3) == 1 and '三年丁班' in f3[0] and [x['title'] for x in anns] == ['新作業：第二課造句']
+          and anns[0]['assignment_id'] == copied[0][6], '複製後沒有發公告')
+    check(len(after4) == 2 and after4[1][5] is False and after4[1][4] is None and len(anns4) == 1
+          and seen == ['第二課造句'] and '尚未發布' in f4[0], '草稿複製不正確')
+    check(len(f5) == 1 and '管理者無法代替老師出題' in f5[0] and len(in_room(rd)) == 2, '管理者可以代替老師複製作業')
+
+
+# ======================================================================
+# 補齊 App 其餘功能（2026-10-05 盤點路由後補上）
+# ======================================================================
+def analyze_photo(u, name='photo.jpg'):
+    scan(u)
+    return SC.post('/api/scenario/analyze', data={'user_id': str(u['id']), 'image': (io.BytesIO(JPEG_BYTES), name)},
+                   content_type='multipart/form-data')
+
+
+def befriend(a, b):
+    SC.post('/api/user/friend_request/send', json={'sender_id': a['id'], 'receiver_id': b['id']})
+    req = J(SC.get(f'/api/user/friend_request/pending/{b["id"]}'))['pending_requests'][0]
+    SC.post('/api/user/friend_request/respond', json={'request_id': req['request_id'], 'action': 'accept'})
+
+
+@case('A01', '登入後修改密碼',
+      pre='使用者 P 已登入，密碼為 Pass1234',
+      steps='POST /api/auth/change_password（帶 P 的通行證）：\n1. 目前密碼打錯\n2. 新密碼太短（123）\n3. 目前密碼正確、新密碼 NewPass5678\n'
+            '4. 用修改前的通行證查個人檔案\n5. 分別用舊密碼、新密碼登入',
+      expect='1. HTTP 400，「目前密碼錯誤」\n2. HTTP 400，提示密碼不符規則\n3. HTTP 200，「密碼已更新」並換發新通行證\n'
+             '4. HTTP 401（舊通行證失效）\n5. 舊密碼登入失敗、新密碼登入成功')
+def _(c):
+    u = register('chpw')
+    old = auth_header(u)
+
+    def change(cur, new):
+        return SC.post('/api/auth/change_password', json={'current_password': cur, 'new_password': new}, headers=old)
+
+    r1 = change('WrongPass1', 'NewPass5678')
+    r2 = change('Pass1234', '123')
+    r3 = change('Pass1234', 'NewPass5678')
+    r4 = SC.get(f'/api/user/profile_data/{u["id"]}', headers=old)
+    r5a, r5b = login(u, 'Pass1234'), login(u, 'NewPass5678')
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}；3. {http(r3, "message")}，換發通行證={bool(J(r3).get("token"))}；'
+          f'4. {http(r4, "error")}；5. 舊密碼 HTTP {r5a.status_code}、新密碼 HTTP {r5b.status_code}')
+    check(r1.status_code == 400 and J(r1).get('error') == '目前密碼錯誤', '目前密碼錯誤未擋下')
+    check(r2.status_code == 400 and J(r2).get('error'), '太短的新密碼未擋下')
+    check(r3.status_code == 200 and J(r3).get('message') == '密碼已更新' and J(r3).get('token'), '修改密碼失敗')
+    check(r4.status_code == 401, '改密碼後舊通行證仍可使用')
+    check(r5a.status_code != 200 and r5b.status_code == 200, '新舊密碼登入結果不正確')
+
+
+@case('A02', '照片紀錄、照片單字與照片改名',
+      pre='訂閱會員 H 拍了 3 張照片（AI 辨識以模擬資料替代，每張辨識出冷蔵庫、電子レンジ）；另一位使用者 X',
+      steps='1. GET /api/scenario/unlocked/{H}?limit=2，再取 offset=2\n2. GET /api/scenario/photo_vocabs，帶第一張照片的路徑\n'
+            '3. POST /api/scenario/rename_photo，把照片命名為「我家廚房」後重新查詢\n4. 名稱空白\n5. X 修改 H 的照片名稱',
+      expect='1. total=3；第一頁 2 筆、has_more=true；第二頁 1 筆、has_more=false；每張照片 vocab_count=2\n2. 列出這張照片的 2 個單字\n'
+             '3. HTTP 200，「修改成功」，照片紀錄顯示新名稱\n4. HTTP 400\n5. HTTP 403，名稱不變',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    h, x = register('photos'), register('photosx')
+    set_user(h['id'], is_premium=True, subscription_end_date=datetime.utcnow() + timedelta(days=30))
+    FAKE['scan_ok'] = True
+    codes = [analyze_photo(h, f'p{i}.jpg').status_code for i in range(3)]
+    p1 = J(SC.get(f'/api/scenario/unlocked/{h["id"]}?limit=2'))
+    p2 = J(SC.get(f'/api/scenario/unlocked/{h["id"]}?limit=2&offset=2'))
+    first = p1.get('scenes', [{}])[0]
+    r2 = SC.get('/api/scenario/photo_vocabs', query_string={'user_id': h['id'], 'image_path': first.get('image_path')})
+    words = sorted(v['word'] for v in J(r2).get('vocabs', []))
+    r3 = SC.post('/api/scenario/rename_photo', json={'photo_id': first.get('photo_id'), 'custom_title': '我家廚房'})
+    renamed = next((s['scene_name'] for s in J(SC.get(f'/api/scenario/unlocked/{h["id"]}')).get('scenes', [])
+                    if s['photo_id'] == first.get('photo_id')), None)
+    r4 = SC.post('/api/scenario/rename_photo', json={'photo_id': first.get('photo_id'), 'custom_title': ''})
+    r5 = SC.post('/api/scenario/rename_photo', json={'photo_id': first.get('photo_id'), 'custom_title': '被別人改'},
+                 headers=auth_header(x))
+    with S.app_context():
+        title = db.session.get(UserPhoto, first.get('photo_id')).custom_title
+    c.log(f'前置辨識狀態碼={codes}；1. total={p1.get("total")}，第一頁 {len(p1.get("scenes", []))} 筆 has_more={p1.get("has_more")}，'
+          f'第二頁 {len(p2.get("scenes", []))} 筆 has_more={p2.get("has_more")}，vocab_count={first.get("vocab_count")}；2. HTTP {r2.status_code}，單字={words}；'
+          f'3. {http(r3, "message")}，照片紀錄名稱={renamed}；4. {http(r4, "error")}；5. {http(r5, "error")}，名稱仍為「{title}」')
+    check(codes == [200] * 3, '前置拍照失敗')
+    check(p1.get('total') == 3 and len(p1.get('scenes', [])) == 2 and p1.get('has_more') is True
+          and len(p2.get('scenes', [])) == 1 and p2.get('has_more') is False and first.get('vocab_count') == 2, '照片紀錄分頁不正確')
+    check(words == ['冷蔵庫', '電子レンジ'], '照片單字不正確')
+    check(r3.status_code == 200 and J(r3).get('message') == '修改成功' and renamed == '我家廚房', '照片改名失敗')
+    check(r4.status_code == 400, '空白名稱未擋下')
+    check(r5.status_code == 403 and title == '我家廚房', '可以修改別人的照片名稱')
+
+
+@case('A02', '用辨識出的單字練習造句',
+      pre='拍照辨識出「冷蔵庫」；AI 批改以模擬資料替代',
+      steps='POST /api/scenario/evaluate_sentence：\n1. sentence=冷蔵庫に牛乳があります。、vocabs=[冷蔵庫]\n2. 沒有句子\n3. AI 批改失敗',
+      expect='1. HTTP 200，回傳 AI 的批改結果\n2. HTTP 400，「缺少句子或單字資料」\n3. HTTP 500，回傳錯誤訊息',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    u = register('evalphoto')
+    state = {'ok': True}
+
+    def fake_eval(sentence, vocabs, context_description=None):
+        if not state['ok']:
+            return {'success': False, 'error': 'AI 服務目前使用人數較多，請稍等幾秒再試一次。'}
+        return {'success': True, 'result': {'is_correct': True, 'score': 90, 'feedback': '文法正確，用到了指定的單字。',
+                                            'corrected_sentence': sentence}}
+
+    orig = ai_helper.evaluate_user_sentence
+    ai_helper.evaluate_user_sentence = fake_eval
+    try:
+        body = {'user_id': u['id'], 'sentence': '冷蔵庫に牛乳があります。', 'vocabs': ['冷蔵庫']}
+        r1 = SC.post('/api/scenario/evaluate_sentence', json=body)
+        r2 = SC.post('/api/scenario/evaluate_sentence', json={'user_id': u['id'], 'vocabs': ['冷蔵庫']})
+        state['ok'] = False
+        r3 = SC.post('/api/scenario/evaluate_sentence', json=body)
+    finally:
+        ai_helper.evaluate_user_sentence = orig
+    c.log(f'1. {http(r1, "score", "feedback")}；2. {http(r2, "error")}；3. {http(r3, "error")}')
+    check(r1.status_code == 200 and J(r1).get('score') == 90 and J(r1).get('feedback'), '批改結果不正確')
+    check(r2.status_code == 400 and J(r2).get('error') == '缺少句子或單字資料', '缺少句子未擋下')
+    check(r3.status_code == 500 and J(r3).get('error'), 'AI 失敗時沒有回報錯誤')
+
+
+@case('A03', '單字詳情依程度顯示分級例句',
+      pre='單字「紅葉」已有四個難度的例句（A11-06 由文章收藏時補上）；使用者 L5 程度 N5、L1 程度 N1，L1 已收藏這個單字',
+      steps='1. L5 GET /api/vocab/detail/{紅葉}\n2. L1 GET /api/vocab/detail/{紅葉}\n3. 查詢不存在的單字',
+      expect='1. 只顯示初階例句 1 句，more_sentences_locked=true，is_favorited=false\n'
+             '2. 顯示 4 個難度的例句並附翻譯，more_sentences_locked=false，is_favorited=true、收藏在「預設單字本」\n3. HTTP 404')
+def _(c):
+    l5, l1 = register('detail'), register('detail')
+    set_user(l5['id'], japanese_level='N5')
+    set_user(l1['id'], japanese_level='N1')
+    with S.app_context():
+        vid = Vocab.query.filter_by(word='紅葉', kana='こうよう').first().id
+    SC.post('/api/vocab/collect', json={'user_id': l1['id'], 'vocab_id': vid})
+    r1 = SC.get(f'/api/vocab/detail/{vid}?user_id={l5["id"]}')
+    r2 = SC.get(f'/api/vocab/detail/{vid}?user_id={l1["id"]}')
+    r3 = SC.get(f'/api/vocab/detail/99999999?user_id={l5["id"]}')
+    d1, d2 = J(r1), J(r2)
+    c.log(f'1. HTTP {r1.status_code}，例句={[s.get("level_name") for s in d1.get("sentences", [])]}，more_locked={d1.get("more_sentences_locked")}、'
+          f'is_favorited={d1.get("is_favorited")}；2. 例句={[s.get("level_name") for s in d2.get("sentences", [])]}，more_locked={d2.get("more_sentences_locked")}、'
+          f'is_favorited={d2.get("is_favorited")}、folder_name={d2.get("folder_name")}；3. {http(r3, "error")}')
+    check(r1.status_code == 200 and [s.get('level_name') for s in d1.get('sentences', [])] == ['初階應用']
+          and d1.get('more_sentences_locked') is True and d1.get('is_favorited') is False, 'N5 看到的例句不正確')
+    check([s.get('level_name') for s in d2.get('sentences', [])] == ['初階應用', '中階變化', '商務/進階', '高級語感']
+          and all(s.get('translation') for s in d2['sentences']) and d2.get('more_sentences_locked') is False
+          and d2.get('is_favorited') is True and d2.get('folder_name') == '預設單字本', 'N1 看到的例句不正確')
+    check(r3.status_code == 404, '不存在的單字未回 404')
+
+
+@case('A03', '場景單字清單、隨機探索與造句可選單字',
+      pre='系統測試場景有 60 個單字；使用者 E 拍過 1 張照片（辨識出冷蔵庫、電子レンジ，未收藏），另收藏了テスト語05',
+      steps='1. GET /api/vocab/scene/{系統測試場景}?user_id=E\n2. POST /api/vocab/explore，count=5、scene_id=系統測試場景\n'
+            '3. GET /api/vocab/practice_words?user_id=E\n4. 不帶 user_id 查詢場景單字',
+      expect='1. 列出 60 個單字，只有テスト語05 標示已解鎖\n2. 回傳 5 個單字，優先給還沒解鎖的\n'
+             '3. 列出 3 個可選單字：收藏的排最前（source=collected），拍照辨識過的在後（source=photo）\n4. HTTP 400',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    e = register('explore')
+    FAKE['scan_ok'] = True
+    analyze_photo(e)
+    SC.post('/api/vocab/collect', json={'user_id': e['id'], 'vocab_id': VOCAB_IDS[4]})
+    r1 = SC.get(f'/api/vocab/scene/{TEST_SCENE_ID}?user_id={e["id"]}')
+    sv = J(r1).get('vocabs', [])
+    unlocked = [v['word'] for v in sv if v['is_unlocked']]
+    r2 = SC.post('/api/vocab/explore', json={'user_id': e['id'], 'count': 5, 'scene_id': TEST_SCENE_ID})
+    ex = J(r2).get('vocabs', [])
+    r3 = SC.get(f'/api/vocab/practice_words?user_id={e["id"]}')
+    pw = [(w['word'], w['source']) for w in J(r3).get('words', [])]
+    r4 = SC.get(f'/api/vocab/scene/{TEST_SCENE_ID}', headers=auth_header(e))
+    c.log(f'1. HTTP {r1.status_code}，單字 {len(sv)} 個，已解鎖={unlocked}；2. HTTP {r2.status_code}，{len(ex)} 個，已解鎖的有 {sum(v["is_unlocked"] for v in ex)} 個；'
+          f'3. 可選單字={pw}；4. {http(r4, "error")}')
+    check(r1.status_code == 200 and len(sv) == 60 and unlocked == ['テスト語05'], '場景單字清單不正確')
+    check(r2.status_code == 200 and len(ex) == 5 and not any(v['is_unlocked'] for v in ex), '隨機探索不正確')
+    check(pw[:1] == [('テスト語05', 'collected')] and sorted(pw[1:]) == [('冷蔵庫', 'photo'), ('電子レンジ', 'photo')], '造句可選單字不正確')
+    check(r4.status_code == 400, '缺少 user_id 未擋下')
+
+
+@case('A04', '對話紀錄清單與 AI 小抄',
+      pre='使用者 T 開了三場對話：「一蘭拉麵」聊了 1 句、「便利商店」聊了 1 句（較晚）、「機場」還沒聊',
+      steps='1. GET /api/chat_history/sessions?user_id=T\n2. 不帶 user_id\n3. POST /api/user/update_profile，cheat_sheet=我在學旅遊日語\n4. update_profile 不帶 user_id',
+      expect='1. 只列出聊過的 2 場，新的排前面，並附最後一則訊息的預覽；沒聊過的「機場」不顯示\n2. HTTP 400\n3. HTTP 200，「AI 小抄更新成功！」並存入資料庫\n4. HTTP 400',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    t = register('sessions')
+    FAKE['chat_ok'] = True
+
+    def open_chat(topic, say=None):
+        sid = J(SC.post('/api/chat_history/session', json={'user_id': t['id'], 'topic': topic})).get('session_id')
+        if say:
+            use_ai(t)
+            SC.post('/api/chat', data={'user_id': str(t['id']), 'message': say, 'topic': topic, 'level': 'N5', 'session_id': str(sid)})
+        return sid
+
+    s1 = open_chat('一蘭拉麵', 'ラーメンをください')
+    s2 = open_chat('便利商店', 'おにぎりはどこですか')
+    open_chat('機場')
+    with S.app_context():   # 讓兩場的最後訊息時間有先後
+        db.session.get(ChatSession, s1).last_message_at = datetime.utcnow() - timedelta(minutes=5)
+        db.session.commit()
+    r1 = SC.get(f'/api/chat_history/sessions?user_id={t["id"]}')
+    rows = J(r1).get('sessions', [])
+    r2 = SC.get('/api/chat_history/sessions', headers=auth_header(t))
+    r3 = SC.post('/api/user/update_profile', data={'user_id': str(t['id']), 'cheat_sheet': '我在學旅遊日語'})
+    sheet = user_row(t['id'])['ai_cheat_sheet']
+    r4 = SC.post('/api/user/update_profile', data={'cheat_sheet': 'x'}, headers=auth_header(t))
+    c.log(f'1. HTTP {r1.status_code}，場次（主題, 訊息數）={[(x["topic"], x["message_count"]) for x in rows]}，都有預覽={all(x.get("preview") for x in rows)}；'
+          f'2. {http(r2, "error")}；3. {http(r3, "message")}，資料庫小抄={sheet}；4. {http(r4, "error")}')
+    check(r1.status_code == 200 and [x['session_id'] for x in rows] == [s2, s1] and all(x.get('preview') for x in rows), '對話紀錄清單不正確')
+    check(r2.status_code == 400, '缺少 user_id 未擋下')
+    check(r3.status_code == 200 and J(r3).get('message') == 'AI 小抄更新成功！' and sheet == '我在學旅遊日語', 'AI 小抄沒有儲存')
+    check(r4.status_code == 400, '缺少 user_id 未擋下')
+
+
+@case('A05', '主題收集冊與主題單字牆',
+      pre='使用者 M 已解鎖「便利商店」主題的 2 個官方單字（直接寫入解鎖紀錄模擬），其餘主題尚未開始',
+      steps='1. GET /api/scenario/themes/{M}\n2. GET /api/scenario/theme_vocabs/{M}/{便利商店}\n3. GET /api/scenario/scenes 與 ?quick_select=true',
+      expect='1. 列出 8 個官方主題（不含「其他」），「便利商店」已解鎖 2 個、進度=2/目標數，排在還沒開始的主題前面\n'
+             '2. total=目標數、unlocked=2；已解鎖的顯示單字，未解鎖的只給中文提示、不洩漏日文\n3. 回傳場景清單；quick_select 只回傳快速選擇用的場景')
+def _(c):
+    m = register('themes')
+    sid = STATE['theme_scene']
+    with S.app_context():
+        official = Vocab.query.filter_by(scene_id=sid, source='admin').order_by(Vocab.id).all()
+        for v in official[:2]:
+            db.session.add(UserVocab(user_id=m['id'], vocab_id=v.id))
+        db.session.commit()
+        total = len(official)
+    r1 = SC.get(f'/api/scenario/themes/{m["id"]}')
+    themes = J(r1).get('themes', [])
+    cvs = next((t for t in themes if t['scene_id'] == sid), {})
+    r2 = SC.get(f'/api/scenario/theme_vocabs/{m["id"]}/{sid}')
+    wall = J(r2)
+    locked = [v for v in wall.get('vocabs', []) if not v['is_unlocked']]
+    r3a, r3b = SC.get('/api/scenario/scenes'), SC.get('/api/scenario/scenes?quick_select=true')
+    all_scenes, quick = r3a.get_json() or [], r3b.get_json() or []
+    c.log(f'1. HTTP {r1.status_code}，主題 {len(themes)} 個，第一個={themes[0]["name"] if themes else None}，便利商店 {cvs.get("unlocked_count")}/{cvs.get("target_count")}（progress={cvs.get("progress")}）；'
+          f'2. total={wall.get("total")}、unlocked={wall.get("unlocked")}，未解鎖 {len(locked)} 個、有洩漏日文={any("word" in v for v in locked)}、都有提示={all(v.get("hint") for v in locked)}；'
+          f'3. 場景 {len(all_scenes)} 個、快速選擇 {len(quick)} 個')
+    check(r1.status_code == 200 and len(themes) == 8 and all(t['name'] != '其他' for t in themes)
+          and themes[0]['scene_id'] == sid and cvs.get('unlocked_count') == 2 and cvs.get('target_count') == total
+          and cvs.get('progress') == round(2 / total, 3), '主題收集冊不正確')
+    check(wall.get('total') == total and wall.get('unlocked') == 2 and len(locked) == total - 2
+          and not any('word' in v or 'kana' in v for v in locked) and all(v.get('hint') for v in locked)
+          and all(v['is_unlocked'] for v in wall['vocabs'][:2]), '主題單字牆不正確')
+    check(r3a.status_code == 200 and len(all_scenes) >= 8 and len(quick) <= len(all_scenes)
+          and all('icon_name' in s for s in all_scenes), '場景清單不正確')
+
+
+@case('A06', '小組追加邀請、取消邀請與不可中途退出',
+      pre='隊長 Q1 已建立小組「晨讀小組」，好友為 Q2、Q3；Q4 不在小組裡',
+      steps='1. Q1 POST /api/group/invite_friends 邀請 Q2、Q3，再邀請一次 Q2\n2. POST /api/group/friends_detailed_status 查好友狀態\n'
+            '3. Q4 替這個小組發邀請\n4. Q1 取消對 Q3 的邀請，再取消一次\n5. Q1 POST /api/group/leave',
+      expect='1. 第一次「成功發送 2 個邀請！」，重複邀請不會再送（0 個）\n2. Q2、Q3 皆標示已邀請\n3. HTTP 403，「你不在這個小組裡」\n'
+             '4. 第一次「已成功取消邀請」，Q3 不再有邀請；第二次 HTTP 404\n5. HTTP 400，挑戰結算前無法退出')
+def _(c):
+    q1, q2, q3, q4 = (register('ginv') for _ in range(4))
+    befriend(q1, q2)
+    befriend(q1, q3)
+    gid = J(SC.post('/api/group/create', json={'user_id': q1['id'], 'name': '晨讀小組', 'goal_type': 'scans', 'goal_target': 30})).get('group_id')
+    STATE['ginv'] = (q1, q2, gid)
+
+    def invite(sender, ids):
+        return SC.post('/api/group/invite_friends', json={'group_id': gid, 'sender_id': sender['id'], 'friend_ids': ids})
+
+    r1a = invite(q1, [q2['friend_id'], q3['friend_id']])
+    r1b = invite(q1, [q2['friend_id']])
+    r2 = SC.post('/api/group/friends_detailed_status', json={'group_id': gid, 'user_id': q1['id']})
+    status = sorted((f['friend_id'] == q2['friend_id'] and 'Q2' or 'Q3', f['is_invited'], f['has_group']) for f in J(r2).get('friends', []))
+    r3 = invite(q4, [q2['friend_id']])
+    cancel = lambda: SC.post('/api/group/cancel_invite', json={'group_id': gid, 'receiver_id': q3['friend_id']})
+    r4a = cancel()
+    left = len(J(SC.get(f'/api/group/invites/{q3["id"]}')).get('invites', []))
+    r4b = cancel()
+    r5 = SC.post('/api/group/leave', json={'user_id': q1['id'], 'group_id': gid})
+    c.log(f'1. {http(r1a, "message")}；{http(r1b, "message")}；2. 好友（誰, 已邀請, 已有小組）={status}；3. {http(r3, "error")}；'
+          f'4. {http(r4a, "message")}，Q3 的邀請 {left} 筆；{http(r4b, "error")}；5. {http(r5, "error")}')
+    check(gid and r1a.status_code == 200 and J(r1a).get('message') == '成功發送 2 個邀請！' and J(r1b).get('message') == '成功發送 0 個邀請！',
+          '追加邀請不正確')
+    check(status == [('Q2', True, False), ('Q3', True, False)], '好友邀請狀態不正確')
+    check(r3.status_code == 403 and J(r3).get('error') == '你不在這個小組裡', '非成員可以替小組發邀請')
+    check(r4a.status_code == 200 and J(r4a).get('message') == '已成功取消邀請' and left == 0 and r4b.status_code == 404, '取消邀請不正確')
+    check(r5.status_code == 400 and '無法退出' in J(r5).get('error', ''), '挑戰期間可以退出小組')
+
+
+@case('A06', '小組達標後提前領獎並結業',
+      pre='延續 A06-20：隊長 Q1 的「晨讀小組」（目標拍照 30 次，免押金）只有 Q1 一人，Q2 仍在受邀中',
+      steps='1. 進度未達標時 POST /api/group/claim_reward\n2. 把小組進度設為達標（模擬成員完成 30 次拍照）後再領一次\n'
+            '3. 達標前先確認：達標的小組再邀請好友\n4. 領獎後查詢我的小組，並再領一次',
+      expect='1. HTTP 400，「任務尚未達成，還不能領獎喔！」\n2. HTTP 200，發放獎勵並結業\n3. HTTP 400，「小組已達標，無法再發送邀請！」\n'
+             '4. Q1 已沒有小組，小組解散；再領 HTTP 404')
+def _(c):
+    q1, q2, gid = STATE['ginv']
+    claim = lambda: SC.post('/api/group/claim_reward', json={'group_id': gid, 'user_id': q1['id']})
+    r1 = claim()
+    with S.app_context():
+        g = db.session.get(StudyGroup, gid)
+        g.current_progress = g.goal_target
+        db.session.commit()
+    r3 = SC.post('/api/group/invite_friends', json={'group_id': gid, 'sender_id': q1['id'], 'friend_ids': [q2['friend_id']]})
+    before = user_row(q1['id'])['j_pts']
+    r2 = claim()
+    after = user_row(q1['id'])['j_pts']
+    n_group = count(StudyGroup, id=gid)
+    n_member = count(GroupMember, user_id=q1['id'])
+    r4 = claim()
+    c.log(f'1. {http(r1, "error")}；2. {http(r2, "message", "new_j_pts")}，點數 {before} → {after}；3. {http(r3, "error")}；'
+          f'4. Q1 的小組成員紀錄 {n_member} 筆、小組 {n_group} 個；再領 {http(r4, "error")}')
+    check(r1.status_code == 400 and J(r1).get('error') == '任務尚未達成，還不能領獎喔！', '未達標可以領獎')
+    check(r3.status_code == 400 and J(r3).get('error') == '小組已達標，無法再發送邀請！', '達標後仍可邀請')
+    check(r2.status_code == 200 and '結業' in J(r2).get('message', '') and after > before, '達標領獎失敗')
+    check(n_member == 0 and n_group == 0 and r4.status_code == 404, '領獎後小組沒有解散或可重複領獎')
+
+
+@case('A07', '月繳訂閱排程升級為年繳',
+      pre='使用者 S1 已訂閱月繳（獲贈 20 點）；S2 沒有訂閱；S3 已訂閱年繳',
+      steps='1. S1 POST /api/subscription/schedule_upgrade\n2. S1 再排程一次\n3. S1 POST /api/subscription/pay_pending\n'
+            '4. S2、S3 分別排程升級\n5. S1 DELETE /api/subscription/schedule_upgrade/{S1}，再刪一次',
+      expect='1. HTTP 200，年繳在月繳到期後自動接續，立即獲贈年繳的 300 點（共 320 點）\n2. HTTP 400，「已有排程升級」\n'
+             '3. HTTP 200，「此排程已完成付款」\n4. S2 HTTP 404「找不到有效訂閱」；S3 HTTP 400「已是年繳方案」\n5. 第一次「已取消排程升級」，第二次 HTTP 404')
+def _(c):
+    s1, s2, s3 = register('upg'), register('upg'), register('upg')
+    subscribe(s1, 'monthly')
+    subscribe(s3, 'yearly')
+    up = lambda u: SC.post('/api/subscription/schedule_upgrade', json={'user_id': u['id'], 'payment_method': 'credit_card'})
+    r1 = up(s1)
+    with S.app_context():
+        subs = UserSubscription.query.filter_by(user_id=s1['id']).order_by(UserSubscription.start_date).all()
+        chained = len(subs) == 2 and subs[1].start_date == subs[0].end_date and subs[1].billing_cycle == 'yearly'
+    r2 = up(s1)
+    r3 = SC.post('/api/subscription/pay_pending', json={'user_id': s1['id']})
+    r4a, r4b = up(s2), up(s3)
+    r5a = SC.delete(f'/api/subscription/schedule_upgrade/{s1["id"]}')
+    r5b = SC.delete(f'/api/subscription/schedule_upgrade/{s1["id"]}')
+    c.log(f'1. {http(r1, "message", "points_granted", "total_points")}，年繳接在月繳到期日之後={chained}；2. {http(r2, "error")}；3. {http(r3, "message")}；'
+          f'4. S2 {http(r4a, "error")}；S3 {http(r4b, "error")}；5. {http(r5a, "message")}；{http(r5b, "error")}')
+    check(r1.status_code == 200 and J(r1).get('points_granted') == 300 and J(r1).get('total_points') == 320 and chained, '排程升級不正確')
+    check(r2.status_code == 400 and J(r2).get('error') == '已有排程升級', '可以重複排程')
+    check(r3.status_code == 200 and J(r3).get('message') == '此排程已完成付款', '排程付款狀態不正確')
+    check(r4a.status_code == 404 and J(r4a).get('error') == '找不到有效訂閱' and r4b.status_code == 400
+          and J(r4b).get('error') == '已是年繳方案', '不符資格的升級未擋下')
+    check(r5a.status_code == 200 and J(r5a).get('message') == '已取消排程升級' and r5b.status_code == 404, '取消排程不正確')
+
+
+@case('A07', '查詢點數可兌換的加購項目',
+      pre='無',
+      steps='GET /api/store/items',
+      expect='HTTP 200，列出可用點數兌換的加購項目，含拍照辨識加購與 AI 對話加購（各 60 點）')
+def _(c):
+    r = SC.get('/api/store/items')
+    items = J(r).get('items', [])
+    c.log(f'HTTP {r.status_code}，項目={[(i.get("id") or i.get("feature"), i.get("name"), i.get("cost")) for i in items]}')
+    check(r.status_code == 200 and len(items) >= 2 and all(i.get('name') and i.get('cost') for i in items), '兌換項目清單不正確')
+    check(sum(1 for i in items if i.get('cost') == 60) >= 2, '拍照與 AI 對話加購不是 60 點')
+
+
+# ======================================================================
+# 補齊管理後台其餘功能（2026-10-05 盤點路由後補上）
+# ======================================================================
+import contextlib
+
+
+@contextlib.contextmanager
+def admin_settings(**values):
+    """暫時指定後台的環境設定（正式環境寫在 .env），個案結束後還原"""
+    old = {k: getattr(admin_module, k) for k in values}
+    for k, v in values.items():
+        setattr(admin_module, k, v)
+    try:
+        yield
+    finally:
+        for k, v in old.items():
+            setattr(admin_module, k, v)
+
+
+def super_client():
+    return admin_client('sys_super', 'Admin@1234')
+
+
+def admin_login_as(username, password):
+    c = A.test_client()
+    return c, c.post('/login', data={'username': username, 'password': password})
+
+
+def teacher_web_login(email, password):
+    c = A.test_client()
+    return c, c.post('/login', data={'login_as': 'teacher', 'email': email, 'password': password})
+
+
+def logs(table, target_id=None, action=None):
+    with S.app_context():
+        q = SystemLog.query.filter_by(target_table=table)
+        if target_id is not None:
+            q = q.filter_by(target_id=target_id)
+        if action:
+            q = q.filter_by(action=action)
+        return q.count()
+
+
+@case('A10', '最高管理者新增管理者帳號',
+      pre='最高管理者 sys_super 已登入；一般管理者 sys_staff',
+      steps='於「管理員帳號」頁新增帳號：\n1. 帳號空白\n2. 密碼太弱（12345678）\n3. 帳號 kanri01、權限 admin、密碼 Kanri#2026a\n4. 再新增一次 kanri01\n'
+            '5. 一般管理者 sys_staff 送出新增帳號\n6. kanri01 第一次登入',
+      expect='1. 提示「請輸入帳號」\n2. 提示密碼強度不足\n3. 建立成功並寫入操作日誌\n4. 提示帳號已存在\n5. 被導回儀表板，不建立帳號\n6. 登入後被導到修改密碼頁')
+def _(c):
+    boss = super_client()
+    add = lambda cl, **d: (cl.post('/admin_account/add', data=d), flashes(cl))[1]
+    f1 = add(boss, username='', role='admin', password='Kanri#2026a')
+    f2 = add(boss, username='kanri00', role='admin', password='12345678')
+    f3 = add(boss, username='kanri01', role='admin', password='Kanri#2026a')
+    f4 = add(boss, username='kanri01', role='admin', password='Kanri#2026a')
+    staff = admin_client('sys_staff', 'Staff@1234')
+    r5 = staff.post('/admin_account/add', data={'username': 'kanri02', 'role': 'admin', 'password': 'Kanri#2026a'})
+    with S.app_context():
+        row = Admin.query.filter_by(username='kanri01').first()
+        info = (row.role, row.must_change_password, row.id) if row else None
+        n = Admin.query.filter(Admin.username.in_(['kanri00', 'kanri02'])).count()
+    cl, r6 = admin_login_as('kanri01', 'Kanri#2026a')
+    STATE['kanri'] = info[2] if info else None
+    c.log(f'1. {f1}；2. {f2}；3. {f3}，帳號（權限, 需改密碼）={info[:2] if info else None}、操作日誌 {logs("admin", info[2], "CREATE") if info else 0} 筆；'
+          f'4. {f4}；5. HTTP {r5.status_code} → {loc(r5)}，多建帳號 {n} 個；6. HTTP {r6.status_code} → {loc(r6)}')
+    check(f1 == ['請輸入帳號'] and len(f2) == 1 and f2[0] and '已建立' not in f2[0], '不合格的帳號資料未擋下')
+    check(len(f3) == 1 and '已建立管理員「kanri01」' in f3[0] and info[:2] == ('admin', True) and logs('admin', info[2], 'CREATE') == 1,
+          '新增管理者失敗')
+    check(f4 == ['帳號「kanri01」已存在'], '重複帳號未擋下')
+    check(r5.status_code == 302 and loc(r5).endswith('/dashboard') and n == 0, '一般管理者可以新增帳號')
+    check(r6.status_code == 302 and 'change_password' in loc(r6), '新帳號第一次登入沒有要求改密碼')
+
+
+@case('A10', '管理者修改密碼與登出',
+      pre='kanri01 用最高管理者給的密碼 Kanri#2026a 登入，尚未改密碼',
+      steps='於「修改密碼」頁：\n1. 目前密碼打錯\n2. 新密碼與確認密碼不一致\n3. 新密碼太弱\n4. 目前密碼正確、新密碼 Kanri#2027b\n'
+            '5. 點擊登出後直接開啟儀表板\n6. 分別用舊密碼、新密碼登入',
+      expect='1. 「目前密碼錯誤」\n2. 「新密碼與確認密碼不一致」\n3. 提示密碼強度不足\n4. 「密碼已成功更新」\n5. 被導回登入頁\n6. 舊密碼無法登入；新密碼登入後直接進儀表板')
+def _(c):
+    cl, _r = admin_login_as('kanri01', 'Kanri#2026a')
+
+    def change(cur, new, confirm=None):
+        return html(cl.post('/admin/change_password', data={'current_password': cur, 'new_password': new,
+                                                            'confirm_password': confirm or new}))
+
+    h1 = change('Wrong#0000a', 'Kanri#2027b')
+    h2 = change('Kanri#2026a', 'Kanri#2027b', 'Kanri#2027c')
+    h3 = change('Kanri#2026a', 'abcdefgh')
+    h4 = change('Kanri#2026a', 'Kanri#2027b')
+    cl.get('/logout')
+    r5 = cl.get('/dashboard')
+    _c1, r6a = admin_login_as('kanri01', 'Kanri#2026a')
+    _c2, r6b = admin_login_as('kanri01', 'Kanri#2027b')
+    c.log(f'1. 目前密碼錯誤={"目前密碼錯誤" in h1}；2. 不一致={"新密碼與確認密碼不一致" in h2}；3. 未更新={"密碼已成功更新" not in h3}；'
+          f'4. 已更新={"密碼已成功更新" in h4}；5. HTTP {r5.status_code} → {loc(r5)}；6. 舊密碼 HTTP {r6a.status_code}、新密碼 HTTP {r6b.status_code} → {loc(r6b)}')
+    check('目前密碼錯誤' in h1 and '新密碼與確認密碼不一致' in h2 and '密碼已成功更新' not in h3, '錯誤的改密碼請求未擋下')
+    check('密碼已成功更新' in h4, '修改密碼失敗')
+    check(r5.status_code == 302 and 'login' in loc(r5), '登出後仍可進後台')
+    check(r6a.status_code == 200 and '帳號或密碼錯誤' in html(r6a), '舊密碼仍可登入')
+    check(r6b.status_code == 302 and loc(r6b).endswith('/dashboard'), '新密碼無法登入')
+
+
+@case('A10', '管理者帳號的權限切換、停用與重設密碼',
+      pre='最高管理者 sys_super 已登入；kanri01 為一般管理者',
+      steps='於「管理員帳號」頁：\n1. 把 kanri01 的權限改為 super_admin，再改回 admin\n2. 修改自己的權限、停用自己\n3. 停用 kanri01 後，kanri01 嘗試登入\n'
+            '4. 重新啟用 kanri01\n5. 重設 kanri01 的密碼為 Reset#2026c 後，kanri01 用新密碼登入',
+      expect='1. 權限依序變為 super_admin、admin，並留下操作日誌\n2. 提示不能修改自己的權限、不能停用自己的帳號\n'
+             '3. 停用成功；kanri01 登入時顯示帳號已被停用\n4. 啟用成功\n5. 重設成功；kanri01 登入後被導到修改密碼頁')
+def _(c):
+    boss = super_client()
+    kid = STATE['kanri']
+    with S.app_context():
+        me = Admin.query.filter_by(username='sys_super').first().id
+    post = lambda url, **d: (boss.post(url, data=d), flashes(boss))[1]
+    role = lambda: count(Admin, id=kid, role='super_admin')
+    f1a = post(f'/admin_account/toggle_role/{kid}')
+    up = role()
+    f1b = post(f'/admin_account/toggle_role/{kid}')
+    f2a = post(f'/admin_account/toggle_role/{me}')
+    f2b = post(f'/admin_account/toggle_active/{me}')
+    f3 = post(f'/admin_account/toggle_active/{kid}')
+    _c, r3 = admin_login_as('kanri01', 'Kanri#2027b')
+    f4 = post(f'/admin_account/toggle_active/{kid}')
+    f5 = post(f'/admin_account/reset_password/{kid}', password='Reset#2026c')
+    _c, r5 = admin_login_as('kanri01', 'Reset#2026c')
+    c.log(f'1. {f1a}；{f1b}，操作日誌 {logs("admin", kid, "UPDATE")} 筆；2. {f2a}；{f2b}；3. {f3}，登入顯示已停用={"已被停用" in html(r3)}；'
+          f'4. {f4}；5. {f5}，登入 HTTP {r5.status_code} → {loc(r5)}')
+    check('super_admin' in f1a[0] and up == 1 and '改為 admin' in f1b[0] and role() == 0, '權限切換不正確')
+    check(f2a == ['不能修改自己的權限'] and f2b == ['不能停用自己的帳號'], '可以修改自己的權限或停用自己')
+    check(f3 == ['已停用「kanri01」'] and r3.status_code == 200 and '已被停用' in html(r3), '停用後仍可登入')
+    check(f4 == ['已啟用「kanri01」'], '重新啟用失敗')
+    page = boss.get('/admin_account/list')
+    check(page.status_code == 200 and 'kanri01' in html(page), '管理員帳號列表不正確')
+    check('已重設「kanri01」的密碼' in f5[0] and r5.status_code == 302 and 'change_password' in loc(r5), '重設密碼不正確')
+
+
+@case('A10', '文章管理：新增、修改、上下架與刪除',
+      pre='管理者已登入；App 使用者 R2 程度 N2',
+      steps='於「文章管理」頁：\n1. 新增文章但沒有標題；等級選錯；解鎖點數填 0\n2. 新增 N2 文章「東京の朝」，解鎖 80 點、立即上架，R2 於 App 查看 N2 文章\n'
+            '3. 修改標題為「東京の朝（改）」、解鎖 60 點\n4. 下架後 R2 再查看，之後重新上架\n5. 刪除文章',
+      expect='1. 分別提示標題與內容必填、請選擇正確的等級、解鎖點數必須大於 0，皆不建立文章\n2. 新增成功，App 的 N2 文章列表出現這篇（未解鎖）\n'
+             '3. 修改成功，資料與操作日誌更新\n4. 下架後 App 看不到，上架後恢復\n5. 刪除成功，App 看不到並留下操作日誌')
+def _(c):
+    cl = admin_client('sys_staff', 'Staff@1234')
+    r2 = register('artadmin')
+    set_user(r2['id'], japanese_level='N2')
+    base = {'title': '東京の朝', 'level': 'N2', 'theme': '日常生活', 'content': '[東京|とうきょう]の[朝|あさ]は[忙|いそが]しいです。',
+            'translation': '東京的早晨很忙碌。', 'unlock_cost': '80', 'is_published': 'on'}
+    post = lambda url, **d: (cl.post(url, data=d), flashes(cl))[1]
+    titles = lambda: [x['title'] for x in J(SC.get(f'/api/articles/dashboard?user_id={r2["id"]}&level=N2')).get('data', [])]
+    f1 = [post('/article/add', **dict(base, title='')), post('/article/add', **dict(base, level='N9')),
+          post('/article/add', **dict(base, unlock_cost='0'))]
+    n1 = count(Article, title='東京の朝')
+    f2 = post('/article/add', **base)
+    with S.app_context():
+        a = Article.query.filter_by(title='東京の朝').first()
+        aid, cost, free = a.id, a.unlock_cost, a.is_free
+    seen2 = titles()
+    f3 = post(f'/article/edit/{aid}', **dict(base, title='東京の朝（改）', unlock_cost='60'))
+    with S.app_context():
+        a = db.session.get(Article, aid)
+        edited = (a.title, a.unlock_cost)
+    f4a = post(f'/article/toggle/{aid}')
+    seen4a = titles()
+    f4b = post(f'/article/toggle/{aid}')
+    seen4b = titles()
+    page = html(cl.get('/article/list?keyword=東京'))
+    f5 = post(f'/article/delete/{aid}')
+    seen5 = titles()
+    c.log(f'1. {f1}，建立 {n1} 篇；2. {f2}，解鎖點數={cost}、免費={free}，App 看到={seen2}；3. {f3}，資料={edited}；'
+          f'4. {f4a}，App 看到={seen4a}；{f4b}，App 看到={seen4b}；5. {f5}，App 看到={seen5}；'
+          f'操作日誌（新增, 修改, 刪除）={logs("articles", aid, "CREATE")}, {logs("articles", aid, "UPDATE")}, {logs("articles", aid, "DELETE")}')
+    check(f1 == [['標題與日文內容為必填欄位'], ['請選擇正確的等級 (N5~N1)'], ['解鎖點數必須大於 0（新文章一律付費解鎖）']] and n1 == 0,
+          '不合格的文章未擋下')
+    check('已新增 N2 文章「東京の朝」' in f2[0] and cost == 80 and free is False and '東京の朝' in seen2, '新增文章失敗')
+    check(f3 == ['已更新文章「東京の朝（改）」'] and edited == ('東京の朝（改）', 60) and '東京の朝（改）' in page, '修改文章失敗')
+    check(f4a == ['已下架「東京の朝（改）」'] and '東京の朝（改）' not in seen4a
+          and f4b == ['已上架「東京の朝（改）」'] and '東京の朝（改）' in seen4b, '上下架不正確')
+    check(f5 == ['已刪除文章「東京の朝（改）」'] and '東京の朝（改）' not in seen5 and count(Article, id=aid) == 0
+          and logs('articles', aid, 'DELETE') == 1, '刪除文章失敗')
+
+
+@case('A10', '測驗題目管理：新增、修改、搜尋與刪除',
+      pre='管理者已登入',
+      steps='於「測驗題目」頁：\n1. 新增題目但缺少選項 D；正確答案填 E\n2. 新增一題 N3 題目「後台測試題：正確的助詞是？」，答案 B\n'
+            '3. 修改題目文字與正確答案為 C\n4. 以關鍵字「後台測試題」搜尋\n5. 刪除這一題',
+      expect='1. 兩次都不會新增題目\n2. 題目新增成功並寫入操作日誌\n3. 題目與答案更新\n4. 搜尋結果列出這一題\n5. 題目刪除並寫入操作日誌')
+def _(c):
+    cl = admin_client('sys_staff', 'Staff@1234')
+    base = {'stage': '第三階段：中級', 'level_tag': 'N3', 'question': '後台測試題：正確的助詞是？',
+            'option_a': 'は', 'option_b': 'を', 'option_c': 'に', 'option_d': 'で', 'correct_answer': 'b'}
+    before = count(QuizQuestion)
+    cl.post('/quiz/add', data=dict(base, option_d=''))
+    cl.post('/quiz/add', data=dict(base, correct_answer='E'))
+    n1 = count(QuizQuestion) - before
+    cl.post('/quiz/add', data=base)
+    with S.app_context():
+        q = QuizQuestion.query.filter_by(question=base['question']).first()
+        qid, ans = (q.id, q.correct_answer) if q else (None, None)
+    cl.post(f'/quiz/edit/{qid}', data=dict(base, question='後台測試題：請選出正確的助詞', correct_answer='C'))
+    with S.app_context():
+        q = db.session.get(QuizQuestion, qid)
+        edited = (q.question, q.correct_answer)
+    found = '請選出正確的助詞' in html(cl.get('/quiz/list?q=後台測試題'))
+    other = '請選出正確的助詞' in html(cl.get('/quiz/list?q=不存在的關鍵字'))
+    cl.post(f'/quiz/delete/{qid}')
+    left = count(QuizQuestion, id=qid)
+    c.log(f'1. 多出 {n1} 題；2. 題目編號={qid}、答案={ans}；3. {edited}；4. 搜尋到={found}、無關的關鍵字搜尋到={other}；5. 剩 {left} 題；'
+          f'操作日誌（新增, 修改, 刪除）={logs("quiz_question", qid, "INSERT")}, {logs("quiz_question", qid, "UPDATE")}, {logs("quiz_question", qid, "DELETE")}')
+    check(n1 == 0, '不完整的題目被新增')
+    check(qid and ans == 'B' and logs('quiz_question', qid, 'INSERT') == 1, '新增題目失敗')
+    check(edited == ('後台測試題：請選出正確的助詞', 'C'), '修改題目失敗')
+    check(found and not other, '題目搜尋不正確')
+    check(left == 0 and logs('quiz_question', qid, 'DELETE') == 1 and count(QuizQuestion) == before, '刪除題目失敗')
+
+
+@case('A10', '教材單字管理：新增、修改與刪除',
+      pre='管理者已登入',
+      steps='於「教材單字」頁：\n1. 新增單字「後台語」（こうだいご／後台測試單字）\n2. 修改為「後台語改」\n3. 查看單字列表\n4. 刪除這個單字',
+      expect='1. 單字新增為官方單字並寫入操作日誌\n2. 單字更新\n3. 列表顯示修改後的單字\n4. 單字刪除並寫入操作日誌')
+def _(c):
+    cl = admin_client('sys_staff', 'Staff@1234')
+    cl.post('/vocab/add', data={'word': '後台語', 'kana': 'こうだいご', 'meaning': '後台測試單字'})
+    with S.app_context():
+        v = Vocab.query.filter_by(word='後台語').first()
+        vid, source = (v.id, v.source) if v else (None, None)
+    cl.post(f'/vocab/edit/{vid}', data={'word': '後台語改', 'kana': 'こうだいごかい', 'meaning': '後台測試單字（改）'})
+    with S.app_context():
+        v = db.session.get(Vocab, vid)
+        edited = (v.word, v.kana, v.meaning)
+    r3 = cl.get('/vocab/list')
+    listed = '後台語改' in html(r3)
+    cl.post(f'/vocab/delete/{vid}')
+    left = count(Vocab, id=vid)
+    c.log(f'1. 單字編號={vid}、來源={source}；2. {edited}；3. HTTP {r3.status_code}，列表有這個字={listed}；4. 剩 {left} 筆；'
+          f'操作日誌（新增, 修改, 刪除）={logs("vocab", vid, "INSERT")}, {logs("vocab", vid, "UPDATE")}, {logs("vocab", vid, "DELETE")}')
+    check(vid and source == 'admin' and logs('vocab', vid, 'INSERT') == 1, '新增單字失敗')
+    check(edited == ('後台語改', 'こうだいごかい', '後台測試單字（改）') and listed, '修改單字失敗')
+    check(left == 0 and logs('vocab', vid, 'DELETE') == 1, '刪除單字失敗')
+
+
+@case('A10', '成就徽章管理：檢視解鎖情形與補建主題徽章',
+      pre='管理者已登入；資料庫少了一個主題徽章（以測試工具刪除模擬）',
+      steps='1. 開啟「成就徽章」頁\n2. 點擊補建主題徽章\n3. 再補建一次',
+      expect='1. 頁面列出各徽章與解鎖人數，並提示缺少的主題徽章\n2. 補建缺少的 1 個徽章並寫入操作日誌\n3. 提示主題徽章都已存在')
+def _(c):
+    cl = admin_client('sys_staff', 'Staff@1234')
+    with A.app_context():
+        names = [b for b, _t in admin_module._theme_badge_names()]
+    with S.app_context():
+        held = {ua.achievement_id for ua in UserAchievement.query.all()}
+        victim = next(a for a in Achievement.query.filter(Achievement.name.in_(names)).all() if a.id not in held)
+        gone = victim.name
+        db.session.delete(victim)
+        db.session.commit()
+    r1 = cl.get('/achievement/list')
+    page = html(r1)
+    cl.post('/achievement/sync_theme')
+    f2 = flashes(cl)
+    back = count(Achievement, name=gone)
+    cl.post('/achievement/sync_theme')
+    f3 = flashes(cl)
+    c.log(f'1. HTTP {r1.status_code}，頁面有「新手上路」={"新手上路" in page}、提到缺少的「{gone}」={gone in page}；2. {f2}，徽章 {back} 個；3. {f3}')
+    check(r1.status_code == 200 and '新手上路' in page and gone in page, '成就徽章頁不正確')
+    check(len(f2) == 1 and f'已補建 1 個主題徽章：{gone}' == f2[0] and back == 1, '補建主題徽章失敗')
+    check(f3 == ['主題徽章都已存在，不需要補建'], '重複補建')
+
+
+@case('A10', '照片管控與刪除意見回饋',
+      pre='使用者 PH 拍了 1 張照片並命名為「違規照片測試」，另送出 1 筆意見回饋；管理者已登入',
+      steps='1. 開啟「照片管控」頁\n2. 刪除這張照片後，PH 於 App 查看照片紀錄\n3. 於「意見回饋」頁刪除 PH 的回饋後，PH 於 App 查看回饋紀錄',
+      expect='1. 列表顯示這張照片與上傳者\n2. 照片、照片檔案與照片單字明細刪除，App 的照片紀錄為 0 筆\n3. 回饋刪除並寫入操作日誌，App 的回饋紀錄為 0 筆',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    ph = register('photoadmin')
+    SC.post('/api/user/update_username', json={'user_id': ph['id'], 'username': 'Photo_Tester'})
+    FAKE['scan_ok'] = True
+    pid = (J(analyze_photo(ph)).get('result') or {}).get('photo_id') or J(SC.get(f'/api/scenario/unlocked/{ph["id"]}'))['scenes'][0]['photo_id']
+    SC.post('/api/scenario/rename_photo', json={'photo_id': pid, 'custom_title': '違規照片測試'})
+    SC.post('/api/user/feedback', json={'user_id': ph['id'], 'email': ph['email'], 'feedback_type': '問題回報', 'content': '這筆回饋要被刪除'})
+    with S.app_context():
+        fid = Feedback.query.filter_by(user_id=ph['id']).first().id
+        photo_file = os.path.join(UPLOAD_DIR, os.path.basename(UserPhoto.query.get(pid).image_path))
+    file_before = os.path.isfile(photo_file)
+    cl = admin_client('sys_staff', 'Staff@1234')
+    r1 = cl.get('/photo/list')
+    page = html(r1)
+    r2 = cl.post(f'/photo/delete/{pid}')
+    file_after = os.path.isfile(photo_file)
+    n_photo, n_pv = count(UserPhoto, id=pid), count(UserPhotoVocab, photo_id=pid)
+    app_total = J(SC.get(f'/api/scenario/unlocked/{ph["id"]}')).get('total')
+    r3 = cl.post(f'/feedback/delete/{fid}')
+    n_fb = count(Feedback, id=fid)
+    app_fb = J(SC.get(f'/api/user/feedback/{ph["id"]}'))
+    c.log(f'1. HTTP {r1.status_code}，列表有這張照片={"違規照片測試" in page}、有上傳者={"Photo_Tester" in page}；'
+          f'2. HTTP {r2.status_code}，照片 {n_photo} 筆、單字明細 {n_pv} 筆、照片檔案存在={file_after}，App 照片紀錄 {app_total} 筆；'
+          f'3. HTTP {r3.status_code}，回饋 {n_fb} 筆、操作日誌 {logs("feedback", fid, "DELETE")} 筆')
+    check(r1.status_code == 200 and '違規照片測試' in page and 'Photo_Tester' in page, '照片管控列表不正確')
+    check(r2.status_code == 302 and n_photo == 0 and n_pv == 0 and app_total == 0, '刪除照片失敗')
+    check(file_before and not file_after, '照片檔案沒有一併刪除')
+    check(r3.status_code == 302 and n_fb == 0 and logs('feedback', fid, 'DELETE') == 1, '刪除回饋失敗')
+    check('這筆回饋要被刪除' not in json.dumps(app_fb, ensure_ascii=False), 'App 仍看得到已刪除的回饋')
+
+
+@case('A10', '營運資料查詢頁：購買紀錄、學習紀錄與學習小組',
+      pre='管理者已登入；使用者 BUY 購買過 140 點並兌換過加購、做過 1 次造句；另有一個進行中的學習小組「後台檢視小組」',
+      steps='1. 開啟「購買紀錄」頁\n2. 開啟「學習紀錄」頁的造句分頁（以 BUY 的 Email 搜尋）與朗讀分頁\n3. 開啟「學習小組」頁，並切換為只看進行中\n'
+            '4. 開啟舊網址「點數管理」與「點數方案」',
+      expect='1. 列出 BUY 的購點紀錄（140 點／NT$90），不包含兌換消費\n2. 造句分頁列出 BUY 的造句紀錄；朗讀分頁正常顯示\n'
+             '3. 列出「後台檢視小組」與成員\n4. 分別導到使用者資料頁與方案管理頁')
+def _(c):
+    buy = register('opsbuy')
+    SC.post('/api/user/add_points', json={'user_id': buy['id'], 'points': 140, 'price': 90, 'payment_method': 'google_pay'})
+    SC.post('/api/store/redeem', json={'user_id': buy['id'], 'feature': 'ai_extra'})
+    evaluate_sentence(buy)
+    SC.post('/api/group/create', json={'user_id': buy['id'], 'name': '後台檢視小組', 'goal_type': 'scans', 'goal_target': 30})
+    cl = super_client()
+    r1 = cl.get('/purchase/list')
+    p1 = html(r1)
+    r2a = cl.get('/record/list', query_string={'tab': 'sentence', 'q': buy['email']})
+    r2b = cl.get('/record/list?tab=reading')
+    p2 = html(r2a)
+    r3a, r3b = cl.get('/group/list'), cl.get('/group/list?status=active')
+    r4a, r4b = cl.get('/customer/list'), cl.get('/package/list')
+    c.log(f'1. HTTP {r1.status_code}，有 BUY 的紀錄={buy["email"] in p1}；2. 造句分頁 HTTP {r2a.status_code}，有 BUY 的造句={"健康のために" in p2}；朗讀分頁 HTTP {r2b.status_code}；'
+          f'3. HTTP {r3a.status_code}／{r3b.status_code}，有這個小組={"後台檢視小組" in html(r3b)}；4. → {loc(r4a)}、{loc(r4b)}')
+    check(r1.status_code == 200 and buy['email'] in p1 and '140' in p1, '購買紀錄頁不正確')
+    check(r2a.status_code == 200 and '健康のために' in p2 and r2b.status_code == 200, '學習紀錄頁不正確')
+    check(r3a.status_code == 200 and r3b.status_code == 200 and '後台檢視小組' in html(r3a) and '後台檢視小組' in html(r3b), '學習小組頁不正確')
+    check(r4a.status_code == 302 and 'user' in loc(r4a) and r4b.status_code == 302 and 'plan' in loc(r4b), '舊網址沒有導到新頁面')
+
+
+@case('A10', '新增訂閱方案',
+      pre='最高管理者已登入；App 目前有 2 個訂閱方案',
+      steps='於「方案管理」的訂閱方案分頁：\n1. 方案名稱空白送出\n2. 新增「測試季訂閱」（月繳 NT$399、贈 60 點），再於 App 查看訂閱方案',
+      expect='1. 不新增方案\n2. 方案新增並寫入操作日誌，App 的訂閱方案多出「測試季訂閱」')
+def _(c):
+    cl = super_client()
+    before = count(SubscriptionPlan)
+    cl.post('/plan/add', data={'name': '', 'billing_cycle': 'monthly', 'price_monthly': '399'})
+    n1 = count(SubscriptionPlan) - before
+    r2 = cl.post('/plan/add', data={'name': '測試季訂閱', 'billing_cycle': 'monthly', 'price_monthly': '399', 'points_grant_monthly': '60'})
+    with S.app_context():
+        p = SubscriptionPlan.query.filter_by(name='測試季訂閱').first()
+        info = (p.id, p.price_monthly, p.points_grant_monthly, p.is_active) if p else None
+    names = [x['name'] for x in J(SC.get('/api/subscription/plans')).get('plans', [])]
+    n_log = logs('subscription_plan', info[0], 'INSERT') if info else 0
+    with S.app_context():   # 清掉測試方案，避免影響之後依方案數量判斷的個案
+        SubscriptionPlan.query.filter_by(name='測試季訂閱').delete()
+        db.session.commit()
+    c.log(f'1. 多出 {n1} 個方案；2. HTTP {r2.status_code}，方案（月費, 贈點, 啟用）={info[1:] if info else None}、操作日誌 {n_log} 筆，App 方案={names}')
+    check(n1 == 0, '名稱空白的方案被新增')
+    check(info and info[1:] == (399, 60, True) and n_log == 1 and '測試季訂閱' in names, '新增訂閱方案失敗')
+
+
+# ----------------------------------------------------------------------
+# A13 校園教育版：學校管理、老師帳號、班級與名冊（後台）
+# ----------------------------------------------------------------------
+@case('A13', '後台學校管理：新增、修改學號格式與停用',
+      pre='最高管理者已登入',
+      steps='於「學校管理」頁：\n1. 新增學校但名稱空白；網域填「not a domain」；學號格式填錯誤的正規式\n'
+            '2. 新增「後台新增大學」，網域 adminuni.edu.tw、學號格式 ^s(\\d{8})$，再於 App 查看學校清單\n3. 再新增一次同名學校\n'
+            '4. 學生分別用 s12345678@、11156001@adminuni.edu.tw 登入\n5. 把學號格式改回預設後，11156001@ 再登入\n'
+            '6. 停用這間學校後查看 App 學校清單並登入，之後重新啟用\n7. 一般管理者開啟學校管理頁',
+      expect='1. 分別提示請輸入學校名稱、網域格式不正確、學號格式寫錯了\n2. 新增成功，App 清單出現這間學校\n3. 提示已經有這間學校\n'
+             '4. 符合學號格式的可以登入，不符合的被拒（not_student）\n5. 修改成功，11156001@ 可以登入\n'
+             '6. 停用後 App 清單不顯示、無法登入；啟用後恢復\n7. 被導回儀表板',
+      note='Google 身分憑證驗證以模擬方式進行')
+def _(c):
+    boss = super_client()
+    post = lambda url, **d: (boss.post(url, data=d), flashes(boss))[1]
+    app_names = lambda: [x['name'] for x in J(SC.get('/api/auth/schools')).get('schools', [])]
+    good = {'name': '後台新增大學', 'student_domains': 'adminuni.edu.tw', 'student_id_pattern': r'^s(\d{8})$'}
+    f1 = [post('/school/add', **dict(good, name='')), post('/school/add', **dict(good, student_domains='not a domain')),
+          post('/school/add', **dict(good, student_id_pattern='^s(\\d{8'))]
+    f2 = post('/school/add', **good)
+    sid = None
+    with S.app_context():
+        s = School.query.filter_by(name='後台新增大學').first()
+        sid = s.id if s else None
+    listed2 = '後台新增大學' in app_names()
+    f3 = post('/school/add', **good)
+    r4a = edu_google('valid:s12345678@adminuni.edu.tw', school_id=sid)
+    r4b = edu_google('valid:11156001@adminuni.edu.tw', school_id=sid)
+    f5 = post(f'/school/edit/{sid}', name='後台新增大學', student_domains='adminuni.edu.tw', student_id_pattern='')
+    r5 = edu_google('valid:11156001@adminuni.edu.tw', school_id=sid)
+    f6a = post(f'/school/toggle/{sid}')
+    listed6 = '後台新增大學' in app_names()
+    r6 = edu_google('valid:s12345678@adminuni.edu.tw', school_id=sid)
+    f6b = post(f'/school/toggle/{sid}')
+    page = boss.get('/school/list')
+    r7 = admin_client('sys_staff', 'Staff@1234').get('/school/list')
+    c.log(f'1. {f1}；2. {f2}，App 清單有這間學校={listed2}；3. {f3}；4. s12345678 {http(r4a, "is_new")}；11156001 {http(r4b, "status")}；'
+          f'5. {f5}，11156001 HTTP {r5.status_code}；6. {f6a}，App 清單有={listed6}，登入 {http(r6, "status")}；{f6b}，App 清單有={"後台新增大學" in app_names()}；'
+          f'7. HTTP {r7.status_code} → {loc(r7)}；操作日誌（新增, 修改）={logs("school", sid, "CREATE")}, {logs("school", sid, "UPDATE")}')
+    check(f1[0] == ['請輸入學校名稱'] and '網域格式不正確' in f1[1][0] and '學號格式' in f1[2][0], '不合格的學校資料未擋下')
+    check('已新增「後台新增大學」' in f2[0] and listed2 and logs('school', sid, 'CREATE') == 1, '新增學校失敗')
+    check(f3 == ['已經有「後台新增大學」了'], '同名學校未擋下')
+    check(r4a.status_code == 200 and r4b.status_code == 403 and J(r4b).get('status') == 'not_student', '學號格式沒有生效')
+    check(f5 == ['已更新「後台新增大學」'] and r5.status_code == 200, '修改學號格式沒有生效')
+    check('已停用「後台新增大學」' in f6a[0] and not listed6 and r6.status_code == 400 and f6b == ['已啟用「後台新增大學」']
+          and '後台新增大學' in app_names(), '停用／啟用學校不正確')
+    check(page.status_code == 200 and '後台新增大學' in html(page), '學校管理頁不正確')
+    check(r7.status_code == 302 and loc(r7).endswith('/dashboard'), '一般管理者可以進學校管理')
+
+
+@case('A13', '管理者建立老師帳號，老師登入後修改密碼',
+      pre='最高管理者已登入；App 一般使用者 G',
+      steps='1. 於「老師帳號」頁新增老師：Email 格式錯誤；密碼太弱\n2. 新增老師 sato@school.test「佐藤老師」，密碼 Sensei#2026a\n'
+            '3. 再用同一個 Email、同一個姓名新增\n4. 老師於登入頁「老師」分頁用錯誤密碼登入；G 用自己的帳密登入\n5. 佐藤老師用正確密碼登入\n'
+            '6. 於個人資料頁修改密碼：目前密碼錯誤、兩次不一致、改為 Sensei#2027b\n7. 改完後開啟班級管理頁',
+      expect='1. 分別提示請輸入正確的 Email、密碼強度不足\n2. 建立成功並寫入操作日誌\n3. 分別提示 Email 已被使用、已經有老師叫這個名字\n'
+             '4. 分別顯示「Email 或密碼錯誤」「這不是老師帳號」\n5. 登入成功，但先被導到個人資料頁要求修改密碼\n'
+             '6. 前兩次被拒，第三次顯示密碼已更新\n7. 可以正常進入班級管理頁')
+def _(c):
+    boss = super_client()
+    g = register('notteacher')
+    add = lambda **d: (boss.post('/teacher_account/add', data=d), flashes(boss))[1]
+    f1 = [add(email='sato-at-school', username='佐藤老師', password='Sensei#2026a'),
+          add(email='sato@school.test', username='佐藤老師', password='12345678')]
+    f2 = add(email='sato@school.test', username='佐藤老師', password='Sensei#2026a')
+    with S.app_context():
+        t = User.query.filter_by(email='sato@school.test').first()
+        tid, info = (t.id, (t.account_type, t.must_change_password, t.teacher_status or 'approved')) if t else (None, None)
+    f3 = [add(email='sato@school.test', username='佐藤二號', password='Sensei#2026a'),
+          add(email='sato2@school.test', username='佐藤老師', password='Sensei#2026a')]
+    _c, r4a = teacher_web_login('sato@school.test', 'Wrong#0000a')
+    _c, r4b = teacher_web_login(g['email'], g['password'])
+    web, r5 = teacher_web_login('sato@school.test', 'Sensei#2026a')
+    blocked = web.get('/teacher/classrooms')
+
+    def change(cur, new, confirm=None):
+        return html(web.post('/teacher/change_password', data={'current_password': cur, 'new_password': new,
+                                                               'confirm_password': confirm or new}))
+
+    h6 = [change('Wrong#0000a', 'Sensei#2027b'), change('Sensei#2026a', 'Sensei#2027b', 'Sensei#2027c'),
+          change('Sensei#2026a', 'Sensei#2027b')]
+    r7 = web.get('/teacher/classrooms')
+    STATE['sato'] = tid
+    c.log(f'1. {f1}；2. {f2}，帳號（類型, 需改密碼, 審核）={info}、操作日誌 {logs("user", tid, "CREATE")} 筆；3. {f3}；'
+          f'4. 錯誤密碼={"Email 或密碼錯誤" in html(r4a)}、一般帳號={"這不是老師帳號" in html(r4b)}；5. HTTP {r5.status_code} → {loc(r5)}，改密碼前開班級頁 → {loc(blocked)}；'
+          f'6. {["目前密碼錯誤" in h6[0], "新密碼與確認密碼不一致" in h6[1], "密碼已更新" in h6[2]]}；7. HTTP {r7.status_code}')
+    check(f1[0] == ['請輸入正確的 Email'] and len(f1[1]) == 1 and '已建立' not in f1[1][0], '不合格的老師資料未擋下')
+    check('已建立老師帳號「佐藤老師」' in f2[0] and info == ('teacher', True, 'approved') and logs('user', tid, 'CREATE') == 1, '建立老師帳號失敗')
+    check('已經被使用' in f3[0][0] and '已經有老師叫「佐藤老師」' in f3[1][0], '重複的老師資料未擋下')
+    check('Email 或密碼錯誤' in html(r4a) and '這不是老師帳號' in html(r4b), '錯誤的老師登入未擋下')
+    check(r5.status_code == 302 and 'profile' in loc(r5) and blocked.status_code == 302 and 'profile' in loc(blocked),
+          '第一次登入沒有要求改密碼')
+    check('目前密碼錯誤' in h6[0] and '新密碼與確認密碼不一致' in h6[1] and '密碼已更新' in h6[2], '老師修改密碼不正確')
+    check(r7.status_code == 200, '改完密碼仍進不了班級管理')
+
+
+@case('A13', '停用與重新啟用老師帳號',
+      pre='佐藤老師已登入後台（A13 上一個個案）；最高管理者已登入',
+      steps='1. 最高管理者於「老師帳號」頁停用佐藤老師\n2. 佐藤老師已登入的瀏覽器重新整理班級管理頁\n3. 佐藤老師重新登入\n4. 最高管理者重新啟用後，佐藤老師再登入',
+      expect='1. 停用成功並寫入操作日誌\n2. 立即被登出、導回登入頁\n3. 顯示「此老師帳號已被停用」\n4. 啟用成功，可以登入')
+def _(c):
+    boss = super_client()
+    tid = STATE['sato']
+    web, _r = teacher_web_login('sato@school.test', 'Sensei#2027b')
+    ok_before = web.get('/teacher/classrooms').status_code
+    boss.post(f'/teacher_account/toggle/{tid}')
+    f1 = flashes(boss)
+    r2 = web.get('/teacher/classrooms')
+    _c, r3 = teacher_web_login('sato@school.test', 'Sensei#2027b')
+    boss.post(f'/teacher_account/toggle/{tid}')
+    f4 = flashes(boss)
+    _c, r4 = teacher_web_login('sato@school.test', 'Sensei#2027b')
+    page = boss.get('/teacher_account/list')
+    c.log(f'停用前開班級頁 HTTP {ok_before}；1. {f1}；2. HTTP {r2.status_code} → {loc(r2)}；3. 顯示已停用={"已被停用" in html(r3)}；'
+          f'4. {f4}，登入 HTTP {r4.status_code} → {loc(r4)}')
+    check(ok_before == 200 and f1 == ['已停用「佐藤老師」'], '停用老師失敗')
+    check(r2.status_code == 302 and 'login' in loc(r2), '停用後已登入的老師沒有被登出')
+    check(r3.status_code == 200 and '此老師帳號已被停用' in html(r3), '停用後仍可登入')
+    check(f4 == ['已啟用「佐藤老師」'] and r4.status_code == 302 and 'classrooms' in loc(r4), '重新啟用後無法登入')
+    check(page.status_code == 200 and '佐藤老師' in html(page), '老師帳號列表不正確')
+
+
+@case('A13', '老師填申請表並以驗證信建立待審核帳號',
+      pre='老師後台限定學校網域 @school.test；yamada@school.test 尚未有帳號；寄信以模擬方式攔截',
+      steps='於登入頁點「申請老師帳號」：\n1. 沒填姓名；沒填系所；用一般 Gmail 申請\n2. 填「山田老師／yamada@school.test／應用日語系」送出，馬上再送一次\n'
+            '3. 開啟信裡的驗證連結，設定密碼時兩次輸入不一致\n4. 設定密碼 Kaiwa#2026a\n5. 開啟被竄改的連結；開啟已逾時的連結\n6. 同一個 Email 再申請一次',
+      expect='1. 分別提示請輸入姓名、請輸入系所或單位、請使用學校 Email\n2. 寄出驗證信到該信箱；馬上再送提示驗證信剛寄出\n'
+             '3. 提示兩次輸入的密碼不一致，不建立帳號\n4. 建立「待審核」的老師帳號，並記下系所\n5. 分別提示驗證連結不正確、連結已逾時\n'
+             '6. 提示這個 Email 已經送出申請',
+      note='寄信以模擬方式攔截，未實際寄出')
+def _(c):
+    MAIL_FAKE['configured'] = True
+    web = A.test_client()
+    good = {'username': '山田老師', 'email': 'Yamada@school.test', 'department': '應用日語系', 'note': '教日語會話'}
+    with admin_settings(TEACHER_GOOGLE_DOMAINS=['school.test']):
+        apply_ = lambda cl, **d: html(cl.post('/teacher/apply', data=d))
+        h1 = [apply_(web, **dict(good, username='')), apply_(web, **dict(good, department='')),
+              apply_(web, **dict(good, email='yamada@gmail.com'))]
+        n_mail = len(SENT_MAIL)
+        h2a = apply_(web, **good)
+        mail = SENT_MAIL[-1] if len(SENT_MAIL) > n_mail else {}
+        h2b = apply_(web, **good)
+        token = (re.search(r'token=(\S+)', mail.get('body', '')) or [None, ''])[1]
+        g3 = web.get(f'/teacher/apply/verify?token={token}')
+        h3 = html(web.post('/teacher/apply/verify', data={'token': token, 'password': 'Kaiwa#2026a', 'confirm_password': 'Kaiwa#2026b'}))
+        n3 = count(User, email='yamada@school.test')
+        h4 = web.post('/teacher/apply/verify', data={'token': token, 'password': 'Kaiwa#2026a', 'confirm_password': 'Kaiwa#2026a'})
+        with S.app_context():
+            t = User.query.filter_by(email='yamada@school.test').first()
+            info = (t.account_type, t.teacher_status, t.teacher_department, t.username) if t else None
+            STATE['yamada'] = t.id if t else None
+        h5a = html(web.get(f'/teacher/apply/verify?token={token[:-3]}abc'))
+        with admin_settings(TEACHER_APPLY_LINK_MINUTES=-1):
+            h5b = html(web.get(f'/teacher/apply/verify?token={token}'))
+        h6 = apply_(A.test_client(), **good)
+    c.log(f'1. {["請輸入姓名" in h1[0], "請輸入系所或單位" in h1[1], "請使用學校 Email" in h1[2]]}；2. 收件人={mail.get("to")}、主旨={mail.get("subject")}，'
+          f'再送={"驗證信剛寄出" in h2b}；3. 設定密碼頁 HTTP {g3.status_code}，不一致={"兩次輸入的密碼不一致" in h3}、帳號 {n3} 個；'
+          f'4. HTTP {h4.status_code}，帳號（類型, 審核, 系所, 姓名）={info}；5. {["驗證連結不正確" in h5a, "請重新填寫申請表" in h5b]}；6. {"已經送出申請" in h6}')
+    check('請輸入姓名' in h1[0] and '請輸入系所或單位' in h1[1] and '請使用學校 Email' in h1[2], '不合格的申請未擋下')
+    check(mail.get('to') == 'yamada@school.test' and token and '驗證信剛寄出' in h2b, '驗證信寄送不正確')
+    check(g3.status_code == 200 and '兩次輸入的密碼不一致' in h3 and n3 == 0, '密碼不一致仍建立帳號')
+    check(h4.status_code == 200 and info == ('teacher', 'pending', '應用日語系', '山田老師'), '沒有建立待審核帳號')
+    check('驗證連結不正確' in h5a and '請重新填寫申請表' in h5b, '失效的驗證連結未擋下')
+    check('已經送出申請' in h6, '重複申請未擋下')
+
+
+@case('A13', '老師帳號審核：等待審核、核准與拒絕',
+      pre='山田老師的帳號待審核（上一個個案）；另有一位待審核的「鈴木老師」；佐藤老師已核准',
+      steps='1. 山田老師用申請時的密碼登入，開啟班級管理頁\n2. 最高管理者於「老師帳號」頁核准山田老師\n3. 山田老師重新整理班級管理頁\n'
+            '4. 最高管理者拒絕已核准的佐藤老師\n5. 最高管理者拒絕待審核的鈴木老師',
+      expect='1. 登入成功但只能看到「等待審核」頁\n2. 核准成功、寫入操作日誌，並寄信通知老師\n3. 可以進入班級管理頁\n'
+             '4. 提示只能拒絕待審核的帳號，帳號保留\n5. 申請被移除並寫入操作日誌',
+      note='寄信以模擬方式攔截，未實際寄出')
+def _(c):
+    MAIL_FAKE['configured'] = True
+    boss = super_client()
+    yid = STATE['yamada']
+    with S.app_context():
+        s = User(email='suzuki@school.test', username='鈴木老師', account_type=AccountType.TEACHER, teacher_status='pending',
+                 password_hash=generate_password_hash('Suzuki#2026a'))
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+    web, r1 = teacher_web_login('yamada@school.test', 'Kaiwa#2026a')
+    r1b = web.get('/teacher/classrooms')
+    r1c = web.get('/teacher/pending')
+    n_mail = len(SENT_MAIL)
+    boss.post(f'/teacher_account/approve/{yid}')
+    f2 = flashes(boss)
+    mail = SENT_MAIL[-1] if len(SENT_MAIL) > n_mail else {}
+    r3 = web.get('/teacher/classrooms')
+    boss.post(f'/teacher_account/reject/{STATE["sato"]}')
+    f4 = flashes(boss)
+    boss.post(f'/teacher_account/reject/{sid}')
+    f5 = flashes(boss)
+    c.log(f'1. 登入 HTTP {r1.status_code}，班級頁 → {loc(r1b)}，等待頁 HTTP {r1c.status_code}；2. {f2}，通知信收件人={mail.get("to")}、主旨={mail.get("subject")}；'
+          f'3. HTTP {r3.status_code}；4. {f4}，佐藤老師帳號 {count(User, id=STATE["sato"])} 個；5. {f5}，鈴木老師帳號 {count(User, id=sid)} 個、操作日誌 {logs("user", sid, "DELETE")} 筆')
+    check(r1.status_code == 302 and r1b.status_code == 302 and 'pending' in loc(r1b) and r1c.status_code == 200, '待審核的老師可以使用後台')
+    check('已核准「山田老師」的老師身分' in f2[0] and '已寄信通知老師' in f2[0] and mail.get('to') == 'yamada@school.test'
+          and user_row(yid)['teacher_status'] == 'approved', '核准不正確')
+    check(r3.status_code == 200, '核准後仍進不了班級管理')
+    check('只能拒絕「待審核」的帳號' in f4[0] and count(User, id=STATE['sato']) == 1, '已核准的帳號被移除')
+    check('已拒絕並移除「鈴木老師」' in f5[0] and count(User, id=sid) == 0 and logs('user', sid, 'DELETE') == 1, '拒絕申請不正確')
+
+
+@case('A13', '老師用學校 Google 帳號登入後台',
+      pre='老師後台限定學校網域 @school.test；App 一般使用者 gen@school.test；佐藤老師帳號已存在',
+      steps='於登入頁「老師」分頁用 Google 登入：\n1. 沒有收到 Google 登入資料；Google 身分憑證無效\n2. 用一般 Gmail\n3. 用帳號是學號的 11156047@school.test\n'
+            '4. 用已經是 App 一般帳號的 gen@school.test\n5. 第一次用 tanaka@school.test 登入\n6. 已有帳號的佐藤老師用 Google 登入\n7. 伺服器沒有設定 Google 登入時',
+      expect='1. 分別提示沒有收到登入資料、驗證失敗\n2. 提示請使用學校配發的 Google 帳號\n3. 提示看起來是學生帳號，請改走申請表\n4. 提示已是 App 的一般使用者帳號\n'
+             '5. 自動建立「待審核」的老師帳號，登入後只看到等待審核頁\n6. 直接登入並進入班級管理\n7. 提示尚未設定 Google 登入',
+      note='Google 身分憑證驗證以模擬方式進行')
+def _(c):
+    with S.app_context():
+        db.session.add(User(email='gen@school.test', username='一般使用者甲', account_type=AccountType.GENERAL,
+                            password_hash=generate_password_hash('Pass1234')))
+        db.session.commit()
+
+    def fake_verify(credential):
+        if credential.startswith('valid:'):
+            email = credential.split(':', 1)[1]
+            return {'email': email, 'email_verified': True, 'name': '田中老師' if email.startswith('tanaka') else ''}
+        raise ValueError('bad token')
+
+    go = lambda cred=None: (lambda cl: (cl, cl.post('/login/google', data={'credential': cred} if cred else {})))(A.test_client())
+    with admin_settings(GOOGLE_WEB_CLIENT_ID='test-client-id', _verify_google_id_token=fake_verify,
+                        TEACHER_GOOGLE_DOMAINS=['school.test'], TEACHER_GOOGLE_STUDENT_PATTERN=r'^\d+$',
+                        TEACHER_GOOGLE_ALLOWED_EMAILS=set()):
+        h1 = [html(go()[1]), html(go('garbage')[1])]
+        h2 = html(go('valid:someone@gmail.com')[1])
+        h3 = html(go('valid:11156047@school.test')[1])
+        n3 = count(User, email='11156047@school.test')
+        h4 = html(go('valid:gen@school.test')[1])
+        web5, r5 = go('valid:tanaka@school.test')
+        r5b = web5.get('/teacher/classrooms')
+        with S.app_context():
+            t = User.query.filter_by(email='tanaka@school.test').first()
+            info = (t.account_type, t.teacher_status, t.username) if t else None
+        web6, r6 = go('valid:sato@school.test')
+        r6b = web6.get('/teacher/classrooms')
+        r_get = A.test_client().get('/login/google')
+    with admin_settings(GOOGLE_WEB_CLIENT_ID=''):
+        h7 = html(go('valid:tanaka@school.test')[1])
+    c.log(f'1. {["沒有收到 Google 登入資料" in h1[0], "Google 登入驗證失敗" in h1[1]]}；2. {"請使用學校配發的 Google 帳號" in h2}；3. {"看起來是學生帳號" in h3}，建立帳號 {n3} 個；'
+          f'4. {"已是 App 的一般使用者帳號" in h4}；5. HTTP {r5.status_code}，帳號（類型, 審核, 姓名）={info}，班級頁 → {loc(r5b)}；'
+          f'6. HTTP {r6.status_code} → {loc(r6)}，班級頁 HTTP {r6b.status_code}；7. {"尚未設定 Google 登入" in h7}；直接開網址 → {loc(r_get)}')
+    check('沒有收到 Google 登入資料' in h1[0] and 'Google 登入驗證失敗' in h1[1], '無效的 Google 登入未擋下')
+    check('請使用學校配發的 Google 帳號' in h2 and '看起來是學生帳號' in h3 and n3 == 0 and '已是 App 的一般使用者帳號' in h4,
+          '不符資格的帳號未擋下')
+    check(r5.status_code == 302 and info == ('teacher', 'pending', '田中老師') and 'pending' in loc(r5b), '第一次 Google 登入沒有建立待審核帳號')
+    check(r6.status_code == 302 and 'classrooms' in loc(r6) and r6b.status_code == 200, '已核准的老師無法用 Google 登入')
+    check('尚未設定 Google 登入' in h7 and r_get.status_code == 302 and 'login' in loc(r_get), '未設定 Google 登入時的處理不正確')
+
+
+@case('A13', '老師建立班級與班級設定',
+      pre='林老師已登入後台；學生丙（不在林老師的任何新班級）；陳老師為其他老師',
+      steps='於「班級管理」頁：\n1. 建立班級但名稱空白\n2. 建立「四年戊班」\n3. 最高管理者建立班級\n4. 修改班級名稱為「四年戊班（日文）」與說明\n'
+            '5. 關閉加入後學生丙用代碼加入；重新開放後再加入\n6. 重新產生班級代碼後，分別用舊、新代碼查詢\n'
+            '7. 封存班級後學生丙查看我的教室；取消封存後再查看\n8. 陳老師修改這個班級',
+      expect='1. 提示「請填寫班級名稱」\n2. 建立成功並產生班級代碼\n3. 提示管理者無法代替老師建立班級\n4. 更新成功，學生端看到新名稱\n'
+             '5. 關閉時顯示已經關閉加入；開放後加入成功\n6. 舊代碼查不到、新代碼查得到\n7. 封存後學生看不到這個班級，取消封存後恢復\n8. 提示「找不到該班級」')
+def _(c):
+    k = ensure_class()
+    web = teacher_client(k['teacher'], '林老師')
+    post = lambda cl, url, **d: (cl.post(url, data=d), flashes(cl))[1]
+    f1 = post(web, '/teacher/classroom/create', name='  ', description='')
+    f2 = post(web, '/teacher/classroom/create', name='四年戊班', description='週五上課')
+    with S.app_context():
+        room = Classroom.query.filter_by(teacher_id=k['teacher'], name='四年戊班').first()
+        rid, code = room.id, room.join_code
+    boss = super_client()
+    f3 = post(boss, '/teacher/classroom/create', name='管理者代建', description='')
+    f4 = post(web, f'/teacher/classroom/{rid}/edit', name='四年戊班（日文）', description='改到週四上課')
+    f5a = post(web, f'/teacher/classroom/{rid}/toggle_open')
+    join = lambda cd: SC.post('/api/classroom/join', json={'user_id': k['s3'], 'join_code': cd})
+    r5a = join(code)
+    f5b = post(web, f'/teacher/classroom/{rid}/toggle_open')
+    r5b = join(code)
+    joined_name = (J(r5b).get('classroom') or {}).get('name')
+    f6 = post(web, f'/teacher/classroom/{rid}/regenerate_code')
+    with S.app_context():
+        new_code = db.session.get(Classroom, rid).join_code
+    r6a, r6b = SC.get(f'/api/classroom/preview?join_code={code}'), SC.get(f'/api/classroom/preview?join_code={new_code}')
+    mine = lambda: [x['name'] for x in J(SC.get(f'/api/classroom/my/{k["s3"]}')).get('classrooms', [])]
+    f7a = post(web, f'/teacher/classroom/{rid}/archive')
+    mine7a = mine()
+    f7b = post(web, f'/teacher/classroom/{rid}/archive')
+    mine7b = mine()
+    other = teacher_client(k['teacher2'], '陳老師')
+    f8 = post(other, f'/teacher/classroom/{rid}/edit', name='被別人改', description='')
+    STATE['room5'] = rid
+    c.log(f'1. {f1}；2. {f2}；3. {f3}；4. {f4}；5. {f5a}，加入 {http(r5a, "status")}；{f5b}，加入 {http(r5b, "status")}（{joined_name}）；'
+          f'6. {f6}，舊代碼 HTTP {r6a.status_code}、新代碼 HTTP {r6b.status_code}；7. {f7a}，學生看到={mine7a}；{f7b}，學生看到={mine7b}；8. {f8}')
+    check(f1 == ['請填寫班級名稱'], '空白班級名稱未擋下')
+    check(len(code or '') >= 6 and f'班級「四年戊班」建立成功！班級代碼為：{code}' == f2[0], '建立班級失敗')
+    check('管理者無法代替老師建立班級' in f3[0] and count(Classroom, name='管理者代建') == 0, '管理者可以代建班級')
+    check(f4 == ['班級「四年戊班（日文）」已更新'] and joined_name == '四年戊班（日文）', '修改班級失敗')
+    check('關閉加入' in f5a[0] and r5a.status_code == 403 and J(r5a).get('status') == 'classroom_closed'
+          and '開放加入' in f5b[0] and r5b.status_code == 201, '開關加入不正確')
+    check(new_code != code and new_code in f6[0] and r6a.status_code == 404 and r6b.status_code == 200, '重新產生代碼不正確')
+    check('已封存' in f7a[0] and '四年戊班（日文）' not in mine7a and '已取消封存' in f7b[0] and '四年戊班（日文）' in mine7b, '封存不正確')
+    check(f8 == ['找不到該班級'], '別的老師可以修改班級')
+
+
+@case('A13', '班級名冊：貼上名單建立學生帳號、改名與移出',
+      pre='林老師的「四年戊班（日文）」目前只有學生丙；帳號 gen9001 已是一般版使用者',
+      steps='於班級名冊頁：\n1. 沒貼名單就送出\n2. 貼上名單：「11156201 王小明」「11156202,李小華」「@@bad 格式錯誤」「gen9001 一般使用者」\n'
+            '3. 再貼一次「11156201 王小明」\n4. 把 11156201 的顯示名稱改為「王小明（班長）」\n5. 把 11156202 移出班級\n6. 最高管理者貼名單',
+      expect='1. 提示請貼上學生名單\n2. 建立 2 個學生帳號並加入班級（第一次登入須改密碼），畫面只顯示這一次的初始密碼；格式錯誤與已是一般版的帳號各有提示\n'
+             '3. 提示 1 位原本就在班上，不重複建立\n4. 顯示名稱更新\n5. 移出班級並寫入操作日誌，學生帳號保留\n6. 提示管理者無法代替老師新增學生')
+def _(c):
+    k = ensure_class()
+    rid = STATE['room5']
+    with S.app_context():
+        db.session.add(User(email='gen9001', username='一般使用者乙', account_type=AccountType.GENERAL,
+                            password_hash=generate_password_hash('Pass1234')))
+        db.session.commit()
+    web = teacher_client(k['teacher'], '林老師')
+    add_url = f'/teacher/classroom/{rid}/students/add'
+    web.post(add_url, data={'roster': '  \n '})
+    f1 = flashes(web)
+    r2 = web.post(add_url, data={'roster': '11156201 王小明\n11156202,李小華\n@@bad 格式錯誤\ngen9001 一般使用者'})
+    f2 = flashes(web)
+    page2 = html(r2)
+    with S.app_context():
+        made = {u.email: (u.id, u.account_type, u.must_change_password) for u in
+                User.query.filter(User.email.in_(['11156201', '11156202'])).all()}
+        names = {m.student_id: m.display_name for m in ClassroomMember.query.filter_by(classroom_id=rid).all()}
+    u1, u2 = made.get('11156201', (None,))[0], made.get('11156202', (None,))[0]
+    web.post(add_url, data={'roster': '11156201 王小明'})
+    f3 = flashes(web)
+    web.post(f'/teacher/classroom/{rid}/student/{u1}/rename', data={'display_name': '王小明（班長）'})
+    f4 = flashes(web)
+    with S.app_context():
+        new_name = ClassroomMember.query.filter_by(classroom_id=rid, student_id=u1).first().display_name
+    web.post(f'/teacher/classroom/{rid}/student/{u2}/remove')
+    f5 = flashes(web)
+    boss = super_client()
+    boss.post(add_url, data={'roster': '11156203 管理者代加'})
+    f6 = flashes(boss)
+    STATE['roster'] = (u1, u2)
+    c.log(f'1. {f1}；2. 畫面提示（新建 2 個帳號, 一般版帳號無法加入, 格式錯誤）={["新建立 2 個學生帳號" in page2, "gen9001" in page2, "@@bad" in page2]}，帳號（類型, 需改密碼）={[v[1:] for v in made.values()]}，名冊顯示名稱={[names.get(u1), names.get(u2)]}，畫面有帳號與初始密碼區={"11156201" in page2}；'
+          f'3. {f3}，帳號數 {count(User, email="11156201")}；4. {f4}，{new_name}；5. {f5}，成員紀錄 {count(ClassroomMember, classroom_id=rid, student_id=u2)} 筆、帳號 {count(User, id=u2)} 個；6. {f6}')
+    check(f1 == ['請貼上學生名單，每行一位：學號 姓名'], '空白名單未擋下')
+    check(r2.status_code == 200 and '新建立 2 個學生帳號' in page2 and 'gen9001' in page2 and '@@bad' in page2, '貼上名單的結果提示不正確')
+    check(all(v[1:] == ('student', True) for v in made.values()) and len(made) == 2
+          and (names.get(u1), names.get(u2)) == ('王小明', '李小華') and '11156201' in page2, '學生帳號或名冊不正確')
+    check(any('1 位原本就在班上' in m for m in f3) and count(User, email='11156201') == 1, '重複貼名單不正確')
+    check(f4 == ['學生顯示名稱已更新'] and new_name == '王小明（班長）', '修改顯示名稱失敗')
+    check(f5 == ['已將「李小華」移出班級'] and count(ClassroomMember, classroom_id=rid, student_id=u2) == 0
+          and count(User, id=u2) == 1 and logs('classroom_member', None, 'DELETE') >= 1, '移出學生不正確')
+    check('管理者無法代替老師新增學生' in f6[0] and count(User, email='11156203') == 0, '管理者可以代加學生')
+
+
+@case('A13', '老師重設學生密碼',
+      pre='「四年戊班（日文）」有老師建立的學生 11156201（已登入 App）、用學校 Google 帳號登入的學生、以及一位一般版帳號的成員',
+      steps='於班級名冊頁：\n1. 重設 11156201 的密碼\n2. 11156201 用重設前的通行證查個人檔案\n3. 重設用學校 Google 帳號登入的學生\n'
+            '4. 重設一般版帳號的成員\n5. 陳老師重設 11156201 的密碼',
+      expect='1. 重設成功，畫面顯示臨時密碼，學生下次登入須改密碼，並寫入操作日誌\n2. HTTP 401（已登入的裝置被登出）\n'
+             '3. 提示用學校 Google 帳號登入、沒有密碼可以重設\n4. 提示這不是校園教育版的學生帳號\n5. 提示「找不到該學生」')
+def _(c):
+    k = ensure_class()
+    rid = STATE['room5']
+    u1, _u2 = STATE['roster']
+    with S.app_context():
+        google_stu = User.query.filter_by(email='11156001@tust.edu.tw').first().id
+        general = User.query.filter_by(email='gen9001').first().id
+        db.session.add_all([ClassroomMember(classroom_id=rid, student_id=google_stu, display_name='Google 學生'),
+                            ClassroomMember(classroom_id=rid, student_id=general, display_name='一般帳號')])
+        db.session.commit()
+        old_hash = db.session.get(User, u1).password_hash
+    old_token = auth_header(u1)
+    web = teacher_client(k['teacher'], '林老師')
+    reset = lambda cl, uid: (cl.post(f'/teacher/classroom/{rid}/student/{uid}/reset_password'), flashes(cl))
+    r1, f1 = reset(web, u1)
+    row = user_row(u1)
+    r2 = SC.get(f'/api/user/profile_data/{u1}', headers=old_token)
+    _r, f3 = reset(web, google_stu)
+    _r, f4 = reset(web, general)
+    _r, f5 = reset(teacher_client(k['teacher2'], '陳老師'), u1)
+    c.log(f'1. HTTP {r1.status_code}，畫面顯示已重設={"已重設「王小明（班長）」的密碼" in html(r1)}，密碼已換={row["password_hash"] != old_hash}、需改密碼={row["must_change_password"]}、操作日誌 {logs("user", u1, "UPDATE")} 筆；'
+          f'2. {http(r2, "error")}；3. {f3}；4. {f4}；5. {f5}')
+    check(r1.status_code == 200 and '已重設「王小明（班長）」的密碼' in html(r1) and row['password_hash'] != old_hash
+          and row['must_change_password'] is True and logs('user', u1, 'UPDATE') >= 1 and '11156201' in html(r1), '重設學生密碼不正確')
+    check(r2.status_code == 401, '重設密碼後舊通行證仍可使用')
+    check('沒有密碼可以重設' in f3[0] and '這不是校園教育版的學生帳號' in f4[0], '不能重設的帳號未擋下')
+    check(f5 == ['找不到該學生'] and user_row(u1)['password_hash'] == row['password_hash'], '別的老師可以重設學生密碼')
+
+
+@case('A13', '作業編輯、下架與刪除',
+      pre='林老師的「三年丙班」有作業「第四課造句」（截止後不收）；學生甲在班上；另以測試資料讓學生甲已繳交「第三課造句」',
+      steps='於作業列表：\n1. 編輯「第四課造句」但標題空白\n2. 把標題改為「第四課造句（修訂）」、遲交規則改為遲交扣 5 分\n3. 下架後學生甲查看我的作業，再重新發布\n'
+            '4. 最高管理者編輯這份作業；陳老師下架這份作業\n5. 刪除已有 1 份繳交的「第三課造句」',
+      expect='1. 提示「請填寫作業標題」\n2. 更新成功\n3. 下架後學生看不到，重新發布後恢復\n4. 分別提示管理者無法代替老師編輯作業、找不到該作業\n'
+             '5. 作業與 1 份繳交紀錄一併刪除，並寫入操作日誌')
+def _(c):
+    k = ensure_class()
+    aid = STATE['late_assignments']['reject']
+    with S.app_context():
+        third = Assignment.query.filter_by(classroom_id=k['room'], title='第三課造句').first().id
+        db.session.add(AssignmentSubmission(assignment_id=third, student_id=k['s1'], status=SubmissionStatus.SUBMITTED,
+                                            submitted_at=datetime.utcnow()))
+        db.session.commit()
+    web = teacher_client(k['teacher'], '林老師')
+    post = lambda cl, url, **d: (cl.post(url, data=d), flashes(cl))[1]
+    seen = lambda: [x['title'] for x in J(SC.get(f'/api/assignment/my/{k["s1"]}')).get('assignments', [])]
+    f1 = post(web, f'/teacher/assignment/{aid}/edit', title=' ', is_published='on')
+    f2 = post(web, f'/teacher/assignment/{aid}/edit', title='第四課造句（修訂）', instructions='請用兩種句型', is_published='on',
+              late_policy='deduct', late_penalty='5')
+    with S.app_context():
+        a = db.session.get(Assignment, aid)
+        edited = (a.title, a.late_policy, a.late_penalty)
+    f3a = post(web, f'/teacher/assignment/{aid}/toggle_publish')
+    seen3a = '第四課造句（修訂）' in seen()
+    f3b = post(web, f'/teacher/assignment/{aid}/toggle_publish')
+    seen3b = '第四課造句（修訂）' in seen()
+    f4a = post(super_client(), f'/teacher/assignment/{aid}/edit', title='管理者改的', is_published='on')
+    f4b = post(teacher_client(k['teacher2'], '陳老師'), f'/teacher/assignment/{aid}/toggle_publish')
+    f5 = post(web, f'/teacher/assignment/{third}/delete')
+    c.log(f'1. {f1}；2. {f2}，作業（標題, 遲交規則, 扣分）={edited}；3. {f3a}，學生看得到={seen3a}；重新發布後看得到={seen3b}；4. {f4a}；{f4b}；'
+          f'5. {f5}，作業 {count(Assignment, id=third)} 份、繳交紀錄 {count(AssignmentSubmission, assignment_id=third)} 筆、操作日誌 {logs("assignment", third, "DELETE")} 筆')
+    check(f1 == ['請填寫作業標題'], '空白標題未擋下')
+    check(f2 == ['作業「第四課造句（修訂）」已更新'] and edited == ('第四課造句（修訂）', 'deduct', 5), '編輯作業失敗')
+    check('已下架' in f3a[0] and not seen3a and '已發布' in f3b[0] and seen3b, '下架／發布不正確')
+    check('管理者無法代替老師編輯作業' in f4a[0] and f4b == ['找不到該作業'], '沒有權限的人可以改作業')
+    check('作業「第三課造句」已刪除，學生的 1 份繳交紀錄一併移除' == f5[0] and count(Assignment, id=third) == 0
+          and count(AssignmentSubmission, assignment_id=third) == 0 and logs('assignment', third, 'DELETE') == 1, '刪除作業不正確')
+
+
+@case('A13', '老師聯絡管理者',
+      pre='還沒登入的老師；最高管理者已登入',
+      steps='於登入頁點「聯絡管理者」：\n1. Email 格式錯誤；沒選問題類型；沒填內容\n2. 填 Email、類型「無法登入」與內容後送出\n3. 馬上再送一次\n4. 最高管理者開啟「意見回饋」頁',
+      expect='1. 分別提示請輸入正確的 Email、請選擇問題類型、請說明遇到的問題\n2. 送出成功，存成一筆「老師聯絡：無法登入」的回饋\n3. 提示剛剛已經送出\n4. 管理者看得到這筆聯絡內容')
+def _(c):
+    web = A.test_client()
+    good = {'email': 'kato@school.test', 'topic': '無法登入', 'content': '用學校 Google 帳號登入一直失敗'}
+    send = lambda **d: html(web.post('/teacher/contact', data=d))
+    h1 = [send(**dict(good, email='kato')), send(**dict(good, topic='亂填')), send(**dict(good, content=''))]
+    n1 = count(Feedback, email='kato@school.test')
+    r_form = web.get('/teacher/contact?topic=忘記密碼')
+    send(**good)
+    with S.app_context():
+        fb = Feedback.query.filter_by(email='kato@school.test').first()
+        info = (fb.feedback_type, fb.content, fb.user_id) if fb else None
+    h3 = send(**good)
+    page = html(super_client().get('/feedback/list'))
+    c.log(f'1. {["請輸入正確的 Email" in h1[0], "請選擇問題類型" in h1[1], "請說明遇到的問題" in h1[2]]}，回饋 {n1} 筆；表單頁 HTTP {r_form.status_code}；'
+          f'2. 回饋（類型, 內容, 使用者）={info}；3. 提示剛剛已經送出={"剛剛已經送出" in h3}，回饋 {count(Feedback, email="kato@school.test")} 筆；'
+          f'4. 管理者看得到={"用學校 Google 帳號登入一直失敗" in page}')
+    check('請輸入正確的 Email' in h1[0] and '請選擇問題類型' in h1[1] and '請說明遇到的問題' in h1[2] and n1 == 0 and r_form.status_code == 200,
+          '不合格的聯絡內容未擋下')
+    check(info == ('老師聯絡：無法登入', '用學校 Google 帳號登入一直失敗', None), '聯絡內容沒有存成回饋')
+    check('剛剛已經送出' in h3 and count(Feedback, email='kato@school.test') == 1, '可以連續送出')
+    check('用學校 Google 帳號登入一直失敗' in page, '管理者看不到老師的聯絡內容')
+
+
+# ----------------------------------------------------------------------
+# A13 校園教育版：老師忘記密碼（管理者寄重設連結，老師自己設定新密碼）
+# ----------------------------------------------------------------------
+def new_teacher(email, name, password='Old@Pass1'):
+    with S.app_context():
+        t = User(email=email, username=name, account_type=AccountType.TEACHER,
+                 password_hash=generate_password_hash(password))
+        db.session.add(t)
+        db.session.commit()
+        return t.id
+
+
+def last_reset_link(email):
+    """信裡的重設連結（只取路徑與參數）"""
+    for m in reversed(SENT_MAIL):
+        if m['to'] == email:
+            found = re.search(r'https?://[^/\s]+(/teacher/reset_password\?token=\S+)', m['body'])
+            return found.group(1) if found else None
+    return None
+
+
+def teacher_login(email, password):
+    return A.test_client().post('/login', data={'login_as': 'teacher', 'email': email, 'password': password})
+
+
+@case('A13', '管理者寄重設連結，老師自己設定新密碼',
+      pre='老師帳號「吳老師」（wu@school.edu.tw）密碼為 Old@Pass1；寄信服務已設定',
+      steps='1. 一般管理者對吳老師送出重設密碼\n2. 最高管理者送出重設密碼並自行指定 password=Hack@1234\n3. 老師開啟信中連結\n'
+            '4. 送出兩次不一致的密碼、強度不足的密碼\n5. 送出新密碼 New@Pass2\n6. 再次開啟同一個連結\n7. 分別以舊密碼、新密碼登入老師後台',
+      expect='1. 被擋下，不寄信\n2. 提示已寄出重設連結，信寄到老師信箱；密碼不變（指定的密碼不被採用）\n3. 顯示設定新密碼頁\n'
+             '4. 分別提示「兩次輸入的密碼不一致」與密碼強度不足，密碼不變\n5. 顯示「密碼已更新」，不需要再強制改密碼，寫入操作日誌\n'
+             '6. 提示連結已經使用過或已失效\n7. 舊密碼登入失敗，新密碼登入成功')
+def _(c):
+    email = 'wu@school.edu.tw'
+    tid = new_teacher(email, '吳老師')
+    url = f'/teacher_account/reset_password/{tid}'
+    n_mail = len(SENT_MAIL)
+    r1 = admin_client('sys_staff', 'Staff@1234').post(url, data={'mode': 'link'})
+    mail1 = len(SENT_MAIL) - n_mail
+    boss = admin_client('sys_super', 'Admin@1234')
+    r2 = boss.post(url, data={'mode': 'link', 'password': 'Hack@1234'})
+    f2 = flashes(boss)
+    link = last_reset_link(email)
+    hash2 = user_row(tid)['password_hash']
+    web = A.test_client()
+    r3 = web.get(link)
+    token = parse_qs(link.split('?', 1)[1])['token'][0]
+    r4a = web.post('/teacher/reset_password', data={'token': token, 'password': 'New@Pass2', 'confirm_password': 'New@Pass3'})
+    r4b = web.post('/teacher/reset_password', data={'token': token, 'password': 'abcdefgh', 'confirm_password': 'abcdefgh'})
+    hash4 = user_row(tid)['password_hash']
+    r5 = web.post('/teacher/reset_password', data={'token': token, 'password': 'New@Pass2', 'confirm_password': 'New@Pass2'})
+    row5 = user_row(tid)
+    with S.app_context():
+        logs = [l.new_value for l in SystemLog.query.filter_by(target_table='user', target_id=tid).order_by(SystemLog.id).all()]
+    r6 = web.get(link)
+    r7a = teacher_login(email, 'Old@Pass1')
+    r7b = teacher_login(email, 'New@Pass2')
+    c.log(f'1. HTTP {r1.status_code}，寄出 {mail1} 封；2. 提示={f2}，信中有連結={bool(link)}，Hack@1234 可登入={check_password_hash(hash2, "Hack@1234")}；'
+          f'3. HTTP {r3.status_code}，設定新密碼頁={"設定新密碼" in html(r3)}；'
+          f'4. 不一致={"兩次輸入的密碼不一致" in html(r4a)}、強度不足仍停在設定頁={"error-box" in html(r4b)}，密碼不變={hash4 == hash2}；'
+          f'5. 密碼已更新={"密碼已更新" in html(r5)}，must_change_password={row5["must_change_password"]}，操作日誌={logs}；'
+          f'6. 已失效={"已經使用過或已失效" in html(r6)}；7. 舊密碼 HTTP {r7a.status_code}、新密碼 HTTP {r7b.status_code} → {loc(r7b)}')
+    check(mail1 == 0 and r1.status_code in (302, 403), '一般管理者可以重設老師密碼')
+    check(len(f2) == 1 and email in f2[0] and link, '沒有寄出重設連結')
+    check(check_password_hash(hash2, 'Old@Pass1') and not check_password_hash(hash2, 'Hack@1234'), '管理者可以自行指定老師密碼')
+    check(r3.status_code == 200 and '設定新密碼' in html(r3), '重設連結打不開')
+    check('兩次輸入的密碼不一致' in html(r4a) and 'error-box' in html(r4b) and hash4 == hash2, '不合格的密碼未擋下')
+    check('密碼已更新' in html(r5) and check_password_hash(row5['password_hash'], 'New@Pass2')
+          and not row5['must_change_password'], '新密碼沒有生效')
+    check(logs == [{'password_reset': 'link_sent'}, {'password': 'reset_by_link'}], '操作日誌不正確')
+    check('已經使用過或已失效' in html(r6), '用過的連結仍可使用')
+    check(r7a.status_code == 200 and 'Email 或密碼錯誤' in html(r7a), '舊密碼仍可登入')
+    check(r7b.status_code == 302 and loc(r7b).endswith('/teacher/classrooms'), '新密碼無法登入')
+
+
+@case('A13', '重設連結逾時、遭竄改，與老師收不到信時改發臨時密碼',
+      pre='老師帳號「鄭老師」（cheng@school.edu.tw）密碼為 Old@Pass1',
+      steps='1. 開啟 31 分鐘前寄出的重設連結\n2. 開啟內容被改過的連結\n3. 寄信服務未設定時，最高管理者寄重設連結\n'
+            '4. 最高管理者先寄出重設連結，再改為產生臨時密碼\n5. 老師開啟步驟 4 的重設連結\n6. 老師以臨時密碼登入',
+      expect='1. 提示連結已超過 30 分鐘\n2. 提示連結不正確\n3. 提示寄信服務尚未設定，密碼不變\n'
+             '4. 畫面顯示系統產生的 8 碼臨時密碼，原密碼失效\n5. 提示連結已經使用過或已失效\n6. 登入後被導向個人資料頁，要求先改密碼')
+def _(c):
+    email = 'cheng@school.edu.tw'
+    tid = new_teacher(email, '鄭老師')
+    url = f'/teacher_account/reset_password/{tid}'
+    boss = admin_client('sys_super', 'Admin@1234')
+    web = A.test_client()
+
+    # 模擬 31 分鐘前寄出的連結：只把簽發時間往前調（不能連管理者的操作一起調，登入狀態也會跟著失效）
+    original = _its_timed.TimestampSigner.get_timestamp
+    _its_timed.TimestampSigner.get_timestamp = lambda self: int(time.time() - 31 * 60)
+    try:
+        with A.app_context():
+            old_token = admin_module._teacher_reset_token(db.session.get(User, tid))
+    finally:
+        _its_timed.TimestampSigner.get_timestamp = original
+    r1 = web.get('/teacher/reset_password?token=' + old_token)
+    boss.post(url, data={'mode': 'link'})
+    flashes(boss)
+    r2 = web.get('/teacher/reset_password?token=' + 'x' + last_reset_link(email).split('token=', 1)[1])
+
+    MAIL_FAKE['configured'] = False
+    try:
+        boss.post(url, data={'mode': 'link'})
+    finally:
+        MAIL_FAKE['configured'] = True
+    f3 = flashes(boss)
+    hash3 = user_row(tid)['password_hash']
+
+    boss.post(url, data={'mode': 'link'})
+    flashes(boss)
+    link4 = last_reset_link(email)
+    r4 = boss.post(url, data={'mode': 'temp'})
+    found = re.search(r'<code>([a-z0-9]{8})</code>', html(r4))
+    temp = found.group(1) if found else None
+    row4 = user_row(tid)
+    r5 = web.get(link4)
+    r6 = teacher_login(email, temp or '')
+    c.log(f'1. 逾時={"已超過 30 分鐘" in html(r1)}；2. 不正確={"重設連結不正確" in html(r2)}；3. 提示={f3}，密碼不變={check_password_hash(hash3, "Old@Pass1")}；'
+          f'4. HTTP {r4.status_code}，畫面有臨時密碼={bool(temp)}，原密碼可用={check_password_hash(row4["password_hash"], "Old@Pass1")}，'
+          f'must_change_password={row4["must_change_password"]}；5. 已失效={"已經使用過或已失效" in html(r5)}；6. HTTP {r6.status_code} → {loc(r6)}')
+    check('已超過 30 分鐘' in html(r1), '逾時的連結仍可使用')
+    check('重設連結不正確' in html(r2), '被竄改的連結仍可使用')
+    check(len(f3) == 1 and '寄信服務尚未設定' in f3[0] and check_password_hash(hash3, 'Old@Pass1'), '寄信服務未設定時處理不正確')
+    check(r4.status_code == 200 and temp and check_password_hash(row4['password_hash'], temp)
+          and not check_password_hash(row4['password_hash'], 'Old@Pass1') and row4['must_change_password'], '臨時密碼不正確')
+    check('已經使用過或已失效' in html(r5), '改發臨時密碼後舊連結仍可使用')
+    check(r6.status_code == 302 and loc(r6).endswith('/teacher/profile'), '臨時密碼登入後沒有要求改密碼')
 
 
 # ======================================================================

@@ -679,7 +679,13 @@ try:
                 (name, jp_name, region, description, prompt_instruction),
             )
             _inserted += 1
-    print(f"✅ dialect 初始資料確認完畢（本次新增 {_inserted} 筆，共 {len(_DIALECTS)} 種腔調）")
+    # 只開放 5 種（含標準語）給使用者選，其餘保留資料但停用
+    _ACTIVE_DIALECTS = ('東京腔', '關西腔', '博多腔', '東北腔', '沖繩腔')
+    cursor.execute(
+        f"UPDATE dialect SET is_active = CASE WHEN name IN ({','.join('?' * len(_ACTIVE_DIALECTS))}) THEN 1 ELSE 0 END;",
+        _ACTIVE_DIALECTS,
+    )
+    print(f"✅ dialect 初始資料確認完畢（本次新增 {_inserted} 筆，共 {len(_DIALECTS)} 種腔調，開放 {len(_ACTIVE_DIALECTS)} 種）")
 except sqlite3.OperationalError as e:
     print(f"⚠️ dialect 建立或初始化警告：{e}")
 
@@ -1031,6 +1037,28 @@ try:
     print(f"✅ 測驗題庫確認完畢（新增 {_added} 題、修正舊題目 {_fixed} 處）")
 except sqlite3.OperationalError as e:
     print(f"⚠️ 測驗題庫擴充警告：{e}")
+
+# ==========================================
+# 建立 custom_character（使用者自訂的 AI 對話角色）
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS custom_character (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name VARCHAR(50) NOT NULL,
+        origin VARCHAR(50),
+        age VARCHAR(10),
+        gender VARCHAR(10),
+        personality VARCHAR(100),
+        special_traits VARCHAR(200),
+        created_at DATETIME,
+        FOREIGN KEY(user_id) REFERENCES user(id)
+    );
+    """)
+    print("✅ custom_character 自訂角色資料表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ custom_character 建立警告：{e}")
 
 # 儲存並關閉
 conn.commit()

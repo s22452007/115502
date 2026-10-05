@@ -27,7 +27,7 @@ def has_unlimited_usage(user):
 
 # 造句批改、文章朗讀評分的每日次數（免費版 / Premium）。教育版學生不受限（has_unlimited_usage）。
 # 拍照與 AI 對話的次數另外寫在 services/user.py（photo 2/10、AI 3/10）。
-SENTENCE_DAILY_LIMIT = {'free': 3, 'premium': 10}
+SENTENCE_DAILY_LIMIT = {'free': 3, 'premium': 5}
 READING_DAILY_LIMIT = {'free': 1, 'premium': 5}
 
 

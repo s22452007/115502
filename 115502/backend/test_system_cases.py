@@ -2901,9 +2901,9 @@ def _(c):
 
 @case('A12', '造句批改與朗讀評分的每日次數依方案不同',
       pre='免費版使用者 F、Premium 使用者 P（AI 以模擬資料替代）',
-      steps='1. GET /api/user/usage_status 查兩人的每日上限\n2. P 造句 10 次後再造第 11 次\n'
+      steps='1. GET /api/user/usage_status 查兩人的每日上限\n2. P 造句 5 次後再造第 6 次\n'
             '3. F 朗讀評分 1 次後再朗讀第 2 次\n4. P 朗讀評分 5 次後再朗讀第 6 次',
-      expect='1. F：造句 3、朗讀 1；P：造句 10、朗讀 5\n2. 前 10 次成功，第 11 次 HTTP 400 quota_exceeded\n'
+      expect='1. F：造句 3、朗讀 1；P：造句 5、朗讀 5\n2. 前 5 次成功，第 6 次 HTTP 400 quota_exceeded\n'
              '3. 第 2 次 status=quota_exceeded，提示升級 Premium\n4. 前 5 次成功，第 6 次 status=quota_exceeded',
       note='AI 回應以模擬資料替代')
 def _(c):
@@ -2914,8 +2914,8 @@ def _(c):
     uf = J(SC.get(f'/api/user/usage_status/{f["id"]}'))
     up = J(SC.get(f'/api/user/usage_status/{p["id"]}'))
 
-    p_sentences = [evaluate_sentence(p).status_code for _ in range(10)]
-    r_p11 = evaluate_sentence(p)
+    p_sentences = [evaluate_sentence(p).status_code for _ in range(5)]
+    r_p6 = evaluate_sentence(p)
 
     def read(u):
         return SC.post('/api/articles/evaluate', data={'audio': (io.BytesIO(M4A_BYTES), 'reading.m4a'),
@@ -2931,12 +2931,12 @@ def _(c):
         GEMINI_FAKE['handler'] = None
     c.log(f'1. F 造句 {uf.get("sentence_daily_limit")}、朗讀 {uf.get("reading_daily_limit")}；'
           f'P 造句 {up.get("sentence_daily_limit")}、朗讀 {up.get("reading_daily_limit")}；'
-          f'2. P 前 10 次={p_sentences}、第 11 次 {http(r_p11, "status")}；'
+          f'2. P 前 5 次={p_sentences}、第 6 次 {http(r_p6, "status")}；'
           f'3. F 朗讀={f_reads}，提示={f_second.get("message")}；4. P 朗讀={p_reads}')
     check(uf.get('sentence_daily_limit') == 3 and uf.get('reading_daily_limit') == 1, '免費版上限不正確')
-    check(up.get('sentence_daily_limit') == 10 and up.get('reading_daily_limit') == 5, 'Premium 上限不正確')
-    check(p_sentences == [200] * 10 and r_p11.status_code == 400 and J(r_p11).get('status') == 'quota_exceeded',
-          'Premium 造句次數不是 10 次')
+    check(up.get('sentence_daily_limit') == 5 and up.get('reading_daily_limit') == 5, 'Premium 上限不正確')
+    check(p_sentences == [200] * 5 and r_p6.status_code == 400 and J(r_p6).get('status') == 'quota_exceeded',
+          'Premium 造句次數不是 5 次')
     check(f_reads == ['success', 'quota_exceeded'] and 'Premium' in (f_second.get('message') or ''),
           '免費版朗讀次數不是 1 次')
     check(p_reads == ['success'] * 5 + ['quota_exceeded'], 'Premium 朗讀次數不是 5 次')

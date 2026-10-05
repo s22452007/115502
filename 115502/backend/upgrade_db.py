@@ -901,6 +901,9 @@ except sqlite3.OperationalError as e:
 # ==========================================
 add_column("classroom", "grade_config JSON")
 add_column("assignment_submission", "answer_detail JSON")
+# 拍照、對話作業的 AI 建議分數與評分理由（老師確認後才寫進 score）
+add_column("assignment_submission", "ai_score INTEGER")
+add_column("assignment_submission", "ai_feedback JSON")
 print("✅ classroom.grade_config / assignment_submission.answer_detail 欄位確認完畢")
 
 # ==========================================

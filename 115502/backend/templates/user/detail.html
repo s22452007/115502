@@ -119,7 +119,7 @@
                 <div style="font-size:1.3rem;font-weight:900;color:#222;">
                     {{ user.username or '未設定暱稱' }}
                     {% if user.japanese_level %}
-                    <span class="chip chip-gold ms-1">{{ user.japanese_level }}</span>
+                    <span class="chip chip-gold ms-1">{{ user.japanese_level|level_title }}</span>
                     {% endif %}
                     {% if user.account_type == 'student' %}
                     <span class="badge-status ms-1" style="background:#e3eefc;color:#2f5f9e;"><i class="bi bi-mortarboard-fill"></i> 教育版學生（免付費）</span>
@@ -362,7 +362,7 @@
                         <tr>
                             <td><a href="/user/{{ f.id }}" style="color:var(--green);text-decoration:none;">{{ f.username or f.email }}</a></td>
                             <td style="color:#aaa;">{{ f.friend_id or '—' }}</td>
-                            <td>{% if f.japanese_level %}<span class="chip chip-gold">{{ f.japanese_level }}</span>{% else %}—{% endif %}</td>
+                            <td>{% if f.japanese_level %}<span class="chip chip-gold">{{ f.japanese_level|level_title }}</span>{% else %}—{% endif %}</td>
                         </tr>
                         {% endfor %}
                         </tbody>

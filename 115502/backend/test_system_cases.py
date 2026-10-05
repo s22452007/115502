@@ -183,6 +183,9 @@ gemini_client.run_with_legacy_keys = _blocked_ai
 # 新單字補例句平常在背景執行；測試改成同步，才能在個案裡直接檢查結果
 from utils import vocab_sentences as _vocab_sentences
 _vocab_sentences.RUN_IN_BACKGROUND = False
+# 拍照、對話作業的 AI 建議分數也改成同步，個案裡才能直接檢查
+from utils import assignment_ai as _assignment_ai
+_assignment_ai.RUN_IN_BACKGROUND = False
 
 # ----------------------------------------------------------------------
 # 暫存資料庫先建好空的資料表，訂閱方案與點數方案交給 app.py 啟動時建立，
@@ -4421,7 +4424,7 @@ def _(c):
       pre='管理者已登入；App 使用者 R2 程度 N2',
       steps='於「文章管理」頁：\n1. 新增文章但沒有標題；等級選錯；解鎖點數填 0\n2. 新增 N2 文章「東京の朝」，解鎖 80 點、立即上架，R2 於 App 查看 N2 文章\n'
             '3. 修改標題為「東京の朝（改）」、解鎖 60 點\n4. 下架後 R2 再查看，之後重新上架\n5. 刪除文章',
-      expect='1. 分別提示標題與內容必填、請選擇正確的等級、解鎖點數必須大於 0，皆不建立文章\n2. 新增成功，App 的 N2 文章列表出現這篇（未解鎖）\n'
+      expect='1. 分別提示標題與內容必填、請選擇正確的難度、解鎖點數必須大於 0，皆不建立文章\n2. 新增成功（提示寫「中高級」不顯示 N2），App 的中高級文章列表出現這篇（未解鎖）\n'
              '3. 修改成功，資料與操作日誌更新\n4. 下架後 App 看不到，上架後恢復\n5. 刪除成功，App 看不到並留下操作日誌')
 def _(c):
     cl = admin_client('sys_staff', 'Staff@1234')
@@ -4453,9 +4456,9 @@ def _(c):
     c.log(f'1. {f1}，建立 {n1} 篇；2. {f2}，解鎖點數={cost}、免費={free}，App 看到={seen2}；3. {f3}，資料={edited}；'
           f'4. {f4a}，App 看到={seen4a}；{f4b}，App 看到={seen4b}；5. {f5}，App 看到={seen5}；'
           f'操作日誌（新增, 修改, 刪除）={logs("articles", aid, "CREATE")}, {logs("articles", aid, "UPDATE")}, {logs("articles", aid, "DELETE")}')
-    check(f1 == [['標題與日文內容為必填欄位'], ['請選擇正確的等級 (N5~N1)'], ['解鎖點數必須大於 0（新文章一律付費解鎖）']] and n1 == 0,
+    check(f1 == [['標題與日文內容為必填欄位'], ['請選擇正確的難度（入門～高級）'], ['解鎖點數必須大於 0（新文章一律付費解鎖）']] and n1 == 0,
           '不合格的文章未擋下')
-    check('已新增 N2 文章「東京の朝」' in f2[0] and cost == 80 and free is False and '東京の朝' in seen2, '新增文章失敗')
+    check('已新增中高級文章「東京の朝」' in f2[0] and cost == 80 and free is False and '東京の朝' in seen2, '新增文章失敗')
     check(f3 == ['已更新文章「東京の朝（改）」'] and edited == ('東京の朝（改）', 60) and '東京の朝（改）' in page, '修改文章失敗')
     check(f4a == ['已下架「東京の朝（改）」'] and '東京の朝（改）' not in seen4a
           and f4b == ['已上架「東京の朝（改）」'] and '東京の朝（改）' in seen4b, '上下架不正確')

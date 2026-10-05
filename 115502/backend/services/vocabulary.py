@@ -277,6 +277,39 @@ def get_scene_vocabs(scene_id):
     return jsonify({"vocabs": results}), 200
 
 
+@vocab_bp.route('/practice_words', methods=['GET'])
+def get_practice_words():
+    """造句練習可以勾選的單字：收藏過的字 + 拍照辨識過的字。
+    同一個字只出現一次，收藏的排前面、其次是最近拍到的；source 標示來源（collected / photo）。
+    原本 App 只讀單字本，拍過但沒按星星的字選不到。"""
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({"error": "缺少 user_id"}), 400
+
+    from models import UserPhoto, UserPhotoVocab
+    collected = (Vocab.query.join(UserVocab, UserVocab.vocab_id == Vocab.id)
+                 .filter(UserVocab.user_id == user_id, UserVocab.collected_at.isnot(None))
+                 .order_by(UserVocab.collected_at.desc())
+                 .all())
+    photographed = (db.session.query(Vocab)
+                    .join(UserPhotoVocab, UserPhotoVocab.vocab_id == Vocab.id)
+                    .join(UserPhoto, UserPhotoVocab.photo_id == UserPhoto.id)
+                    .filter(UserPhoto.user_id == user_id)
+                    .group_by(Vocab.id)
+                    .order_by(func.max(UserPhoto.created_at).desc())
+                    .all())
+
+    words, seen = [], set()
+    for source, vocabs in (('collected', collected), ('photo', photographed)):
+        for v in vocabs:
+            if not v.word or v.word in seen:
+                continue
+            seen.add(v.word)
+            words.append({"vocab_id": v.id, "word": v.word, "kana": v.kana,
+                          "meaning": v.meaning, "source": source})
+    return jsonify({"words": words}), 200
+
+
 @vocab_bp.route('/detail/<int:vocab_id>', methods=['GET'])
 def get_vocab_detail(vocab_id):
     """

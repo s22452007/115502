@@ -985,6 +985,18 @@ class ApiClient {
     throw Exception('無法載入');
   }
 
+  /// 造句練習可以勾選的單字：收藏過的字 + 拍照辨識過的字（後端已去重複，收藏的排前面）。
+  /// 每筆有 word、kana、meaning、source（collected / photo）；失敗時回傳空清單。
+  static Future<List<dynamic>> getPracticeWords(int userId) async {
+    try {
+      final response = await client.get(Uri.parse('$baseUrl/vocab/practice_words?user_id=$userId'));
+      if (response.statusCode == 200) return json.decode(response.body)['words'] ?? [];
+    } catch (e) {
+      debugPrint('取得造句單字失敗: $e');
+    }
+    return [];
+  }
+
   static Future<Map<String, dynamic>> getVocabDetail(
     int vocabId,
     int userId,

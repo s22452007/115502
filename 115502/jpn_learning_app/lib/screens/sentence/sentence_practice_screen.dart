@@ -111,39 +111,25 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     }
 
     // ==========================================
-    // 任務 2：接著獲取收藏單字 (即使失敗也不影響文法顯示)
+    // 任務 2：接著獲取可以勾選的單字 (即使失敗也不影響文法顯示)
+    //   收藏過的字 + 拍照辨識過的字，後端已去重複、收藏的排前面
     // ==========================================
     try {
-      List<Map<String, dynamic>> allVocabs = [];
-      final foldersResult = await ApiClient.fetchUserFavorites(userId);
-
-      if (foldersResult.containsKey('favorites') ||
-          foldersResult.containsKey('folders')) {
-        final folders =
-            foldersResult['favorites'] ?? foldersResult['folders'] ?? [];
-        for (var folder in folders) {
-          final folderId = folder['id'];
-          final vResult = await ApiClient.getFolderVocabs(
-            userId,
-            folderId: folderId,
-          );
-          if (vResult.containsKey('vocabs')) {
-            for (var v in vResult['vocabs']) {
-              final word = v['word'] ?? v['kanji'] ?? '';
-              final meaning = v['meaning'] ?? '';
-              if (word.isNotEmpty &&
-                  !allVocabs.any((element) => element['word'] == word)) {
-                allVocabs.add({'word': word, 'meaning': meaning});
-              }
-            }
-          }
-        }
+      final List<Map<String, dynamic>> allVocabs = [];
+      for (final v in await ApiClient.getPracticeWords(userId)) {
+        final word = (v['word'] ?? '').toString();
+        if (word.isEmpty) continue;
+        allVocabs.add({
+          'word': word,
+          'meaning': v['meaning'] ?? '',
+          'source': v['source'] ?? 'collected',
+        });
       }
 
       // 作業指定的單字可能不在學生收藏裡，補進清單讓它能被顯示與勾選
       for (final w in _requiredVocabs) {
         if (!allVocabs.any((e) => e['word'] == w)) {
-          allVocabs.insert(0, {'word': w, 'meaning': '作業指定單字'});
+          allVocabs.insert(0, {'word': w, 'meaning': '作業指定單字', 'source': 'assignment'});
         }
       }
 
@@ -337,7 +323,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '用越多指定單字，總分越高！',
+                      '句子每用到一個勾選的單字，獎勵 +10 點（最多 3 個）',
                       style: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                     const Divider(height: 24),
@@ -345,7 +331,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       child: _allMyVocabs.isEmpty
                           ? const Center(
                               child: Text(
-                                '單字本裡面還沒有單字喔！\n請先去閱讀文章收藏單字。',
+                                '還沒有可以選的單字喔！\n先去拍照辨識，或在文章裡收藏單字吧。',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.grey),
                               ),
@@ -358,13 +344,39 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                                 final isSelected = _selectedVocabWords.contains(
                                   word,
                                 );
+                                final source = vocab['source'];
+                                final fromPhoto = source == 'photo';
+                                final tag = source == 'assignment' ? '作業指定' : (fromPhoto ? '拍過' : '已收藏');
                                 return CheckboxListTile(
                                   activeColor: AppColors.primary,
-                                  title: Text(
-                                    word,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  title: Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          word,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // 標出來源：收藏過的字 / 拍照辨識過的字
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: fromPhoto ? AppColors.lightBg : Colors.amber.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          tag,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: fromPhoto ? AppColors.textSubtle : Colors.amber.shade800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   subtitle: Text(vocab['meaning'] ?? ''),
                                   value: isSelected,
@@ -408,6 +420,34 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     );
   }
 
+  /// 獎勵點數下方的單字加分說明：用到的單字 +10，選了沒用到的也列出來
+  Widget _buildVocabBonusNote(int bonus, List<String> used, List<String> unused) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bonus > 0 ? Colors.amber.withOpacity(0.12) : AppColors.lightBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          if (bonus > 0)
+            Text(
+              '單字加分 +$bonus 點（用到：${used.join('、')}）',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.amber.shade800),
+            ),
+          if (unused.isNotEmpty)
+            Text(
+              '選了但沒用到：${unused.join('、')}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: AppColors.textSubtle),
+            ),
+        ],
+      ),
+    );
+  }
+
   void _showEvaluationResultDialog(Map<String, dynamic> result) {
     final score = result['score'] ?? 0;
     final points = result['points_earned'] ?? 0;
@@ -419,6 +459,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     final translation = (result['translation'] ?? '').toString();
     final corrections = (result['corrections'] as List?) ?? const [];
     final isCorrect = result['is_grammar_correct'] ?? false;
+    // 選用單字加分：用到幾個、哪些沒用到（舊版後端沒有這些欄位就不顯示）
+    final vocabBonus = (result['vocab_bonus'] as num?)?.toInt() ?? 0;
+    final usedVocabs = List<String>.from(result['used_vocabs'] ?? const []);
+    final unusedVocabs = List<String>.from(result['unused_vocabs'] ?? const []);
     // 作業模式才有：後端自動繳交的結果
     final Map<String, dynamic>? assignmentResult =
         (result['assignment_result'] as Map?)?.cast<String, dynamic>();
@@ -503,6 +547,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       ),
                     ],
                   ),
+                  if (vocabBonus > 0 || unusedVocabs.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildVocabBonusNote(vocabBonus, usedVocabs, unusedVocabs),
+                  ],
                   const Divider(height: 30),
 
                   // 總評一句 + 你的句子 → 修改建議 → 參考句子（與拍照後的練習造句共用）
@@ -828,7 +876,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       const SizedBox(height: 24),
 
                       const Text(
-                        '選用我的單字本 (選填，可加分)',
+                        '選用我學過的單字（選填，每用到一個 +10 點）',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,

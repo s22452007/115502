@@ -2730,7 +2730,7 @@ def _(c):
 @case('A12', '使用收藏單字造句並由 AI 批改',
       pre='W1 已收藏「冷蔵庫」；AI 批改以模擬資料替代（85 分）',
       steps='1. 從收藏夾取得單字（POST /api/vocab/folder_vocabs）\n2. POST /api/sentence/evaluate，grammar_point=〜ために、selected_vocabs=[冷蔵庫]、user_sentence=健康のために、毎日冷蔵庫の野菜を食べます。\n3. POST /api/sentence/evaluate 未帶 user_sentence',
-      expect='2. HTTP 200，status=success，score=85、修正句與條列評語、80 分以上可得 30 點（points_earned=30）、回傳 record_id；資料庫紀錄保存選用的收藏單字\n3. HTTP 400，「缺少必要參數」',
+      expect='2. HTTP 200，status=success，score=85、修正句與條列評語、80 分以上可得 30 點，句子用到選用的「冷蔵庫」再加 10 點（points_earned=40、vocab_bonus=10）、回傳 record_id；資料庫紀錄保存選用的收藏單字\n3. HTTP 400，「缺少必要參數」',
       note='AI 回應以模擬資料替代')
 def _(c):
     w1 = STATE['writer']
@@ -2752,7 +2752,8 @@ def _(c):
           f'資料庫保存的選用單字={saved_vocabs}；3. {http(r_bad, "error")}')
     check(words == ['冷蔵庫'], '收藏夾內容不正確')
     check(r.status_code == 200 and d.get('status') == 'success' and d.get('score') == 85
-          and d.get('points_earned') == 30 and d.get('record_id'), '批改結果不正確')
+          and d.get('points_earned') == 40 and d.get('vocab_bonus') == 10 and d.get('used_vocabs') == ['冷蔵庫']
+          and d.get('record_id'), '批改結果不正確')
     check(d.get('corrected_sentence') and d.get('strict_feedback'), '缺少修正句或評語')
     check(saved_vocabs == ['冷蔵庫'], '未保存選用的收藏單字')
     check(r_bad.status_code == 400 and J(r_bad).get('error') == '缺少必要參數', '未擋下缺少參數')
@@ -2761,7 +2762,7 @@ def _(c):
 @case('A12', '查詢造句歷史紀錄',
       pre='W1 已完成 1 次造句（A12-02），尚未領取獎勵',
       steps='GET /api/sentence/history/{W1}',
-      expect='HTTP 200，列出 1 筆：文法〜ために、原句、修正句、AI 評語、85 分、可領 30 點、is_claimed=false')
+      expect='HTTP 200，列出 1 筆：文法〜ために、原句、修正句、AI 評語、85 分、可領 40 點（含單字加分 10）、is_claimed=false')
 def _(c):
     w1 = STATE['writer']
     r = SC.get(f'/api/sentence/history/{w1["id"]}')
@@ -2770,14 +2771,14 @@ def _(c):
     c.log(f'HTTP {r.status_code}，{len(hist)} 筆；grammar_point={h.get("grammar_point")}、score={h.get("score")}、'
           f'points_earned={h.get("points_earned")}、is_claimed={h.get("is_claimed")}、有修正句={bool(h.get("corrected_sentence"))}、有評語={bool(h.get("ai_feedback"))}')
     check(r.status_code == 200 and len(hist) == 1 and h.get('grammar_point') == '〜ために' and h.get('score') == 85
-          and h.get('points_earned') == 30 and h.get('is_claimed') is False
+          and h.get('points_earned') == 40 and h.get('is_claimed') is False
           and h.get('corrected_sentence') and h.get('ai_feedback'), '歷史紀錄不正確')
 
 
 @case('A12', '領取造句獎勵且不能重複領取',
-      pre='W1 有一筆未領取的造句紀錄（30 點），目前 0 點',
+      pre='W1 有一筆未領取的造句紀錄（40 點），目前 0 點',
       steps='1. POST /api/sentence/claim，record_id、user_id=W1\n2. 再領一次\n3. GET /api/sentence/history/{W1}',
-      expect='1. HTTP 200，status=success、total_points=30，交易紀錄新增 +30（reward）\n2. HTTP 400，「無法領取或已領取過」，點數不變\n3. is_claimed=true')
+      expect='1. HTTP 200，status=success、total_points=40，交易紀錄新增 +40（reward）\n2. HTTP 400，「無法領取或已領取過」，點數不變\n3. is_claimed=true')
 def _(c):
     w1, rid = STATE['writer'], STATE.get('sentence_record')
     if not rid:
@@ -2788,14 +2789,14 @@ def _(c):
     claimed = J(SC.get(f'/api/sentence/history/{w1["id"]}')).get('data', [{}])[0].get('is_claimed')
     tx = [t for t in J(SC.get(f'/api/user/transactions/{w1["id"]}')).get('transactions', [])]
     c.log(f'1. {http(r1, "status", "total_points")}；2. {http(r2, "error")}，點數={pts}；3. is_claimed={claimed}；交易紀錄 {len(tx)} 筆')
-    check(r1.status_code == 200 and J(r1).get('total_points') == 30, '領取失敗')
-    check([(t['points'], t['transaction_type']) for t in tx] == [(30, 'reward')], '領取的點數沒有寫入交易紀錄')
-    check(r2.status_code == 400 and J(r2).get('error') == '無法領取或已領取過' and pts == 30, '可重複領取')
+    check(r1.status_code == 200 and J(r1).get('total_points') == 40, '領取失敗')
+    check([(t['points'], t['transaction_type']) for t in tx] == [(40, 'reward')], '領取的點數沒有寫入交易紀錄')
+    check(r2.status_code == 400 and J(r2).get('error') == '無法領取或已領取過' and pts == 40, '可重複領取')
     check(claimed is True, '領取狀態未更新')
 
 
 @case('A12', '不能領取他人的造句獎勵',
-      pre='W1 另有一筆未領取的造句紀錄（30 點，AI 以模擬資料替代）；使用者 W2 為 0 點',
+      pre='W1 另有一筆未領取的造句紀錄（40 點，AI 以模擬資料替代）；使用者 W2 為 0 點',
       steps='W2 POST /api/sentence/claim，record_id=W1 的紀錄、user_id=W2',
       expect='HTTP 400 或 403 拒絕領取；W2 點數維持 0，W1 的紀錄仍為未領取',
       note='AI 回應以模擬資料替代')
@@ -2886,6 +2887,27 @@ def ensure_edu():
         db.session.commit()
         STATE['edu_student'] = {'id': student.id, 'email': student.email, 'password': '11156099'}
         STATE['edu_rooms'] = {'open': open_room.id, 'closed': closed_room.id, 'archived': archived_room.id}
+
+
+@case('A12', '選用單字有用到才加分',
+      pre='使用者 W5 程度 N4；AI 批改以模擬資料替代（85 分，基本 30 點）',
+      steps='1. 不選單字造句\n2. 選「冷蔵庫」但句子沒用到\n3. 選「冷蔵庫、野菜」且都有用到',
+      expect='1. points_earned=30、vocab_bonus=0\n2. points_earned=30、vocab_bonus=0、unused_vocabs=[冷蔵庫]\n'
+             '3. points_earned=50、vocab_bonus=20、used_vocabs=[冷蔵庫, 野菜]')
+def _(c):
+    w5 = register('writer')
+    set_user(w5['id'], japanese_level='N4')
+    d1 = J(evaluate_sentence(w5, sentence='健康のために、毎日走ります。'))
+    d2 = J(evaluate_sentence(w5, vocabs=['冷蔵庫'], sentence='健康のために、毎日走ります。'))
+    d3 = J(evaluate_sentence(w5, vocabs=['冷蔵庫', '野菜']))
+    c.log(f'1. points={d1.get("points_earned")}、bonus={d1.get("vocab_bonus")}；'
+          f'2. points={d2.get("points_earned")}、bonus={d2.get("vocab_bonus")}、unused={d2.get("unused_vocabs")}；'
+          f'3. points={d3.get("points_earned")}、bonus={d3.get("vocab_bonus")}、used={d3.get("used_vocabs")}')
+    check(d1.get('points_earned') == 30 and d1.get('vocab_bonus') == 0, '沒選單字卻加分')
+    check(d2.get('points_earned') == 30 and d2.get('vocab_bonus') == 0 and d2.get('unused_vocabs') == ['冷蔵庫'],
+          '選了單字但沒用到卻加分')
+    check(d3.get('points_earned') == 50 and d3.get('vocab_bonus') == 20 and d3.get('used_vocabs') == ['冷蔵庫', '野菜'],
+          '用到選用單字沒有加分')
 
 
 @case('A13', '學生帳號由校園教育版入口登入',

@@ -169,6 +169,25 @@ def _normalize_feedback(result):
     return result
 
 
+# 選用單字加分：每用到一個選用的單字 +10 點，最多算 3 個（+30）。
+# 原本寫在 AI 計分規則裡（基礎 60 分、每個單字 +10），但 AI 遇到好句子一律給 100，
+# 有沒有用單字分數都一樣；現在改成 AI 分數只看文法，單字另外加在獎勵點數上。
+VOCAB_BONUS_EACH = 10
+VOCAB_BONUS_MAX_WORDS = 3
+
+
+def _used_vocabs(sentence, selected, ai_used):
+    """選用的單字實際有用到哪些：原形直接出現在句子裡，或 AI 判斷用到了它的變化形
+    （例如選「食べる」寫「食べました」）。只承認使用者自己選的字，AI 多報的不算。"""
+    ai = {str(w).strip() for w in (ai_used or []) if isinstance(w, str)}
+    used = []
+    for w in selected or []:
+        w = str(w).strip()
+        if w and w not in used and (w in (sentence or '') or w in ai):
+            used.append(w)
+    return used
+
+
 # ==========================================
 # 🌟 2. 極度嚴格的 AI 批改與結算 API (防彈升級版)
 # ==========================================
@@ -234,7 +253,9 @@ def evaluate_sentence():
         【指定單字】：{vocab_str}
         【學生的造句】：{user_sentence}
 
-        計分(滿分100)：基礎分60，每個指定單字+10。助詞錯扣5分，變形錯扣10分，語意不通扣20分。未正確使用「指定文法」直接不及格。
+        計分(滿分100)：只看文法與自然度，從 100 分開始扣：助詞錯扣5分，變形錯扣10分，語意不通扣20分。
+        未正確使用「指定文法」直接不及格（59 分以下）。指定單字有沒有用到不影響分數（系統另外加點）。
+        used_vocabs：列出【指定單字】中，句子裡真的有用到的（含動詞、形容詞的變化形），照抄指定單字的寫法；沒用到就給空陣列。
         
         App 會把結果拆成「總評、修改建議、參考句子」分區顯示，每個欄位只放該放的內容：
         - summary：一句總評（30 字以內），不要在這裡重複解釋錯誤。
@@ -251,6 +272,7 @@ def evaluate_sentence():
         {{
             "score": 85,
             "is_grammar_correct": false,
+            "used_vocabs": ["公園"],
             "summary": "有用到指定文法，助詞再注意一下就更好了。",
             "corrections": [
                 {{"original": "公園に", "corrected": "公園で", "reason": "助詞錯誤：表示動作地點要用で"}}
@@ -269,7 +291,15 @@ def evaluate_sentence():
         # 交由 Gemini 批改
         result = _normalize_feedback(_analyze())
         score = result.get('score', 0)
-        points_earned = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
+        base_points = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
+        # 單字加分：及格（60 分以上）才給，避免把單字硬塞進不通的句子來拿點數
+        used = _used_vocabs(user_sentence, selected_vocabs, result.get('used_vocabs'))
+        vocab_bonus = VOCAB_BONUS_EACH * min(len(used), VOCAB_BONUS_MAX_WORDS) if score >= 60 else 0
+        points_earned = base_points + vocab_bonus
+        result['used_vocabs'] = used
+        result['unused_vocabs'] = [w for w in (selected_vocabs or []) if w not in used]
+        result['base_points'] = base_points
+        result['vocab_bonus'] = vocab_bonus
 
         # 🌟 防呆 2：安全寫入資料庫
         record_id = None

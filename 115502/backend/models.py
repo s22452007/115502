@@ -789,3 +789,17 @@ class ClassroomAnnouncement(db.Model):
     assignment_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True)   # 老師編輯過才有
+
+
+# 請確保這兩段有在 models.py 的最下方，並且有存檔！
+
+
+
+class UserArticleUnlock(db.Model):
+    """使用者解鎖文章紀錄表"""
+    __tablename__ = 'user_article_unlock'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    article_id = db.Column(db.Integer, db.ForeignKey('article.id'), nullable=False)
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow)

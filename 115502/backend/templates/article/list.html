@@ -69,6 +69,17 @@
         .form-hint { font-size: 0.75rem; color: #999; margin-top: 4px; }
         .modal-body label.form-label { font-size: 0.82rem; color: #777; margin-bottom: 4px; }
         textarea.form-control { font-size: 0.9rem; }
+        /* 視窗裡的 <form> 包住了 header／body／footer，Bootstrap 的 modal-dialog-scrollable
+           只認得直接放在 modal-content 裡的 modal-body，所以要幫 form 補上捲動設定，不然下面的欄位會被切掉 */
+        .modal-dialog-scrollable .modal-content > form { display: flex; flex-direction: column; min-height: 0; max-height: 100%; overflow: hidden; }
+        .modal-dialog-scrollable .modal-content > form > .modal-body { overflow-y: auto; }
+        /* App 顯示效果：讀音標記照 App 的樣子顯示在漢字上方 */
+        .ruby-preview { margin-top: 8px; padding: 10px 14px; background: #f6f8f6; border-radius: 10px; font-size: 1.05rem; line-height: 2.4; color: #333; }
+        .ruby-preview:empty { display: none; }
+        .ruby-preview rt { font-size: 0.55em; color: #718096; }
+        .ruby-preview ruby { cursor: pointer; border-radius: 4px; padding: 0 1px; }
+        .ruby-preview ruby:hover { background: #e3efe4; }
+        .ruby-preview-label { font-size: 0.72rem; color: #999; margin: 8px 0 -4px; }
     </style>
 </head>
 <body>
@@ -278,16 +289,36 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">日文內容</label>
-                            <textarea autocomplete="off" name="content" class="form-control" rows="6" placeholder="可使用 &lt;ruby&gt;漢字&lt;rt&gt;かんじ&lt;/rt&gt;&lt;/ruby&gt; 標註假名" required></textarea>
-                            <div class="form-hint">支援 ruby 標籤，App 端會顯示振假名</div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">日文內容</label>
+                                <button type="button" class="btn btn-sm btn-outline-success js-auto-ruby">
+                                    <i class="bi bi-magic"></i> 自動標註讀音
+                                </button>
+                            </div>
+                            <textarea autocomplete="off" name="content" class="form-control" rows="6" placeholder="貼上日文內容，再按右上角「自動標註讀音」，漢字上方就會顯示讀音" required></textarea>
+                            <div class="form-hint js-ruby-msg"></div>
+                            <div class="ruby-preview-label js-ruby-preview-label" hidden>App 顯示效果（點漢字可以修改讀音）</div>
+                            <div class="ruby-preview js-ruby-preview"></div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">中文翻譯</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">中文翻譯</label>
+                                <button type="button" class="btn btn-sm btn-outline-success js-auto-translate">
+                                    <i class="bi bi-translate"></i> 自動產生翻譯
+                                </button>
+                            </div>
                             <textarea autocomplete="off" name="translation" class="form-control" rows="3"></textarea>
+                            <div class="form-hint js-translate-msg"></div>
                         </div>
 
+                        <div class="d-flex justify-content-between align-items-center mb-2 js-points-bar">
+                            <span class="form-hint m-0">重點文法與單字會顯示在 App 文章下方，單字在文章裡會變成可以點的綠色字</span>
+                            <button type="button" class="btn btn-sm btn-outline-success js-auto-points">
+                                <i class="bi bi-stars"></i> 自動產生重點文法與單字
+                            </button>
+                        </div>
+                        <div class="form-hint js-points-msg mb-2"></div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">重點文法（一行一筆）</label>
@@ -301,15 +332,6 @@
                             </div>
                         </div>
 
-                        <div class="mt-3">
-                            <a class="small text-muted" data-bs-toggle="collapse" href="#advAdd" role="button" style="cursor:pointer;">
-                                <i class="bi bi-code-slash"></i> 進階：直接貼上 grammar_points JSON
-                            </a>
-                            <div class="collapse mt-2" id="advAdd">
-                                <textarea autocomplete="off" name="grammar_json" class="form-control" rows="4" placeholder='{"grammars": [...], "vocabularies": [...]}'></textarea>
-                                <div class="form-hint">若填寫此欄，會覆蓋上面兩個欄位</div>
-                            </div>
-                        </div>
                     </div>
                     <div class="modal-footer border-0">
                         <button type="submit" class="btn btn-snap w-100 py-2">確認新增</button>
@@ -365,15 +387,36 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">日文內容</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">日文內容</label>
+                                <button type="button" class="btn btn-sm btn-outline-success js-auto-ruby">
+                                    <i class="bi bi-magic"></i> 自動標註讀音
+                                </button>
+                            </div>
                             <textarea autocomplete="off" name="content" class="form-control" rows="6" required>{{ a.content }}</textarea>
+                            <div class="form-hint js-ruby-msg"></div>
+                            <div class="ruby-preview-label js-ruby-preview-label" hidden>App 顯示效果（點漢字可以修改讀音）</div>
+                            <div class="ruby-preview js-ruby-preview"></div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">中文翻譯</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">中文翻譯</label>
+                                <button type="button" class="btn btn-sm btn-outline-success js-auto-translate">
+                                    <i class="bi bi-translate"></i> 自動產生翻譯
+                                </button>
+                            </div>
                             <textarea autocomplete="off" name="translation" class="form-control" rows="3">{{ a.translation or '' }}</textarea>
+                            <div class="form-hint js-translate-msg"></div>
                         </div>
 
+                        <div class="d-flex justify-content-between align-items-center mb-2 js-points-bar">
+                            <span class="form-hint m-0">重點文法與單字會顯示在 App 文章下方，單字在文章裡會變成可以點的綠色字</span>
+                            <button type="button" class="btn btn-sm btn-outline-success js-auto-points">
+                                <i class="bi bi-stars"></i> 自動產生重點文法與單字
+                            </button>
+                        </div>
+                        <div class="form-hint js-points-msg mb-2"></div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">重點文法（一行一筆）</label>
@@ -387,15 +430,6 @@
                             </div>
                         </div>
 
-                        <div class="mt-3">
-                            <a class="small text-muted" data-bs-toggle="collapse" href="#advEdit{{ a.id }}" role="button" style="cursor:pointer;">
-                                <i class="bi bi-code-slash"></i> 進階：直接貼上 grammar_points JSON
-                            </a>
-                            <div class="collapse mt-2" id="advEdit{{ a.id }}">
-                                <textarea autocomplete="off" name="grammar_json" class="form-control" rows="4" placeholder='{"grammars": [...], "vocabularies": [...]}'></textarea>
-                                <div class="form-hint">若填寫此欄，會覆蓋上面兩個欄位</div>
-                            </div>
-                        </div>
                     </div>
                     <div class="modal-footer border-0">
                         <button type="submit" class="btn btn-snap w-100 py-2">儲存變更</button>
@@ -410,5 +444,159 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {% include 'admin/_flash_autohide.html' %}
+<script>
+// 自動標註讀音：把「日文內容」送給後端請 AI 加上 <ruby> 讀音，成功後填回輸入框（還沒存檔，按儲存才會寫入）
+document.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.js-auto-ruby');
+    if (!btn) return;
+    const group = btn.closest('.mb-3');
+    const box = group.querySelector('textarea[name="content"]');
+    const msg = group.querySelector('.js-ruby-msg');
+    const text = box.value.trim();
+    if (!text) { msg.textContent = '請先輸入日文內容'; msg.style.color = '#d9534f'; return; }
+
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 標註中…';
+    msg.textContent = 'AI 標註讀音中，約需幾秒鐘…'; msg.style.color = '';
+    try {
+        const res = await fetch('/article/auto_ruby', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text }),
+        });
+        const data = await res.json().catch(() => ({ error: '登入逾時，請重新整理頁面後再試' }));
+        if (!res.ok || data.error) throw new Error(data.error || '標註失敗');
+        box.value = data.content;
+        renderRubyPreview(group);  // 標註完立刻更新 App 顯示效果
+        msg.textContent = data.count ? `已幫 ${data.count} 個詞標上讀音，請檢查後再儲存` : '內容沒有漢字，不需要標註';
+        msg.style.color = '#4e8b57';
+    } catch (err) {
+        msg.textContent = err.message;
+        msg.style.color = '#d9534f';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
+});
+</script>
+<script>
+// App 顯示效果：只把 <ruby> 讀音標記還原成真的標記，其他內容一律當純文字顯示（避免貼進來的 HTML 被執行）
+function renderRubyPreview(group) {
+    const box = group.querySelector('textarea[name="content"]');
+    const view = group.querySelector('.js-ruby-preview');
+    const label = group.querySelector('.js-ruby-preview-label');
+    if (!box || !view) return;
+    const escaped = box.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = escaped.replace(/&lt;(\/?)(ruby|rt)&gt;/g, '<$1$2>').replace(/\n/g, '<br>');
+    const hasRuby = /<ruby>/.test(html);
+    let i = 0;
+    view.innerHTML = hasRuby ? html.replace(/<ruby>/g, () => `<ruby data-i="${i++}" title="點一下修改讀音">`) : '';
+    if (label) label.hidden = !hasRuby;
+}
+document.addEventListener('input', function (e) {
+    if (e.target.matches('textarea[name="content"]')) renderRubyPreview(e.target.closest('.mb-3'));
+});
+document.querySelectorAll('textarea[name="content"]').forEach(t => renderRubyPreview(t.closest('.mb-3')));
+
+// 自動產生中文翻譯：拿「日文內容」請 AI 翻成繁體中文，填回中文翻譯欄（按儲存才會寫入）
+document.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.js-auto-translate');
+    if (!btn) return;
+    const form = btn.closest('form');
+    const source = form.querySelector('textarea[name="content"]').value.trim();
+    const group = btn.closest('.mb-3');
+    const box = group.querySelector('textarea[name="translation"]');
+    const msg = group.querySelector('.js-translate-msg');
+    if (!source) { msg.textContent = '請先輸入日文內容'; msg.style.color = '#d9534f'; return; }
+    if (box.value.trim() && !confirm('中文翻譯已經有內容，要用 AI 翻譯取代嗎？')) return;
+
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 翻譯中…';
+    msg.textContent = 'AI 翻譯中，約需幾秒鐘…'; msg.style.color = '';
+    try {
+        const res = await fetch('/article/auto_translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: source }),
+        });
+        const data = await res.json().catch(() => ({ error: '登入逾時，請重新整理頁面後再試' }));
+        if (!res.ok || data.error) throw new Error(data.error || '翻譯失敗');
+        box.value = data.translation;
+        msg.textContent = '已產生中文翻譯，請檢查後再儲存';
+        msg.style.color = '#4e8b57';
+    } catch (err) {
+        msg.textContent = err.message;
+        msg.style.color = '#d9534f';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
+});
+</script>
+<script>
+// 點預覽裡的漢字修改讀音：找到內容裡第 n 個 <ruby>，只改它的讀音（清空就是不標讀音）
+document.addEventListener('click', function (e) {
+    const item = e.target.closest('.js-ruby-preview ruby[data-i]');
+    if (!item) return;
+    const group = item.closest('.mb-3');
+    const box = group.querySelector('textarea[name="content"]');
+    const target = Number(item.dataset.i);
+    let n = 0, found = null;
+    box.value.replace(/<ruby>([\s\S]*?)<rt>([\s\S]*?)<\/rt><\/ruby>/g, (m, base, rt, offset) => {
+        if (n++ === target) found = { m, base, rt, offset };
+        return m;
+    });
+    if (!found) return;
+    const next = prompt(`「${found.base}」的讀音（清空就是不標讀音）`, found.rt);
+    if (next === null) return;
+    const reading = next.trim();
+    const replaced = reading ? `<ruby>${found.base}<rt>${reading}</rt></ruby>` : found.base;
+    box.value = box.value.slice(0, found.offset) + replaced + box.value.slice(found.offset + found.m.length);
+    renderRubyPreview(group);
+    const msg = group.querySelector('.js-ruby-msg');
+    msg.textContent = reading ? `已把「${found.base}」的讀音改成「${reading}」` : `已拿掉「${found.base}」的讀音`;
+    msg.style.color = '#4e8b57';
+});
+
+// 自動產生重點文法與單字：依文章內容與發布等級請 AI 挑出重點，填回兩個欄位（按儲存才會寫入）
+document.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.js-auto-points');
+    if (!btn) return;
+    const form = btn.closest('form');
+    const source = form.querySelector('textarea[name="content"]').value.trim();
+    const level = (form.querySelector('[name="level"]') || {}).value || 'N5';
+    const grammarsBox = form.querySelector('textarea[name="grammars_text"]');
+    const vocabsBox = form.querySelector('textarea[name="vocabs_text"]');
+    const msg = btn.closest('.js-points-bar').nextElementSibling;
+    if (!source) { msg.textContent = '請先輸入日文內容'; msg.style.color = '#d9534f'; return; }
+    if ((grammarsBox.value.trim() || vocabsBox.value.trim()) && !confirm('重點文法或單字已經有內容，要用 AI 產生的取代嗎？')) return;
+
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 產生中…';
+    msg.textContent = 'AI 挑選重點中，約需幾秒鐘…'; msg.style.color = '';
+    try {
+        const res = await fetch('/article/auto_points', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: source, level: level }),
+        });
+        const data = await res.json().catch(() => ({ error: '登入逾時，請重新整理頁面後再試' }));
+        if (!res.ok || data.error) throw new Error(data.error || '產生失敗');
+        grammarsBox.value = data.grammars_text;
+        vocabsBox.value = data.vocabs_text;
+        msg.textContent = `已產生 ${data.grammar_count} 個文法、${data.vocab_count} 個單字，請檢查後再儲存`;
+        msg.style.color = '#4e8b57';
+    } catch (err) {
+        msg.textContent = err.message;
+        msg.style.color = '#d9534f';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
+});
+</script>
 </body>
 </html>

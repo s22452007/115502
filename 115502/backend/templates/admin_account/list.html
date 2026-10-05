@@ -221,7 +221,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">初始密碼</label>
-                            <input autocomplete="off" type="text" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號，不可包含帳號" required>
+                            <input autocomplete="off" type="password" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號，不可包含帳號" required>
                             <div class="form-hint">對方第一次登入會被要求改成自己的密碼</div>
                         </div>
                     </div>
@@ -245,7 +245,7 @@
                     </div>
                     <div class="modal-body p-4">
                         <label class="form-label">臨時密碼</label>
-                        <input autocomplete="off" type="text" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
+                        <input autocomplete="off" type="password" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
                         <div class="form-hint">把臨時密碼告訴對方；對方登入後會被要求立刻改成自己的密碼</div>
                     </div>
                     <div class="modal-footer border-0">
@@ -262,5 +262,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {% include 'admin/_flash_autohide.html' %}
 {% include 'admin/_password_strength.html' %}
+{% include 'admin/_password_toggle.html' %}
 </body>
 </html>

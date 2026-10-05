@@ -246,7 +246,7 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
     
     String getFeatureName(String? featureId) {
       switch (featureId) {
-        case 'photo_extra': return '拍照辨識加購';
+        case 'photo_extra': return '加購';
         case 'ai_extra': return 'AI 對話加購';
         case 'vocab_expand': return '單字收藏擴充';
         case 'vocab_expand_premium': return '單字收藏擴充 (會員優惠)';

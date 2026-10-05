@@ -35,13 +35,6 @@ class FriendListCard extends StatelessWidget {
 
     final String avatarText = originalName.isNotEmpty ? originalName : friendId;
     
-    // 顏色也永遠綁定不變的 friendId
-    final String bgColor = AppHelpers.getFixedColor(friendId);
-    
-    // 這樣一來，這串網址對同一個好友永遠長得一模一樣，絕對不會重新下載跟閃爍！
-    final String defaultAvatarUrl =
-        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(avatarText)}&background=$bgColor&color=fff';
-        
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -59,10 +52,12 @@ class FriendListCard extends StatelessWidget {
       child: Row(
         children: [
           // 1. 大頭貼
-          CircleAvatar(
+          // 跟側邊選單等畫面用同一個頭像元件：文字用原名、顏色綁 friendId、支援動物頭像
+          UserAvatar(
+            avatarBase64: avatarBase64,
+            friendId: friendId,
+            originalName: avatarText,
             radius: 30,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: safeAvatarImage(avatarBase64, defaultAvatarUrl),
           ),
           const SizedBox(width: 16),
           

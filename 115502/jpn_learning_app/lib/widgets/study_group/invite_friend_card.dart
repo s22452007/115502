@@ -24,7 +24,8 @@ class InviteFriendCard extends StatelessWidget {
     const Color darkGreen = Color(0xFF4A7A4D);
 
     final String avatarBase64 = friend['avatar']?.toString() ?? '';
-    final String friendId = friend['id']?.toString() ?? '未知ID';
+    // 後端回傳的是 friend_id（原本讀 id 永遠讀不到，每個人都變成「未知ID」、頭像同一個顏色）
+    final String friendId = (friend['friend_id'] ?? friend['id'])?.toString() ?? '未知ID';
     
     final String originalName = friend['username']?.toString() ?? friend['name']?.toString() ?? '';
     final String? customNickname = friend['nickname']?.toString();
@@ -35,8 +36,6 @@ class InviteFriendCard extends StatelessWidget {
     final String statusText = AppHelpers.getDisplayLevel(friend['japanese_level']?.toString());
 
     final String avatarText = originalName.isNotEmpty ? originalName : friendId;
-    final String bgColor = AppHelpers.getFixedColor(friendId);
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(avatarText)}&background=$bgColor&color=fff';
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -47,10 +46,12 @@ class InviteFriendCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          // 跟側邊選單等畫面用同一個頭像元件：顏色綁 friendId、支援動物頭像
+          UserAvatar(
+            avatarBase64: avatarBase64,
+            friendId: friendId,
+            originalName: avatarText,
             radius: 26,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: safeAvatarImage(avatarBase64, defaultAvatarUrl),
           ),
           const SizedBox(width: 12),
           Expanded(

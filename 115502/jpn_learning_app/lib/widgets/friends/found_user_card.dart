@@ -23,16 +23,6 @@ class FoundUserCard extends StatelessWidget {
     final targetId = user['friend_id'] ?? '';
     final avatarBase64 = user['avatar'] as String?;
 
-    // 計算預設頭像顏色
-    final String safeName = nickname.isEmpty ? 'U' : nickname;
-    int hash = 0;
-    for (int i = 0; i < safeName.length; i++) {
-      hash = (hash * 31 + safeName.codeUnitAt(i)) & 0x7FFFFFFF;
-    }
-    final List<String> colors = ['E57373', 'F06292', 'BA68C8', '9575CD', '7986CB', '64B5F6', '4DD0E1', '4DB6AC', '81C784', 'AED581', 'FFB74D', 'FF8A65'];
-    final String bgColor = colors[hash % colors.length];
-    final String defaultAvatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(safeName)}&background=$bgColor&color=fff';
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -43,11 +33,12 @@ class FoundUserCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          // 跟側邊選單、好友列表用同一個頭像元件：顏色綁交友 ID、支援動物頭像
+          UserAvatar(
+            avatarBase64: avatarBase64,
+            friendId: targetId.toString(),
+            originalName: nickname.toString(),
             radius: 24,
-            backgroundColor: Colors.grey.shade200,
-            // 完美顯示 Base64 或預設圖片
-            backgroundImage: safeAvatarImage(avatarBase64, defaultAvatarUrl),
           ),
           const SizedBox(width: 12),
           Expanded(

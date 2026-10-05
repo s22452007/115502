@@ -67,7 +67,14 @@ def update_level():
     if not user:
         return jsonify({"error": "找不到此使用者"}), 404
 
-    # 直接更新日語程度
+    # 這支只給剛註冊、選「我是日文新手」的人用：還沒有程度時設成 N5。
+    # 原本可以直接送任何等級，送 N1 就跳過程度測驗和升級測驗變成「日語大師」。
+    # 其他程度只能由程度測驗（/api/quiz/submit）或升級測驗（/api/quiz/upgrade_submit）決定。
+    if user.japanese_level:
+        return jsonify({"error": "程度已經設定過了，想提升稱號請到「個人檔案」挑戰升級測驗"}), 409
+    if level != 'N5':
+        return jsonify({"error": "只能從新手程度開始，或做程度測驗決定起點"}), 400
+
     user.japanese_level = level
     db.session.commit()
 
@@ -82,6 +89,13 @@ def grant_initial_badges():
 
     if not user_id or not level:
         return jsonify({"error": "缺少必要資料"}), 400
+
+    # 徽章依使用者「實際的」程度發放，不相信前端送來的 level，
+    # 否則送 N1 就能直接拿到全部程度徽章
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "找不到此使用者"}), 404
+    level = user.japanese_level
 
     # 1. 定義每個等級對應「應該擁有的徽章名稱」
     level_badges = {
@@ -222,7 +236,6 @@ def upload_avatar():
 def check_username():
     data = request.get_json()
     username = (data.get('username') or '').strip()
-    current_user_id = data.get('user_id')
 
     if not username:
         return jsonify({"error": "請輸入暱稱"}), 400
@@ -231,13 +244,7 @@ def check_username():
     if not re.match(r'^[\u4e00-\u9fffA-Za-z0-9_]+$', username):
         return jsonify({"error": "暱稱只能包含中文、英文、數字或底線"}), 400
 
-    query = User.query.filter(db.func.lower(User.username) == username.lower())
-    if current_user_id:
-        query = query.filter(User.id != current_user_id)
-    taken = query.first()
-    if taken:
-        return jsonify({"available": False, "error": "此暱稱已被使用"}), 200
-
+    # 暱稱可以跟別人重複（加好友、邀請都用交友 ID），格式正確就能用
     return jsonify({"available": True}), 200
 
 # 更新暱稱
@@ -253,13 +260,6 @@ def update_username():
         return jsonify({"error": "暱稱需為 2～20 個字元"}), 400
     if not re.match(r'^[\u4e00-\u9fffA-Za-z0-9_]+$', username):
         return jsonify({"error": "暱稱只能包含中文、英文、數字或底線"}), 400
-
-    taken = User.query.filter(
-        db.func.lower(User.username) == username.lower(),
-        User.id != user_id
-    ).first()
-    if taken:
-        return jsonify({"error": "此暱稱已被使用"}), 400
 
     user = User.query.get(user_id)
     if not user:

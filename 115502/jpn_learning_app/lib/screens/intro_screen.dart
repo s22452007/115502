@@ -109,7 +109,7 @@ class IntroScreen extends StatelessWidget {
                             icon: Icons.assignment_turned_in_outlined,
                             tag: '任務派發',
                             title: '無縫對接課程進度',
-                            desc: '教師能一鍵派發指定文法（如 N3 句型）與單字任務，學生透過 App 直接進行情境演練，實現翻轉課堂。',
+                            desc: '教師能一鍵派發指定文法（如中級句型）與單字任務，學生透過 App 直接進行情境演練，實現翻轉課堂。',
                             themeColor: themeColor,
                           ),
                           _buildZuvioFeatureItem(

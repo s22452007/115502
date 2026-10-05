@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/utils/helpers.dart';
 import 'package:jpn_learning_app/screens/article/article_history_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
@@ -227,7 +228,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        article.level,
+                        AppHelpers.getDifficultyLabel(article.level),
                         style: TextStyle(
                           color: isUnlocked
                               ? Colors.orange

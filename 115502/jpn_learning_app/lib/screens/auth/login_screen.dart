@@ -117,6 +117,12 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    // 一般版一定要用 Email（要有 @），規則跟後端 utils/auth_helper.py 相同
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請輸入正確的 Email（例如 name@gmail.com）')));
+      return;
+    }
+
     if (!_isLogin) {
       final pwError = PasswordPolicy.validate(password, account: email);
       if (pwError != null) {
@@ -231,6 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context.read<UserProvider>().setEmail(email);
         if (result.containsKey('friend_id') && result['friend_id'] != null) context.read<UserProvider>().setFriendId(result['friend_id']);
         if (result.containsKey('username') && result['username'] != null) context.read<UserProvider>().setUsername(result['username']);
+        context.read<UserProvider>().setStreakDays(_toInt(result['streak_days'], defaultValue: 1));
         try { await NotificationService.recordLogin(); } catch (e) { debugPrint('推播狀態設定失敗: $e'); }
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('註冊成功！請選擇您的日語程度')));
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LevelSelectScreen()));
@@ -367,7 +374,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final userName = (userProvider.username?.isNotEmpty ?? false) ? userProvider.username : '使用者';
+    // 登入頁通常還沒有登入者，沒有名字時只打招呼，不顯示「使用者」
+    final userName = userProvider.displayName;
+    final greeting = userName.isEmpty ? '早安！' : '早安，$userName!';
 
     return Scaffold(
       backgroundColor: _flatCanvasColor,
@@ -424,7 +433,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            _isLogin ? '早安，$userName!' : '建立新帳號',
+                            _isLogin ? greeting : '建立新帳號',
                             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _textDark),
                           ),
                         ),
@@ -562,14 +571,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         _buildGoogleButton(onTap: _handleGoogleLogin),
                         const SizedBox(height: 24),
-
-                        GestureDetector(
-                          onTap: () => Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false),
-                          child: const Text(
-                            '以訪客身分繼續',
-                            style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
-                          ),
-                        ),
                       ],
                     ),
                   ),

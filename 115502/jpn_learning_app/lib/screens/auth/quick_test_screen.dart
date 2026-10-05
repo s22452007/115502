@@ -17,7 +17,8 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
   int _currentIndex = 0;
   int? _selectedAnswerIndex;
   List<dynamic> _questions = [];
-  final List<bool> _results = [];
+  // 每題選了哪個選項（選項文字；選「我還沒學過這個」是 null），送給後端對答案
+  final List<Map<String, dynamic>> _answers = [];
   bool _isLoading = true;
   bool _isSubmitting = false;
 
@@ -42,42 +43,72 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
   Future<void> _nextQuestion() async {
     if (_selectedAnswerIndex == null) return;
-    bool isCorrect = false;
-    if (_selectedAnswerIndex != 4) {
-      isCorrect =
-          (_selectedAnswerIndex == _questions[_currentIndex]['correctIndex']);
-    }
-    _results.add(isCorrect);
+    final q = _questions[_currentIndex];
+    final options = List<String>.from(q['options']);
+    // 第 5 個選項是「我還沒學過這個」，送 null
+    final answer = _selectedAnswerIndex! < options.length ? options[_selectedAnswerIndex!] : null;
+    _answers.add({'id': q['id'], 'answer': answer});
 
     if (_currentIndex < _questions.length - 1) {
       setState(() {
         _currentIndex++;
         _selectedAnswerIndex = null;
       });
-    } else {
-      setState(() => _isSubmitting = true);
-      final currentUserId = context.read<UserProvider>().userId ?? 1;
-      final response = await ApiClient.submitQuizResults(
-        currentUserId,
-        _results,
-      );
-      final levelCode = response['level'] ?? 'N5';
-
-      if (context.mounted) {
-        context.read<UserProvider>().setJapaneseLevel(levelCode);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => TestResultScreen(levelCode: levelCode),
-          ),
-        );
-      }
+      return;
     }
+
+    setState(() => _isSubmitting = true);
+    final currentUserId = context.read<UserProvider>().userId;
+    if (currentUserId == null) return;
+    final response = await ApiClient.submitQuizResults(currentUserId, _answers);
+    if (!mounted) return;
+
+    if ((response['_status'] as num?)?.toInt() != 200) {
+      // 送出失敗：保留最後一題的選擇，讓使用者可以再按一次送出
+      _answers.removeLast();
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(response['error']?.toString() ?? '送出失敗，請稍後再試'),
+        backgroundColor: Colors.redAccent,
+      ));
+      return;
+    }
+
+    final levelCode = response['level']?.toString() ?? 'N5';
+    context.read<UserProvider>().setJapaneseLevel(levelCode);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TestResultScreen(
+          levelCode: levelCode,
+          correctCount: (response['correct'] as num?)?.toInt(),
+          totalCount: (response['total'] as num?)?.toInt(),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading || _isSubmitting || _questions.isEmpty) {
+    // 題目載入失敗（連不到後端或題庫不足）：原本會一直轉圈，改成提示並可返回
+    if (!_isLoading && _questions.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(AppIcons.back, size: AppIcons.navSize, color: Colors.black87),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(
+          child: Text('題目載入失敗，請返回後再試一次', style: TextStyle(color: AppColors.textGrey)),
+        ),
+      );
+    }
+
+    if (_isLoading || _isSubmitting) {
       return Scaffold(
         backgroundColor: AppColors.background,
         body: const Center(
@@ -88,7 +119,7 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
     final currentQ = _questions[_currentIndex];
     final List<String> displayOptions = List<String>.from(currentQ['options']);
-    displayOptions.add('E. 我還沒學過這個');
+    displayOptions.add('我還沒學過這個'); // 其他選項沒有 ABCD 編號，這裡也不加
 
     return Scaffold(
       backgroundColor: AppColors.background,

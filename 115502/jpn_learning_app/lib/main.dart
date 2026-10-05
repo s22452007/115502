@@ -33,7 +33,7 @@ Future<void> main() async {
     final ctx = navigatorKey.currentContext;
     if (ctx == null) return;
     final userProvider = ctx.read<UserProvider>();
-    // 本來就沒登入（訪客、登入時帳密錯誤、已經登出）不用跳畫面
+    // 本來就沒登入（登入時帳密錯誤、已經登出）不用跳畫面
     if (userProvider.userId == null) return;
     userProvider.logout();
     navigatorKey.currentState?.pushAndRemoveUntil(

@@ -22,7 +22,8 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
   int _currentIndex = 0;
   int? _selectedAnswerIndex;
   List<dynamic> _questions = [];
-  final List<bool> _results = [];
+  // 每題選了哪個選項（選項文字），送給後端對答案
+  final List<Map<String, dynamic>> _answers = [];
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _loadError;
@@ -72,9 +73,8 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
   Future<void> _nextQuestion() async {
     if (_selectedAnswerIndex == null) return;
 
-    final isCorrect =
-        _selectedAnswerIndex == _questions[_currentIndex]['correctIndex'];
-    _results.add(isCorrect);
+    final q = _questions[_currentIndex];
+    _answers.add({'id': q['id'], 'answer': List<String>.from(q['options'])[_selectedAnswerIndex!]});
 
     if (_currentIndex < _questions.length - 1) {
       setState(() {
@@ -89,10 +89,12 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
 
-    final res = await ApiClient.submitUpgradeQuiz(userId, _results);
+    final res = await ApiClient.submitUpgradeQuiz(userId, _answers);
     if (!mounted) return;
 
     if ((res['_status'] as num?)?.toInt() != 200) {
+      // 送出失敗：拿掉最後一題的作答，讓使用者可以再按一次送出
+      _answers.removeLast();
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(res['error']?.toString() ?? '送出失敗，請稍後再試'),
@@ -109,7 +111,7 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
     _showResultDialog(
       passed: passed,
       correct: (res['correct'] as num?)?.toInt() ?? 0,
-      total: (res['total'] as num?)?.toInt() ?? _results.length,
+      total: (res['total'] as num?)?.toInt() ?? _answers.length,
       passCount: (res['pass_count'] as num?)?.toInt() ?? _passCount,
       level: newLevel,
     );

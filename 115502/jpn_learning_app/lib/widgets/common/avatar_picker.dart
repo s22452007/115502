@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,8 +17,32 @@ Future<String?> showAvatarPicker(BuildContext context, {String? currentAvatar}) 
   );
 }
 
-// 從相簿選一張照片，讓使用者拖曳/縮放裁切成圓形頭像後，回傳 base64 字串
-Future<String?> pickAndCropAvatarFromGallery() async {
+// 從相簿選一張照片，讓使用者拖曳/縮放裁切成圓形頭像後，回傳 base64 字串。
+// 失敗時直接跳提示並回傳 null，不會再按了沒反應。
+Future<String?> pickAndCropAvatarFromGallery(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    return await _pickAndCrop();
+  } catch (e) {
+    debugPrint('頭像照片處理失敗: $e');
+    messenger.showSnackBar(const SnackBar(content: Text('照片讀取失敗，請換一張照片再試一次')));
+    return null;
+  }
+}
+
+Future<String?> _pickAndCrop() async {
+  // 只有手機（Android / iOS）用裁切畫面。網頁版的裁切套件要另外載入 cropper.js、
+  // Windows 版則完全不支援，這兩種改成選圖時直接縮到 300px 以內，頭像顯示時本來就會裁成圓形。
+  // 讀檔也不能用 dart:io 的 File（網頁版沒有檔案路徑）。
+  final canCrop = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  if (!canCrop) {
+    final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery, maxWidth: 300, maxHeight: 300, imageQuality: 70);
+    if (picked == null) return null;
+    return base64Encode(await picked.readAsBytes());
+  }
+
   final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
   if (picked == null) return null;
 
@@ -46,8 +70,7 @@ Future<String?> pickAndCropAvatarFromGallery() async {
   );
   if (cropped == null) return null;
 
-  final bytes = await File(cropped.path).readAsBytes();
-  return base64Encode(bytes);
+  return base64Encode(await cropped.readAsBytes());
 }
 
 class _AvatarPickerSheet extends StatefulWidget {

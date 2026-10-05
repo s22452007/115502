@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/utils/helpers.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
@@ -579,7 +580,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
               children: [
                 _buildTag(widget.article.theme, AppColors.primary),
                 const SizedBox(width: 8),
-                _buildTag(widget.article.level, Colors.orange),
+                _buildTag(AppHelpers.getDifficultyLabel(widget.article.level), Colors.orange),
               ],
             ),
             const SizedBox(height: 16),

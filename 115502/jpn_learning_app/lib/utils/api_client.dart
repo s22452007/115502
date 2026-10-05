@@ -1021,21 +1021,23 @@ class ApiClient {
     }
   }
 
+  /// 程度測驗送出作答。answers 是 [{'id': 題目ID, 'answer': 選的選項文字或 null（我還沒學過這個）}]，
+  /// 由後端對答案、判定程度（App 拿不到正確答案）。
   static Future<Map<String, dynamic>> submitQuizResults(
     int userId,
-    List<bool> results,
+    List<Map<String, dynamic>> answers,
   ) async {
     final url = Uri.parse('$baseUrl/quiz/submit');
     try {
       final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'results': results}),
+        body: jsonEncode({'user_id': userId, 'answers': answers}),
       );
-      if (response.statusCode == 200) return jsonDecode(response.body);
-      return {'error': '伺服器錯誤'};
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
     } catch (e) {
-      return {'error': '連線失敗'};
+      return {'error': '連線失敗', '_status': 0};
     }
   }
 
@@ -1051,17 +1053,17 @@ class ApiClient {
     }
   }
 
-  // 升級測驗：送出作答結果（通過就升一級）
+  // 升級測驗：送出作答（格式同 submitQuizResults），後端對答案，通過就升一級
   static Future<Map<String, dynamic>> submitUpgradeQuiz(
     int userId,
-    List<bool> results,
+    List<Map<String, dynamic>> answers,
   ) async {
     final url = Uri.parse('$baseUrl/quiz/upgrade_submit');
     try {
       final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'results': results}),
+        body: jsonEncode({'user_id': userId, 'answers': answers}),
       );
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return {...data, '_status': response.statusCode};

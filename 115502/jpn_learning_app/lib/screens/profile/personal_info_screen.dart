@@ -118,7 +118,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
     String avatarValue;
     if (picked == kAvatarGallery) {
-      final cropped = await pickAndCropAvatarFromGallery();
+      final cropped = await pickAndCropAvatarFromGallery(context);
       if (cropped == null || !mounted) return;
       avatarValue = cropped;
     } else {

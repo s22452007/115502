@@ -280,21 +280,31 @@ def evaluate_user_sentence(sentence, vocabs, context_description):
         使用者嘗試用這些單字造了一個日文句子：
         「{sentence}」
 
-        請你扮演專業的日文老師，幫忙評估這個句子。
+        請你扮演親切的日文老師，幫忙評估這個句子。App 會把你的回覆拆成「總評、修改建議、參考句子」分區顯示，
+        所以每個欄位只放該放的內容，文字要短、好讀。
         要求：
         1. 檢查這個句子是否至少使用了一個上面列出的日文單字（或是它的動詞/形容詞變化形）。
-           如果完全沒有用到，請在 `is_valid` 填寫 false，並在 `feedback` 給予鼓勵和提醒，請他們嘗試用上面的單字造句。
-        2. 如果有使用，請檢查日文文法是否正確、語意是否自然。
-           - 若有錯誤或不自然的地方，請在 `is_valid` 填寫 false，並在 `feedback` 溫柔地指出並解釋錯誤，然後在 `corrected_sentence` 提供修正後的句子。
-           - 若完全正確，請在 `is_valid` 填寫 true，並在 `feedback` 給予大大的稱讚，並在 `corrected_sentence` 提供原本的句子。
-        3. 必須在 `translation` 提供該句子（或修正後句子）的繁體中文翻譯。
-        4. 句中有使用到「漢字」的部分，在 `corrected_sentence` 請一律使用 `[漢字|平假名]` 的格式標記讀音。
+           如果完全沒有用到，`is_valid` 填 false，`feedback` 提醒他用上面的單字造句，`corrections` 給空陣列。
+        2. 如果有使用，檢查文法是否正確、語意是否自然。
+           - 有錯誤或不自然：`is_valid` 填 false，每一個要改的地方放進 `corrections` 一筆（最多 5 筆）：
+             `original` 是原句中要改的那一小段（照抄原句，不加讀音標記）、
+             `corrected` 是改成的寫法（不加讀音標記）、
+             `reason` 用一句話說明為什麼（30 字以內）。
+           - 完全正確：`is_valid` 填 true，`corrections` 給空陣列。
+        3. `feedback` 是一句總評（30 字以內），正確就稱讚、有錯就鼓勵，不要在這裡重複解釋錯誤。
+        4. `corrected_sentence`：修正後的完整句子（正確的話就是原句），漢字一律用 `[漢字|平假名]` 標記讀音，
+           例如 `[犬|いぬ]に`、`[新|あたら]しい`。方括號只能用來標讀音，片假名、平假名和單字都不要加方括號（不要寫成 `[リード]`）。
+        5. `translation`：`corrected_sentence` 的繁體中文翻譯。
+        6. 所有說明一律用繁體中文，不要夾雜英文術語（例如不要寫 particle，要寫「助詞」），不要用 markdown 符號。
 
         請「嚴格」以下列 JSON 格式回傳，不可加上 json 或 markdown 標籤：
         {{
           "is_valid": true或false,
-          "feedback": "給使用者的評語與解釋",
-          "corrected_sentence": "修正後或原本正確的日文句子(需含漢字注音標記)",
+          "feedback": "一句總評",
+          "corrections": [
+            {{"original": "原句中要改的片段", "corrected": "改成的寫法", "reason": "一句話說明"}}
+          ],
+          "corrected_sentence": "修正後或原本正確的日文句子（漢字用 [漢字|平假名] 標記）",
           "translation": "繁體中文翻譯"
         }}
         '''
@@ -305,6 +315,14 @@ def evaluate_user_sentence(sentence, vocabs, context_description):
             config=JSON_CONFIG,
         )
         result = parse_gemini_json(response.text)
+        if not isinstance(result, dict):
+            raise ValueError('AI 回傳格式不正確')
+        # 整理修改建議：AI 偶爾會漏欄位或多給，只留格式完整的前 5 筆，App 才能穩定分區顯示
+        corrections = []
+        for c in result.get('corrections') or []:
+            if isinstance(c, dict) and c.get('original') and c.get('corrected'):
+                corrections.append({k: str(c.get(k) or '').strip() for k in ('original', 'corrected', 'reason')})
+        result['corrections'] = corrections[:5]
         return {"success": True, "result": result}
     except Exception as e:
         print(f"評估句子失敗: {e}")

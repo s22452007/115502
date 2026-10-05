@@ -525,13 +525,17 @@ def get_transactions(user_id):
     return jsonify({"transactions": result}), 200
 
 
-# 各 feature 的固定點數成本（server-side）
+# 各 feature 的固定點數成本（server-side）。價格統一定義在 services/store.py 的 ITEM_COSTS
+from services.store import ITEM_COSTS, EXTRA_PER_PURCHASE, VOCAB_SLOTS_PER_PURCHASE, VOCAB_SLOT_MAX
 _FEATURE_COST = {
-    'photo_extra':          60,
-    'ai_extra':             60,
-    'vocab_expand':         50,
-    'vocab_expand_premium': 35,
+    'photo_extra':          ITEM_COSTS['photo_extra'],
+    'ai_extra':             ITEM_COSTS['ai_extra'],
+    'reading_extra':        ITEM_COSTS['reading_extra'],
+    'vocab_expand':         ITEM_COSTS['vocab_expand'],
+    'vocab_expand_premium': ITEM_COSTS['vocab_expand_premium'],
 }
+PHOTO_QUOTA_MSG = f"今日拍照次數已用完，請花 {ITEM_COSTS['photo_extra']} 點加購 {EXTRA_PER_PURCHASE} 次"
+AI_QUOTA_MSG = f"今日 AI 對話次數已用完，請花 {ITEM_COSTS['ai_extra']} 點加購 {EXTRA_PER_PURCHASE} 次"
 
 # 消費點數解鎖功能（DFD 5.5）
 @user_bp.route('/spend_points', methods=['POST'])
@@ -571,19 +575,23 @@ def spend_points():
         effect_desc = ''
 
         if feature == 'photo_extra':
-            user.photo_extra_count = (getattr(user, 'photo_extra_count', 0) or 0) + 5
-            effect_desc = '+5 次拍照（永久）'
+            user.photo_extra_count = (getattr(user, 'photo_extra_count', 0) or 0) + EXTRA_PER_PURCHASE
+            effect_desc = f'+{EXTRA_PER_PURCHASE} 次拍照（永久）'
 
         elif feature == 'ai_extra':
-            user.ai_extra_count = (getattr(user, 'ai_extra_count', 0) or 0) + 5
-            effect_desc = '+5 次 AI 對話（永久）'
+            user.ai_extra_count = (getattr(user, 'ai_extra_count', 0) or 0) + EXTRA_PER_PURCHASE
+            effect_desc = f'+{EXTRA_PER_PURCHASE} 次 AI 對話（永久）'
+
+        elif feature == 'reading_extra':
+            user.reading_extra_count = (getattr(user, 'reading_extra_count', 0) or 0) + EXTRA_PER_PURCHASE
+            effect_desc = f'+{EXTRA_PER_PURCHASE} 次朗讀評分（永久）'
 
         elif feature in ('vocab_expand', 'vocab_expand_premium'):
             current_slot = getattr(user, 'vocab_slot', 50) or 50
-            if current_slot >= 1000:
+            if current_slot >= VOCAB_SLOT_MAX:
                 db.session.rollback()
-                return jsonify({"error": "單字收藏擴充已達上限（1000個）"}), 400
-            add_amount = min(50, 1000 - current_slot)
+                return jsonify({"error": f"單字收藏擴充已達上限（{VOCAB_SLOT_MAX}個）"}), 400
+            add_amount = min(VOCAB_SLOTS_PER_PURCHASE, VOCAB_SLOT_MAX - current_slot)
             user.vocab_slot = current_slot + add_amount
             effect_desc = f'+{add_amount} 個收藏位'
 
@@ -640,7 +648,7 @@ def increment_scan():
     else:
         db.session.commit()  # 儲存可能發生的跨日重置
         return jsonify({
-            "error": "今日拍照次數已用完，請花 60 點加購 5 次",
+            "error": PHOTO_QUOTA_MSG,
             "daily_scans": photo_today,
             "daily_limit": daily_limit,
             "extra_count": 0,
@@ -699,7 +707,7 @@ def use_ai():
     else:
         db.session.commit() # 儲存可能發生的跨日重置
         return jsonify({
-            "error": "今日 AI 對話次數已用完，請花 60 點加購 5 次",
+            "error": AI_QUOTA_MSG,
             "daily_ai": ai_today,
             "daily_limit": daily_limit,
             "extra_count": 0,
@@ -844,6 +852,8 @@ def get_usage_status(user_id):
         "sentence_count_today": sentence_today,
         "reading_daily_limit": reading_daily_limit(user),
         "reading_count_today": reading_today,
+        # 朗讀評分的加購次數：每日次數用完後才會扣，剩餘可用次數 = 每日剩餘 + 這個數字
+        "reading_extra_count": getattr(user, 'reading_extra_count', 0) or 0,
         "is_premium": user.is_premium,
         # 前端靠這兩個欄位決定要不要顯示剩餘次數與加購入口：
         # unlimited 為 true 時整個次數 UI 都不該出現

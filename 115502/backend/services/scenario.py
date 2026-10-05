@@ -212,9 +212,9 @@ def analyze_scene():
 
     # 必須先透過 /api/user/increment_scan 扣過次數。原本這裡完全不檢查，
     # 次數用完後跳過扣次 API 直接呼叫辨識，就能無限使用。
-    from services.user import consume_scan_credit
+    from services.user import consume_scan_credit, PHOTO_QUOTA_MSG
     if not consume_scan_credit(user_id):
-        return jsonify({'error': '今日拍照次數已用完，請花 60 點加購 5 次', 'quota_exceeded': True}), 403
+        return jsonify({'error': PHOTO_QUOTA_MSG, 'quota_exceeded': True}), 403
 
     file_path = None
     if file:

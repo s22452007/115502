@@ -27,6 +27,11 @@ def tw_fmt(dt, fmt='%Y-%m-%d %H:%M'):
 _FURIGANA_RE = re.compile(r'\[([^\[\]|]+)\|([^\[\]]+)\]')
 
 
+def student_no(user):
+    """學號：學校 Google 帳號取信箱 @ 前面（登入時已檢查過是學號），老師名冊建的帳號本身就是學號"""
+    return ((user.email if user else '') or '').split('@')[0]
+
+
 def strip_furigana(text):
     return _FURIGANA_RE.sub(r'\1（\2）', text or '')
 
@@ -157,6 +162,7 @@ def get_classroom_student_stats(classroom_id):
         student_stats.append({
             'student_id': student.id,
             'username': student.username or '未命名',
+            'student_no': row['student_no'],
             'display_name': row['display_name'],
             'email': student.email or '',
             'google_login': bool(student.school_id),   # 學校 Google 帳號登入，沒有密碼可重設
@@ -539,6 +545,7 @@ def get_assignment_submissions_list(assignment_id):
             'student_id': student.id,
             'username': student.username,
             'display_name': m.display_name or student.username,
+            'student_no': student_no(student),
             'email': student.email,
             'submission_id': sub.id if sub else None,
             'status': sub.status if sub else SubmissionStatus.PENDING,
@@ -570,6 +577,7 @@ def get_assignment_submissions_list(assignment_id):
                     'translation': art.translation,
                 }
 
+    students_submissions.sort(key=lambda s: (s['student_no'], s['display_name'] or ''))
     return {
         'assignment': {
             'id': assignment.id,
@@ -775,12 +783,13 @@ def get_gradebook(classroom_id):
             'student_id': student.id,
             'display_name': m.display_name or student.username or '學生',
             'username': student.username or '',
+            'student_no': student_no(student),
             'cells': cells,
             'assignment_avg': assignment_avg,
             'final': final,
             **practice,
         })
-    students.sort(key=lambda s: s['display_name'])
+    students.sort(key=lambda s: (s['student_no'], s['display_name']))
 
     assignment_rows = []
     for a in assignments:
@@ -950,7 +959,7 @@ def gradebook_csv(classroom_id):
         return None
     buf = io.StringIO()
     writer = csv.writer(buf)
-    header = ['帳號／學號', '姓名'] + [f"{a['title']}（權重 {a['weight']:g}）" for a in data['assignments']]
+    header = ['學號', '姓名'] + [f"{a['title']}（權重 {a['weight']:g}）" for a in data['assignments']]
     header += ['作業平均', '造句均分', '文章測驗均分', '學期成績']
     writer.writerow(header)
 
@@ -958,7 +967,7 @@ def gradebook_csv(classroom_id):
         return '' if v is None else v
 
     for s in data['students']:
-        row = [s['username'], s['display_name']]
+        row = [s['student_no'], s['display_name']]
         for a in data['assignments']:
             cell = s['cells'][a['id']]
             row.append(fmt(cell['effective']) if cell['status'] == 'graded' else ('待批閱' if cell['status'] == 'ungraded' else '缺交'))
@@ -1289,6 +1298,7 @@ def get_student_report(classroom_id, student_id):
         'assignment_pct': gb['assignment_pct'],
         'student': {
             'id': student_id, 'display_name': me['display_name'], 'username': me['username'],
+            'student_no': me['student_no'],
             'email': user.email if user else '', 'joined_at': tw_fmt(since, '%Y-%m-%d'),
         },
         'grade': {
@@ -1321,7 +1331,7 @@ def student_report_csv(classroom_id, student_id):
     w = csv.writer(buf)
     g = data['grade']
     w.writerow(['班級', data['classroom']['name']])
-    w.writerow(['學生', data['student']['display_name'], data['student']['username']])
+    w.writerow(['學生', data['student']['display_name'], data['student']['student_no']])
     w.writerow(['學期成績', '' if g['final'] is None else g['final'],
                 '排名', f"{g['rank']}/{g['ranked_total']}" if g['rank'] else '',
                 '班平均', '' if g['class_avg'] is None else g['class_avg']])

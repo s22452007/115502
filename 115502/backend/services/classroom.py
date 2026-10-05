@@ -73,7 +73,22 @@ def preview_classroom():
     return jsonify({
         "status": "success",
         "classroom": _classroom_brief(classroom),
+        "suggested_name": _suggested_name(request.args.get('user_id', type=int)),
     }), 200
+
+
+def _suggested_name(user_id):
+    """加入班級時姓名欄的預設值：之前在別班填過的真實姓名，沒有就用 Google 帳號的名字（第一次登入時存成 username）"""
+    if not user_id:
+        return ''
+    last = ClassroomMember.query.filter(
+        ClassroomMember.student_id == user_id,
+        ClassroomMember.display_name.isnot(None),
+    ).order_by(ClassroomMember.joined_at.desc()).first()
+    if last:
+        return last.display_name
+    user = User.query.get(user_id)
+    return (user.username or '') if user else ''
 
 
 @classroom_bp.route('/join', methods=['POST'])
@@ -82,6 +97,8 @@ def join_classroom():
     data = request.get_json() or {}
     user_id = data.get('user_id')
     code = normalize_join_code(data.get('join_code'))
+    # 老師名冊顯示的名字，跟 App 暱稱分開，學生之後改暱稱不影響名冊
+    real_name = (data.get('real_name') or '').strip()[:50]
 
     if not user_id:
         return jsonify({"error": "缺少使用者 ID"}), 400
@@ -130,8 +147,8 @@ def join_classroom():
     member = ClassroomMember(
         classroom_id=classroom.id,
         student_id=user_id,
-        # 預設用暱稱讓老師認得出是誰，之後老師可以改成座號或真名
-        display_name=user.username or user.email,
+        # 沒填（舊版 App）就先用暱稱，老師之後可以在名冊改
+        display_name=real_name or user.username or user.email,
         joined_at=datetime.utcnow(),
     )
     db.session.add(member)

@@ -92,7 +92,7 @@
         <div class="page-header">
             <div>
                 <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ data.classroom.name }}</h1>
-                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 成績分布、各作業比較、文法弱點、測驗錯題與學習活躍度</div>
+                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong></div>
             </div>
         </div>
         {% with cid=cid, active='report' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %}

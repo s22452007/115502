@@ -17,6 +17,7 @@ from models import (
     Feedback, PointTransaction, Vocab, TransactionType, AccountType,
     UserPhoto, UserPhotoVocab, ChatSession, ChatMessage, Notification, UserSubscription,
     ArticleProgress, UnlockedArticle, ScoreRecord, ReadingEvaluation, SentencePracticeRecord, SystemLog,
+    CustomCharacter,
 )
 
 user_bp = Blueprint('user', __name__)
@@ -308,6 +309,7 @@ def delete_account():
         if session_ids:
             ChatMessage.query.filter(ChatMessage.session_id.in_(session_ids)).delete(synchronize_session=False)
         ChatSession.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        CustomCharacter.query.filter_by(user_id=user_id).delete(synchronize_session=False)
 
         for model in (Notification, Feedback, UserSubscription, PointTransaction,
                       ArticleProgress, UnlockedArticle, ScoreRecord, ReadingEvaluation,

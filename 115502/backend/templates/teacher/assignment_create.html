@@ -69,7 +69,6 @@
 
         <div class="page-header">
             <h1 class="page-title"><i class="bi bi-pencil-square me-2"></i>出題新作業</h1>
-            <div class="page-sub">支援「造句挑戰」、「文章閱讀（上傳文章、選擇題、是非題）」、「拍照學習」與「AI 情境對話」</div>
         </div>
 
         <form id="assignmentForm" action="/teacher/classroom/{{ classroom.id }}/assignment/create" method="POST">
@@ -136,7 +135,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-bold">指定文法重點 <span class="text-danger">*</span></label>
                         <input autocomplete="off" type="text" name="grammar_point" class="form-control" placeholder="例如：～てもいいです、～てはいけません">
-                        <div class="form-text">學生造句必須包含此文法結構，AI 將比對此重點進行糾錯與評分。</div>
+                        <div class="form-text">學生造句必須用到這個文法。</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold">及格分數標準</label>
@@ -244,7 +243,7 @@
                         <datalist id="sceneNameList">
                             {% for name in scene_names %}<option value="{{ name }}">{% endfor %}
                         </datalist>
-                        <div class="form-text">會顯示在學生的作業說明上，提醒學生要拍什麼。可從既有場景挑，也可自由輸入。</div>
+                        <div class="form-text">可從既有場景挑，也可自由輸入。</div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">最少辨識單字數</label>

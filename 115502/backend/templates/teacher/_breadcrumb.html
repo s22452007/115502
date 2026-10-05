@@ -1,9 +1,12 @@
-{# 老師端麵包屑：開頭固定是「我的班級／所有班級」，後面接 crumbs = [(文字, 網址或 None), ...]，最後一個是目前這頁 #}
+{# 老師端頁首的返回按鈕：回到上一層。crumbs = [(文字, 網址或 None), ...]，最後一個是目前這頁，
+   返回目標是倒數第一個有網址的項目，都沒有就回「我的班級／所有班級」 #}
 {# 用法：{% with crumbs=[(班名, None)] %}{% include 'teacher/_breadcrumb.html' %}{% endwith %} #}
-<div class="mb-3 fw-bold" style="font-size: 0.9rem; color: #888;">
-    <a href="/teacher/classrooms" class="text-decoration-none text-secondary">{{ '所有班級' if session.get('role') == 'super_admin' else '我的班級' }}</a>
-    {% for label, url in crumbs %}
-    <span class="mx-1">›</span>
-    {% if url %}<a href="{{ url }}" class="text-decoration-none text-secondary">{{ label }}</a>{% else %}<span style="color: var(--green-dark);">{{ label }}</span>{% endif %}
-    {% endfor %}
-</div>
+{% set ns = namespace(label='所有班級' if session.get('role') == 'super_admin' else '我的班級', url='/teacher/classrooms') %}
+{% for label, url in crumbs %}{% if url %}{% set ns.label = label %}{% set ns.url = url %}{% endif %}{% endfor %}
+<a href="{{ ns.url }}" class="teacher-back mb-3"
+   style="display:inline-flex; align-items:center; gap:4px; padding:6px 14px 6px 8px; border-radius:8px;
+          background:#fff; border:1px solid #dfe6e1; color:var(--green-dark); font-weight:700; font-size:0.9rem;
+          text-decoration:none;"
+   onmouseover="this.style.background='#eef3ef'" onmouseout="this.style.background='#fff'">
+    <i class="bi bi-chevron-left"></i>返回{{ ns.label }}
+</a>

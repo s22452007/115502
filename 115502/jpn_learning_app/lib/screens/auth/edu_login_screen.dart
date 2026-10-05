@@ -570,7 +570,7 @@ class _AddSchoolDialogState extends State<_AddSchoolDialog> {
             controller: _nameCtrl,
             autofocus: true,
             maxLength: 50,
-            decoration: const InputDecoration(hintText: '學校全名，例如：國立○○科技大學'),
+            decoration: const InputDecoration(hintText: '學校全名，例如：國立○○科技大學、○○市立○○高中'),
           ),
           const Text(
             '接著用你的學校 Google 帳號登入，系統會用你的學校信箱登記這間學校，之後同學就能直接選。',
@@ -626,7 +626,7 @@ class _SchoolSearchPageState extends State<_SchoolSearchPage> {
     }).toList();
     final Widget results;
     if (q.isEmpty) {
-      // 跟 TronClass 一樣，還沒打字不列出整份清單（一百多間太長），搜尋框已有提示
+      // 跟 TronClass 一樣，還沒打字不列出整份清單（六百多間太長），搜尋框已有提示
       results = const SizedBox.shrink();
     } else {
       results = ListView.separated(

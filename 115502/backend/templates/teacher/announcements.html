@@ -54,7 +54,7 @@
         <div class="page-header">
             <div>
                 <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ classroom.name }}</h1>
-                <div class="page-sub">班級代碼：<strong>{{ classroom.join_code }}</strong> ｜ 發布公告，學生在 App 的教室頁看得到，有未讀會顯示紅點</div>
+                <div class="page-sub">班級代碼：<strong>{{ classroom.join_code }}</strong></div>
             </div>
         </div>
         {% with cid=classroom.id, active='announcements' %}{% include 'teacher/_classroom_nav.html' %}{% endwith %}
@@ -73,7 +73,7 @@
             <input autocomplete="off" type="text" name="title" class="form-control fw-bold mb-2" placeholder="公告標題，例如：下週三小考範圍" maxlength="100" required>
             <textarea autocomplete="off" name="content" class="form-control mb-2" rows="3" placeholder="公告內容（可留空）"></textarea>
             <div class="d-flex justify-content-between align-items-center">
-                <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>發布後會推播到學生手機；出新作業時勾選「通知學生」就會自動發，不用另外寫</span>
+                <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>發布後會推播到學生手機</span>
                 <button type="submit" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;">
                     <i class="bi bi-megaphone me-1"></i>發布公告
                 </button>

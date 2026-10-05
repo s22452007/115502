@@ -59,6 +59,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
           topicTitle: s['topic']?.toString() ?? '對話練習',
           characterName: s['character_name']?.toString() ?? '預設老師',
           resumeSessionId: (s['session_id'] as num).toInt(),
+          dialectId: (s['dialect_id'] as num?)?.toInt(),
         ),
       ),
     ).then((_) => _reload()); // 聊完回來更新清單（訊息數、時間會變）

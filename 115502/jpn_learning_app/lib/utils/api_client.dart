@@ -1486,6 +1486,111 @@ class ApiClient {
     }
   }
 
+  // 官方對話角色清單（含是否已擁有）與腔調選單是否已解鎖
+  static Future<Map<String, dynamic>> getCharacters(int userId) async {
+    final url = Uri.parse('$baseUrl/character/list?user_id=$userId');
+    try {
+      final response = await client.get(url);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return {'error': '無法取得'};
+    } catch (e) {
+      return {'error': '連線失敗'};
+    }
+  }
+
+  // 用點數購買官方對話角色，並解鎖一種腔調（dialectId 沒帶就先保留名額）
+  static Future<Map<String, dynamic>> buyCharacter({
+    required int userId,
+    required String characterId,
+    int? dialectId,
+  }) async {
+    final url = Uri.parse('$baseUrl/character/buy');
+    try {
+      final response = await client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'character_id': characterId,
+          if (dialectId != null) 'dialect_id': dialectId,
+        }),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
+    } catch (e) {
+      return {'error': '連線失敗', '_status': 0};
+    }
+  }
+
+  // 花點數新增自訂角色（fields：name、origin、age、gender、personality、special_traits）
+  static Future<Map<String, dynamic>> createCustomCharacter({
+    required int userId,
+    required Map<String, String> fields,
+  }) async {
+    final url = Uri.parse('$baseUrl/character/custom/create');
+    try {
+      final response = await client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, ...fields}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
+    } catch (e) {
+      return {'error': '連線失敗', '_status': 0};
+    }
+  }
+
+  // 刪除自己的自訂角色（不退點數）
+  static Future<Map<String, dynamic>> deleteCustomCharacter({
+    required int userId,
+    required int customId,
+  }) async {
+    final url = Uri.parse('$baseUrl/character/custom/delete');
+    try {
+      final response = await client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'custom_id': customId}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
+    } catch (e) {
+      return {'error': '連線失敗', '_status': 0};
+    }
+  }
+
+  // 用買角色得到、還沒用掉的名額解鎖一種腔調
+  static Future<Map<String, dynamic>> chooseDialect({
+    required int userId,
+    required int dialectId,
+  }) async {
+    final url = Uri.parse('$baseUrl/character/choose_dialect');
+    try {
+      final response = await client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'dialect_id': dialectId}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {...data, '_status': response.statusCode};
+    } catch (e) {
+      return {'error': '連線失敗', '_status': 0};
+    }
+  }
+
+  // 啟用中的腔調清單
+  static Future<List<Map<String, dynamic>>> getDialects() async {
+    final url = Uri.parse('$baseUrl/dialect/list');
+    try {
+      final response = await client.get(url);
+      if (response.statusCode != 200) return [];
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } catch (e) {
+      return [];
+    }
+  }
+
   static Future<Map<String, dynamic>> useAI(int userId) async {
     final url = Uri.parse('$baseUrl/user/use_ai');
     try {

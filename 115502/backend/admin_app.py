@@ -1707,7 +1707,7 @@ def vocab_delete(id):
 ARTICLE_LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1']
 ARTICLE_THEMES = ['日常生活', '日本文化', '旅遊觀光', '職場應用', '流行動漫',
                   '日本美食', '台灣文化', '日本傳說']
-DEFAULT_ARTICLE_COST = 50
+DEFAULT_ARTICLE_COST = 150   # 與 services/store.py ITEM_COSTS['unlock_article'] 一致
 
 
 def _parse_grammar_points(raw_json, grammars_text, vocabs_text):

@@ -290,7 +290,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     if (userId == null) return;
     final isPremium = context.read<UserProvider>().isPremium;
     final feature = isPremium ? 'vocab_expand_premium' : 'vocab_expand';
-    final cost = isPremium ? 35 : 50;
+    final cost = isPremium ? 50 : 100;
 
     setState(() => _isExpanding = true);
     final res = await ApiClient.spendPoints(
@@ -318,7 +318,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('擴充成功！收藏空間 +50 個', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text('擴充成功！收藏空間 +20 個', style: TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -334,7 +334,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     final isFull = _vocabCount >= _vocabSlot;
     final isNearFull = !isFull && _vocabCount >= (_vocabSlot * 0.8).ceil();
     final isPremium = context.read<UserProvider>().isPremium;
-    final expandCost = isPremium ? 35 : 50;
+    final expandCost = isPremium ? 50 : 100;
 
     return Column(
       children: [
@@ -429,7 +429,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
                     ),
                     child: _isExpanding
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('花 $expandCost J-Pts 擴充 +50 空間', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
+                        : Text('花 $expandCost J-Pts 擴充 +20 空間', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
                   ),
                 ),
               ],

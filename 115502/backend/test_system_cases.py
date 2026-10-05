@@ -1312,7 +1312,7 @@ def _(c):
 @case('A03', '收藏達上限（預設 50 個）時被擋',
       pre='一般會員 W，收藏位 vocab_slot=50（預設）',
       steps='1. 連續 POST /api/vocab/collect 收藏 50 個不同單字\n2. 收藏第 51 個單字',
-      expect='1. 50 次皆 HTTP 201\n2. HTTP 400，「收藏已達上限（50 個），花 50 點可擴充 +50 個位置」，回傳 vocab_slot=50、collected_count=50')
+      expect='1. 50 次皆 HTTP 201\n2. HTTP 400，「收藏已達上限（50 個），花 100 點可擴充 +20 個位置」，回傳 vocab_slot=50、collected_count=50')
 def _(c):
     u = register('vocabfull')
     STATE['vocabfull'] = u
@@ -1321,22 +1321,22 @@ def _(c):
     c.log(f'1. 前 50 次中 HTTP 201 共 {codes.count(201)} 次；2. {http(r, "error", "vocab_slot", "collected_count")}')
     check(codes.count(201) == 50, '前 50 個未全部收藏成功')
     check(r.status_code == 400 and J(r).get('vocab_slot') == 50 and J(r).get('collected_count') == 50, '未擋下第 51 個')
-    check(J(r).get('error') == '收藏已達上限（50 個），花 50 點可擴充 +50 個位置', '錯誤訊息不正確')
+    check(J(r).get('error') == '收藏已達上限（50 個），花 100 點可擴充 +20 個位置', '錯誤訊息不正確')
 
 
 @case('A03', '花點數擴充收藏位後可繼續收藏',
-      pre='W 已收藏 50 個（達上限），並購買 60 點',
+      pre='W 已收藏 50 個（達上限），並購買 110 點',
       steps='1. POST /api/user/spend_points，feature=vocab_expand\n2. GET /api/user/usage_status/{W}\n3. 再收藏第 51 個單字',
-      expect='1. HTTP 200，扣 50 點、effect=「+50 個收藏位」，餘額 10 點\n2. vocab_slot=100\n3. HTTP 201 收藏成功')
+      expect='1. HTTP 200，扣 100 點、effect=「+20 個收藏位」，餘額 10 點\n2. vocab_slot=70\n3. HTTP 201 收藏成功')
 def _(c):
     u = STATE['vocabfull']
-    SC.post('/api/user/add_points', json={'user_id': u['id'], 'points': 60, 'price': 50, 'payment_method': 'credit_card'})
+    SC.post('/api/user/add_points', json={'user_id': u['id'], 'points': 110, 'price': 50, 'payment_method': 'credit_card'})
     r1 = SC.post('/api/user/spend_points', json={'user_id': u['id'], 'feature': 'vocab_expand'})
     st = usage(u)
     r3 = SC.post('/api/vocab/collect', json={'user_id': u['id'], 'vocab_id': VOCAB_IDS[50]})
     c.log(f'1. {http(r1, "effect", "total_points")}；2. vocab_slot={st.get("vocab_slot")}、vocab_count={st.get("vocab_count")}；3. {http(r3, "message")}')
-    check(r1.status_code == 200 and J(r1).get('effect') == '+50 個收藏位' and J(r1).get('total_points') == 10, '擴充失敗')
-    check(st.get('vocab_slot') == 100, '收藏位未增加')
+    check(r1.status_code == 200 and J(r1).get('effect') == '+20 個收藏位' and J(r1).get('total_points') == 10, '擴充失敗')
+    check(st.get('vocab_slot') == 70, '收藏位未增加')
     check(r3.status_code == 201, '擴充後仍無法收藏')
 
 
@@ -1950,47 +1950,47 @@ def _(c):
 @case('A07', '消費點數兌換加購次數（扣點）',
       pre='P1 有 140 點',
       steps='POST /api/user/spend_points，feature=ai_extra',
-      expect='HTTP 200，扣除 60 點（餘額 80）、effect=「+5 次 AI 對話（永久）」；資料庫 ai_extra_count=5')
+      expect='HTTP 200，扣除 15 點（餘額 125）、effect=「+1 次 AI 對話（永久）」；資料庫 ai_extra_count=1')
 def _(c):
     p1 = STATE['points']
     r = SC.post('/api/user/spend_points', json={'user_id': p1['id'], 'feature': 'ai_extra'})
     row = user_row(p1['id'])
     c.log(http(r, 'message', 'total_points', 'effect') + f'；資料庫 ai_extra_count={row["ai_extra_count"]}')
-    check(r.status_code == 200 and J(r).get('total_points') == 80 and J(r).get('effect') == '+5 次 AI 對話（永久）', '扣點失敗')
-    check(row['ai_extra_count'] == 5, '加購次數未增加')
+    check(r.status_code == 200 and J(r).get('total_points') == 125 and J(r).get('effect') == '+1 次 AI 對話（永久）', '扣點失敗')
+    check(row['ai_extra_count'] == 1, '加購次數未增加')
 
 
 @case('A07', '點數不足時扣點被拒',
-      pre='使用者 P2 只有 10 點',
-      steps='POST /api/user/spend_points，feature=photo_extra（需 60 點）',
-      expect='HTTP 400，「點數不足，需要 60 點」；點數維持 10，不產生消費紀錄')
+      pre='使用者 P2 只有 5 點',
+      steps='POST /api/user/spend_points，feature=photo_extra（需 10 點）',
+      expect='HTTP 400，「點數不足，需要 10 點」；點數維持 5，不產生消費紀錄')
 def _(c):
     p2 = register('poor')
-    SC.post('/api/user/add_points', json={'user_id': p2['id'], 'points': 10, 'price': 0, 'payment_method': 'credit_card'})
+    SC.post('/api/user/add_points', json={'user_id': p2['id'], 'points': 5, 'price': 0, 'payment_method': 'credit_card'})
     r = SC.post('/api/user/spend_points', json={'user_id': p2['id'], 'feature': 'photo_extra'})
     pts = user_row(p2['id'])['j_pts']
     n_spend = count(PointTransaction, user_id=p2['id'], transaction_type='spend')
     c.log(http(r, 'error') + f'；j_pts={pts}、消費紀錄 {n_spend} 筆')
-    check(r.status_code == 400 and J(r).get('error') == '點數不足，需要 60 點', '未擋下')
-    check(pts == 10 and n_spend == 0, '點數或紀錄被異動')
+    check(r.status_code == 400 and J(r).get('error') == '點數不足，需要 10 點', '未擋下')
+    check(pts == 5 and n_spend == 0, '點數或紀錄被異動')
 
 
 @case('A07', '查詢點數交易紀錄',
-      pre='P1 有 1 筆購點（+140）與 1 筆消費（-60）',
+      pre='P1 有 1 筆購點（+140）與 1 筆消費（-15）',
       steps='GET /api/user/transactions/{P1}',
-      expect='HTTP 200，依時間新到舊列出 2 筆：-60（spend，ai_extra）、+140（purchase，google_pay，NT$90）')
+      expect='HTTP 200，依時間新到舊列出 2 筆：-15（spend，ai_extra）、+140（purchase，google_pay，NT$90）')
 def _(c):
     r = SC.get(f'/api/user/transactions/{STATE["points"]["id"]}')
     tx = [(t['points'], t['transaction_type'], t['related_feature'] or t['payment_method'], t['price'])
           for t in J(r).get('transactions', [])]
     c.log(f'HTTP {r.status_code}，transactions={tx}')
-    check(r.status_code == 200 and tx == [(-60, 'spend', 'ai_extra', 0), (140, 'purchase', 'google_pay', 90)], '交易紀錄不正確')
+    check(r.status_code == 200 and tx == [(-15, 'spend', 'ai_extra', 0), (140, 'purchase', 'google_pay', 90)], '交易紀錄不正確')
 
 
 @case('A07', '免費會員每日拍照額度 2 次',
       pre='免費會員 U1 今日尚未拍照',
       steps='1. POST /api/user/increment_scan 三次\n2. GET /api/user/usage_status/{U1}',
-      expect='1. 前 2 次 HTTP 200（daily_scans=1、2，daily_limit=2）；第 3 次 HTTP 403「今日拍照次數已用完，請花 60 點加購 5 次」\n2. photo_count_today=2、photo_daily_limit=2')
+      expect='1. 前 2 次 HTTP 200（daily_scans=1、2，daily_limit=2）；第 3 次 HTTP 403「今日拍照次數已用完，請花 10 點加購 1 次」\n2. photo_count_today=2、photo_daily_limit=2')
 def _(c):
     u1 = register('freeU')
     STATE['freeU'] = u1
@@ -1999,22 +1999,24 @@ def _(c):
     c.log(f'1. ' + '；'.join(http(r, 'daily_scans', 'daily_limit', 'error') for r in rs)
           + f'；2. photo_count_today={st.get("photo_count_today")}、photo_daily_limit={st.get("photo_daily_limit")}')
     check([r.status_code for r in rs] == [200, 200, 403], '額度判斷不正確')
-    check(J(rs[2]).get('error') == '今日拍照次數已用完，請花 60 點加購 5 次', '錯誤訊息不正確')
+    check(J(rs[2]).get('error') == '今日拍照次數已用完，請花 10 點加購 1 次', '錯誤訊息不正確')
     check(st.get('photo_count_today') == 2 and st.get('photo_daily_limit') == 2, '使用量不正確')
 
 
 @case('A07', '每日拍照額度用完後使用加購次數',
-      pre='U1 今日 2 次已用完；購買 60 點後兌換拍照加購（+5 次）',
+      pre='U1 今日 2 次已用完；購買 60 點後兌換拍照加購（10 點，+1 次）',
       steps='1. POST /api/user/spend_points，feature=photo_extra\n2. POST /api/user/increment_scan',
-      expect='1. HTTP 200，effect=「+5 次拍照（永久）」\n2. HTTP 200，daily_scans=3、extra_count 由 5 變 4')
+      expect='1. HTTP 200，effect=「+1 次拍照（永久）」，餘額 50 點\n2. HTTP 200，daily_scans=3、extra_count 由 1 變 0\n3. 再拍一次 HTTP 403（加購次數已用完）')
 def _(c):
     u1 = STATE['freeU']
     SC.post('/api/user/add_points', json={'user_id': u1['id'], 'points': 60, 'price': 50, 'payment_method': 'credit_card'})
     r1 = SC.post('/api/user/spend_points', json={'user_id': u1['id'], 'feature': 'photo_extra'})
     r2 = scan(u1)
-    c.log(f'1. {http(r1, "effect", "total_points")}；2. {http(r2, "daily_scans", "extra_count")}')
-    check(r1.status_code == 200 and J(r1).get('effect') == '+5 次拍照（永久）', '兌換失敗')
-    check(r2.status_code == 200 and J(r2).get('daily_scans') == 3 and J(r2).get('extra_count') == 4, '未使用加購次數')
+    r3 = scan(u1)
+    c.log(f'1. {http(r1, "effect", "total_points")}；2. {http(r2, "daily_scans", "extra_count")}；3. HTTP {r3.status_code}')
+    check(r1.status_code == 200 and J(r1).get('effect') == '+1 次拍照（永久）' and J(r1).get('total_points') == 50, '兌換失敗')
+    check(r2.status_code == 200 and J(r2).get('daily_scans') == 3 and J(r2).get('extra_count') == 0, '未使用加購次數')
+    check(r3.status_code == 403, '加購次數用完後仍可拍照')
 
 
 @case('A07', '訂閱會員每日拍照額度 10 次',
@@ -2035,13 +2037,13 @@ def _(c):
 @case('A07', '免費會員每日 AI 對話額度 3 次',
       pre='U1 今日尚未使用 AI 對話',
       steps='POST /api/user/use_ai 四次',
-      expect='前 3 次 HTTP 200（daily_ai=1～3，daily_limit=3）；第 4 次 HTTP 403「今日 AI 對話次數已用完，請花 60 點加購 5 次」')
+      expect='前 3 次 HTTP 200（daily_ai=1～3，daily_limit=3）；第 4 次 HTTP 403「今日 AI 對話次數已用完，請花 15 點加購 1 次」')
 def _(c):
     u1 = STATE['freeU']
     rs = [use_ai(u1) for _ in range(4)]
     c.log('；'.join(http(r, 'daily_ai', 'daily_limit', 'error') for r in rs))
     check([r.status_code for r in rs] == [200, 200, 200, 403], 'AI 額度判斷不正確')
-    check(J(rs[0]).get('daily_limit') == 3 and J(rs[3]).get('error') == '今日 AI 對話次數已用完，請花 60 點加購 5 次', '回傳資料不正確')
+    check(J(rs[0]).get('daily_limit') == 3 and J(rs[3]).get('error') == '今日 AI 對話次數已用完，請花 15 點加購 1 次', '回傳資料不正確')
 
 
 @case('A07', '訂閱會員每日 AI 對話額度 10 次',
@@ -2881,10 +2883,10 @@ def _(c):
           f'W2 領走了 W1 的造句獎勵（HTTP {r.status_code}，W2 點數變 {pts}）：/claim 未檢查紀錄擁有者')
 
 
-@case('A12', '免費版每日造句 3 次，超過需付 10 點',
+@case('A12', '免費版每日造句 3 次，超過需付 5 點',
       pre='使用者 W3 今日已造句 3 次（AI 以模擬資料替代），目前 0 點',
       steps='1. 第 4 次 POST /api/sentence/evaluate（不付點）\n2. 第 4 次帶 pay_with_points=true（0 點）\n3. 購買 20 點後，第 4 次帶 pay_with_points=true',
-      expect='1. HTTP 400，status=quota_exceeded、「今日免費次數已用盡」\n2. HTTP 400，status=insufficient_points、「點數不足」\n3. HTTP 200 批改成功，扣 10 點（餘額 10），交易紀錄有 -10（spend）',
+      expect='1. HTTP 400，status=quota_exceeded、「今日免費次數已用盡」\n2. HTTP 400，status=insufficient_points、「點數不足」\n3. HTTP 200 批改成功，扣 5 點（餘額 15），交易紀錄有 -5（spend）',
       note='AI 回應以模擬資料替代')
 def _(c):
     w3 = register('writer3')
@@ -2898,16 +2900,16 @@ def _(c):
     c.log(f'前 3 次狀態碼={first3}；1. {http(r1, "status", "error")}；2. {http(r2, "status", "error")}；'
           f'3. {http(r3, "status", "score")}，點數={pts}；交易紀錄={tx}')
     check(first3 == [200] * 3, '前 3 次未全部成功')
-    check((-10, 'spend') in tx, '付費造句扣除的 10 點沒有寫入交易紀錄')
+    check((-5, 'spend') in tx, '付費造句扣除的 5 點沒有寫入交易紀錄')
     check(r1.status_code == 400 and J(r1).get('status') == 'quota_exceeded' and J(r1).get('error') == '今日免費次數已用盡', '未擋下第 4 次')
     check(r2.status_code == 400 and J(r2).get('status') == 'insufficient_points', '點數不足未擋下')
-    check(r3.status_code == 200 and J(r3).get('status') == 'success' and pts == 10, '付費造句不正確')
+    check(r3.status_code == 200 and J(r3).get('status') == 'success' and pts == 15, '付費造句不正確')
 
 
 @case('A12', '付費造句 AI 批改失敗時退還點數',
       pre='使用者 W4 今日已造句 3 次（AI 以模擬資料替代），購買 20 點',
       steps='第 4 次 POST /api/sentence/evaluate，pay_with_points=true，AI 批改失敗',
-      expect='HTTP 500；扣除的 10 點退還（餘額 20），交易紀錄有 -10（spend）與 +10（退還）',
+      expect='HTTP 500；扣除的 5 點退還（餘額 20），交易紀錄有 -5（spend）與 +5（退還）',
       note='AI 失敗以模擬方式產生')
 def _(c):
     w4 = register('writer4')
@@ -2920,7 +2922,7 @@ def _(c):
     c.log(f'前 3 次狀態碼={first3}；第 4 次 HTTP {r.status_code}，點數={pts}；交易紀錄={tx}')
     check(first3 == [200] * 3, '前 3 次未全部成功')
     check(r.status_code == 500 and pts == 20, 'AI 失敗後點數沒有退還')
-    check((-10, 'sentence_extra') in tx and (10, 'sentence_extra_refund') in tx, '扣點與退點沒有寫入交易紀錄')
+    check((-5, 'sentence_extra') in tx and (5, 'sentence_extra_refund') in tx, '扣點與退點沒有寫入交易紀錄')
 
 
 @case('A12', '造句批改與朗讀評分的每日次數依方案不同',
@@ -3556,119 +3558,114 @@ def _(c):
 # A04 AI對話練習：對話角色與腔調（services/character.py、services/dialect.py）
 # ----------------------------------------------------------------------
 def characters_of(u):
-    d = J(SC.get(f'/api/character/list?user_id={u["id"]}'))
-    return {x['id']: x for x in d.get('characters', [])}, d.get('dialect_unlocked')
+    return J(SC.get(f'/api/character/list?user_id={u["id"]}'))
 
 
-def buy_character(u, character_id):
-    return SC.post('/api/character/buy', json={'user_id': u['id'], 'character_id': character_id})
+CUSTOM_FORM = {'origin': '大阪', 'age': '25', 'gender': '女', 'personality': '開朗健談', 'special_traits': '章魚燒店的店員'}
 
 
-@case('A04', '官方角色清單與以點數購買角色',
-      pre='使用者 C 目前 0 點，尚未購買任何角色；官方角色「瀨戶 景」售價 300 點',
-      steps='1. GET /api/character/list?user_id=C\n2. 0 點時 POST /api/character/buy，character_id=seto_kei\n3. 購買 350 點後再買一次\n'
-            '4. 再查角色清單與交易紀錄\n5. 重複購買同一個角色\n6. 購買免費的「預設老師」、購買不存在的角色',
-      expect='1. 「預設老師」免費且已擁有，「瀨戶 景」300 點未擁有，尚無腔調名額\n2. HTTP 400，「點數不足，需要 300 點」\n'
-             '3. HTTP 200，扣 300 點（餘 50），取得一個腔調名額\n4. 「瀨戶 景」已擁有，交易紀錄有 -300\n5. HTTP 400，「已經擁有這個角色了」，不重複扣點\n'
-             '6. 皆 HTTP 400')
-def _(c):
-    u = register('chara')
-    STATE['chara'] = u
-    chars, unlocked = characters_of(u)
-    r2 = buy_character(u, 'seto_kei')
-    SC.post('/api/user/add_points', json={'user_id': u['id'], 'points': 350, 'price': 0, 'payment_method': 'credit_card'})
-    r3 = buy_character(u, 'seto_kei')
-    chars2, unlocked2 = characters_of(u)
-    tx = [(t['points'], t['transaction_type']) for t in J(SC.get(f'/api/user/transactions/{u["id"]}')).get('transactions', [])]
-    r5 = buy_character(u, 'seto_kei')
-    pts = user_row(u['id'])['j_pts']
-    r6a, r6b = buy_character(u, 'default_teacher'), buy_character(u, 'no_such_character')
-    c.log(f'1. 角色（名稱, 售價, 已擁有）={[(x["name"], x["cost"], x["owned"]) for x in chars.values()]}，dialect_unlocked={unlocked}；'
-          f'2. {http(r2, "error")}；3. {http(r3, "message", "total_points", "dialect_unlocked")}；'
-          f'4. 瀨戶 景 owned={chars2["seto_kei"]["owned"]}、dialect_unlocked={unlocked2}、交易紀錄={tx}；'
-          f'5. {http(r5, "error")}，點數={pts}；6. {http(r6a, "error")}；{http(r6b, "error")}')
-    check(chars['default_teacher']['owned'] is True and chars['default_teacher']['cost'] == 0
-          and chars['seto_kei']['owned'] is False and chars['seto_kei']['cost'] == 300 and unlocked is False, '角色清單不正確')
-    check(r2.status_code == 400 and J(r2).get('error') == '點數不足，需要 300 點', '點數不足未擋下')
-    check(r3.status_code == 200 and J(r3).get('total_points') == 50 and J(r3).get('dialect_unlocked') is True, '購買角色失敗')
-    check(chars2['seto_kei']['owned'] is True and unlocked2 is True and (-300, 'spend') in tx, '購買後的狀態或交易紀錄不正確')
-    check(r5.status_code == 400 and J(r5).get('error') == '已經擁有這個角色了' and pts == 50, '可以重複購買')
-    check(r6a.status_code == 400 and r6b.status_code == 400, '免費或不存在的角色未擋下')
+def create_custom(u, name, **extra):
+    return SC.post('/api/character/custom/create', json={'user_id': u['id'], 'name': name, **CUSTOM_FORM, **extra})
 
 
-@case('A04', '每買一個角色可解鎖一種對話腔調',
-      pre='系統有啟用中的腔調「關西腔」「博多腔」；使用者 N 沒買過角色，使用者 C 已買過一個角色、尚未選腔調（A04-04）',
-      steps='1. GET /api/dialect/list\n2. N 指定關西腔與 AI 對話（POST /api/chat，dialect_id=關西腔）\n3. N 解鎖關西腔（POST /api/character/choose_dialect）\n'
-            '4. C 還沒選腔調就指定關西腔與 AI 對話\n5. C 解鎖關西腔\n6. C 指定關西腔與 AI 對話\n7. C 再解鎖博多腔\n8. C 指定博多腔與 AI 對話',
-      expect='1. 清單有「關西腔」，並附男女聲試聽音檔欄位\n2. 對話正常，但以標準語回覆（腔調不套用）\n3. HTTP 400，沒有可用的腔調名額\n'
-             '4. 以標準語回覆\n5. HTTP 200，已解鎖的腔調為關西腔、名額剩 0\n6. 對話套用關西腔\n7. HTTP 400，沒有可用的腔調名額\n8. 以標準語回覆',
-      note='AI 回應以模擬資料替代，檢查的是交給 AI 的腔調設定')
-def _(c):
+def dialect_id_of(name, jp_name, region):
+    """取得（沒有就建立）啟用中的腔調"""
     with S.app_context():
-        d = Dialect.query.filter_by(name='關西腔', is_active=True).first()
+        d = Dialect.query.filter_by(name=name, is_active=True).first()
         if d is None:
-            d = Dialect(name='關西腔', jp_name='関西弁', region='大阪、京都、神戶', description='最有名的方言',
-                        prompt_instruction='請用關西腔回覆', is_active=True)
+            d = Dialect(name=name, jp_name=jp_name, region=region, description='',
+                        prompt_instruction=f'請用{name}回覆', is_active=True)
             db.session.add(d)
             db.session.commit()
-        did = d.id
-        d2 = Dialect.query.filter_by(name='博多腔', is_active=True).first()
-        if d2 is None:
-            d2 = Dialect(name='博多腔', jp_name='博多弁', region='福岡博多', description='九州最有代表性',
-                         prompt_instruction='請用博多腔回覆', is_active=True)
-            db.session.add(d2)
-            db.session.commit()
-        did2 = d2.id
+        return d.id
+
+
+@case('A04', '角色清單只有預設老師，舊的官方角色購買 API 已移除',
+      pre='使用者 C 剛註冊、還沒新增過自訂角色',
+      steps='1. GET /api/character/list?user_id=C\n2. POST /api/character/buy（舊版購買官方角色的 API）',
+      expect='1. 只有免費的「預設老師」、沒有自訂角色、沒有腔調名額、不能用男聲、自訂角色售價 200 點\n2. HTTP 404')
+def _(c):
+    u = register('chara')
+    d = characters_of(u)
+    r2 = SC.post('/api/character/buy', json={'user_id': u['id'], 'character_id': 'seto_kei'})
+    c.log(f'1. 角色={[x["name"] for x in d.get("characters", [])]}，自訂角色={d.get("custom_characters")}，'
+          f'名額={d.get("free_dialect_slots")}，可用男聲={d.get("dialect_unlocked")}，售價={d.get("custom_character_cost")}；'
+          f'2. HTTP {r2.status_code}')
+    check([x['name'] for x in d.get('characters', [])] == ['預設老師'] and d.get('custom_characters') == []
+          and d.get('free_dialect_slots') == 0 and d.get('dialect_unlocked') is False
+          and d.get('custom_character_cost') == 200, '角色清單不正確')
+    check(r2.status_code == 404, '舊的購買 API 還在')
+
+
+@case('A04', '每新增一個自訂角色可解鎖一種對話腔調',
+      pre='系統有啟用中的腔調「關西腔」「博多腔」；使用者 N 沒新增過自訂角色；使用者 C 有 450 點',
+      steps='1. GET /api/dialect/list\n2. N 指定關西腔與 AI 對話（POST /api/chat，dialect_id=關西腔）\n'
+            '3. N 用名額解鎖關西腔（POST /api/character/choose_dialect）\n'
+            '4. C 新增自訂角色時順便選關西腔\n5. C 指定關西腔對話\n'
+            '6. C 再新增一個自訂角色，又選關西腔\n7. C 新增自訂角色時不選腔調，之後用名額解鎖博多腔\n'
+            '8. C 指定博多腔對話\n9. C 刪掉第一個角色後指定關西腔對話',
+      expect='1. 清單有「關西腔」，並附男女聲試聽音檔欄位\n2. 對話正常，但以標準語回覆（腔調不套用）\n3. HTTP 400，沒有可用的腔調名額\n'
+             '4. HTTP 200，已解鎖關西腔、可用男聲\n5. 關西腔套用\n6. HTTP 400，「這個腔調已經解鎖過了」，不扣點\n'
+             '7. 新增後名額 1 個；解鎖後已解鎖關西腔與博多腔、名額 0\n8. 博多腔套用\n9. 刪角色不收回腔調，關西腔仍套用',
+      note='AI 回應以模擬資料替代，檢查的是交給 AI 的腔調設定')
+def _(c):
+    did = dialect_id_of('關西腔', '関西弁', '大阪、京都、神戶')
+    did2 = dialect_id_of('博多腔', '博多弁', '福岡博多')
     r1 = SC.get('/api/dialect/list')
     row = next((x for x in (r1.get_json() or []) if x['id'] == did), {})
-    n, buyer = register('nodialect'), STATE['chara']
+    n, u = register('nodialect'), register('dialectbuyer')
+    SC.post('/api/user/add_points', json={'user_id': u['id'], 'points': 450, 'price': 0, 'payment_method': 'credit_card'})
 
-    def talk(u, dialect_id=did):
-        use_ai(u)
+    def talk(who, dialect_id):
+        use_ai(who)
         FAKE['last_dialect'] = 'unset'
-        r = SC.post('/api/chat', data={'user_id': str(u['id']), 'message': 'こんにちは', 'topic': '日常對話',
+        r = SC.post('/api/chat', data={'user_id': str(who['id']), 'message': 'こんにちは', 'topic': '日常對話',
                                        'level': 'N5', 'dialect_id': str(dialect_id)})
-        return r, FAKE['last_dialect']
+        return r.status_code, FAKE['last_dialect']
 
-    def choose(u, dialect_id):
-        return SC.post('/api/character/choose_dialect', json={'user_id': u['id'], 'dialect_id': dialect_id})
+    def choose(who, dialect_id):
+        return SC.post('/api/character/choose_dialect', json={'user_id': who['id'], 'dialect_id': dialect_id})
 
-    r2, used2 = talk(n)
+    t2 = talk(n, did)
     r3 = choose(n, did)
-    r4, used4 = talk(buyer)
-    r5 = choose(buyer, did)
-    r6, used6 = talk(buyer)
-    r7 = choose(buyer, did2)
-    r8, used8 = talk(buyer, did2)
+    r4 = create_custom(u, '角色一', dialect_id=did)
+    t5 = talk(u, did)   # 免費帳號一天只有 3 次 AI 對話，C 共對話 3 次
+    r6 = create_custom(u, '角色二', dialect_id=did)
+    pts6 = user_row(u['id'])['j_pts']
+    r7a = create_custom(u, '角色三')
+    r7b = choose(u, did2)
+    t8 = talk(u, did2)
+    SC.post('/api/character/custom/delete', json={'user_id': u['id'], 'custom_id': J(r4)['character']['custom_id']})
+    t9 = talk(u, did)
     c.log(f'1. HTTP {r1.status_code}，{row.get("name")}（{row.get("jp_name")}），試聽欄位={sorted((row.get("samples") or {}).keys())}；'
-          f'2. HTTP {r2.status_code}，套用腔調={used2}；3. {http(r3, "error")}；4. HTTP {r4.status_code}，套用腔調={used4}；'
-          f'5. {http(r5, "message", "unlocked_dialect_ids", "free_dialect_slots")}；'
-          f'6. HTTP {r6.status_code}，套用腔調={"關西腔" if used6 == did else used6}；7. {http(r7, "error")}；'
-          f'8. HTTP {r8.status_code}，套用腔調={used8}')
+          f'2. 套用腔調={t2[1]}；3. {http(r3, "error")}；4. {http(r4, "message", "unlocked_dialect_ids", "dialect_unlocked")}；'
+          f'5. 關西腔={t5[1] == did}；6. {http(r6, "error")}，點數={pts6}；'
+          f'7. 名額={J(r7a).get("free_dialect_slots")}，{http(r7b, "unlocked_dialect_ids", "free_dialect_slots")}；'
+          f'8. HTTP {t8[0]}，博多腔={t8[1] == did2}；9. HTTP {t9[0]}，關西腔={t9[1] == did}')
     check(r1.status_code == 200 and row.get('name') == '關西腔' and sorted((row.get('samples') or {}).keys()) == ['female', 'male'],
           '腔調清單不正確')
-    check(r2.status_code == 200 and used2 is None, '沒買過角色卻套用了腔調')
-    check(r3.status_code == 400 and r7.status_code == 400, '沒有名額卻能解鎖腔調')
-    check(r4.status_code == 200 and used4 is None, '還沒解鎖腔調卻套用了')
-    check(r5.status_code == 200 and J(r5).get('unlocked_dialect_ids') == [did] and J(r5).get('free_dialect_slots') == 0,
+    check(t2 == (200, None) and r3.status_code == 400, '沒有新增過角色卻能用腔調')
+    check(r4.status_code == 200 and J(r4).get('unlocked_dialect_ids') == [did] and J(r4).get('dialect_unlocked') is True,
+          '新增角色時解鎖腔調失敗')
+    check(t5 == (200, did), '腔調套用不正確')
+    check(r6.status_code == 400 and '已經解鎖過' in J(r6).get('error', '') and pts6 == 250, '重複解鎖同一種腔調未擋下')
+    check(J(r7a).get('free_dialect_slots') == 1 and r7b.status_code == 200
+          and J(r7b).get('unlocked_dialect_ids') == sorted([did, did2]) and J(r7b).get('free_dialect_slots') == 0,
           '用名額解鎖腔調失敗')
-    check(r6.status_code == 200 and used6 == did, '解鎖後卻沒有套用腔調')
-    check(r8.status_code == 200 and used8 is None, '套用了沒解鎖的腔調')
+    check(t8 == (200, did2) and t9 == (200, did), '解鎖後的腔調沒有套用，或刪角色後被收回')
 
 
 @case('A04', '花點數新增自訂角色，對話時套用角色人設',
-      pre='使用者 K 目前 0 點、沒買過官方角色；使用者 C 已買過「瀨戶 景」；自訂角色售價 200 點',
+      pre='使用者 K 目前 0 點；使用者 B 是另一位使用者；自訂角色售價 200 點',
       steps='1. 0 點時新增自訂角色\n2. 儲值 450 點後，缺「個性」新增\n3. 六欄都填好新增「佐藤 美咲」\n4. 再新增同名角色、新增名為「預設老師」的角色\n'
-            '5. 查角色清單\n6. K 用「佐藤 美咲」對話；K 用沒買的「瀨戶 景」對話；C 用「瀨戶 景」對話；C 冒用 K 的「佐藤 美咲」對話\n'
-            '7. 刪除「佐藤 美咲」後再用它對話',
+            '5. 查角色清單\n6. K 用「佐藤 美咲」對話；K 用「預設老師」對話；B 冒用 K 的「佐藤 美咲」對話\n'
+            '7. B 刪除 K 的角色；K 刪除「佐藤 美咲」後再用它對話',
       expect='1. HTTP 400，「點數不足，需要 200 點」\n2. HTTP 400，「請填寫個性」，不扣點\n3. HTTP 200，扣 200 點（餘 250），交易紀錄有 -200\n'
              '4. 皆 HTTP 400，「已經有同名的角色了」\n5. 自訂角色清單有「佐藤 美咲」\n'
-             '6. 依序套用佐藤 美咲的人設、不套用、套用瀨戶 景的人設、不套用\n7. HTTP 200 刪除成功，之後對話不套用人設',
+             '6. 依序套用佐藤 美咲的人設、不套用（家教模式）、不套用\n7. B 刪除 HTTP 404；K 刪除 HTTP 200，之後對話不套用人設',
       note='AI 回應以模擬資料替代，檢查的是交給 AI 的角色人設')
 def _(c):
-    k, buyer = register('custom'), register('custombuyer')
-    SC.post('/api/user/add_points', json={'user_id': buyer['id'], 'points': 300, 'price': 0, 'payment_method': 'credit_card'})
-    buy_character(buyer, 'seto_kei')
+    k, other = register('custom'), register('customother')
     form = {'user_id': k['id'], 'name': '佐藤 美咲', 'origin': '大阪', 'age': '25', 'gender': '女',
             'personality': '開朗健談', 'special_traits': '章魚燒店的店員'}
 
@@ -3690,22 +3687,23 @@ def _(c):
     r3 = create()
     pts3 = user_row(k['id'])['j_pts']
     r4a, r4b = create(), create(name='預設老師')
-    customs = J(SC.get(f'/api/character/list?user_id={k["id"]}')).get('custom_characters', [])
+    customs = characters_of(k).get('custom_characters', [])
     tx = [(t['points'], t['related_feature']) for t in J(SC.get(f'/api/user/transactions/{k["id"]}')).get('transactions', [])]
-    t1, t2, t3, t4 = talk(k, '佐藤 美咲'), talk(k, '瀨戶 景'), talk(buyer, '瀨戶 景'), talk(buyer, '佐藤 美咲')
+    t1, t2, t3 = talk(k, '佐藤 美咲'), talk(k, '預設老師'), talk(other, '佐藤 美咲')
     cid = (J(r3).get('character') or {}).get('custom_id')
-    r7 = SC.post('/api/character/custom/delete', json={'user_id': k['id'], 'custom_id': cid})
+    r7a = SC.post('/api/character/custom/delete', json={'user_id': other['id'], 'custom_id': cid})
+    r7b = SC.post('/api/character/custom/delete', json={'user_id': k['id'], 'custom_id': cid})
     t7 = talk(k, '佐藤 美咲')
     c.log(f'1. {http(r1, "error")}；2. {http(r2, "error")}，點數={pts2}；3. {http(r3, "message", "total_points")}，點數={pts3}，交易紀錄={tx}；'
           f'4. {http(r4a, "error")}；{http(r4b, "error")}；5. 自訂角色={[x["name"] for x in customs]}；'
-          f'6. 套用人設={[t1, t2, t3, t4]}；7. {http(r7, "message")}，之後套用人設={t7}')
+          f'6. 套用人設={[t1, t2, t3]}；7. B 刪除 HTTP {r7a.status_code}；{http(r7b, "message")}，之後套用人設={t7}')
     check(r1.status_code == 400 and J(r1).get('error') == '點數不足，需要 200 點', '點數不足未擋下')
     check(r2.status_code == 400 and J(r2).get('error') == '請填寫個性' and pts2 == 450, '缺欄位未擋下')
     check(r3.status_code == 200 and pts3 == 250 and (-200, f'custom_character:{cid}') in tx, '新增自訂角色失敗')
     check(r4a.status_code == 400 and r4b.status_code == 400 and '同名' in J(r4a).get('error', ''), '重名未擋下')
     check([x['name'] for x in customs] == ['佐藤 美咲'], '自訂角色清單不正確')
-    check([t1, t2, t3, t4] == [(200, '佐藤 美咲'), (200, None), (200, '瀨戶 景'), (200, None)], '角色人設套用不正確')
-    check(r7.status_code == 200 and t7 == (200, None), '刪除自訂角色後仍套用人設')
+    check([t1, t2, t3] == [(200, '佐藤 美咲'), (200, None), (200, None)], '角色人設套用不正確')
+    check(r7a.status_code == 404 and r7b.status_code == 200 and t7 == (200, None), '刪除自訂角色不正確')
 
 
 def kansai_id():
@@ -3713,65 +3711,88 @@ def kansai_id():
         return Dialect.query.filter_by(name='關西腔', is_active=True).first().id
 
 
+class FakeTTS:
+    """把 AI 語音模型與 gTTS 換成假的，記錄每次 AI 語音的合成參數"""
+
+    def __init__(self):
+        import services.tts as tts_module
+        self.module, self.calls, self.ok = tts_module, [], True
+
+    def __enter__(self):
+        tester = self
+
+        def fake_gemini(text, jp_name, voice='female'):
+            tester.calls.append((text, jp_name, voice))
+            return (b'RIFF' + b'\x00' * 40) if tester.ok else None
+
+        class FakeGTTS:
+            def __init__(self, text, lang):
+                self.text = text
+
+            def write_to_fp(self, fp):
+                fp.write(b'ID3' + self.text.encode('utf-8'))
+
+        self.orig = self.module.synthesize_with_gemini, self.module.gTTS
+        self.module.synthesize_with_gemini, self.module.gTTS = fake_gemini, FakeGTTS
+        return self
+
+    def __exit__(self, *exc):
+        self.module.synthesize_with_gemini, self.module.gTTS = self.orig
+
+    def say(self, u, **body):
+        n = len(self.calls)
+        r = SC.post('/api/tts/synthesize', json={'user_id': u['id'], **body})
+        return r, self.calls[n:]
+
+
 @case('A04', '以腔調與男女聲朗讀對話內容',
-      pre='系統有啟用中的腔調「關西腔」；語音合成以模擬方式進行（腔調與男聲用 AI 語音模型，標準語女聲用一般語音）',
-      steps='POST /api/tts/synthesize：\n1. 沒有文字\n2. 標準語女聲朗讀「おはよう」\n3. 指定關西腔朗讀「おおきに」\n4. 同一句關西腔再朗讀一次\n'
-            '5. 標準語男聲朗讀「こんばんは」\n6. AI 語音模型無法使用時，指定關西腔朗讀「ほんまに」',
-      expect='1. HTTP 400\n2. 回傳 mp3，dialect_voice=false，不使用 AI 語音模型\n3. 回傳 wav，dialect_voice=true，以関西弁、女聲合成\n'
-             '4. cached=true，不重複合成\n5. 回傳 wav，以標準語、男聲合成\n6. 自動退回標準語音：回傳 mp3，dialect_voice=false',
+      pre='系統有啟用中的腔調「關西腔」「博多腔」；使用者 F 沒新增過自訂角色；使用者 U 新增過自訂角色並解鎖關西腔；'
+          '語音合成以模擬方式進行（解鎖後的男女聲與腔調用 AI 語音模型，沒解鎖用基本語音）',
+      steps='POST /api/tts/synthesize：\n1. 沒有文字\n2. F 朗讀「おはよう」，分別要求女聲、男聲、關西腔\n'
+            '3. U 以女聲朗讀「おはよう」\n4. U 以關西腔朗讀「おおきに」\n5. 同一句關西腔再朗讀一次\n6. U 以男聲朗讀「こんばんは」\n'
+            '7. U 要求沒解鎖的博多腔\n8. AI 語音模型無法使用時，U 以關西腔朗讀「ほんまに」',
+      expect='1. HTTP 400\n2. 三次都回傳基本語音 mp3，不使用 AI 語音模型\n3. 回傳 wav，以標準語、女聲合成\n'
+             '4. 回傳 wav，dialect_voice=true，以関西弁、女聲合成\n5. cached=true，不重複合成\n6. 回傳 wav，以標準語、男聲合成\n'
+             '7. 不套用博多腔，以標準語、女聲合成\n8. 自動退回基本語音：回傳 mp3，dialect_voice=false',
       note='語音合成以模擬資料替代，未連線語音服務')
 def _(c):
-    import services.tts as tts_module
     did = kansai_id()
-    calls = []
-    state = {'ok': True}
-
-    def fake_gemini(text, jp_name, voice='female'):
-        calls.append((text, jp_name, voice))
-        return (b'RIFF' + b'\x00' * 40) if state['ok'] else None
-
-    class FakeGTTS:
-        def __init__(self, text, lang):
-            self.text = text
-
-        def write_to_fp(self, fp):
-            fp.write(b'ID3' + self.text.encode('utf-8'))
-
-    orig = tts_module.synthesize_with_gemini, tts_module.gTTS
-    tts_module.synthesize_with_gemini, tts_module.gTTS = fake_gemini, FakeGTTS
-
-    def say(**body):
-        n = len(calls)
-        r = SC.post('/api/tts/synthesize', json=body)
-        return r, calls[n:]
-
-    try:
-        r1, _ = say(text='  ')
-        r2, c2 = say(text='おはよう')
-        r3, c3 = say(text='おおきに', dialect_id=did)
-        r4, c4 = say(text='おおきに', dialect_id=did)
-        r5, c5 = say(text='こんばんは', voice='male')
-        state['ok'] = False
-        r6, c6 = say(text='ほんまに', dialect_id=did)
-    finally:
-        tts_module.synthesize_with_gemini, tts_module.gTTS = orig
-    c.log(f'1. {http(r1, "error")}；2. {http(r2, "format", "dialect_voice")}，AI 語音呼叫 {len(c2)} 次；'
-          f'3. {http(r3, "format", "cached", "dialect_voice")}，合成參數={c3}；4. {http(r4, "cached")}，AI 語音呼叫 {len(c4)} 次；'
-          f'5. {http(r5, "format", "dialect_voice")}，合成參數={c5}；6. {http(r6, "format", "dialect_voice")}')
+    did2 = dialect_id_of('博多腔', '博多弁', '福岡博多')
+    f, u = register('ttsfree'), register('ttsunlocked')
+    SC.post('/api/user/add_points', json={'user_id': u['id'], 'points': 200, 'price': 0, 'payment_method': 'credit_card'})
+    create_custom(u, '語音角色', dialect_id=did)
+    with FakeTTS() as t:
+        r1, _ = t.say(u, text='  ')
+        free = [t.say(f, text='おはよう', **extra) for extra in ({'voice': 'female'}, {'voice': 'male'}, {'dialect_id': did})]
+        r3, c3 = t.say(u, text='おはよう', voice='female')
+        r4, c4 = t.say(u, text='おおきに', dialect_id=did)
+        r5, c5 = t.say(u, text='おおきに', dialect_id=did)
+        r6, c6 = t.say(u, text='こんばんは', voice='male')
+        r7, c7 = t.say(u, text='よかよか', dialect_id=did2)
+        t.ok = False
+        r8, c8 = t.say(u, text='ほんまに', dialect_id=did)
+    c.log(f'1. {http(r1, "error")}；2. 格式={[J(r).get("format") for r, _ in free]}，AI 語音呼叫 {sum(len(x) for _, x in free)} 次；'
+          f'3. {http(r3, "format")}，合成參數={c3}；4. {http(r4, "format", "dialect_voice")}，合成參數={c4}；'
+          f'5. {http(r5, "cached")}，AI 語音呼叫 {len(c5)} 次；6. {http(r6, "format")}，合成參數={c6}；'
+          f'7. {http(r7, "format")}，合成參數={c7}；8. {http(r8, "format", "dialect_voice")}')
     check(r1.status_code == 400, '沒有文字未擋下')
-    check(r2.status_code == 200 and J(r2).get('format') == 'mp3' and J(r2).get('dialect_voice') is False and c2 == [], '標準語女聲不正確')
-    check(r3.status_code == 200 and J(r3).get('format') == 'wav' and J(r3).get('dialect_voice') is True
-          and c3 == [('おおきに', '関西弁', 'female')], '腔調語音不正確')
-    check(J(r4).get('cached') is True and c4 == [], '相同內容沒有使用快取')
-    check(J(r5).get('format') == 'wav' and c5 == [('こんばんは', '標準語', 'male')], '男聲不正確')
-    check(r6.status_code == 200 and J(r6).get('format') == 'mp3' and J(r6).get('dialect_voice') is False, 'AI 語音失敗時沒有退回標準語音')
+    check(all(r.status_code == 200 and J(r).get('format') == 'mp3' and not x for r, x in free), '沒解鎖卻用了 AI 語音')
+    check(J(r3).get('format') == 'wav' and c3 == [('おはよう', '標準語', 'female')], '解鎖後的女聲不正確')
+    check(J(r4).get('format') == 'wav' and J(r4).get('dialect_voice') is True and c4 == [('おおきに', '関西弁', 'female')],
+          '腔調語音不正確')
+    check(J(r5).get('cached') is True and c5 == [], '相同內容沒有使用快取')
+    check(J(r6).get('format') == 'wav' and c6 == [('こんばんは', '標準語', 'male')], '男聲不正確')
+    check(c7 == [('よかよか', '標準語', 'female')], '套用了沒解鎖的腔調')
+    check(r8.status_code == 200 and J(r8).get('format') == 'mp3' and J(r8).get('dialect_voice') is False,
+          'AI 語音失敗時沒有退回基本語音')
 
 
 @case('A13', '老師在對話作業指定的腔調不受角色限制',
-      pre='「三年丙班」學生乙沒有買過任何角色；系統有腔調「關西腔」',
+      pre='「三年丙班」學生乙沒有新增過自訂角色（沒有腔調名額）；系統有腔調「關西腔」',
       steps='1. 老師出一份 AI 情境對話作業「車站問路」，指定腔調選「關西腔」，最少 1 輪\n2. 學生乙查看作業內容\n'
-            '3. 學生乙從作業進入對話並送出一句話\n4. 學生乙在一般對話（不是作業）指定關西腔送出一句話',
-      expect='1. 作業建立成功並記下指定的腔調\n2. 作業內容帶有老師指定的腔調\n3. 對話套用關西腔，達到輪數後自動繳交\n4. 沒買過角色，一般對話不套用腔調',
+            '3. 學生乙從作業進入對話並送出一句話\n4. 學生乙在一般對話（不是作業）指定關西腔送出一句話\n'
+            '5. 學生乙朗讀 AI 回覆：帶作業編號指定關西腔一次、不帶作業編號一次',
+      expect='1. 作業建立成功並記下指定的腔調\n2. 作業內容帶有老師指定的腔調\n3. 對話套用關西腔，達到輪數後自動繳交\n4. 沒有解鎖腔調，一般對話不套用腔調\n5. 帶作業編號時以関西弁、女聲合成；不帶時用基本語音',
       note='AI 回應以模擬資料替代，檢查的是交給 AI 的腔調設定')
 def _(c):
     k = ensure_class()
@@ -3804,6 +3825,12 @@ def _(c):
     check((detail.get('config') or {}).get('dialect_id') == did, '學生端作業內容沒有腔調')
     check(r3.status_code == 200 and used3 == did and result.get('submitted') is True, '作業對話沒有套用老師指定的腔調或沒有自動繳交')
     check(r4.status_code == 200 and used4 is None, '一般對話不該套用腔調')
+    with FakeTTS() as t:
+        _, c5a = t.say(s2, text='駅はあちらです', dialect_id=did, assignment_id=aid)
+        r5b, c5b = t.say(s2, text='駅はあちらです', dialect_id=did)
+    c.log(f'5. 帶作業編號合成參數={c5a}；不帶作業編號 格式={J(r5b).get("format")}、合成參數={c5b}')
+    check(c5a == [('駅はあちらです', '関西弁', 'female')] and J(r5b).get('format') == 'mp3' and c5b == [],
+          '作業指定腔調的語音不正確')
 
 
 @case('A13', '把作業複製到老師自己的其他班',
@@ -4200,13 +4227,58 @@ def _(c):
 @case('A07', '查詢點數可兌換的加購項目',
       pre='無',
       steps='GET /api/store/items',
-      expect='HTTP 200，列出可用點數兌換的加購項目，含拍照辨識加購與 AI 對話加購（各 60 點）')
+      expect='HTTP 200，列出可用點數兌換的加購項目：朗讀評分 20 點、AI 對話 15 點、拍照辨識 10 點（各 +1 次），單字收藏擴充 100 點（訂閱會員 50 點）')
 def _(c):
     r = SC.get('/api/store/items')
     items = J(r).get('items', [])
     c.log(f'HTTP {r.status_code}，項目={[(i.get("id") or i.get("feature"), i.get("name"), i.get("cost")) for i in items]}')
     check(r.status_code == 200 and len(items) >= 2 and all(i.get('name') and i.get('cost') for i in items), '兌換項目清單不正確')
-    check(sum(1 for i in items if i.get('cost') == 60) >= 2, '拍照與 AI 對話加購不是 60 點')
+    cost = {i.get('id'): i.get('cost') for i in items}
+    check(cost == {'reading_extra': 20, 'ai_extra': 15, 'photo_extra': 10, 'vocab_expand': 100, 'vocab_expand_premium': 50},
+          '加購項目的價格不正確')
+
+
+@case('A11', '每日朗讀次數用完後以點數加購朗讀評分',
+      pre='免費會員 X 今日已朗讀評分 1 次（每日上限 1 次），目前 0 點；AI 評分以模擬資料替代',
+      steps='1. 再朗讀一次\n2. 0 點時 POST /api/user/spend_points，feature=reading_extra\n3. 購買 20 點後兌換，並查 usage_status\n'
+            '4. 再朗讀一次，並查 usage_status\n5. 再朗讀一次',
+      expect='1. status=quota_exceeded，提示可到商城花 20 點加購 1 次\n2. HTTP 400，「點數不足，需要 20 點」\n'
+             '3. HTTP 200，扣 20 點、「+1 次朗讀評分（永久）」，reading_extra_count=1\n'
+             '4. status=success，使用加購次數，reading_extra_count=0\n5. status=quota_exceeded',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    ensure_articles()
+    aid = STATE['art_free']
+    x = register('readextra')
+
+    def read():
+        GEMINI_FAKE['handler'] = fake_reading_ai
+        try:
+            return J(SC.post('/api/articles/evaluate', data={'audio': (io.BytesIO(M4A_BYTES), 'reading.m4a'),
+                                                             'user_id': str(x['id']), 'article_id': str(aid)},
+                             content_type='multipart/form-data'))
+        finally:
+            GEMINI_FAKE['handler'] = None
+
+    first = read()
+    d1 = read()
+    r2 = SC.post('/api/user/spend_points', json={'user_id': x['id'], 'feature': 'reading_extra'})
+    SC.post('/api/user/add_points', json={'user_id': x['id'], 'points': 20, 'price': 0, 'payment_method': 'credit_card'})
+    r3 = SC.post('/api/user/spend_points', json={'user_id': x['id'], 'feature': 'reading_extra'})
+    extra3 = usage(x).get('reading_extra_count')
+    d4 = read()
+    extra4 = usage(x).get('reading_extra_count')
+    d5 = read()
+    c.log(f'前置朗讀={first.get("status")}；1. {d1.get("status")}，提示={d1.get("message")}；2. {http(r2, "error")}；'
+          f'3. {http(r3, "effect", "total_points")}，reading_extra_count={extra3}；'
+          f'4. {d4.get("status")}，used_extra={d4.get("used_extra")}，reading_extra_count={extra4}；5. {d5.get("status")}')
+    check(first.get('status') == 'success' and d1.get('status') == 'quota_exceeded'
+          and '花 20 點加購 1 次' in (d1.get('message') or ''), '次數用完的提示不正確')
+    check(r2.status_code == 400 and J(r2).get('error') == '點數不足，需要 20 點', '點數不足未擋下')
+    check(r3.status_code == 200 and J(r3).get('effect') == '+1 次朗讀評分（永久）' and J(r3).get('total_points') == 0
+          and extra3 == 1, '加購朗讀次數失敗')
+    check(d4.get('status') == 'success' and d4.get('used_extra') is True and extra4 == 0, '加購次數沒有被使用')
+    check(d5.get('status') == 'quota_exceeded', '加購次數用完後仍可朗讀')
 
 
 # ======================================================================

@@ -169,7 +169,7 @@
                         <tr id="row-{{ s.student_id }}">
                             <td class="sticky">
                                 <a class="stu-name text-decoration-none" style="color:#222;" href="/teacher/classroom/{{ data.classroom.id }}/student/{{ s.student_id }}/report" title="看詳細成果">{{ s.display_name }}</a>
-                                {% if s.username and s.username != s.display_name %}<div class="stu-id">{{ s.username }}</div>{% endif %}
+                                {% if s.student_no %}<div class="stu-id">{{ s.student_no }}</div>{% endif %}
                             </td>
                             {% for a in data.assignments %}
                             {% set cell = s.cells[a.id] %}

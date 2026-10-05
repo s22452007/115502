@@ -1486,7 +1486,7 @@ class ApiClient {
     }
   }
 
-  // 官方對話角色清單（含是否已擁有）與腔調選單是否已解鎖
+  // 對話角色清單（預設老師＋自己的自訂角色）與腔調解鎖狀態
   static Future<Map<String, dynamic>> getCharacters(int userId) async {
     final url = Uri.parse('$baseUrl/character/list?user_id=$userId');
     try {
@@ -1495,30 +1495,6 @@ class ApiClient {
       return {'error': '無法取得'};
     } catch (e) {
       return {'error': '連線失敗'};
-    }
-  }
-
-  // 用點數購買官方對話角色，並解鎖一種腔調（dialectId 沒帶就先保留名額）
-  static Future<Map<String, dynamic>> buyCharacter({
-    required int userId,
-    required String characterId,
-    int? dialectId,
-  }) async {
-    final url = Uri.parse('$baseUrl/character/buy');
-    try {
-      final response = await client.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId,
-          'character_id': characterId,
-          if (dialectId != null) 'dialect_id': dialectId,
-        }),
-      );
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return {...data, '_status': response.statusCode};
-    } catch (e) {
-      return {'error': '連線失敗', '_status': 0};
     }
   }
 
@@ -1980,8 +1956,10 @@ class ApiClient {
   }
 
   /// 輸入代碼後、真正加入前，先查這是哪一班、哪位老師。
-  static Future<Map<String, dynamic>> previewClassroom(String joinCode) async {
-    final url = Uri.parse('$baseUrl/classroom/preview?join_code=${Uri.encodeQueryComponent(joinCode)}');
+  /// 帶 [userId] 會多回傳 suggested_name（姓名欄預設值）。
+  static Future<Map<String, dynamic>> previewClassroom(String joinCode, {int? userId}) async {
+    final url = Uri.parse('$baseUrl/classroom/preview?join_code=${Uri.encodeQueryComponent(joinCode)}'
+        '${userId != null ? '&user_id=$userId' : ''}');
     try {
       final response = await client.get(url);
       return jsonDecode(utf8.decode(response.bodyBytes));
@@ -1995,13 +1973,18 @@ class ApiClient {
   static Future<Map<String, dynamic>> joinClassroom({
     required int userId,
     required String joinCode,
+    String? realName,
   }) async {
     final url = Uri.parse('$baseUrl/classroom/join');
     try {
       final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'join_code': joinCode}),
+        body: jsonEncode({
+          'user_id': userId,
+          'join_code': joinCode,
+          if (realName != null) 'real_name': realName,
+        }),
       );
       return {
         'statusCode': response.statusCode,

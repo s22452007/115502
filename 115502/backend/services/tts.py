@@ -67,6 +67,7 @@ DIALECT_TTS_MODELS = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts',
 VOICE_NAMES = {'female': 'Leda', 'male': 'Charon'}
 # 每種腔調的男女聲各用不同的聲線，聽起來像不同的人（沒列到的用上面的預設）
 DIALECT_VOICES = {
+    '標準語': {'female': 'Despina', 'male': 'Charon'},
     '関西弁': {'female': 'Aoede', 'male': 'Puck'},
     '博多弁': {'female': 'Leda', 'male': 'Achird'},
     '東北弁': {'female': 'Sulafat', 'male': 'Umbriel'},
@@ -148,23 +149,51 @@ def _get_dialect(dialect_id):
     return dialect
 
 
+def _assignment_dialect_ok(user_id, assignment_id, dialect_id):
+    """老師在對話作業指定的腔調：學生是那個班的成員，就算沒解鎖也能用"""
+    try:
+        assignment_id = int(assignment_id)
+    except (TypeError, ValueError):
+        return False
+    from models import Assignment, ClassroomMember
+    a = Assignment.query.get(assignment_id)
+    if a is None or (a.config or {}).get('dialect_id') != dialect_id:
+        return False
+    return ClassroomMember.query.filter_by(classroom_id=a.classroom_id, student_id=user_id).first() is not None
+
+
 @tts_bp.route('/synthesize', methods=['POST'])
 def synthesize():
     """
     接收文字，合成日語語音並回傳 base64 編碼的音訊（format 為 mp3 或 wav）。
-    帶 dialect_id 時會用該腔調的語調朗讀，voice 可指定 female（預設）或 male。
-    相同文字會直接使用快取，不重複合成。
+
+    沒解鎖的人一律用基本語音（gTTS），不能選聲音也不能選腔調。
+    新增過自訂角色（解鎖）的人：voice 可選 female／male，用 AI 語音模型朗讀；
+    dialect_id 要是自己解鎖過的腔調才套用。
+    老師在作業指定的腔調（帶 assignment_id）不受限制，沒解鎖的學生用女聲。
+    不符合條件的要求不擋，直接改用基本語音。相同內容會直接使用快取，不重複合成。
     """
+    from utils.auth_token import current_user_id
+    from services.character import can_use_dialect, free_dialect_slots, unlocked_dialect_ids
+
     data = request.get_json(silent=True) or request.form
     text = (data.get('text') or '').strip()
 
     if not text:
         return jsonify({'error': '請提供要合成的文字 (text)'}), 400
 
+    user_id = current_user_id()
+    unlocked = bool(unlocked_dialect_ids(user_id)) or free_dialect_slots(user_id) > 0
     dialect = _get_dialect(data.get('dialect_id'))
-    voice = 'male' if data.get('voice') == 'male' else 'female'
-    # 標準語女聲走 gTTS，其他組合（腔調或男聲）才需要 Gemini 語音模型
-    use_gemini = dialect is not None or voice == 'male'
+    if dialect is not None and not (can_use_dialect(user_id, dialect.id)
+                                    or _assignment_dialect_ok(user_id, data.get('assignment_id'), dialect.id)):
+        dialect = None
+    if unlocked:
+        voice = 'male' if data.get('voice') == 'male' else 'female'
+    else:
+        voice = 'female' if dialect is not None else 'basic'
+    # 基本語音走 gTTS，其他（解鎖後的男女聲、腔調）才需要 AI 語音模型
+    use_gemini = voice != 'basic'
     cache_key = (dialect.id if dialect else None, voice, text)
 
     # 1. 先查快取
@@ -190,9 +219,9 @@ def synthesize():
                 'cached': False,
                 'dialect_voice': True,
             }), 200
-        print(f'⚠️ [tts] 「{jp_name}／{voice}」語音無法使用，退回標準語音')
+        print(f'⚠️ [tts] 「{jp_name}／{voice}」語音無法使用，退回基本語音')
 
-    # 3. 標準語音（退回時只寫進標準語女聲的快取，額度恢復後才能重新合成腔調語音）
+    # 3. 基本語音（退回時只寫進基本語音的快取，額度恢復後才能重新合成 AI 語音）
     try:
         tts = gTTS(text=text, lang='ja')
 
@@ -201,7 +230,7 @@ def synthesize():
         mp3_fp.seek(0)
         audio_base64 = base64.b64encode(mp3_fp.read()).decode('utf-8')
 
-        _cache_put((None, 'female', text), audio_base64, 'mp3')
+        _cache_put((None, 'basic', text), audio_base64, 'mp3')
 
         return jsonify({
             'audio_base64': audio_base64,

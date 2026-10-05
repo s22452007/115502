@@ -9,16 +9,14 @@
 
 語音模型的免費額度很少，額度用完時會停下來，隔天再跑一次就會從缺的繼續補。
 """
-import io
 import os
 import sys
 
 from flask import Flask
-from gtts import gTTS
 
 from models import db, Dialect
 from services.dialect import SAMPLE_DIR, SAMPLE_VOICES, sample_url
-from services.tts import synthesize_with_gemini, STANDARD_JP_NAME
+from services.tts import synthesize_with_gemini
 
 # 各腔調的試聽句子（沒列到的腔調用標準語那句）
 SAMPLE_TEXTS = {
@@ -50,19 +48,17 @@ def main():
                 if not force and sample_url(d.id, voice):
                     print(f'✅ 已存在：{d.name} {voice}')
                     continue
-                # 標準語女聲實際對話時用的是 gTTS，試聽也用同一個聲音
-                if d.jp_name == STANDARD_JP_NAME and voice == 'female':
-                    fp = io.BytesIO()
-                    gTTS(text=text, lang='ja').write_to_fp(fp)
-                    data, ext = fp.getvalue(), 'mp3'
-                else:
-                    data, ext = synthesize_with_gemini(text, d.jp_name, voice), 'wav'
+                data, ext = synthesize_with_gemini(text, d.jp_name, voice), 'wav'
                 if not data:
                     print(f'⚠️ 產生失敗（多半是額度用完，明天再跑一次）：{d.name} {voice}')
                     missing += 1
                     continue
                 with open(os.path.join(SAMPLE_DIR, f'{d.id}_{voice}.{ext}'), 'wb') as f:
                     f.write(data)
+                # 舊版標準語女聲是 gTTS 的 mp3，換成 AI 語音後把舊檔刪掉
+                old_mp3 = os.path.join(SAMPLE_DIR, f'{d.id}_{voice}.mp3')
+                if os.path.exists(old_mp3):
+                    os.remove(old_mp3)
                 print(f'🎧 已產生：{d.name} {voice}')
 
     print('全部完成！' if missing == 0 else f'還有 {missing} 個音檔沒產生。')

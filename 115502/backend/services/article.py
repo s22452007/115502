@@ -16,8 +16,9 @@ from utils.account_helper import is_payment_free, has_unlimited_usage, reading_d
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
 
-# 後台沒有指定價格時採用的預設解鎖點數
-DEFAULT_UNLOCK_COST = 50
+# 後台沒有指定價格時採用的預設解鎖點數（價格統一定義在 services/store.py）
+from services.store import ITEM_COSTS
+DEFAULT_UNLOCK_COST = ITEM_COSTS['unlock_article']
 
 
 def _can_read(user_id, article):
@@ -119,6 +120,9 @@ def evaluate_audio():
 
     # 每日朗讀評分次數：免費版 1 次、Premium 5 次，教育版不限。
     # 以今天存下的評分紀錄計算，AI 失敗或聽不清楚沒有產生紀錄，就不會被算進去。
+    # 每日次數用完後，可以用商城加購的次數（reading_extra_count）繼續；
+    # 加購次數等評分成功、存下紀錄時才扣，AI 失敗不會白扣。
+    use_extra = False
     if eval_user_id:
         eval_user = User.query.get(eval_user_id)
         if eval_user and not has_unlimited_usage(eval_user):
@@ -128,12 +132,17 @@ def evaluate_audio():
                 ReadingEvaluation.created_at >= today_start_utc(),
             ).count()
             if used >= limit:
-                tip = '' if eval_user.is_premium else '升級 Premium 每天可以朗讀 5 次。'
-                return jsonify({
-                    "status": "quota_exceeded",
-                    "message": f"今天的 {limit} 次朗讀評分已經用完了，明天再來挑戰吧！{tip}",
-                    "daily_limit": limit,
-                }), 200
+                if (getattr(eval_user, 'reading_extra_count', 0) or 0) > 0:
+                    use_extra = True
+                else:
+                    tip = '' if eval_user.is_premium else '升級 Premium 每天可以朗讀 5 次。'
+                    cost = ITEM_COSTS['reading_extra']
+                    return jsonify({
+                        "status": "quota_exceeded",
+                        "message": f"今天的 {limit} 次朗讀評分已經用完了，明天再來挑戰吧！{tip}"
+                                   f"也可以到商城花 {cost} 點加購 1 次。",
+                        "daily_limit": limit,
+                    }), 200
 
     # 音檔直接讀進記憶體、以 bytes 內嵌送給 Gemini（新版 SDK）。
     # 不再存成固定檔名的暫存檔再 upload_file：
@@ -216,8 +225,13 @@ def evaluate_audio():
                 score=max(0, min(100, int(raw_score))),
             )
             db.session.add(evaluation)
+            if use_extra:
+                # 條件式扣除（> 0 才減 1），同時送出兩次也不會扣成負數
+                User.query.filter(User.id == eval_user_id, User.reading_extra_count > 0).update(
+                    {User.reading_extra_count: User.reading_extra_count - 1}, synchronize_session=False)
             db.session.commit()
             result['evaluation_id'] = evaluation.id
+            result['used_extra'] = use_extra
             result['score'] = evaluation.score  # 讓畫面顯示的分數跟存下來的一致
         return jsonify(result), 200
 

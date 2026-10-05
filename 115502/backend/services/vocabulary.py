@@ -6,6 +6,7 @@ from utils.auth_token import current_user_id, forbid_unless_owner
 from models import User, UserVocab, UserFolder, Vocab
 from sqlalchemy import func
 
+from services.store import ITEM_COSTS, VOCAB_SLOTS_PER_PURCHASE
 vocab_bp = Blueprint('vocab', __name__)
 
 
@@ -160,9 +161,9 @@ def collect_vocab():
         UserVocab.collected_at.isnot(None),
     ).count()
     if collected_count >= vocab_slot:
-        cost_hint = 35 if user.is_premium else 50
+        cost_hint = ITEM_COSTS['vocab_expand_premium'] if user.is_premium else ITEM_COSTS['vocab_expand']
         return jsonify({
-            "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +50 個位置",
+            "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +{VOCAB_SLOTS_PER_PURCHASE} 個位置",
             "vocab_slot": vocab_slot,
             "collected_count": collected_count,
         }), 400
@@ -474,9 +475,9 @@ def collect_from_article():
     ).count()
     
     if collected_count >= vocab_slot:
-        cost_hint = 35 if user.is_premium else 50
+        cost_hint = ITEM_COSTS['vocab_expand_premium'] if user.is_premium else ITEM_COSTS['vocab_expand']
         return jsonify({
-            "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +50 個位置"
+            "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +{VOCAB_SLOTS_PER_PURCHASE} 個位置"
         }), 400
 
     # 4. 字庫沒有這個字就新增。vocab.scene_id 不能是空的，文章單字沒有主題資訊，

@@ -910,6 +910,7 @@ add_column("assignment", "late_policy VARCHAR(10) DEFAULT 'allow'")
 add_column("assignment", "late_penalty INTEGER DEFAULT 0")
 add_column("classroom_member", "notice_seen_at DATETIME")
 add_column("user", "push_token VARCHAR(255)")   # 手機推播 token
+add_column("user", "reading_extra_count INTEGER DEFAULT 0")   # 朗讀評分加購次數
 try:
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classroom_announcement (
@@ -1003,9 +1004,9 @@ try:
     import json as _json
     _OLD_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '單字收藏擴充6折', '學習小組押金5折', '學習小組獎勵加倍']
     _PREVIOUS_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '每天10次造句AI批改', '每天5次文章朗讀評分',
-                          '單字收藏擴充7折', '學習小組押金5折', '學習小組獎勵加倍']
+                          '單字收藏擴充半價', '學習小組押金5折', '學習小組獎勵加倍']
     _NEW_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '每天5次造句AI批改', '每天5次文章朗讀評分',
-                     '單字收藏擴充7折', '學習小組押金5折', '學習小組獎勵加倍']
+                     '單字收藏擴充半價', '學習小組押金5折', '學習小組獎勵加倍']
     _updated = 0
     for _pid, _fj in cursor.execute("SELECT id, features_json FROM subscription_plan").fetchall():
         try:

@@ -251,17 +251,17 @@
             </div>
             {% endif %}
 
-            <form action="{{ url_for('admin_login') }}" method="POST" id="form-admin" {{ 'hidden' if login_as == 'teacher' }}>
+            <form action="{{ url_for('admin_login') }}" method="POST" id="form-admin" autocomplete="off" {{ 'hidden' if login_as == 'teacher' }}>
                 <input type="hidden" name="login_as" value="admin">
                 <div class="mb-4">
                     <div class="field-label">帳號</div>
-                    <input type="text" name="username" class="form-control" placeholder="輸入管理者帳號" required autocomplete="username">
+                    <input type="text" name="username" class="form-control" placeholder="輸入管理者帳號" required autocomplete="off" spellcheck="false">
                 </div>
 
                 <div class="mb-4">
                     <div class="field-label">密碼</div>
                     <div class="input-group">
-                        <input autocomplete="off" type="password" name="password" id="adminPassword"
+                        <input autocomplete="off" type="password" name="password" id="adminPassword" data-nosave
                                class="form-control" placeholder="輸入密碼" required>
                         <button class="btn btn-eye" type="button" id="togglePassword">
                             <i id="eyeIcon" class="bi bi-eye-slash-fill"></i>
@@ -295,15 +295,15 @@
             </form>
             <div class="or-line">或用管理者提供的帳號密碼</div>
             {% endif %}
-            <form action="{{ url_for('admin_login') }}" method="POST">
+            <form action="{{ url_for('admin_login') }}" method="POST" autocomplete="off">
                 <input type="hidden" name="login_as" value="teacher">
                 <div class="mb-4">
                     <div class="field-label">老師 Email</div>
-                    <input autocomplete="off" type="email" name="email" class="form-control" placeholder="輸入學校管理員提供的 Email" required>
+                    <input autocomplete="off" type="email" name="email" class="form-control" placeholder="輸入學校管理員提供的 Email" required spellcheck="false">
                 </div>
                 <div class="mb-4">
                     <div class="field-label">密碼</div>
-                    <input autocomplete="off" type="password" name="password" class="form-control" placeholder="輸入密碼" required>
+                    <input autocomplete="off" type="password" name="password" class="form-control" placeholder="輸入密碼" required data-nosave>
                 </div>
                 <button type="submit" class="btn-login">登入班級管理</button>
                 <div style="text-align:center; margin-top:16px; font-size:0.78rem; color:#aaa;">忘記密碼或登不進去？<a href="{{ url_for('teacher_contact') }}" style="color:#3d7a52; font-weight:700; text-decoration:none;">聯絡管理者</a></div>
@@ -328,14 +328,34 @@
         }
     </script>
     {% endif %}
+    <style>.pw-masked { -webkit-text-security: disc; }</style>
     <script>
+        // 不讓瀏覽器記住、自動帶入帳密（後台可能在共用電腦上登入）：
+        // Chrome 不理會 autocomplete="off"，只要看到 type=password 就會跳「儲存密碼」、下次自動填。
+        // 改成一般文字欄、用 CSS 遮成圓點，瀏覽器就不會把它當登入表單；
+        // 不支援這個 CSS 的瀏覽器維持 type=password，寧可被記住也不能讓密碼明碼顯示
+        const maskByCss = window.CSS && CSS.supports('-webkit-text-security', 'disc');
+        if (maskByCss) {
+            document.querySelectorAll('input[data-nosave]').forEach(function (input) {
+                input.type = 'text';
+                input.classList.add('pw-masked');
+                input.setAttribute('autocapitalize', 'off');
+                input.setAttribute('spellcheck', 'false');
+            });
+        }
+
         const toggleBtn = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('adminPassword');
         const eyeIcon = document.getElementById('eyeIcon');
         toggleBtn.addEventListener('click', function () {
-            const isPassword = passwordInput.getAttribute('type') === 'password';
-            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
-            eyeIcon.className = isPassword ? 'bi bi-eye-fill' : 'bi bi-eye-slash-fill';
+            let hidden;
+            if (maskByCss) {
+                hidden = passwordInput.classList.toggle('pw-masked');
+            } else {
+                hidden = passwordInput.getAttribute('type') !== 'password';
+                passwordInput.setAttribute('type', hidden ? 'password' : 'text');
+            }
+            eyeIcon.className = hidden ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill';
         });
 
         // 管理者 / 老師 切換：只切換顯示的表單，不重新載入

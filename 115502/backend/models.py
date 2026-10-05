@@ -559,6 +559,19 @@ class ChatMessage(db.Model):
     content = db.Column(db.Text, nullable=False)      # 保留原始內容（含 [漢字|假名] 標音）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# T_custom_character: 使用者自訂的 AI 對話角色（花點數新增，人設會放進 AI 的指令）
+class CustomCharacter(db.Model):
+    __tablename__ = 'custom_character'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(50), nullable=False)        # 同一位使用者不可重名
+    origin = db.Column(db.String(50))                      # 出身地
+    age = db.Column(db.String(10))
+    gender = db.Column(db.String(10))
+    personality = db.Column(db.String(100))                # 個性
+    special_traits = db.Column(db.String(200))             # 特殊設定
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 # ==========================================
 # 🎓 校園教育版：教室與作業
@@ -624,12 +637,18 @@ class School(db.Model):
     def domain_list(self):
         return [d.strip().lower().lstrip('@') for d in (self.student_domains or '').split(',') if d.strip()]
 
-    def domain_allowed(self, domain):
+    def domain_match_len(self, domain):
+        """這個網域符合的設定有多長，不符合回傳 0。附中的網域在大學底下（hs.ntnu.edu.tw），
+        同時符合好幾間學校時用這個挑最貼近的那一間"""
         domain = (domain or '').lower()
+        best = 0
         for allowed in self.domain_list():
             if domain == allowed.lstrip('.') or (allowed.startswith('.') and domain.endswith(allowed)):
-                return True
-        return False
+                best = max(best, len(allowed.lstrip('.')))
+        return best
+
+    def domain_allowed(self, domain):
+        return self.domain_match_len(domain) > 0
 
     def student_no(self, local_part):
         """Email @ 前面那段是學號就回傳學號，不是回傳 None"""

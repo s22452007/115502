@@ -56,13 +56,13 @@
         <div class="page-header">
             <div>
                 <h1 class="page-title"><i class="bi bi-mortarboard-fill me-2"></i>{{ data.classroom.name }}</h1>
-                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong> ｜ 學生名冊、作業繳交與自學狀況</div>
+                <div class="page-sub">班級代碼：<strong>{{ data.classroom.join_code }}</strong></div>
             </div>
         </div>
         {% set tab_actions %}
         {% if session.get('role') == 'teacher' %}
-        <button type="button" class="btn btn-sm btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
-            <i class="bi bi-person-plus me-1"></i>新增學生
+        <button type="button" class="btn btn-sm btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#inviteModal">
+            <i class="bi bi-person-plus me-1"></i>邀請學生
         </button>
         {% endif %}
         {% endset %}
@@ -123,9 +123,9 @@
                 <div class="p-5 text-center text-muted">
                     <i class="bi bi-person-x" style="font-size: 2.5rem;"></i>
                     {% if session.get('role') == 'teacher' %}
-                    <p class="mt-2 mb-3">目前尚無學生加入本班級。<br>把班級代碼 <b>{{ data.classroom.join_code }}</b> 給學生：學生在 App 校園教育版選學校、用學校帳號登入後，輸入代碼就會加入。<br>學生沒有學校 Google 帳號時，可以按「新增學生」貼上名單，幫他們建立帳號。</p>
-                    <button type="button" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
-                        <i class="bi bi-person-plus me-1"></i>新增學生
+                    <p class="mt-2 mb-3">目前還沒有學生。</p>
+                    <button type="button" class="btn btn-success fw-bold" style="background-color: var(--green-accent); border: none; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                        <i class="bi bi-person-plus me-1"></i>邀請學生
                     </button>
                     {% else %}
                     <p class="mt-2 mb-0">目前尚無學生加入本班級。<br>學生名單由班級老師新增。</p>
@@ -205,9 +205,6 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="small text-muted px-4 py-3" style="border-top: 1px solid #eef1ef;">
-                    <i class="bi bi-info-circle me-1"></i>作業平均和成績總表一樣依權重與缺交設定計算；造句、文章閱讀只計入學生加入本班之後的紀錄
-                </div>
             {% endif %}
         </div>
     </main>
@@ -226,7 +223,7 @@
         <div class="modal-body p-4">
           <label class="form-label fw-bold">顯示名稱</label>
           <input autocomplete="off" type="text" name="display_name" class="form-control" value="{{ s.display_name }}" placeholder="例：01 王小明" maxlength="50">
-          <div class="form-text">只影響老師這邊的名冊，例如改成座號＋真名；留空則顯示學生在 App 的暱稱。</div>
+          <div class="form-text">只改老師這邊的名冊，留空顯示學生的暱稱。</div>
         </div>
         <div class="modal-footer bg-light">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
@@ -238,13 +235,44 @@
 </div>
 {% endfor %}
 
-<!-- 新增學生：貼上名單（只有班級老師能用） -->
 {% if session.get('role') == 'teacher' %}
+<!-- 邀請學生：主要方式是給班級代碼，學生用學校帳號登入 App 後自己加入 -->
+<div class="modal fade" id="inviteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header" style="background-color: var(--green-dark); color: white;">
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>邀請學生加入「{{ data.classroom.name }}」</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="text-muted small">班級代碼</div>
+        <div id="inviteCode" style="font-size: 2.6rem; font-weight: 900; letter-spacing: 6px; color: var(--green-dark); font-family: Consolas, monospace;">{{ data.classroom.join_code }}</div>
+        <button type="button" class="btn btn-sm btn-outline-secondary mt-1" style="border-radius: 8px;"
+                onclick="navigator.clipboard.writeText('{{ data.classroom.join_code }}').then(() => { this.textContent = '已複製'; setTimeout(() => this.innerHTML = '<i class=&quot;bi bi-copy me-1&quot;></i>複製代碼', 1500); })">
+          <i class="bi bi-copy me-1"></i>複製代碼
+        </button>
+        <div class="small text-muted mt-3">學生用學校帳號登入 App 校園教育版，在「我的教室」輸入代碼就會加入</div>
+        {% if not data.classroom.is_open %}
+        <div class="alert alert-warning small mt-3 mb-0 py-2" style="border-radius: 10px;">
+          <i class="bi bi-lock me-1"></i>這班目前關閉加入，學生輸入代碼會被擋下；到「我的班級」開放加入
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer bg-light justify-content-center">
+        <button type="button" class="btn btn-link btn-sm text-secondary" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
+          學生沒有學校帳號？幫他建立帳號
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 備用：幫沒有學校 Google 帳號的學生貼名單建立帳號 -->
 <div class="modal fade" id="addStudentsModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
       <div class="modal-header" style="background-color: var(--green-dark); color: white;">
-        <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>新增學生到「{{ data.classroom.name }}」</h5>
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>幫沒有學校帳號的學生建立帳號</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form action="/teacher/classroom/{{ data.classroom.id }}/students/add" method="POST">
@@ -254,10 +282,8 @@
                     placeholder="11156001 王小明&#10;11156002 李小華&#10;11156003 陳大文"
                     style="font-family: Consolas, monospace; border-radius: 10px;"></textarea>
           <div class="small text-muted mt-2" style="line-height: 1.7;">
-            <i class="bi bi-info-circle me-1"></i>可直接從 Excel 複製兩欄貼上；姓名可省略，之後也能用「改名稱」修改。<br>
-            <i class="bi bi-google me-1"></i>有學校 Google 帳號的學生<strong>不用加在這裡</strong>：給他們班級代碼，自己登入後加入就好。<br>
-            <i class="bi bi-key me-1"></i>這裡建立的帳號是學號，<strong>初始密碼由系統隨機產生</strong>，加入後只顯示一次，請抄下或列印發給學生。<br>
-            <i class="bi bi-arrow-repeat me-1"></i>已經有帳號的學生會直接加入本班，不會重複建立。
+            <i class="bi bi-info-circle me-1"></i>可直接從 Excel 複製兩欄貼上，姓名可省略。<br>
+            <i class="bi bi-key me-1"></i>這裡建立的帳號是學號，<strong>初始密碼由系統隨機產生</strong>，加入後只顯示一次，請抄下或列印發給學生。
           </div>
         </div>
         <div class="modal-footer bg-light">

@@ -121,7 +121,6 @@
             <div class="page-title-box d-flex justify-content-between align-items-end">
                 <div>
                     <h3 class="page-title"><i class="bi bi-file-earmark-text me-2"></i>閱讀文章管理</h3>
-                    <div class="text-muted small mt-1">依 N5～N1 等級上架文章；後台新增的文章一律需付費解鎖</div>
                 </div>
                 <div class="d-flex gap-2">
                     <form method="GET" action="{{ url_for('article_list') }}" class="d-flex gap-2">
@@ -252,7 +251,6 @@
                                     <option value="{{ lv }}" {{ 'selected' if current_level == lv }}>{{ lv }}</option>
                                     {% endfor %}
                                 </select>
-                                <div class="form-hint">只有該等級的使用者看得到</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">主題</label>

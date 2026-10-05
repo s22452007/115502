@@ -8,7 +8,21 @@ tutor_bp = Blueprint('tutor', __name__)
 #（AI 對話有專用金鑰，額度用完會自動切換到備用金鑰）
 
 # 2. 建立一個專門負責聊天的函數
-def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=None):
+def _persona_instruction(persona, topic):
+    """把角色人設寫成給 AI 的指令（persona 為 None 就維持原本的家教模式）"""
+    if not persona:
+        return ''
+    details = '、'.join(f'{label}：{persona[key]}' for key, label in (
+        ('origin', '出身地'), ('age', '年紀'), ('gender', '性別'),
+        ('personality', '個性'), ('special_traits', '特殊設定')) if persona.get(key))
+    return (f"\n        10. 角色設定：你這次扮演的人物叫「{persona['name']}」（{details}）。"
+            f"請用這個人物的身分、個性和口吻說話，在「{topic}」情境中自然地融入他的背景；"
+            f"情境需要特定身分（例如店員）時，就由這個人物來擔任。"
+            f"說話方式以標準日語為主，出身地只影響話題與個性，不要因此改用方言（除非上面有腔調要求）。"
+            f"上面的教學、排版、標音與訂正規則仍然要遵守。")
+
+
+def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=None, persona=None):
     try:
         prompt = f"""
         【系統設定】
@@ -60,6 +74,9 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
             dialect = Dialect.query.filter_by(id=dialect_id, is_active=True).first()
             if dialect:
                 prompt += f"\n        9. 腔調要求：{dialect.prompt_instruction}"
+
+        # 👇 使用者選的角色（已擁有的官方角色或自己的自訂角色）
+        prompt += _persona_instruction(persona, topic)
 
         if user_message == "[幫我開場]":
             prompt += "\n現在是這個情境的剛開始。請直接用你扮演的角色，熱情或專業地說出一句符合該場景的開場白，並拋出第一個問題或動作！一句話就好，讓使用者有機會回應。"

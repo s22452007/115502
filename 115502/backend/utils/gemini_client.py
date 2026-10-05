@@ -17,6 +17,8 @@ Gemini 金鑰管理與呼叫封裝。
     GEMINI_KEY_CONTEXT_BACKUP=xxx
     GEMINI_KEY_ARTICLE=xxx          # 文章語音評分
     GEMINI_KEY_ARTICLE_BACKUP=xxx
+    GEMINI_KEY_TTS=xxx              # 腔調語音（選填，沒設定就沿用 AI 對話的金鑰）
+    GEMINI_KEY_TTS_BACKUP=xxx
 
 備用金鑰請使用「不同 Google 帳號」申請，額度才會分開計算。
 若上述變數未設定，會自動沿用舊的 GEMINI_API_KEY / GEMINI_API_KEY_camara，
@@ -86,6 +88,10 @@ FEATURE_KEY_ENVS = {
                 'GEMINI_API_KEY_camara', 'GEMINI_API_KEY'],
     'article': ['GEMINI_KEY_ARTICLE', 'GEMINI_KEY_ARTICLE_BACKUP',
                 'GEMINI_API_KEY', 'GEMINI_API_KEY_camara'],
+    # 腔調語音：沒有專用金鑰時沿用 AI 對話的金鑰（語音模型的額度與文字模型分開計算）
+    'tts': ['GEMINI_KEY_TTS', 'GEMINI_KEY_TTS_BACKUP',
+            'GEMINI_KEY_TUTOR', 'GEMINI_KEY_TUTOR_BACKUP',
+            'GEMINI_API_KEY', 'GEMINI_API_KEY_camara'],
 }
 
 # 功能名稱（組錯誤訊息用）
@@ -94,6 +100,7 @@ FEATURE_LABELS = {
     'tutor': 'AI 對話',
     'context': '情境例句',
     'article': '文章語音評分',
+    'tts': '腔調語音',
 }
 
 

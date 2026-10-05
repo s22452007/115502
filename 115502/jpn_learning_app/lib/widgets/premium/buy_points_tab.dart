@@ -245,6 +245,8 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
     }
     
     String getFeatureName(String? featureId) {
+      if (featureId != null && featureId.startsWith('character:')) return '購買對話角色';
+      if (featureId != null && featureId.startsWith('custom_character:')) return '新增自訂角色';
       switch (featureId) {
         case 'photo_extra': return '加購';
         case 'ai_extra': return 'AI 對話加購';

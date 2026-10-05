@@ -24,6 +24,9 @@ class RoleplayScreen extends StatefulWidget {
   final int? minTurns;
   final int? dialectId;
 
+  /// 語音的性別：'female'（預設）或 'male'
+  final String voiceGender;
+
   const RoleplayScreen({
     Key? key,
     required this.topicTitle,
@@ -32,6 +35,7 @@ class RoleplayScreen extends StatefulWidget {
     this.assignmentId,
     this.minTurns,
     this.dialectId,
+    this.voiceGender = 'female',
   }) : super(key: key);
 
   @override
@@ -217,7 +221,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       final response = await ApiClient.client.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': t}),
+        // 老師有指定腔調時，語音也用該腔調的語調朗讀
+        body: jsonEncode({
+          'text': t,
+          if (widget.dialectId != null) 'dialect_id': widget.dialectId,
+          if (widget.voiceGender == 'male') 'voice': 'male',
+        }),
       );
 
       if (!mounted) return;

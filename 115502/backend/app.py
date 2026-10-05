@@ -13,6 +13,7 @@ from services.group import group_bp
 from services.vocabulary import vocab_bp
 from services.tutor import tutor_bp
 from services.dialect import dialect_bp
+from services.character import character_bp
 from services.tts import tts_bp
 from services.subscription import subscription_bp, MONTHLY_POINTS_GRANT, YEARLY_POINTS_GRANT
 from services.store import store_bp
@@ -80,6 +81,7 @@ app.register_blueprint(group_bp, url_prefix='/api/group')
 app.register_blueprint(vocab_bp, url_prefix='/api/vocab')
 app.register_blueprint(tutor_bp, url_prefix='/api/tutor')
 app.register_blueprint(dialect_bp, url_prefix='/api/dialect')
+app.register_blueprint(character_bp, url_prefix='/api/character')
 app.register_blueprint(tts_bp, url_prefix='/api/tts')
 app.register_blueprint(subscription_bp, url_prefix='/api/subscription')
 app.register_blueprint(store_bp, url_prefix='/api/store')
@@ -283,8 +285,17 @@ def chat():
             return jsonify({"error": quota_msg, "quota_exceeded": True}), 403
         return quota_msg, 403
 
+    # 1c. 腔調要用買角色的名額解鎖過才能用；沒解鎖就當作標準語（老師在作業指定的腔調不受限）
+    if dialect_id and not request.form.get('assignment_id', type=int):
+        from services.character import can_use_dialect
+        if not can_use_dialect(user_id, dialect_id):
+            dialect_id = None
+
     # 2. 把食材交給內場廚師 (呼叫 tutor.py 的函數，記得把 user_level / dialect_id 也傳進去)
-    ai_response_text, ok = get_ai_reply(topic, user_message, chat_history, user_level, dialect_id)
+    #     角色人設：官方角色要已擁有、自訂角色要是自己的才套用，否則維持原本的家教模式
+    from services.character import character_persona
+    persona = character_persona(user_id, request.form.get('character'))
+    ai_response_text, ok = get_ai_reply(topic, user_message, chat_history, user_level, dialect_id, persona)
 
     # 2b. AI 沒有成功產生回覆時，把先前扣掉的對話次數還給使用者
     #     （次數是在送出訊息前就先扣的，失敗了不該算在使用者頭上）

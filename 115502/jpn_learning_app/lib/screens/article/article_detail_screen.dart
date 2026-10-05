@@ -9,6 +9,8 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'article_result_screen.dart';
+// 通用的標音元件（這個檔案底下另有文章專用的 FuriganaText，用前綴區分）
+import 'package:jpn_learning_app/widgets/common/furigana_text.dart' as common;
 
 class ArticleDetailScreen extends StatefulWidget {
   final Article article;
@@ -47,67 +49,300 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     super.dispose();
   }
 
+  /// 文章裡第一句含有這個字的句子（去掉讀音標記），找不到回傳 null
+  String? _findArticleSentence(String word) {
+    if (word.isEmpty) return null;
+    final sentences = widget.article.content.split(RegExp(r'(?<=[。！？!?\n])'));
+    for (final raw in sentences) {
+      final plain = raw
+          .replaceAll(RegExp(r'<rt>.*?</rt>', dotAll: true), '')
+          .replaceAll(RegExp(r'<[^>]*>'), '')
+          .trim();
+      if (plain.contains(word)) return plain;
+    }
+    return null;
+  }
+
+  /// 文章原句：把查的那個字標成綠色
+  Widget _highlightedSentence(String sentence, String word) {
+    final parts = sentence.split(word);
+    final spans = <TextSpan>[];
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].isNotEmpty) spans.add(TextSpan(text: parts[i]));
+      if (i < parts.length - 1) {
+        spans.add(TextSpan(
+          text: word,
+          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900),
+        ));
+      }
+    }
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
+        children: spans,
+      ),
+    );
+  }
+
+  Widget _dictSectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 18, bottom: 8),
+      child: Text(text, style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
+    );
+  }
+
   // ====================================================
   // 🌟 1. 單字字典彈出視窗
+  //    讀音、單字、中文解釋，加上：
+  //      - 文章原句：這篇文章裡用到這個字的句子（不用 AI，馬上有）
+  //      - 例句：字庫裡已經有這個字的話，顯示初級例句與翻譯
+  //    已經收藏過就不再顯示「加入單字本」按鈕
   // ====================================================
   void _showDictionaryDialog(Map<String, dynamic> vocab) {
+    final word = (vocab['word'] ?? '').toString();
+    final articleSentence = _findArticleSentence(word);
+    final lookup = currentUserId == null
+        ? Future.value(<String, dynamic>{'found': false})
+        : ApiClient.lookupVocab(currentUserId!, word);
+
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('單字字典', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.grey),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(vocab['reading'] ?? '', style: const TextStyle(fontSize: 16, color: Color(0xFF8E9AAB))),
-                const SizedBox(height: 4),
-                Text(vocab['word'] ?? '', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Divider(height: 1, color: Color(0xFFE2E8F0)),
-                ),
-                const Text('中文解釋', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
-                const SizedBox(height: 8),
-                Text(vocab['meaning'] ?? '', style: const TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showFolderSelectionDialog(vocab);
-                    },
-                    child: const Text('加入收藏', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
-                ),
-              ],
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: FutureBuilder<Map<String, dynamic>>(
+                future: lookup,
+                builder: (context, snapshot) {
+                  final info = snapshot.data ?? const {};
+                  final loading = snapshot.connectionState == ConnectionState.waiting;
+                  final example = (info['sentence'] ?? '').toString();
+                  final exampleZh = (info['translation'] ?? '').toString();
+                  final favorited = info['is_favorited'] == true;
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('單字字典', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.grey),
+                            onPressed: () => Navigator.pop(context),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(vocab['reading'] ?? '', style: const TextStyle(fontSize: 16, color: Color(0xFF8E9AAB))),
+                      const SizedBox(height: 4),
+                      Text(word, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16),
+                        child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      ),
+                      _dictSectionLabel('中文解釋'),
+                      Text(vocab['meaning'] ?? '', style: const TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w600)),
+
+                      if (articleSentence != null) ...[
+                        _dictSectionLabel('文章原句'),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: AppColors.primaryLight.withOpacity(0.6), borderRadius: BorderRadius.circular(12)),
+                          child: _highlightedSentence(articleSentence, word),
+                        ),
+                      ],
+
+                      if (example.isNotEmpty) ...[
+                        _dictSectionLabel('例句'),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              common.FuriganaText(text: example, fontSize: 16, textColor: Colors.black87),
+                              if (exampleZh.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(exampleZh, style: const TextStyle(fontSize: 14, color: Color(0xFF64748B), height: 1.4)),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 24),
+                      // 已收藏：顯示收在哪個單字本，可以取消收藏或移到其他單字本；還沒收藏：加入單字本
+                      if (favorited) ...[
+                        Row(
+                          children: [
+                            const Icon(Icons.bookmark_rounded, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text('已收藏在「${info['folder_name'] ?? '預設單字本'}」',
+                                  style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.error,
+                                  side: BorderSide(color: AppColors.error.withOpacity(0.6)),
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                  await _removeFromWordBook(info, word);
+                                },
+                                child: const Text('取消收藏', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  elevation: 0,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _showMoveWordBookDialog(info, word);
+                                },
+                                child: const Text('移到其他單字本', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              disabledBackgroundColor: const Color(0xFFE2E8F0),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: loading
+                                ? null
+                                : () {
+                                    Navigator.pop(context);
+                                    _showFolderSelectionDialog(vocab);
+                                  },
+                            child: const Text('加入單字本',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  /// 從字典取消收藏
+  Future<void> _removeFromWordBook(Map<String, dynamic> info, String word) async {
+    final vocabId = (info['vocab_id'] as num?)?.toInt();
+    if (currentUserId == null || vocabId == null) return;
+    final ok = await ApiClient.removeFavorite(vocabId, currentUserId!);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(ok ? '已取消收藏「$word」' : '取消收藏失敗，請稍後再試')),
+    );
+  }
+
+  /// 從字典把已收藏的字移到另一個單字本
+  void _showMoveWordBookDialog(Map<String, dynamic> info, String word) {
+    final userVocabId = (info['user_vocab_id'] as num?)?.toInt();
+    if (currentUserId == null || userVocabId == null) return;
+    final currentFolderId = info['folder_id'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: ApiClient.fetchUserFavorites(currentUserId!),
+            builder: (ctx, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+              }
+              final folders = ((snapshot.data?['favorites'] as List?) ?? [])
+                  .where((f) => f['id'] != currentFolderId)
+                  .toList();
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('要把「$word」移到哪個單字本？', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2C3E50))),
+                  const SizedBox(height: 12),
+                  if (folders.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text('目前沒有其他單字本，可以先在「加入單字本」時新建一個。', style: TextStyle(color: Color(0xFF64748B))),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.4),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: folders.map((f) {
+                          final isDefault = f['is_default'] == true;
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(isDefault ? Icons.star_rounded : Icons.folder_rounded,
+                                color: isDefault ? Colors.amber.shade600 : AppColors.primary),
+                            title: Text(f['name'] ?? '未命名', style: const TextStyle(fontWeight: FontWeight.w600)),
+                            subtitle: Text('${f['count'] ?? 0} 個單字'),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final res = await ApiClient.moveVocab(userVocabId, targetFolderId: f['id']);
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text(res['error'] != null ? res['error'].toString() : '已把「$word」移到「${f['name']}」'),
+                              ));
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('取消', style: TextStyle(color: Color(0xFF64748B))),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 
@@ -612,6 +847,21 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     ],
                   ),
                   const Divider(height: 20),
+                  // 說明綠色字的用途（原本沒有任何提示，看不出可以點）
+                  if (_vocabularies.isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.touch_app_rounded, size: 15, color: AppColors.primary),
+                          SizedBox(width: 4),
+                          Expanded(
+                            child: Text('點擊綠色的字，可以查看解釋並加入單字本',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSubtle)),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   
                   // 🌟 假名解析器
@@ -731,7 +981,19 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
 // ==========================================
 // 🌟 互動字典版：精準基準線對齊、可點擊的假名解析器
+// 綠色虛線底線的字是這篇文章要學的單字，點一下打開字典、可以加入單字本。
+//   - 關掉假名時也保留綠色標記與點擊（原本關掉假名就整段變純文字，綠色字跟著消失）
+//   - 沒有讀音標記的單字（例如片假名「パン」「コーヒー」）也會標綠色
+//   - 讀音比漢字寬時（「私」上的「わたし」）可以延伸到旁邊沒有讀音的字上方，漢字後面不會空一格
 // ==========================================
+class _ArticleToken {
+  final String text;
+  final String? furigana; // null＝沒有讀音（或關掉假名）
+  final Map<String, dynamic>? vocab; // 不是 null＝要學的單字
+  const _ArticleToken(this.text, {this.furigana, this.vocab});
+  bool get hasRuby => furigana != null && furigana!.isNotEmpty;
+}
+
 class FuriganaText extends StatelessWidget {
   final String text;
   final bool showFurigana;
@@ -750,83 +1012,132 @@ class FuriganaText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!showFurigana) {
-      String cleanText = text.replaceAll(RegExp(r'<rt>.*?</rt>', dotAll: true), '');
-      cleanText = cleanText.replaceAll(RegExp(r'<[^>]*>'), ''); 
-      return Text(cleanText, style: style);
-    }
+    final tokens = _tokenize();
+    final rubyHeight = MediaQuery.textScalerOf(context).scale((style.fontSize ?? 18) * 0.52);
 
-    List<InlineSpan> spans = [];
-    final RegExp regExp = RegExp(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>', dotAll: true);
-    int lastMatchEnd = 0;
+    bool freeAt(int i) => i >= 0 && i < tokens.length && !tokens[i].hasRuby;
 
-    for (final Match match in regExp.allMatches(text)) {
-      if (match.start > lastMatchEnd) {
-        spans.add(TextSpan(text: text.substring(lastMatchEnd, match.start), style: style));
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < tokens.length; i++) {
+      final t = tokens[i];
+      final baseStyle = t.vocab != null ? _vocabStyle : style;
+      if (!t.hasRuby && t.vocab == null) {
+        spans.add(TextSpan(text: t.text, style: style));
+        continue;
       }
-
-      final String kanji = match.group(1) ?? '';
-      final String furigana = match.group(2) ?? '';
-
-      Map<String, dynamic>? matchingVocab;
-      try {
-        matchingVocab = vocabularies.firstWhere((v) => v['word'] == kanji);
-      } catch (e) {
-        matchingVocab = null;
-      }
-
-      Widget columnContent = Column(
-        mainAxisSize: MainAxisSize.min,
-        verticalDirection: VerticalDirection.up, 
-        children: [
-          Text(
-            kanji,
-            style: style.copyWith(
-              height: 1.0, 
-              color: matchingVocab != null ? AppColors.primary : style.color,
-              decoration: matchingVocab != null ? TextDecoration.underline : TextDecoration.none,
-              decorationStyle: TextDecorationStyle.dotted,
-            ),
-          ),
-          const SizedBox(height: 2), 
-          Text(
-            furigana,
-            style: style.copyWith(
-              fontSize: (style.fontSize ?? 18) * 0.52,
-              color: const Color(0xFF718096),
-              height: 1.0, 
-            ),
-          ),
-        ],
-      );
-
-      Widget finalWidget = columnContent;
-      if (matchingVocab != null) {
-        finalWidget = Tooltip(
+      Widget child = t.hasRuby
+          ? _rubyColumn(t.text, t.furigana!, baseStyle, rubyHeight, leftFree: freeAt(i - 1), rightFree: freeAt(i + 1))
+          : Text(t.text, style: baseStyle.copyWith(height: 1.0));
+      if (t.vocab != null) {
+        child = Tooltip(
           message: '點擊查看字典',
           child: MouseRegion(
-            cursor: SystemMouseCursors.click, 
-            child: GestureDetector(
-              onTap: () => onVocabTap(matchingVocab!),
-              child: columnContent,
-            ),
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(onTap: () => onVocabTap(t.vocab!), child: child),
           ),
         );
       }
-
-      spans.add(WidgetSpan(
-        alignment: PlaceholderAlignment.baseline,
-        baseline: TextBaseline.alphabetic,
-        child: finalWidget,
-      ));
-
-      lastMatchEnd = match.end;
+      spans.add(WidgetSpan(alignment: PlaceholderAlignment.baseline, baseline: TextBaseline.alphabetic, child: child));
     }
-
-    if (lastMatchEnd < text.length) {
-      spans.add(TextSpan(text: text.substring(lastMatchEnd), style: style));
-    }
-
     return RichText(text: TextSpan(children: spans, style: style));
+  }
+
+  TextStyle get _vocabStyle => style.copyWith(
+        color: AppColors.primary,
+        decoration: TextDecoration.underline,
+        decorationStyle: TextDecorationStyle.dotted,
+        decorationColor: AppColors.primary,
+      );
+
+  /// 把文章拆成一段一段：<ruby> 標記的字、要學的單字、一般文字
+  List<_ArticleToken> _tokenize() {
+    final Map<String, Map<String, dynamic>> vocabByWord = {};
+    for (final v in vocabularies) {
+      if (v is Map && (v['word'] ?? '').toString().isNotEmpty) {
+        vocabByWord[v['word'].toString()] = Map<String, dynamic>.from(v);
+      }
+    }
+    // 一般文字裡要找出來標綠色的單字：長的先比對；全平假名的短字容易誤判（例如助詞），不從一般文字裡找
+    final plainWords = vocabByWord.keys.where((w) => !RegExp(r'^[぀-ゟ]{1,2}$').hasMatch(w)).toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    final wordPattern = plainWords.isEmpty ? null : RegExp(plainWords.map(RegExp.escape).join('|'));
+
+    final tokens = <_ArticleToken>[];
+    void addPlain(String s) {
+      s = s.replaceAll(RegExp(r'<[^>]*>'), '');
+      if (s.isEmpty) return;
+      int last = 0;
+      if (wordPattern != null) {
+        for (final m in wordPattern.allMatches(s)) {
+          if (m.start > last) tokens.add(_ArticleToken(s.substring(last, m.start)));
+          tokens.add(_ArticleToken(m.group(0)!, vocab: vocabByWord[m.group(0)!]));
+          last = m.end;
+        }
+      }
+      if (last < s.length) tokens.add(_ArticleToken(s.substring(last)));
+    }
+
+    final rubyExp = RegExp(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>', dotAll: true);
+    int lastEnd = 0;
+    for (final m in rubyExp.allMatches(text)) {
+      addPlain(text.substring(lastEnd, m.start));
+      final kanji = m.group(1) ?? '';
+      tokens.add(_ArticleToken(kanji, furigana: showFurigana ? m.group(2) : null, vocab: vocabByWord[kanji]));
+      lastEnd = m.end;
+    }
+    addPlain(text.substring(lastEnd));
+    return tokens;
+  }
+
+  /// 讀音在上、漢字在下；verticalDirection.up 讓漢字當第一個子元件，基準線才會跟旁邊的字對齊。
+  /// 讀音包在寬度 0 的盒子裡、用 OverflowBox 畫出來，整格寬度只看漢字；
+  /// 只有兩邊都緊接著有讀音的字時，才照舊用讀音撐開，避免讀音互相重疊。
+  Widget _rubyColumn(String kanji, String furigana, TextStyle baseStyle, double rubyHeight,
+      {required bool leftFree, required bool rightFree}) {
+    final rubyStyle = style.copyWith(
+      fontSize: (style.fontSize ?? 18) * 0.52,
+      color: const Color(0xFF718096),
+      height: 1.0,
+      decoration: TextDecoration.none,
+    );
+    final base = Text(kanji, style: baseStyle.copyWith(height: 1.0));
+    final ruby = Text(furigana, style: rubyStyle, softWrap: false, maxLines: 1);
+
+    if (!leftFree && !rightFree) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        verticalDirection: VerticalDirection.up,
+        children: [base, const SizedBox(height: 2), ruby],
+      );
+    }
+
+    // 假名與漢字幾乎等寬，用字數估讀音會不會比漢字寬（讀音字級是 0.52 倍）
+    final rubyWider = furigana.length * 0.52 > kanji.length;
+    CrossAxisAlignment cross = CrossAxisAlignment.center;
+    Alignment align = Alignment.center;
+    if (rubyWider && !(leftFree && rightFree)) {
+      if (rightFree) {
+        cross = CrossAxisAlignment.start; // 句首或左邊緊接著有讀音：只往右延伸
+        align = Alignment.centerLeft;
+      } else {
+        cross = CrossAxisAlignment.end; // 只往左延伸
+        align = Alignment.centerRight;
+      }
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      verticalDirection: VerticalDirection.up,
+      crossAxisAlignment: cross,
+      children: [
+        base,
+        const SizedBox(height: 2),
+        SizedBox(
+          width: 0,
+          height: rubyHeight,
+          child: OverflowBox(maxWidth: double.infinity, alignment: align, child: ruby),
+        ),
+      ],
+    );
   }
 }

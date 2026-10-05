@@ -15,7 +15,7 @@ from models import db, User, SentencePracticeRecord, PointTransaction, Transacti
 from utils import gemini_client
 from utils.ai_helper import JSON_CONFIG, parse_gemini_json
 from utils.group_helper import add_group_progress_and_check_reward
-from utils.account_helper import is_payment_free
+from utils.account_helper import is_payment_free, sentence_daily_limit, today_start_utc, has_unlimited_usage
 
 sentence_bp = Blueprint('sentence', __name__)
 
@@ -128,7 +128,10 @@ def get_task():
         "status": "success", 
         "data": selected_task,
         "level": level,
-        "today_count": today_count
+        "today_count": today_count,
+        # 每日免費批改次數：免費版 3、Premium 10，教育版不限（App 依這兩個欄位顯示剩餘次數）
+        "daily_limit": sentence_daily_limit(user) if user else 3,
+        "unlimited": has_unlimited_usage(user),
     }), 200
 
 
@@ -220,9 +223,11 @@ def evaluate_sentence():
 
     # 檢查免費次數與扣點機制。教育版學生完全跳過：不限次數也不扣點。
     paid = False
-    if today_count >= 5 and not is_payment_free(user):
+    daily_limit = sentence_daily_limit(user)
+    if today_count >= daily_limit and not is_payment_free(user):
         if not pay_with_points:
-            return jsonify({"status": "quota_exceeded", "error": "今日免費次數已用盡"}), 400
+            return jsonify({"status": "quota_exceeded", "error": "今日免費次數已用盡",
+                            "daily_limit": daily_limit}), 400
         if (user.j_pts or 0) < PAID_SENTENCE_COST:
             return jsonify({"status": "insufficient_points", "error": "點數不足"}), 400
 

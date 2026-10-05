@@ -1009,6 +1009,14 @@ try:
                            (_json.dumps(_NEW_FEATURES, ensure_ascii=False), _pid))
             _updated += 1
     print(f"✅ 訂閱方案功能說明確認完畢（更新 {_updated} 個方案）")
+
+    # 舊的通用方案「Premium Pro」早已停用、內容也過時（拍照 20 次、AI 30 次），沒有訂閱紀錄在用就刪掉
+    _deleted = cursor.execute(
+        "DELETE FROM subscription_plan WHERE name = 'Premium Pro' "
+        "AND NOT EXISTS (SELECT 1 FROM user_subscription WHERE user_subscription.plan_id = subscription_plan.id);"
+    ).rowcount
+    if _deleted:
+        print(f"✅ 已刪除停用的舊方案「Premium Pro」")
 except sqlite3.OperationalError as e:
     print(f"⚠️ 訂閱方案功能說明更新警告：{e}")
 

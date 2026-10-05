@@ -2047,7 +2047,7 @@ def _(c):
 
 
 @case('A07', '每日任務未完成不可領取獎勵',
-      pre='使用者 U3 今日尚未拍照、未使用 AI 對話',
+      pre='使用者 U3 今日尚未拍照、未使用 AI 對話、未造句、未朗讀',
       steps='POST /api/daily/claim，user_id=U3',
       expect='HTTP 400，「今日任務尚未完成」')
 def _(c):
@@ -2059,22 +2059,37 @@ def _(c):
 
 
 @case('A07', '完成每日任務領取點數獎勵',
-      pre='U3 今日完成拍照 1 次與 AI 對話 1 次（連續登入未滿 7 天）',
-      steps='1. GET /api/daily/status?user_id=U3\n2. POST /api/daily/claim',
-      expect='1. photo_done=true、ai_done=true、can_claim=true\n2. HTTP 200，「獎勵領取成功！」，隨機獲得 10～30 點並寫入交易紀錄（reward）')
+      pre='U3 今日完成拍照 1 次與 AI 對話 1 次（連續登入未滿 7 天）；造句與朗讀以模擬 AI 完成',
+      steps='1. 只完成拍照與 AI 對話時 POST /api/daily/claim\n2. 再完成造句批改與文章朗讀評分各 1 次後 GET /api/daily/status\n3. POST /api/daily/claim',
+      expect='1. HTTP 400，「今日任務尚未完成」（四項都要完成）\n2. photo_done、ai_done、sentence_done、reading_done 皆為 true，can_claim=true\n'
+             '3. HTTP 200，「獎勵領取成功！」，隨機獲得 10～30 點並寫入交易紀錄（reward）')
 def _(c):
     u3 = STATE['daily']
     scan(u3)
     use_ai(u3)
+    r_half = SC.post('/api/daily/claim', json={'user_id': u3['id']})
+    # 造句批改、文章朗讀評分各做一次（AI 以模擬資料替代）
+    evaluate_sentence(u3)
+    ensure_articles()
+    GEMINI_FAKE['handler'] = fake_reading_ai
+    try:
+        SC.post('/api/articles/evaluate', data={'audio': (io.BytesIO(M4A_BYTES), 'reading.m4a'),
+                                                'user_id': str(u3['id']), 'article_id': str(STATE['art_free'])},
+                content_type='multipart/form-data')
+    finally:
+        GEMINI_FAKE['handler'] = None
+    # 造句可能帶來獎勵點數，但要等「領取」才入帳，這裡的點數仍只會來自每日任務
     st = J(SC.get(f'/api/daily/status?user_id={u3["id"]}'))
     r = SC.post('/api/daily/claim', json={'user_id': u3['id']})
     pts = J(r).get('pts_earned')
     row = user_row(u3['id'])
     n_tx = count(PointTransaction, user_id=u3['id'], transaction_type='reward', related_feature='daily_task_reward')
     STATE['daily_pts'] = row['j_pts']
-    c.log(f'1. photo_done={st.get("photo_done")}、ai_done={st.get("ai_done")}、can_claim={st.get("can_claim")}；'
-          f'2. {http(r, "message", "pts_earned", "j_pts")}；獎勵交易 {n_tx} 筆')
-    check(st.get('can_claim') is True, '任務狀態不正確')
+    c.log(f'1. {http(r_half, "error")}；2. photo_done={st.get("photo_done")}、ai_done={st.get("ai_done")}、'
+          f'sentence_done={st.get("sentence_done")}、reading_done={st.get("reading_done")}、can_claim={st.get("can_claim")}；'
+          f'3. {http(r, "message", "pts_earned", "j_pts")}；獎勵交易 {n_tx} 筆')
+    check(r_half.status_code == 400 and J(r_half).get('error') == '今日任務尚未完成', '只完成兩項就能領獎')
+    check(st.get('sentence_done') is True and st.get('reading_done') is True and st.get('can_claim') is True, '任務狀態不正確')
     check(r.status_code == 200 and isinstance(pts, int) and 10 <= pts <= 30 and row['j_pts'] == pts, '獎勵不正確')
     check(n_tx == 1, '未寫入交易紀錄')
 

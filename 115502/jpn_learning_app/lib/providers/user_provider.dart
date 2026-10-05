@@ -74,9 +74,21 @@ class UserProvider extends ChangeNotifier {
   int get photoDailyLimit => _photoDailyLimitApi ?? (_isPremium ? 10 : 2);
   int get aiDailyLimit => _aiDailyLimitApi ?? (_isPremium ? 10 : 3);
 
+  // 造句批改、文章朗讀評分的今日次數（免費版 3/1、Premium 10/5，以後端回傳為準）
+  int _sentenceCountToday = 0;
+  int _readingCountToday = 0;
+  int? _sentenceDailyLimitApi;
+  int? _readingDailyLimitApi;
+  int get sentenceCountToday => _sentenceCountToday;
+  int get readingCountToday => _readingCountToday;
+  int get sentenceDailyLimit => _sentenceDailyLimitApi ?? (_isPremium ? 10 : 3);
+  int get readingDailyLimit => _readingDailyLimitApi ?? (_isPremium ? 5 : 1);
+
   // 每日任務狀態
   bool _dailyPhotoDone = false;
   bool _dailyAiDone = false;
+  bool _dailySentenceDone = false;
+  bool _dailyReadingDone = false;
   bool _dailyRewardClaimed = false;
   int _dailyPtsMin = 10;
   int _dailyPtsMax = 30;
@@ -84,6 +96,8 @@ class UserProvider extends ChangeNotifier {
 
   bool get dailyPhotoDone => _dailyPhotoDone;
   bool get dailyAiDone => _dailyAiDone;
+  bool get dailySentenceDone => _dailySentenceDone;
+  bool get dailyReadingDone => _dailyReadingDone;
   bool get dailyRewardClaimed => _dailyRewardClaimed;
   int get dailyPtsMin => _dailyPtsMin;
   int get dailyPtsMax => _dailyPtsMax;
@@ -92,6 +106,8 @@ class UserProvider extends ChangeNotifier {
   void setDailyTaskStatus({
     required bool photoDone,
     required bool aiDone,
+    bool sentenceDone = false,
+    bool readingDone = false,
     required bool claimed,
     required int ptsMin,
     required int ptsMax,
@@ -99,6 +115,8 @@ class UserProvider extends ChangeNotifier {
   }) {
     _dailyPhotoDone = photoDone;
     _dailyAiDone = aiDone;
+    _dailySentenceDone = sentenceDone;
+    _dailyReadingDone = readingDone;
     _dailyRewardClaimed = claimed;
     _dailyPtsMin = ptsMin;
     _dailyPtsMax = ptsMax;
@@ -119,6 +137,10 @@ class UserProvider extends ChangeNotifier {
     int vocabSlot = 50,
     int? photoDailyLimit,
     int? aiDailyLimit,
+    int? sentenceCountToday,
+    int? sentenceDailyLimit,
+    int? readingCountToday,
+    int? readingDailyLimit,
     bool? isPremium,
     String? accountType,
   }) {
@@ -131,6 +153,10 @@ class UserProvider extends ChangeNotifier {
     // 不更新的話首頁會一直拿登入當下的舊值去算上限。
     if (photoDailyLimit != null) _photoDailyLimitApi = photoDailyLimit;
     if (aiDailyLimit != null) _aiDailyLimitApi = aiDailyLimit;
+    if (sentenceCountToday != null) _sentenceCountToday = sentenceCountToday;
+    if (sentenceDailyLimit != null) _sentenceDailyLimitApi = sentenceDailyLimit;
+    if (readingCountToday != null) _readingCountToday = readingCountToday;
+    if (readingDailyLimit != null) _readingDailyLimitApi = readingDailyLimit;
     if (isPremium != null) _isPremium = isPremium;
     if (accountType != null && accountType.isNotEmpty) _accountType = accountType;
     notifyListeners();
@@ -295,7 +321,13 @@ class UserProvider extends ChangeNotifier {
     _vocabSlot = 50;
     _dailyPhotoDone = false;
     _dailyAiDone = false;
+    _dailySentenceDone = false;
+    _dailyReadingDone = false;
     _dailyRewardClaimed = false;
+    _sentenceCountToday = 0;
+    _readingCountToday = 0;
+    _sentenceDailyLimitApi = null;
+    _readingDailyLimitApi = null;
     try {
       NotificationService.setLoginStatus(false);
     } catch (_) {}

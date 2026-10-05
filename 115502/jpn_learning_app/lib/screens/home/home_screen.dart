@@ -197,6 +197,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         vocabSlot: (res['vocab_slot'] as num?)?.toInt() ?? 50,
         photoDailyLimit: (res['photo_daily_limit'] as num?)?.toInt(),
         aiDailyLimit: (res['ai_daily_limit'] as num?)?.toInt(),
+        sentenceCountToday: (res['sentence_count_today'] as num?)?.toInt(),
+        sentenceDailyLimit: (res['sentence_daily_limit'] as num?)?.toInt(),
+        readingCountToday: (res['reading_count_today'] as num?)?.toInt(),
+        readingDailyLimit: (res['reading_daily_limit'] as num?)?.toInt(),
         isPremium: res['is_premium'] == true,
         accountType: res['account_type']?.toString(),
       );
@@ -216,6 +220,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         userProvider.setDailyTaskStatus(
           photoDone: res['photo_done'] == true,
           aiDone: res['ai_done'] == true,
+          sentenceDone: res['sentence_done'] == true,
+          readingDone: res['reading_done'] == true,
           claimed: res['claimed'] == true,
           ptsMin: (preview['pts_min'] as num?)?.toInt() ?? 10,
           ptsMax: (preview['pts_max'] as num?)?.toInt() ?? 30,

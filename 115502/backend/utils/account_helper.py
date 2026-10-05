@@ -25,6 +25,34 @@ def has_unlimited_usage(user):
     return is_edu_student(user)
 
 
+# 造句批改、文章朗讀評分的每日次數（免費版 / Premium）。教育版學生不受限（has_unlimited_usage）。
+# 拍照與 AI 對話的次數另外寫在 services/user.py（photo 2/10、AI 3/10）。
+SENTENCE_DAILY_LIMIT = {'free': 3, 'premium': 10}
+READING_DAILY_LIMIT = {'free': 1, 'premium': 5}
+
+
+def _tier(user):
+    return 'premium' if getattr(user, 'is_premium', False) else 'free'
+
+
+def sentence_daily_limit(user):
+    """每天可以免費 AI 批改造句幾次（超過可以花點數）"""
+    return SENTENCE_DAILY_LIMIT[_tier(user)]
+
+
+def reading_daily_limit(user):
+    """每天可以做幾次文章朗讀評分"""
+    return READING_DAILY_LIMIT[_tier(user)]
+
+
+def today_start_utc():
+    """台灣時間今天 00:00 換算成 UTC（資料庫的 created_at 存 UTC），算「今天用了幾次」用。"""
+    from datetime import datetime, timedelta, timezone
+    tw = timezone(timedelta(hours=8))
+    today_tw = datetime.now(tw).date()
+    return datetime.combine(today_tw, datetime.min.time()) - timedelta(hours=8)
+
+
 def is_payment_free(user):
     """這個帳號是否完全不需要付費／扣點。
 

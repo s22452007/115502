@@ -1995,23 +1995,4 @@ class ApiClient {
       return {'statusCode': 0, 'data': {'error': '網路發生錯誤，請檢查後端伺服器是否開啟'}};
     }
   }
-
-  /// 退出教室。只移除成員關聯，作業成績與學習紀錄都保留。
-  static Future<Map<String, dynamic>> leaveClassroom({
-    required int userId,
-    required int classroomId,
-  }) async {
-    final url = Uri.parse('$baseUrl/classroom/leave');
-    try {
-      final response = await client.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'classroom_id': classroomId}),
-      );
-      return jsonDecode(utf8.decode(response.bodyBytes));
-    } catch (e) {
-      debugPrint('❌ 退出教室連線失敗: $e');
-      return {'status': 'error', 'error': '連線失敗'};
-    }
-  }
 }

@@ -4,7 +4,6 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
-
 class ManualSearchScreen extends StatefulWidget {
   const ManualSearchScreen({Key? key}) : super(key: key);
 
@@ -18,7 +17,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 
   // 角色清單資料
   final List<Map<String, dynamic>> _characters = [
-    { 
+    {
       'name': '預設老師',
       'role': '親切耐心，標準日語',
       'origin': '東京',
@@ -36,7 +35,6 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       'personality': '1. 隨性慵懶 2. 對喜歡的事物充滿熱情 3. 說話帶點幽默感',
       'special_traits': '獨立樂團貝斯手、App開發者、重度貓奴',
     },
-    
   ];
 
   // 預設選中的角色
@@ -84,96 +82,170 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     final genderCtrl = TextEditingController();
     final personalityCtrl = TextEditingController();
     final traitsCtrl = TextEditingController();
+    var attemptedSubmit = false;
 
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('新增對話角色', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: '姓名 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
-                  cursorColor: AppColors.primary,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            InputDecoration requiredDecoration(
+              String label,
+              TextEditingController controller,
+            ) {
+              final isMissing =
+                  attemptedSubmit && controller.text.trim().isEmpty;
+              final color = isMissing ? Colors.red : AppColors.primary;
+
+              return InputDecoration(
+                labelText: '$label *',
+                labelStyle: TextStyle(color: isMissing ? Colors.red : null),
+                errorText: isMissing ? '此欄位為必填' : null,
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: isMissing ? Colors.red : Colors.grey,
+                  ),
                 ),
-                TextField(
-                  controller: originCtrl,
-                  decoration: const InputDecoration(labelText: '出身地 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
-                  cursorColor: AppColors.primary,
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: color),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: ageCtrl,
-                        decoration: const InputDecoration(labelText: '年紀 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
-                        keyboardType: TextInputType.number,
-                        cursorColor: AppColors.primary,
+              );
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '新增對話角色',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: genderCtrl,
-                        decoration: const InputDecoration(labelText: '性別 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
-                        cursorColor: AppColors.primary,
-                      ),
+                  ),
+                  Text(
+                    '必填',
+                    style: TextStyle(color: Colors.red, fontSize: 14),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: requiredDecoration('姓名', nameCtrl),
+                      onChanged: (_) => setDialogState(() {}),
+                      cursorColor: AppColors.primary,
+                    ),
+                    TextField(
+                      controller: originCtrl,
+                      decoration: requiredDecoration('出身地', originCtrl),
+                      onChanged: (_) => setDialogState(() {}),
+                      cursorColor: AppColors.primary,
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: ageCtrl,
+                            decoration: requiredDecoration('年紀', ageCtrl),
+                            onChanged: (_) => setDialogState(() {}),
+                            keyboardType: TextInputType.number,
+                            cursorColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: genderCtrl,
+                            decoration: requiredDecoration('性別', genderCtrl),
+                            onChanged: (_) => setDialogState(() {}),
+                            cursorColor: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextField(
+                      controller: personalityCtrl,
+                      decoration: requiredDecoration('個性', personalityCtrl),
+                      onChanged: (_) => setDialogState(() {}),
+                      cursorColor: AppColors.primary,
+                    ),
+                    TextField(
+                      controller: traitsCtrl,
+                      decoration: requiredDecoration('特殊設定', traitsCtrl),
+                      onChanged: (_) => setDialogState(() {}),
+                      maxLines: 2,
+                      cursorColor: AppColors.primary,
                     ),
                   ],
                 ),
-                TextField(
-                  controller: personalityCtrl,
-                  decoration: const InputDecoration(labelText: '個性 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
-                  cursorColor: AppColors.primary,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消', style: TextStyle(color: Colors.grey)),
                 ),
-                TextField(
-                  controller: traitsCtrl,
-                  decoration: const InputDecoration(labelText: '特殊設定 (必填)', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary))),
-                  maxLines: 2,
-                  cursorColor: AppColors.primary,
+                ElevatedButton(
+                  onPressed: () {
+                    setDialogState(() => attemptedSubmit = true);
+                    final hasMissingFields = [
+                      nameCtrl,
+                      originCtrl,
+                      ageCtrl,
+                      genderCtrl,
+                      personalityCtrl,
+                      traitsCtrl,
+                    ].any((controller) => controller.text.trim().isEmpty);
+                    if (hasMissingFields) return;
+
+                    setState(() {
+                      _characters.add({
+                        'name': nameCtrl.text.trim(),
+                        'role': '自訂角色',
+                        'origin': originCtrl.text.trim(),
+                        'age': ageCtrl.text.trim(),
+                        'gender': genderCtrl.text.trim(),
+                        'personality': personalityCtrl.text.trim(),
+                        'special_traits': traitsCtrl.text.trim(),
+                      });
+                      _selectedCharacterName = nameCtrl.text.trim();
+                    });
+
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    '新增並選擇',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameCtrl.text.trim().isEmpty) return;
-
-                // 儲存資料並更新畫面
-                setState(() {
-                  _characters.add({
-                    'name': nameCtrl.text.trim(),
-                    'role': '自訂角色',
-                    'origin': originCtrl.text.trim(),
-                    'age': ageCtrl.text.trim(),
-                    'gender': genderCtrl.text.trim(),
-                    'personality': personalityCtrl.text.trim(),
-                    'special_traits': traitsCtrl.text.trim(),
-                  });
-                  _selectedCharacterName = nameCtrl.text.trim();
-                });
-
-                Navigator.pop(context); // 關閉彈窗
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('新增並選擇', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+            );
+          },
         );
       },
-    );//角色新增抽屜結束
+    );
+    nameCtrl.dispose();
+    originCtrl.dispose();
+    ageCtrl.dispose();
+    genderCtrl.dispose();
+    personalityCtrl.dispose();
+    traitsCtrl.dispose();
   }
 
   @override
@@ -203,7 +275,11 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                       const SizedBox(height: 8),
                       const Text(
                         '輸入您想模擬的情境或主題，AI 將為您量身打造專屬的日語課程！',
-                        style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          height: 1.5,
+                        ),
                       ),
                       const SizedBox(height: 24),
 
@@ -214,10 +290,16 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                         decoration: InputDecoration(
                           hintText: '例如：在便利商店買咖啡...',
                           hintStyle: TextStyle(color: Colors.grey.shade400),
-                          prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppColors.primary,
+                          ),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear, color: Colors.grey),
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    color: Colors.grey,
+                                  ),
                                   onPressed: () {
                                     _searchController.clear();
                                     setState(() {});
@@ -236,7 +318,10 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -256,7 +341,8 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                         spacing: 10,
                         runSpacing: 12,
                         children: _scenes.map((scene) {
-                          final int? codepoint = scene['icon_codepoint'] as int?;
+                          final int? codepoint =
+                              scene['icon_codepoint'] as int?;
                           final String text = scene['name'] as String;
 
                           return InkWell(
@@ -267,12 +353,17 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                               });
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.2,
+                                  ),
                                 ),
                               ),
                               child: Row(
@@ -280,7 +371,10 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                                 children: [
                                   Icon(
                                     codepoint != null
-                                        ? IconData(codepoint, fontFamily: 'MaterialIcons')
+                                        ? IconData(
+                                            codepoint,
+                                            fontFamily: 'MaterialIcons',
+                                          )
                                         : Icons.category,
                                     size: 16,
                                     color: AppColors.primary,
@@ -300,7 +394,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                           );
                         }).toList(),
                       ),
-                      
+
                       const SizedBox(height: 32),
 
                       const Text(
@@ -312,32 +406,49 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       SizedBox(
                         height: 60,
                         child: ListView.builder(
-                          padding: const EdgeInsets.only(right: 16), 
+                          padding: const EdgeInsets.only(right: 16),
                           scrollDirection: Axis.horizontal,
                           itemCount: _characters.length + 1,
                           itemBuilder: (context, index) {
-                            
                             // 渲染新增按鈕
                             if (index == _characters.length) {
                               return GestureDetector(
-                                onTap: () => _showAddCharacterDialog(context), // 呼叫本檔案內的函數
+                                onTap: () => _showAddCharacterDialog(
+                                  context,
+                                ), // 呼叫本檔案內的函數
                                 child: Container(
                                   margin: const EdgeInsets.only(right: 8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Colors.grey.shade400, width: 1.5),
+                                    border: Border.all(
+                                      color: Colors.grey.shade400,
+                                      width: 1.5,
+                                    ),
                                   ),
                                   child: const Row(
                                     children: [
-                                      Icon(Icons.add, color: AppColors.primary, size: 18),
+                                      Icon(
+                                        Icons.add,
+                                        color: AppColors.primary,
+                                        size: 18,
+                                      ),
                                       SizedBox(width: 4),
-                                      Text('自訂角色', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                      Text(
+                                        '自訂角色',
+                                        style: TextStyle(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -346,26 +457,64 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 
                             // 渲染一般角色卡片
                             final char = _characters[index];
-                            final isSelected = _selectedCharacterName == char['name'];
+                            final isSelected =
+                                _selectedCharacterName == char['name'];
 
                             return GestureDetector(
-                              onTap: () => setState(() => _selectedCharacterName = char['name']),
+                              onTap: () => setState(
+                                () => _selectedCharacterName = char['name'],
+                              ),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? AppColors.primary : Colors.white,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppColors.primary, width: 1.5),
-                                  boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withValues(alpha:0.3), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                                  border: Border.all(
+                                    color: AppColors.primary,
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.3,
+                                            ),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ]
+                                      : [],
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(char['name'], style: TextStyle(color: isSelected ? Colors.white : AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                                    Text(
+                                      char['name'],
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
                                     const SizedBox(height: 2),
-                                    Text(char['role'], style: TextStyle(color: isSelected ? Colors.white70 : Colors.black54, fontSize: 10)),
+                                    Text(
+                                      char['role'],
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white70
+                                            : Colors.black54,
+                                        fontSize: 10,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -383,7 +532,9 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _searchController.text.trim().isEmpty ? null : _submitScenario,
+                  onPressed: _searchController.text.trim().isEmpty
+                      ? null
+                      : _submitScenario,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary.withValues(alpha: 0.9),
                     disabledBackgroundColor: Colors.grey.shade300,
@@ -395,7 +546,9 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                   child: Text(
                     '開始生成情境',
                     style: TextStyle(
-                      color: _searchController.text.trim().isEmpty ? Colors.grey.shade500 : Colors.white,
+                      color: _searchController.text.trim().isEmpty
+                          ? Colors.grey.shade500
+                          : Colors.white,
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),

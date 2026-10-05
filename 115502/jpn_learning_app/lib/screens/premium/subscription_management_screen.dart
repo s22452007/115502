@@ -161,6 +161,7 @@ class _SubscriptionManagementScreenState
   String _cycleLabel(String? cycle) {
     if (cycle == 'yearly') return '年繳';
     if (cycle == 'monthly') return '月繳';
+    if (cycle == 'trial') return '7 天免費試用';
     return cycle ?? '—';
   }
 
@@ -230,12 +231,9 @@ class _SubscriptionManagementScreenState
               Row(children: [
                 const Icon(Icons.verified, color: _green, size: 28),
                 const SizedBox(width: 10),
+                // 試用結束後轉月繳，所以試用也顯示月繳方案
                 Text(
-                  _billingCycle == 'yearly'
-                      ? 'Premium Pro 年訂閱'
-                      : _billingCycle == 'monthly'
-                          ? 'Premium Pro 月訂閱'
-                          : (_planName ?? 'Premium Pro'),
+                  _billingCycle == 'yearly' ? 'Premium (年繳)' : 'Premium (月繳)',
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark),
                 ),
               ]),
@@ -407,7 +405,7 @@ class _SubscriptionManagementScreenState
       MaterialPageRoute(
         builder: (_) => SubscriptionCheckoutScreen(
           planId: 0,
-          planName: 'Premium Pro 年繳',
+          planName: 'Premium (年繳)',
           priceMonthly: 0,
           priceYearly: 1290,
           features: const [

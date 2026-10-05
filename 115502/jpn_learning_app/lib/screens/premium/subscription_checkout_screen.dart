@@ -51,7 +51,7 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
   bool get _isMonthly => widget.initialBillingCycle == 'monthly';
   int get _price => (_isMonthly ? widget.priceMonthly : widget.priceYearly) ?? 0;
   int get _points => (_isMonthly ? widget.pointsGrantMonthly : widget.pointsGrantYearly) ?? 0;
-  String get _planTitle => _isMonthly ? 'Premium (月繳)' : 'Premium Pro (年繳)';
+  String get _planTitle => _isMonthly ? 'Premium (月繳)' : 'Premium (年繳)';
   bool get _isTrialFlow => _isMonthly && widget.isTrialPurchase;
 
   // 輔助函式：日期格式化 (若你的專案有 utils，請確保可呼叫)

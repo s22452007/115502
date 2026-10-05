@@ -117,7 +117,7 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Premium Pro',
+                    'Premium (月繳)',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -138,12 +138,13 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
             ],
           ),
           const SizedBox(height: 24),
+          // 跟商城 Premium 方案卡列的權益一致
+          _featureRow('每日 10 次拍照辨識'),
           _featureRow('每日 10 次 AI 對話'),
-          _featureRow('每日 10 次場景照片上傳'),
           _featureRow('每日 5 次造句 AI 批改'),
           _featureRow('每日 5 次文章朗讀評分'),
-          _featureRow('詳細學習分析報告'),
-          _featureRow('每月贈送點數'),
+          _featureRow('單字擴充半價、小組押金 5 折'),
+          _featureRow('每月贈送 20 點'),
           const SizedBox(height: 20),
           Container(
             width: double.infinity,
@@ -375,7 +376,7 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
           style: TextStyle(fontWeight: FontWeight.w900, color: _textDark),
         ),
         content: const Text(
-          '你現在可以開始使用 Premium Pro 的完整功能。',
+          '你現在可以開始使用 Premium 的完整功能。',
           style: TextStyle(color: _subText, height: 1.5),
         ),
         actions: [

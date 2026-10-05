@@ -61,7 +61,7 @@ class _PremiumTabState extends State<PremiumTab> {
     if (plan == null) return;
     Navigator.push(context, MaterialPageRoute(builder: (_) => SubscriptionCheckoutScreen(
       planId: plan['id'],
-      planName: cycle == 'monthly' ? 'Premium (月繳)' : 'Premium Pro (年繳)',
+      planName: cycle == 'monthly' ? 'Premium (月繳)' : 'Premium (年繳)',
       priceMonthly: (plan['price_monthly'] as num?)?.toInt() ?? 149,
       priceYearly: (plan['price_yearly'] as num?)?.toInt() ?? 1290,
       features: List<String>.from(plan['features_json'] ?? [
@@ -160,7 +160,7 @@ class _PremiumTabState extends State<PremiumTab> {
 
         // 3. 年繳方案卡片
         _buildFlatPlanCard(
-          title: 'Premium Pro (年繳)',
+          title: 'Premium (年繳)',
           isCurrent: isPremium && currentCycle == 'yearly',
           badgeText: '年度精選 贈送 300 點', 
           priceText: 'NT\$ 1290 / 年',

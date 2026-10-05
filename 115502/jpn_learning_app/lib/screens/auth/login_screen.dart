@@ -278,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(
         builder: (_) => SubscriptionCheckoutScreen(
           planId: 0,
-          planName: 'Premium Pro (年繳)',
+          planName: 'Premium (年繳)',
           priceMonthly: 0,
           priceYearly: 1290,
           features: const [

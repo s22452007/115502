@@ -1036,7 +1036,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     return SubPageTemplate(
       title: '意見回饋',
       body: SafeArea(
-        child: Center(
+        // 靠上對齊：原本用 Center，內容不多時（例如還沒有回饋紀錄）整塊會被推到畫面正中間，上方空一大片
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: SingleChildScrollView(

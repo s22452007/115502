@@ -162,10 +162,13 @@ with app.app_context():
     except Exception as _e:
         print(f"⚠️ user_subscription 欄位修正警告：{_e}")
 
+    # 跟 utils/account_helper.py 的每日次數一致；單字收藏擴充實際是 35/50 點＝7 折
     _FEATURES = [
         '每天10次拍照辨識',
         '每天10次AI對話',
-        '單字收藏擴充6折',
+        '每天10次造句AI批改',
+        '每天5次文章朗讀評分',
+        '單字收藏擴充7折',
         '學習小組押金5折',
         '學習小組獎勵加倍',
     ]

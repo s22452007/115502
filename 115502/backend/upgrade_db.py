@@ -941,6 +941,29 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ user.must_change_password 升級警告：{e}")
 
 # ==========================================
+# 訂閱方案功能說明：加上造句批改、文章朗讀的每日次數，並更正單字收藏擴充為 7 折。
+# 只更新「還是舊預設內容」的方案，管理者在後台改過的不動。
+# ==========================================
+try:
+    import json as _json
+    _OLD_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '單字收藏擴充6折', '學習小組押金5折', '學習小組獎勵加倍']
+    _NEW_FEATURES = ['每天10次拍照辨識', '每天10次AI對話', '每天10次造句AI批改', '每天5次文章朗讀評分',
+                     '單字收藏擴充7折', '學習小組押金5折', '學習小組獎勵加倍']
+    _updated = 0
+    for _pid, _fj in cursor.execute("SELECT id, features_json FROM subscription_plan").fetchall():
+        try:
+            _cur = _json.loads(_fj) if isinstance(_fj, str) else _fj
+        except Exception:
+            continue
+        if _cur == _OLD_FEATURES:
+            cursor.execute("UPDATE subscription_plan SET features_json = ? WHERE id = ?;",
+                           (_json.dumps(_NEW_FEATURES, ensure_ascii=False), _pid))
+            _updated += 1
+    print(f"✅ 訂閱方案功能說明確認完畢（更新 {_updated} 個方案）")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ 訂閱方案功能說明更新警告：{e}")
+
+# ==========================================
 # 程度測驗／升級測驗題庫擴充：N5～N1 每級補到 20 題（題目在 quiz_bank.py）
 # ==========================================
 try:

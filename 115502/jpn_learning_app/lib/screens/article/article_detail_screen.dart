@@ -9,6 +9,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'article_result_screen.dart';
+import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 // 通用的標音元件（這個檔案底下另有文章專用的 FuriganaText，用前綴區分）
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart' as common;
 
@@ -43,9 +44,67 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     return [];
   }
 
+  // 每日朗讀評分次數（免費版 1、Premium 5，教育版不限）。進畫面時向後端查，
+  // 用完就在開始錄音「之前」擋下，不要錄完才告訴使用者不能評分。
+  int? _readingLimit;
+  int _readingUsed = 0;
+  bool _readingUnlimited = false;
+
+  int? get _readingLeft =>
+      (_readingUnlimited || _readingLimit == null) ? null : (_readingLimit! - _readingUsed).clamp(0, _readingLimit!);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadReadingQuota());
+  }
+
+  Future<void> _loadReadingQuota() async {
+    final uid = currentUserId;
+    if (uid == null) return;
+    final res = await ApiClient.getUsageStatus(uid);
+    if (!mounted || res.containsKey('error')) return;
+    setState(() {
+      _readingUnlimited = res['unlimited'] == true;
+      _readingLimit = (res['reading_daily_limit'] as num?)?.toInt();
+      _readingUsed = (res['reading_count_today'] as num?)?.toInt() ?? 0;
+    });
+  }
+
+  /// 今天的朗讀評分次數用完了：說明並提供升級入口（Premium 每天 5 次）
+  void _showReadingQuotaDialog([String? message]) {
+    final isPremium = context.read<UserProvider>().isPremium;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('今日朗讀次數已用完', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+          message ??
+              (isPremium
+                  ? '今天的 ${_readingLimit ?? 5} 次朗讀評分已經用完了，明天再來挑戰吧！'
+                  : '免費版每天可以朗讀評分 ${_readingLimit ?? 1} 次，明天再來挑戰吧！\n升級 Premium 每天可以朗讀 5 次。'),
+          style: const TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('知道了', style: TextStyle(color: Colors.grey))),
+          if (!isPremium)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreDashboardScreen()));
+              },
+              child: const Text('查看 Premium', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _audioRecorder.dispose(); 
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -631,10 +690,21 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         );
         if (!mounted) return;
 
+        if (result['status'] == 'quota_exceeded') {
+          // 後端判定今天的次數已用完（例如在別台裝置用掉了）
+          setState(() {
+            _isAnalyzing = false;
+            if (_readingLimit != null) _readingUsed = _readingLimit!;
+          });
+          _showReadingQuotaDialog(result['message']?.toString());
+          return;
+        }
+
         if (result['status'] == 'success') {
+          setState(() => _readingUsed++);
           // 🛡️ 防呆：確保分數是整數
           final int score = double.tryParse(result['score']?.toString() ?? '0')?.toInt() ?? 0;
-          
+
           // 2. 🌟 呼叫成績結算與點數發放 API
           await _submitScoreAndShowResult(score, result);
         } else {
@@ -646,6 +716,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('⚠️ 無法取得錄音檔案，請確認麥克風權限或重試')));
       }
     } else {
+      // 次數用完就不讓開始錄音，免得錄完才被擋
+      if (_readingLeft == 0) {
+        _showReadingQuotaDialog();
+        return;
+      }
       if (await _audioRecorder.hasPermission()) {
         String? filePath;
         if (!kIsWeb) {
@@ -956,7 +1031,8 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       );
     }
 
-    return GestureDetector(
+    final left = _readingLeft;
+    final button = GestureDetector(
       onTap: _toggleRecording,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -975,6 +1051,32 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           ],
         ),
       ),
+    );
+
+    // 教育版不限次數、或還沒查到次數時，只顯示按鈕
+    if (left == null || _isRecording) return button;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: left > 0 ? Colors.white : const Color(0xFFFFEBEE),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 2))],
+          ),
+          child: Text(
+            left > 0 ? '今日剩餘 $left 次朗讀評分' : '今日朗讀評分次數已用完',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: left > 0 ? AppColors.primary : const Color(0xFFD32F2F),
+            ),
+          ),
+        ),
+        button,
+      ],
     );
   }
 }

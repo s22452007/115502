@@ -90,7 +90,7 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
     final userProvider = context.watch<UserProvider>();
 
     return SubPageTemplate(
-      title: '榮譽徽章',
+      title: '成就徽章',
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

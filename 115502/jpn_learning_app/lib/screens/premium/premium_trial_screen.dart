@@ -106,6 +106,8 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
           const SizedBox(height: 24),
           _featureRow('每日 10 次 AI 對話'),
           _featureRow('每日 10 次場景照片上傳'),
+          _featureRow('每日 10 次造句 AI 批改'),
+          _featureRow('每日 5 次文章朗讀評分'),
           _featureRow('詳細學習分析報告'),
           _featureRow('每月贈送點數'),
           const SizedBox(height: 20),

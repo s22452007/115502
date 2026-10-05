@@ -183,6 +183,9 @@ gemini_client.run_with_legacy_keys = _blocked_ai
 # 新單字補例句平常在背景執行；測試改成同步，才能在個案裡直接檢查結果
 from utils import vocab_sentences as _vocab_sentences
 _vocab_sentences.RUN_IN_BACKGROUND = False
+# 拍照、對話作業的 AI 建議分數也改成同步，個案裡才能直接檢查
+from utils import assignment_ai as _assignment_ai
+_assignment_ai.RUN_IN_BACKGROUND = False
 
 # ----------------------------------------------------------------------
 # 暫存資料庫先建好空的資料表，訂閱方案與點數方案交給 app.py 啟動時建立，
@@ -3113,22 +3116,19 @@ def _(c):
     check(r2.status_code == 200 and J(r2).get('count') == 1 and rooms == [('一年甲班', 1, 1)], '我的教室列表不正確')
 
 
-@case('A13', '退出教室',
+@case('A13', '學生無法自行退出教室',
       pre='學生在「一年甲班」中',
-      steps='1. POST /api/classroom/leave，user_id、classroom_id=一年甲班\n2. GET /api/classroom/my/{學生 id}\n3. 再退出一次\n4. POST /api/classroom/leave 未帶 classroom_id',
-      expect='1. HTTP 200，「已退出教室」\n2. count=0\n3. HTTP 404，「你不在這個教室裡」\n4. HTTP 400，「缺少使用者 ID 或教室 ID」')
+      steps='1. POST /api/classroom/leave，user_id、classroom_id=一年甲班\n2. GET /api/classroom/my/{學生 id}',
+      expect='1. HTTP 404，沒有退出教室的功能\n2. count=1，仍在一年甲班；要離開班級須由老師在班級名冊移出')
 def _(c):
     ensure_edu()
     st, rid = STATE['edu_student'], STATE['edu_rooms']['open']
     r1 = SC.post('/api/classroom/leave', json={'user_id': st['id'], 'classroom_id': rid})
     my = J(SC.get(f'/api/classroom/my/{st["id"]}'))
-    r3 = SC.post('/api/classroom/leave', json={'user_id': st['id'], 'classroom_id': rid})
-    r4 = SC.post('/api/classroom/leave', json={'user_id': st['id']})
-    c.log(f'1. {http(r1, "status", "message")}；2. count={my.get("count")}；3. {http(r3, "error")}；4. {http(r4, "error")}')
-    check(r1.status_code == 200 and J(r1).get('message') == '已退出教室', '退出失敗')
-    check(my.get('count') == 0, '退出後仍顯示教室')
-    check(r3.status_code == 404 and J(r3).get('error') == '你不在這個教室裡', '重複退出未回 404')
-    check(r4.status_code == 400 and J(r4).get('error') == '缺少使用者 ID 或教室 ID', '缺少參數未擋下')
+    rooms = [x.get('name') for x in my.get('classrooms', [])]
+    c.log(f'1. HTTP {r1.status_code}；2. count={my.get("count")}，教室={rooms}')
+    check(r1.status_code == 404, '學生仍可自行退出教室')
+    check(my.get('count') == 1 and rooms == ['一年甲班'], '學生不在原本的教室裡')
 
 
 # ----------------------------------------------------------------------
@@ -3181,7 +3181,9 @@ def _(c):
           '學生帳號資料不正確')
     check(r3.status_code == 200 and J(r3).get('is_new') is False and J(r3).get('user_id') == uid and n == 1, '重複建立帳號')
     check(r4.status_code == 201 and J(r4).get('status') == 'success', '新學生無法用班級代碼加入教室')
-    SC.post('/api/classroom/leave', json={'user_id': uid, 'classroom_id': STATE['edu_rooms']['open']})
+    with S.app_context():   # 還原：讓後面的個案看到的一年甲班成員數不受影響
+        ClassroomMember.query.filter_by(classroom_id=STATE['edu_rooms']['open'], student_id=uid).delete()
+        db.session.commit()
 
 
 @case('A13', '學校 Google 登入的限制',
@@ -3493,7 +3495,7 @@ def _(c):
       pre='「三年丙班」學生甲、乙都已登記手機；學生甲有一份已繳交、待批閱的造句作業',
       steps='1. 老師發布公告「明天停課」\n2. 老師出一份作業並勾選「通知學生」，再出一份不勾選\n3. 老師在批閱頁替學生甲的作業打 88 分\n'
             '4. 學生乙的手機已移除 App，老師再發一則公告\n5. 伺服器沒有設定推播金鑰時，老師再發一則公告',
-      expect='1. 推播給甲、乙兩支手機，標題「三年丙班：明天停課」\n2. 勾選通知的作業推播「三年丙班：新作業」，沒勾選的不推播\n'
+      expect='1. 推播給甲、乙兩支手機，標題「三年丙班・林老師：明天停課」\n2. 勾選通知的作業推播「三年丙班・林老師：新作業」，沒勾選的不推播\n'
              '3. 只推播給學生甲，標題「作業已批改」，內容含 88 分\n4. 乙的手機登記被清除，之後不再推給他\n5. 公告照常發布，不推播也不出錯',
       note='推播以模擬方式進行，未連線 Firebase')
 def _(c):
@@ -3544,9 +3546,9 @@ def _(c):
     c.log(f'1. 提示={f1}，推播={[(p["tokens"], p["title"]) for p in p1]}；2. 推播={[(p["title"], p["body"]) for p in p2]}；'
           f'3. 提示={f3}，推播={[(p["tokens"], p["title"], p["body"]) for p in p3]}；'
           f'4. 乙的手機登記={s2_token}，之後的推播對象={[p["tokens"] for p in p4]}；5. 提示={f5}，推播 {n_after - n_before} 則，公告 {n_ann} 則')
-    check(len(p1) == 1 and p1[0]['tokens'] == ['tok-s1', 'tok-s2'] and p1[0]['title'] == '三年丙班：明天停課'
+    check(len(p1) == 1 and p1[0]['tokens'] == ['tok-s1', 'tok-s2'] and p1[0]['title'] == '三年丙班・林老師：明天停課'
           and p1[0]['data'].get('type') == 'announcement' and '已推播到 2 位學生的手機' in f1[0], '公告推播不正確')
-    check(len(p2) == 1 and p2[0]['title'] == '三年丙班：新作業' and p2[0]['body'].startswith('第五課造句'), '新作業推播不正確')
+    check(len(p2) == 1 and p2[0]['title'] == '三年丙班・林老師：新作業' and p2[0]['body'].startswith('第五課造句'), '新作業推播不正確')
     check(len(p3) == 1 and p3[0]['tokens'] == ['tok-s1'] and p3[0]['title'] == '作業已批改' and '88 分' in p3[0]['body'],
           '批改推播不正確')
     check(s2_token is None and [p['tokens'] for p in p4] == [['tok-s1', 'tok-s2'], ['tok-s1']], '收不到的手機沒有清除')
@@ -4421,7 +4423,7 @@ def _(c):
       pre='管理者已登入；App 使用者 R2 程度 N2',
       steps='於「文章管理」頁：\n1. 新增文章但沒有標題；等級選錯；解鎖點數填 0\n2. 新增 N2 文章「東京の朝」，解鎖 80 點、立即上架，R2 於 App 查看 N2 文章\n'
             '3. 修改標題為「東京の朝（改）」、解鎖 60 點\n4. 下架後 R2 再查看，之後重新上架\n5. 刪除文章',
-      expect='1. 分別提示標題與內容必填、請選擇正確的等級、解鎖點數必須大於 0，皆不建立文章\n2. 新增成功，App 的 N2 文章列表出現這篇（未解鎖）\n'
+      expect='1. 分別提示標題與內容必填、請選擇正確的難度、解鎖點數必須大於 0，皆不建立文章\n2. 新增成功（提示寫「中高級」不顯示 N2），App 的中高級文章列表出現這篇（未解鎖）\n'
              '3. 修改成功，資料與操作日誌更新\n4. 下架後 App 看不到，上架後恢復\n5. 刪除成功，App 看不到並留下操作日誌')
 def _(c):
     cl = admin_client('sys_staff', 'Staff@1234')
@@ -4453,9 +4455,9 @@ def _(c):
     c.log(f'1. {f1}，建立 {n1} 篇；2. {f2}，解鎖點數={cost}、免費={free}，App 看到={seen2}；3. {f3}，資料={edited}；'
           f'4. {f4a}，App 看到={seen4a}；{f4b}，App 看到={seen4b}；5. {f5}，App 看到={seen5}；'
           f'操作日誌（新增, 修改, 刪除）={logs("articles", aid, "CREATE")}, {logs("articles", aid, "UPDATE")}, {logs("articles", aid, "DELETE")}')
-    check(f1 == [['標題與日文內容為必填欄位'], ['請選擇正確的等級 (N5~N1)'], ['解鎖點數必須大於 0（新文章一律付費解鎖）']] and n1 == 0,
+    check(f1 == [['標題與日文內容為必填欄位'], ['請選擇正確的難度（入門～高級）'], ['解鎖點數必須大於 0（新文章一律付費解鎖）']] and n1 == 0,
           '不合格的文章未擋下')
-    check('已新增 N2 文章「東京の朝」' in f2[0] and cost == 80 and free is False and '東京の朝' in seen2, '新增文章失敗')
+    check('已新增中高級文章「東京の朝」' in f2[0] and cost == 80 and free is False and '東京の朝' in seen2, '新增文章失敗')
     check(f3 == ['已更新文章「東京の朝（改）」'] and edited == ('東京の朝（改）', 60) and '東京の朝（改）' in page, '修改文章失敗')
     check(f4a == ['已下架「東京の朝（改）」'] and '東京の朝（改）' not in seen4a
           and f4b == ['已上架「東京の朝（改）」'] and '東京の朝（改）' in seen4b, '上下架不正確')

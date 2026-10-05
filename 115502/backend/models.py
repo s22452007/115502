@@ -769,6 +769,10 @@ class AssignmentSubmission(db.Model):
     #     "your_answer": "B", "correct_answer": "A", "is_correct": false, "explanation": "..."}]
     # 只有 submit_quiz 會寫；其他題型和舊資料為 None
     answer_detail = db.Column(db.JSON, nullable=True)
+    # 拍照、對話作業的 AI 建議分數：只給老師參考，老師在批閱頁確認後才寫進 score、計入成績。
+    # ai_feedback 格式：{"items": [{"label": "文法正確", "score": 32, "max": 40, "reason": "…"}], "comment": "…"}
+    ai_score = db.Column(db.Integer, nullable=True)
+    ai_feedback = db.Column(db.JSON, nullable=True)
     attempt_count = db.Column(db.Integer, default=0)      # 重做次數，允許學生再挑戰
     submitted_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

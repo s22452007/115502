@@ -331,7 +331,17 @@ def submit_assignment(student_id, assignment_id, result_ref_id):
             submission.status = new_status
             submission.submitted_at = now
 
+    # 拍照、對話作業：換了新的作答就清掉舊的 AI 建議分數，繳交後在背景重新評估
+    needs_ai_suggestion = kept and assignment.task_type in (TaskType.PHOTO, TaskType.CHAT)
+    if needs_ai_suggestion:
+        submission.ai_score = None
+        submission.ai_feedback = None
+
     db.session.commit()
+
+    if needs_ai_suggestion:
+        from utils.assignment_ai import suggest_in_background
+        suggest_in_background(submission.id)
 
     if submission.attempt_count == 1:
         message = "作業已繳交"

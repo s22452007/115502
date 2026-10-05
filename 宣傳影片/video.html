@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Snap to Learn 宣傳影片</title>
+<script src="build/cues.js"></script>
+<style>
+:root{
+  --g:#4E8B4C; --g-d:#2F5E33; --g-l:#EAF4EA; --gold:#C6B13B; --gold-l:#FFF8E1;
+  --bg:#F5F5F0; --ink:#22313F; --ink2:#5B6670; --mute:#8E9AAB; --line:#E7E7E7; --red:#E5484D;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+body{font-family:"Segoe UI","Microsoft JhengHei UI","Microsoft JhengHei",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+.jp{font-family:"Yu Gothic UI","Yu Gothic","Meiryo",sans-serif}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;
+  background:
+    radial-gradient(900px 700px at 1350px 520px, rgba(78,139,76,.14), transparent 70%),
+    radial-gradient(700px 500px at 200px 980px, rgba(198,177,59,.12), transparent 70%),
+    var(--bg)}
+.scene{position:absolute;inset:0;display:none}
+
+/* 左側文字 */
+.left{position:absolute;left:150px;top:300px;width:820px}
+.kicker{display:flex;align-items:center;gap:18px;font-size:26px;font-weight:700;color:var(--g);letter-spacing:2px}
+.kicker b{font-family:"Segoe UI";font-size:26px;color:#fff;background:var(--g);border-radius:8px;padding:2px 12px;letter-spacing:0}
+.headline{margin-top:28px;font-size:84px;line-height:1.18;font-weight:900;color:var(--ink);letter-spacing:2px}
+.headline em{font-style:normal;color:var(--g)}
+.tagline{margin-top:30px;font-size:32px;color:var(--ink2);font-weight:600;letter-spacing:1px}
+
+/* 手機 */
+#phone{position:absolute;left:1190px;top:62px;width:420px;height:868px;border-radius:64px;background:#15181B;
+  box-shadow:0 40px 80px rgba(34,49,63,.25),0 0 0 2px #2B3036 inset;z-index:1}
+.scr{position:absolute;left:1204px;top:76px;width:392px;height:840px;border-radius:50px;overflow:hidden;background:var(--bg);z-index:2}
+#sb{position:absolute;left:1204px;top:76px;width:392px;height:46px;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:6px 34px 0;font:700 16px "Segoe UI";color:var(--ink)}
+#sb.light{color:#fff}
+#island{position:absolute;left:1340px;top:88px;width:120px;height:34px;border-radius:20px;background:#000;z-index:6}
+.layer{position:absolute;inset:0;padding-top:50px;opacity:0;background:var(--bg)}
+.layer::before{content:'';position:absolute;left:0;right:0;top:0;height:50px;background:inherit;z-index:3}
+.appbar{position:relative;z-index:3;background:inherit;height:54px;display:flex;align-items:center;gap:10px;padding:0 22px;font-size:21px;font-weight:800;color:var(--ink)}
+.appbar .back{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:2.4}
+.card{background:#fff;border-radius:18px;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:700}
+svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tap{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.55);border:3px solid rgba(34,49,63,.35);opacity:0;z-index:20;pointer-events:none}
+.tabs{display:flex;gap:6px;margin:4px 20px 12px;background:#EBEDE6;border-radius:12px;padding:4px}
+.tabs div{flex:1;text-align:center;padding:8px 0;border-radius:9px;font-size:15px;font-weight:700;color:var(--mute)}
+.tabs .on{background:#fff;color:var(--g);box-shadow:0 2px 6px rgba(0,0,0,.06)}
+
+/* 字幕 */
+#cap{position:absolute;left:0;right:0;top:968px;text-align:center;z-index:30;opacity:0}
+#cap span{display:inline-block;max-width:1500px;padding:14px 38px;border-radius:16px;background:rgba(25,32,38,.82);color:#fff;font-size:42px;font-weight:700;letter-spacing:2px;line-height:1.3}
+
+/* ===== S1 ===== */
+.home-hero{margin:8px 20px 0;padding:22px;border-radius:24px;color:#fff;background:linear-gradient(135deg,#4E8B4C,#3A6F3A);height:200px;position:relative;overflow:hidden}
+.home-hero h3{font-size:26px;font-weight:900}
+.home-hero p{margin-top:6px;font-size:15px;opacity:.85}
+.home-hero .cam{position:absolute;right:20px;bottom:20px;width:78px;height:78px;border-radius:50%;background:#fff;color:var(--g);display:flex;align-items:center;justify-content:center}
+.home-hero .cam svg{width:40px;height:40px}
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 20px}
+.home-grid .card{height:108px;padding:16px;font-weight:800;font-size:17px;position:relative}
+.home-grid .card small{display:block;margin-top:6px;font-size:13px;color:var(--mute);font-weight:600}
+.home-grid .card svg{position:absolute;right:14px;bottom:14px;width:30px;height:30px;color:var(--g)}
+.viewfinder{position:absolute;inset:0;background:#1A1512;overflow:hidden}
+.table{position:absolute;inset:-40px;background:radial-gradient(circle at 50% 40%,#6B4A2F,#2A1B10 75%)}
+.menu{position:absolute;left:40px;top:175px;width:250px;height:400px;background:#F6EEDC;border-radius:6px;box-shadow:0 18px 40px rgba(0,0,0,.5);padding:26px 26px;transform:rotate(-3deg);
+  background-image:repeating-linear-gradient(0deg,transparent 0 3px,rgba(120,90,50,.04) 3px 4px)}
+.menu h4{text-align:center;font-size:30px;font-weight:900;color:#5A1E12;letter-spacing:6px;border-bottom:3px double #8A3A22;padding-bottom:10px;margin-bottom:12px}
+.menu .row{position:relative;display:flex;justify-content:space-between;font-size:23px;font-weight:800;color:#2B1A12;padding:9px 4px}
+.menu .row i{font-style:normal;color:#8A3A22}
+.menu .box{position:absolute;inset:2px -6px;border:2.5px solid #7CE08A;border-radius:6px;opacity:0;box-shadow:0 0 12px rgba(124,224,138,.6)}
+.menu .box b{position:absolute;right:-64px;top:50%;margin-top:-11px;white-space:nowrap;background:#7CE08A;color:#0E2A12;font:800 12px "Microsoft JhengHei";padding:1px 6px;border-radius:4px}
+.corners{position:absolute;inset:110px 34px 190px}
+.corners i{position:absolute;width:36px;height:36px;border:4px solid #fff}
+.corners i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
+.corners i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+.corners i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0;border-radius:0 0 0 10px}
+.corners i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 10px 0}
+.shutter{position:absolute;left:50%;bottom:52px;width:82px;height:82px;margin-left:-41px;border-radius:50%;border:5px solid #fff;padding:5px}
+.shutter div{width:100%;height:100%;border-radius:50%;background:#fff}
+.cam-top{position:absolute;top:58px;left:0;right:0;text-align:center;color:#fff;font-size:15px;font-weight:700;opacity:.9}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:9}
+.scanline{position:absolute;left:0;right:0;height:120px;background:linear-gradient(180deg,transparent,rgba(124,224,138,.35) 85%,#9BF0A7 100%);border-bottom:2px solid #B9FFC2;opacity:0}
+.analyzing{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;bottom:70px;background:rgba(0,0,0,.6);color:#fff;font-size:16px;font-weight:700;padding:10px 20px;border-radius:999px;white-space:nowrap}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:480px;background:var(--bg);border-radius:30px 30px 0 0;padding:14px 20px;box-shadow:0 -10px 30px rgba(0,0,0,.25)}
+.grab{width:44px;height:5px;border-radius:3px;background:#CCD;margin:0 auto 14px}
+.found{display:flex;gap:8px;margin-bottom:14px}
+.found .chip{background:#fff;color:var(--ink2);border:1.5px solid var(--line);font-size:14px;padding:6px 12px}
+.found .chip.on{background:var(--g);color:#fff;border-color:var(--g)}
+.wcard{padding:22px;position:relative}
+.wcard .w{font-size:50px;font-weight:900;color:var(--ink)}
+.wcard .kana{margin-top:4px;font-size:18px;color:var(--mute);font-weight:700}
+.wcard .mean{margin-top:14px;font-size:30px;font-weight:900;color:var(--g)}
+.wcard .pos{margin-left:10px;vertical-align:middle;background:var(--g-l);color:var(--g)}
+.wcard .heart{position:absolute;right:20px;top:20px;width:52px;height:52px;border-radius:50%;background:#FFF0F0;display:flex;align-items:center;justify-content:center}
+.wcard .heart svg{width:28px;height:28px;stroke:var(--red);stroke-width:2.4}
+.wcard .heart .fill{position:absolute;fill:var(--red);stroke:none;opacity:0}
+.burst i{position:absolute;left:22px;top:22px;width:8px;height:8px;border-radius:50%;background:var(--red)}
+.speak{display:flex;align-items:center;gap:12px;margin-top:18px;padding:12px 16px;background:var(--g-l);border-radius:14px;color:var(--g);font-weight:800;font-size:16px}
+.speak .wave{display:flex;gap:3px;align-items:center;height:24px}
+.speak .wave i{width:4px;height:6px;background:var(--g);border-radius:2px}
+.ex{margin-top:14px;padding:14px 16px;background:#fff;border-radius:14px;border:1.5px solid var(--line)}
+.ex .jp{font-size:19px;font-weight:700}
+.ex p{margin-top:4px;color:var(--mute);font-size:14px;font-weight:600}
+.toast{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;bottom:40px;background:#22313F;color:#fff;padding:12px 22px;border-radius:999px;font-weight:800;font-size:16px;white-space:nowrap;opacity:0;z-index:10}
+.wall-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 22px 10px}
+.wall-head b{font-size:15px;color:var(--mute)}
+.wall-head b span{color:var(--g);font-size:22px;font-family:"Segoe UI";font-weight:900}
+.wall-wrap{position:absolute;left:0;right:0;top:206px;bottom:0;overflow:hidden}
+.wall{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 18px}
+.tile{height:96px;border-radius:16px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;opacity:0}
+.tile .jp{font-size:22px;font-weight:900;color:var(--ink)}
+.tile small{font-size:13px;font-weight:700;color:var(--ink2)}
+.c1{background:#E3F1E2}.c2{background:#FFF4D6}.c3{background:#FBEBDD}.c4{background:#E3EEF8}.c5{background:#EFE6F5}
+
+/* ===== S2 ===== */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 20px}
+.sgrid .card{height:140px;padding:16px;position:relative;font-size:18px;font-weight:800}
+.sgrid .card small{display:block;margin-top:4px;font-size:13px;color:var(--mute);font-weight:600}
+.sgrid .ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.sgrid .ic svg{width:26px;height:26px}
+.sgrid .hot{outline:3px solid var(--g)}
+.chat-top{display:flex;align-items:center;gap:12px;padding:6px 18px 12px;border-bottom:1px solid var(--line);background:#fff}
+.av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:17px;flex:none}
+.chat-top b{display:block;font-size:17px}.chat-top small{font-size:13px;color:var(--g);font-weight:700}
+.chat-wrap{position:absolute;left:0;right:0;top:116px;bottom:150px;overflow:hidden}
+.chat{position:absolute;left:0;right:0;top:0;padding:14px 14px 20px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:78%;opacity:0}
+.msg .b{padding:12px 15px;border-radius:18px;font-size:18px;font-weight:700;line-height:1.4}
+.msg .t{margin-top:5px;font-size:13px;color:var(--mute);font-weight:600;padding:0 6px}
+.msg.ai .b{background:#fff;border-top-left-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.msg.me{align-self:flex-end;text-align:right}
+.msg.me .b{background:var(--g);color:#fff;border-top-right-radius:6px;text-align:left}
+.msg.ai .b .sp{display:inline-flex;vertical-align:middle;margin-left:6px;color:var(--g)}
+.micbar{position:absolute;left:0;right:0;bottom:0;height:150px;background:#fff;border-top:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.mic{position:relative;width:76px;height:76px;border-radius:50%;background:var(--g);color:#fff;display:flex;align-items:center;justify-content:center;z-index:1}
+.mic svg{width:34px;height:34px}
+.ring{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:3px solid var(--g);opacity:0}
+.micbar .hint{margin-top:10px;font-size:13px;font-weight:700;color:var(--mute)}
+.live{position:absolute;left:20px;right:20px;bottom:166px;padding:12px 16px;border-radius:16px;background:#22313F;color:#fff;display:flex;align-items:center;gap:14px;opacity:0}
+.live .wv{display:flex;gap:3px;align-items:center;height:30px}
+.live .wv i{width:4px;height:6px;background:#9BE59C;border-radius:2px}
+.live .txt{font-size:18px;font-weight:700}
+
+/* ===== S3 ===== */
+.prompt{margin:4px 20px;padding:18px;border-radius:18px;background:var(--gold-l);border:1.5px solid #F0E2A8}
+.prompt small{font-size:13px;font-weight:800;color:#9A8420}
+.prompt div{margin-top:6px;font-size:20px;font-weight:800}
+.input{margin:14px 20px 0;min-height:96px;padding:16px;border-radius:16px;background:#fff;border:2px solid var(--g);font-size:20px;font-weight:700;position:relative}
+.input .caret{display:inline-block;width:2px;height:22px;background:var(--g);vertical-align:middle;margin-left:1px}
+.send{margin:12px 20px 0;height:52px;border-radius:14px;background:var(--g);color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:18px;opacity:0}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--g)}
+.result{margin:16px 20px 0;padding:18px;opacity:0}
+.result .tag{background:#FFE9E9;color:var(--red)}
+.result .s{margin-top:12px;font-size:20px;font-weight:700;line-height:1.6}
+.err{position:relative;color:var(--red)}
+.err u{position:absolute;left:0;bottom:-2px;height:3px;background:var(--red);border-radius:2px;width:0}
+.fix{margin-top:8px;font-size:20px;font-weight:800;color:var(--g);opacity:0}
+.why{margin-top:14px;padding:14px;border-radius:12px;background:var(--g-l);font-size:15px;font-weight:600;line-height:1.6;color:var(--ink2);opacity:0}
+.why b{color:var(--ink)}
+.alist{padding:0 20px;display:flex;flex-direction:column;gap:12px}
+.art{display:flex;gap:14px;padding:14px;align-items:center;opacity:0}
+.art .th{width:76px;height:76px;border-radius:14px;flex:none}
+.art b{display:block;font-size:19px}
+.art small{display:block;margin-top:4px;font-size:13px;color:var(--mute);font-weight:600}
+.lv{background:#FFF0DC;color:#E08A00;margin-top:8px}
+.ahead{padding:4px 22px 0}
+.ahead h2{font-size:28px;font-weight:900}
+.ahead .lv{margin:8px 0 0}
+.para{margin:16px 22px;font-size:21px;line-height:2;font-weight:600;color:var(--ink)}
+.para span{background-image:linear-gradient(var(--g-l),var(--g-l));background-repeat:no-repeat;background-size:0% 100%;border-radius:4px}
+.recbar{position:absolute;left:0;right:0;bottom:0;height:170px;background:#fff;border-top:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.recbar .wv{display:flex;gap:4px;align-items:center;height:36px}
+.recbar .wv i{width:4px;height:6px;background:var(--red);border-radius:2px}
+.rec{width:70px;height:70px;border-radius:50%;border:4px solid #F3C2C3;display:flex;align-items:center;justify-content:center}
+.rec div{width:34px;height:34px;border-radius:10px;background:var(--red)}
+.timer{position:absolute;right:26px;top:24px;font:700 16px "Segoe UI";color:var(--red)}
+.score{position:absolute;inset:0;background:rgba(20,30,25,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;z-index:8}
+.score .ringbox{position:relative;width:250px;height:250px}
+.score svg{width:250px;height:250px;transform:rotate(-90deg)}
+.score .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff}
+.score .num b{font:900 92px "Segoe UI";line-height:1;background:linear-gradient(180deg,#FFF6C7,#F2C94C);-webkit-background-clip:text;color:transparent}
+.score .num small{font-size:18px;font-weight:800;margin-top:6px;letter-spacing:2px}
+.subs{display:flex;gap:12px;margin-top:28px}
+.subs div{width:104px;padding:12px 0;border-radius:14px;background:rgba(255,255,255,.12);text-align:center;color:#fff;font-size:13px;font-weight:700;opacity:0}
+.subs div b{display:block;font:900 26px "Segoe UI";color:#9BE59C}
+.fx i{position:absolute;width:10px;height:14px;border-radius:2px}
+
+/* ===== S4 ===== */
+.ghero{margin:4px 20px;padding:18px;border-radius:22px;background:linear-gradient(135deg,#2F5E33,#4E8B4C);color:#fff}
+.ghero h3{font-size:23px;font-weight:900}
+.ghero small{font-size:14px;opacity:.85;font-weight:600}
+.members{display:flex;margin-top:16px}
+.members .av{width:46px;height:46px;border:3px solid #3C7440;margin-right:-8px;font-size:16px;opacity:0}
+.lb{position:relative;margin:0 20px;height:292px}
+.lrow{position:absolute;left:0;right:0;height:52px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:14px;background:#fff;opacity:0}
+.lrow .rk{width:24px;font:900 18px "Segoe UI";color:var(--mute);text-align:center}
+.lrow .av{width:32px;height:32px;font-size:13px}
+.lrow .nm{width:54px;font-size:16px;font-weight:800}
+.lrow .bar{flex:1;height:12px;border-radius:6px;background:#EEF0EA;overflow:hidden}
+.lrow .bar i{display:block;height:100%;width:0;border-radius:6px;background:var(--g)}
+.lrow .xp{width:56px;text-align:right;font:800 15px "Segoe UI";color:var(--ink2)}
+.lrow.me{background:var(--g-l);outline:2px solid var(--g)}
+.lrow.me .bar i{background:var(--gold)}
+.crown{position:absolute;left:-6px;top:-12px;font-size:20px;opacity:0}
+.cls{margin:4px 20px;padding:16px 18px}
+.cls b{font-size:20px}
+.cls small{display:block;margin-top:4px;color:var(--mute);font-size:14px;font-weight:600}
+.hw{margin:12px 20px 0;padding:16px;display:flex;gap:14px;align-items:center;opacity:0}
+.hw .k{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.hw b{display:block;font-size:17px}
+.hw small{display:block;margin-top:3px;font-size:13px;color:var(--mute);font-weight:600}
+.hw .st{margin-left:auto;flex:none}
+.notice{position:absolute;left:12px;right:12px;top:52px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.97);box-shadow:0 10px 30px rgba(0,0,0,.18);display:flex;gap:12px;align-items:center;z-index:9;opacity:0}
+.notice b{display:block;font-size:15px}.notice small{font-size:13px;color:var(--ink2);font-weight:600}
+.sec{padding:16px 22px 8px;font-size:16px;font-weight:800;color:var(--ink2)}
+
+/* ===== S5 ===== */
+.wallet{margin:4px 20px;padding:18px 20px;border-radius:20px;background:linear-gradient(135deg,#C6B13B,#A08B1E);color:#fff;display:flex;justify-content:space-between;align-items:center}
+.wallet small{font-size:14px;font-weight:700;opacity:.9}
+.wallet b{display:block;font:900 32px "Segoe UI"}
+.plus{font:900 26px "Segoe UI";color:#fff;opacity:0}
+.task{margin:12px 20px 0;padding:16px;display:flex;align-items:center;gap:14px}
+.task .ck{width:30px;height:30px;border-radius:50%;border:2.5px solid #CDD3C9;flex:none;display:flex;align-items:center;justify-content:center;position:relative}
+.task .ck i{position:absolute;inset:-2.5px;border-radius:50%;background:var(--g);opacity:0;display:flex;align-items:center;justify-content:center}
+.task .ck svg{width:18px;height:18px;color:#fff;stroke-width:3}
+.task b{font-size:17px;flex:1}
+.task .pt{font:800 15px "Segoe UI";color:#A08B1E}
+.claim{margin:22px 20px 0;height:60px;border-radius:16px;background:linear-gradient(90deg,#C6B13B,#E0C84E);color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;box-shadow:0 8px 20px rgba(198,177,59,.4)}
+.coin{position:absolute;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFF3B0,#F2C94C 45%,#C99A12);border:2px solid #B88A0E;color:#8A6400;font:900 16px "Segoe UI";display:flex;align-items:center;justify-content:center;opacity:0;z-index:7}
+.prof{display:flex;align-items:center;gap:16px;margin:4px 22px 6px}
+.prof .av{width:66px;height:66px;font-size:26px}
+.prof b{font-size:22px;display:block}
+.prof small{font-size:14px;color:var(--mute);font-weight:700}
+.streak{margin:10px 20px 4px;display:flex;gap:10px}
+.streak div{flex:1;padding:12px 14px;border-radius:14px;background:#fff;font-size:13px;font-weight:700;color:var(--mute)}
+.streak div b{display:block;font:900 22px "Segoe UI";color:var(--ink)}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 20px}
+.badge{height:132px;border-radius:18px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;opacity:0}
+.medal{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;position:relative}
+.medal svg{width:32px;height:32px;stroke-width:2.2}
+.badge small{font-size:13px;font-weight:800;color:var(--ink)}
+.badge .tier{font-size:11px;font-weight:800;color:var(--mute);margin-top:-6px}
+.shine{position:absolute;top:-20px;bottom:-20px;width:40px;left:-60px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);transform:rotate(20deg)}
+.badge.locked .medal{background:#E3E5E0!important;color:#B4BAB0}
+.badge.locked small{color:#B4BAB0}
+.glow{position:absolute;left:50%;top:44px;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;background:radial-gradient(circle,rgba(186,104,255,.55),transparent 70%);opacity:0}
+.spark{position:absolute;width:10px;height:10px;background:#FFE07A;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);opacity:0}
+
+/* ===== S6 ===== */
+.items{margin:4px 20px 0;display:flex;flex-direction:column;gap:10px}
+.item{display:flex;align-items:center;gap:14px;padding:14px 16px;position:relative}
+.item .k{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.item b{font-size:16px;display:block}
+.item small{font-size:12px;color:var(--mute);font-weight:600}
+.item .cost{margin-left:auto;padding:7px 12px;border-radius:10px;background:var(--g-l);color:var(--g);font-weight:900;font-size:15px;white-space:nowrap}
+.item .hl{position:absolute;inset:0;border-radius:18px;border:3px solid var(--gold);opacity:0}
+.packs{margin:4px 20px 0;display:flex;flex-direction:column;gap:12px}
+.pack{display:flex;align-items:center;padding:18px;gap:14px;position:relative;opacity:0}
+.pack .gem{width:50px;height:50px;border-radius:14px;background:var(--gold-l);display:flex;align-items:center;justify-content:center;color:#A08B1E}
+.pack b{font:900 22px "Segoe UI";display:block}
+.pack small{font-size:13px;color:var(--mute);font-weight:600}
+.pack .price{margin-left:auto;padding:10px 16px;border-radius:12px;background:var(--g);color:#fff;font:900 18px "Segoe UI"}
+.pack .tg{position:absolute;right:16px;top:-10px;background:var(--red);color:#fff}
+.prem{margin:4px 18px 0;border-radius:26px;padding:24px 22px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(145deg,#1F3A24 0%,#2F5E33 55%,#6C7B23 100%);box-shadow:0 16px 40px rgba(47,94,51,.45)}
+.prem .crownic{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#FFE58A,#C6B13B);display:flex;align-items:center;justify-content:center;color:#5A4A00}
+.prem h3{margin-top:14px;font:900 34px "Segoe UI";letter-spacing:1px}
+.prem h3 span{background:linear-gradient(90deg,#FFE58A,#F5C842);-webkit-background-clip:text;color:transparent}
+.prem p{margin-top:4px;font-size:16px;font-weight:700;opacity:.85}
+.prem ul{list-style:none;margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.prem li{display:flex;gap:10px;align-items:center;font-size:16px;font-weight:700}
+.prem li svg{width:20px;height:20px;color:#FFE58A;stroke-width:3}
+.prem .pr{margin-top:22px;display:flex;align-items:baseline;gap:8px}
+.prem .pr b{font:900 40px "Segoe UI"}
+.prem .pr small{font-size:15px;opacity:.8;font-weight:700}
+.prem .go{margin-top:16px;height:54px;border-radius:14px;background:linear-gradient(90deg,#FFE58A,#F5C842);color:#3D3200;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.prem .shine{width:80px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)}
+.plan2{margin:14px 18px 0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center}
+.plan2 b{font-size:17px}.plan2 small{display:block;font-size:13px;color:var(--mute);font-weight:600;margin-top:2px}
+.plan2 .chip{background:var(--gold-l);color:#A08B1E}
+#endcard{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:120px;opacity:0;z-index:12}
+#endcard .brand{display:flex;flex-direction:column;align-items:flex-start}
+#endcard .brand img{width:200px}
+#endcard h1{margin-top:18px;font:900 104px "Segoe UI";color:var(--g-d);letter-spacing:1px}
+#endcard .slogan{margin-top:10px;font-size:40px;font-weight:800;color:var(--ink)}
+#endcard .slogan em{font-style:normal;color:var(--g)}
+#endcard .qr{background:#fff;border-radius:32px;padding:30px;box-shadow:0 24px 60px rgba(34,49,63,.18);text-align:center}
+#endcard .qr img{width:300px;height:300px;display:block;image-rendering:pixelated}
+#endcard .qr div{margin-top:16px;font-size:28px;font-weight:900;color:var(--g)}
+/* ===== 新增：個資打碼、主題收集冊、AI 家教、朗讀回饋、程度測驗 ===== */
+.face{position:absolute;right:12px;top:10px;width:46px;height:46px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);overflow:hidden;
+  background:radial-gradient(circle at 50% 40%,#F2C9A5 0 30%,transparent 31%),radial-gradient(ellipse at 50% 112%,#3B5B8C 0 50%,transparent 51%),radial-gradient(circle at 50% 30%,#3A2A20 0 36%,transparent 37%),#CFE0EA}
+.tel{margin-top:8px;text-align:center;font:700 15px "Segoe UI";color:#5A1E12;letter-spacing:1px}
+.pv{position:absolute;border:2px dashed #7CE08A;border-radius:10px;background:rgba(124,224,138,.12);opacity:0}
+.pv b{position:absolute;left:50%;top:-22px;transform:translateX(-50%);white-space:nowrap;background:#7CE08A;color:#0E2A12;font:800 11px "Microsoft JhengHei";padding:1px 6px;border-radius:4px}
+#s1-pv1{right:4px;top:2px;width:62px;height:62px}
+#s1-pv2{left:44px;right:44px;top:340px;height:32px}
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 20px}
+.th-c{height:150px;padding:14px;position:relative;opacity:0}
+.th-c .ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.th-c b{display:block;font-size:17px}
+.th-c small{font:700 13px "Segoe UI";color:var(--mute)}
+.th-c .pg{margin-top:8px;height:8px;border-radius:4px;background:#EEF0EA;overflow:hidden}
+.th-c .pg i{display:block;height:100%;background:var(--g);border-radius:4px}
+.stamp{position:absolute;right:12px;top:14px;border:3px solid var(--red);color:var(--red);font-weight:900;font-size:16px;padding:1px 8px;border-radius:8px;opacity:0;background:#fff}
+.chips{display:flex;gap:8px;opacity:0}
+.chips .chip{background:#fff;border:1.5px solid var(--g);color:var(--g);font-size:14px;padding:7px 12px}
+#s4-para em{font-style:normal}
+#s4-para em.on{color:var(--red);text-decoration:underline wavy var(--red);text-underline-offset:7px}
+.tip{position:absolute;left:24px;right:24px;top:392px;padding:12px 16px;border-radius:14px;background:#22313F;color:#fff;font-size:14px;font-weight:600;line-height:1.6;opacity:0;z-index:4}
+.tip b{font-size:16px;color:#FFB4B6}
+.qprog{margin:4px 20px 0;display:flex;align-items:center;gap:12px;font:700 14px "Microsoft JhengHei";color:var(--mute)}
+.qprog .pg{flex:1;height:8px;border-radius:4px;background:#E3E6DE;overflow:hidden}
+.qprog .pg i{display:block;height:100%;background:var(--g)}
+.qcard{margin:14px 20px 0;padding:18px;text-align:center}
+.qcard small{font-size:14px;font-weight:700;color:var(--mute)}
+.qcard div{font-size:64px;font-weight:900;margin-top:4px;line-height:1.2}
+.opts{margin:14px 20px 0;display:flex;flex-direction:column;gap:10px}
+.opt{height:54px;border-radius:14px;background:#fff;border:2px solid var(--line);display:flex;align-items:center;padding:0 18px;font-size:22px;font-weight:800;position:relative}
+.opt .ok{position:absolute;right:16px;width:24px;height:24px;color:#fff;stroke-width:3;opacity:0}
+.opt.right{background:var(--g);border-color:var(--g);color:#fff}
+.opt.right .ok{opacity:1}
+.skip{text-align:center;margin-top:16px;font-size:14px;font-weight:700;color:var(--mute);text-decoration:underline}
+.lvcard{margin:10px 20px 0;padding:28px 20px;text-align:center}
+.lvcard small{font-size:15px;font-weight:700;color:var(--mute)}
+.lvbadge{width:150px;height:150px;margin:18px auto 0;border-radius:50%;background:linear-gradient(135deg,#7BAE8A,#3A6F3A);display:flex;align-items:center;justify-content:center;color:#fff;font:900 60px "Segoe UI";box-shadow:0 12px 30px rgba(78,139,76,.35)}
+.lvbadge.up{background:linear-gradient(135deg,#FFE58A,#C6B13B);color:#4A3D00;box-shadow:0 12px 30px rgba(198,177,59,.45)}
+.lvsub{margin-top:16px;font-size:20px;font-weight:900}
+.lvnote{margin-top:6px;font-size:14px;color:var(--mute);font-weight:600}
+.lvbtn{position:absolute;left:20px;right:20px;top:600px;height:56px;border-radius:14px;background:var(--g);color:#fff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center}
+/* ===== 片頭、章節列、背景字、手機外的重點卡片 ===== */
+#bgk{position:absolute;inset:0;pointer-events:none}
+#bgk span{position:absolute;font-family:"Yu Gothic UI","Meiryo",sans-serif;font-weight:900;color:var(--g);opacity:.055}
+#nav{position:absolute;left:150px;top:92px;display:flex;gap:28px;z-index:8}
+#nav div{position:relative;font-size:21px;font-weight:800;color:#B4BBB2;letter-spacing:2px;padding-bottom:12px}
+#nav div.done{color:var(--ink2)}
+#nav div.on{color:var(--g)}
+#nav div i{position:absolute;left:0;bottom:0;height:4px;border-radius:2px;background:var(--g);width:0}
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#intro img{width:190px}
+#intro h1{margin-top:14px;font:900 120px "Segoe UI";color:var(--g-d);letter-spacing:1px}
+#intro p{margin-top:8px;font-size:40px;font-weight:800;color:var(--ink);letter-spacing:4px}
+#intro p em{font-style:normal;color:var(--g)}
+.co{position:absolute;left:1650px;z-index:9;background:#fff;border-radius:20px;box-shadow:0 18px 40px rgba(34,49,63,.16);padding:16px 22px;opacity:0;white-space:nowrap}
+.co .jp{font-size:32px;font-weight:900;color:var(--ink)}
+.co small{display:block;margin-top:2px;font-size:18px;font-weight:800;color:var(--g)}
+.co.bad{border:3px solid var(--red)} .co.bad .jp{color:var(--red);text-decoration:line-through}
+.co.good{border:3px solid var(--g)} .co.good .jp{color:var(--g)}
+.co .mk{font:900 22px "Segoe UI";margin-right:8px}
+.co.chipco{padding:12px 20px;font-size:22px;font-weight:800;color:var(--ink2)}
+.co.big{text-align:center;padding:22px 30px}
+.co.big b{display:block;font:900 96px "Segoe UI";line-height:1;background:linear-gradient(180deg,#6FBF6C,#2F5E33);-webkit-background-clip:text;color:transparent}
+.co.big.gold b{background:linear-gradient(180deg,#F5C842,#A08B1E);-webkit-background-clip:text}
+.co.big small{font-size:20px;margin-top:8px;color:var(--ink2)}
+.co .medal{width:110px;height:110px;margin:0 auto 10px}
+.co .medal svg{width:56px;height:56px}
+#s5-ladder{position:absolute;left:1660px;top:250px;width:210px;z-index:9}
+.rung{height:84px;margin-bottom:14px;border-radius:18px;background:#fff;box-shadow:0 10px 24px rgba(34,49,63,.10);display:flex;align-items:center;justify-content:space-between;padding:0 24px;font:900 34px "Segoe UI";color:#C3C9C0;opacity:0}
+.rung small{font:800 16px "Microsoft JhengHei";color:inherit}
+.rung.cur{background:var(--g);color:#fff}
+.rung.up{background:linear-gradient(135deg,#FFE58A,#C6B13B);color:#4A3D00}
+.goal{margin:8px 20px 0;padding:14px 16px}
+.goal b{font-size:15px}.goal span{float:right;font:800 14px "Segoe UI";color:var(--g)}
+.goal .pg{margin-top:10px;height:10px;border-radius:5px;background:#EEF0EA;overflow:hidden}
+.goal .pg i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4E8B4C,#8CC58A);border-radius:5px}
+.week{margin:18px 20px 0;padding:14px 16px}
+.week b{font-size:15px}
+.week .days{display:flex;justify-content:space-between;margin-top:12px}
+.week .days div{width:38px;text-align:center;font-size:12px;font-weight:700;color:var(--mute)}
+.week .days i{display:flex;width:34px;height:34px;margin:0 auto 6px;border-radius:50%;background:#EEF0EA;align-items:center;justify-content:center;color:#fff;font-style:normal;font:900 15px "Segoe UI"}
+.week .days i.f{background:var(--g)}
+.week .days i.today{background:#fff;border:3px solid var(--gold);color:var(--gold)}
+/* ===== 校園教育版 ===== */
+.edu-hero{margin:10px 20px 0;padding:20px;display:flex;gap:16px;align-items:center}
+.edu-hero img{width:56px}
+.edu-hero b{display:block;font-size:20px}
+.edu-hero small{font-size:13px;color:var(--mute);font-weight:600}
+.field{margin:18px 20px 0}
+.field small{font-size:13px;font-weight:800;color:var(--ink2)}
+.field div{margin-top:6px;height:52px;border-radius:14px;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:17px;font-weight:800}
+.field span{color:var(--mute)}
+.gbtn{margin:18px 20px 0;height:56px;border-radius:14px;background:#fff;border:2px solid #D7DBD3;display:flex;align-items:center;justify-content:center;gap:12px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.gbtn .g{font:900 22px "Segoe UI";background:conic-gradient(from -45deg,#EA4335 0 25%,#FBBC05 0 50%,#34A853 0 75%,#4285F4 0);-webkit-background-clip:text;color:transparent}
+.alt{margin-top:16px;text-align:center;font-size:13px;font-weight:700;color:var(--mute)}
+.joincard{margin:10px 20px 0;padding:22px}
+.joincard small{font-size:14px;font-weight:800;color:var(--ink2)}
+.code{display:flex;gap:8px;margin-top:12px}
+.code i{flex:1;height:60px;border-radius:12px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font:900 28px "Segoe UI";font-style:normal;color:var(--ink)}
+.code i.f{border-color:var(--g);background:var(--g-l)}
+.joined{margin:14px 20px 0;padding:16px;display:flex;gap:14px;align-items:center;opacity:0;border:2px solid var(--g)}
+.joined b{display:block;font-size:17px}.joined small{font-size:13px;color:var(--g);font-weight:700}
+#browser{position:absolute;left:1010px;top:150px;width:870px;height:640px;border-radius:16px;background:#fff;box-shadow:0 40px 80px rgba(34,49,63,.22);overflow:hidden;opacity:0;z-index:3}
+.bbar{height:44px;background:#ECEEE8;display:flex;align-items:center;gap:8px;padding:0 16px}
+.bbar i{width:12px;height:12px;border-radius:50%;background:#F26B5B}
+.url{margin-left:14px;flex:1;height:28px;border-radius:8px;background:#fff;font:600 14px "Microsoft JhengHei";color:var(--mute);display:flex;align-items:center;padding:0 12px}
+.bbody{display:flex;height:596px}
+.side{width:190px;background:#1F3A24;color:#fff;padding:18px 12px}
+.side .logo{display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px;height:34px;margin-bottom:18px}
+.side .logo img{width:32px;background:#fff;border-radius:8px;padding:2px}
+.nv{height:43px;line-height:43px;padding:0 14px;border-radius:10px;font-size:15px;font-weight:700;color:rgba(255,255,255,.65);margin-bottom:4px}
+.nv.on{background:rgba(255,255,255,.16);color:#fff}
+.main{flex:1;position:relative;background:#F5F6F2}
+.pane{position:absolute;inset:0;padding:22px 26px;opacity:0}
+.pane h3{font-size:22px;font-weight:900;height:30px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.pane h3 .btn{font-size:14px;padding:8px 14px;border-radius:10px;background:var(--g);color:#fff}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ccard{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 14px rgba(0,0,0,.05);opacity:0}
+.ccard b{font-size:18px}
+.ccard .bd{float:right;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:#EEF0EA;color:var(--mute)}
+.ccard .bd.on{background:var(--g-l);color:var(--g)}
+.ccard .cd{margin-top:14px;font-size:13px;color:var(--mute);font-weight:700}
+.ccard .cd span{display:block;margin-top:4px;font:900 36px "Segoe UI";letter-spacing:5px;color:var(--g-d)}
+.ccard .meta{margin-top:10px;font-size:13px;color:var(--ink2);font-weight:600}
+.step{font-size:14px;font-weight:800;color:var(--ink2);height:20px;margin-bottom:10px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tcard{height:86px;background:#fff;border-radius:14px;padding:14px 16px;border:2px solid transparent;box-shadow:0 3px 10px rgba(0,0,0,.04)}
+.tcard b{font-size:16px}
+.tcard small{display:block;margin-top:6px;font-size:12.5px;color:var(--mute);font-weight:600;line-height:1.5}
+.tcard.sel{border-color:var(--g);background:var(--g-l)}
+.frow{display:flex;gap:12px;margin-top:16px}
+.frow div{flex:1;background:#fff;border-radius:12px;padding:10px 14px;border:1.5px solid var(--line)}
+.frow small{display:block;font-size:12px;color:var(--mute);font-weight:700}
+.frow span{font-size:16px;font-weight:800}
+.chk{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--ink2)}
+.chk i{width:20px;height:20px;border-radius:5px;background:var(--g);color:#fff;font-style:normal;font-size:13px;display:flex;align-items:center;justify-content:center}
+.pub{position:absolute;right:26px;bottom:26px;height:46px;padding:0 26px;border-radius:12px;background:var(--g);color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center}
+.stats{display:flex;background:#fff;border-radius:14px;padding:18px 6px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.stats div{flex:1;padding:0 18px;border-left:1.5px solid var(--line)}
+.stats div:first-child{border-left:0}
+.stats small{font-size:13px;color:var(--mute);font-weight:700}
+.stats b{display:block;margin-top:4px;font:900 32px "Segoe UI";color:var(--ink)}
+.chart{margin-top:16px;background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.chart small{font-size:14px;font-weight:800;color:var(--ink2)}
+.bars{display:flex;align-items:flex-end;gap:22px;height:250px;margin-top:10px;padding:0 10px}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bars i{display:block;width:100%;border-radius:8px 8px 0 0;background:linear-gradient(180deg,#8CC58A,#4E8B4C)}
+.bars span{margin-top:8px;font:700 13px "Segoe UI";color:var(--mute)}
+.cursor{position:absolute;left:0;top:0;width:28px;height:28px;z-index:5;opacity:0}
+.btoast{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;bottom:24px;background:#22313F;color:#fff;padding:12px 22px;border-radius:999px;font-weight:800;font-size:16px;opacity:0;z-index:6}
+.endwrap{display:flex;flex-direction:column;align-items:center}
+.endwrap img{width:150px}
+.endwrap h1{margin-top:10px;font:900 100px "Segoe UI";color:var(--g-d)}
+.endwrap .slogan{margin-top:6px;font-size:40px;font-weight:800;color:var(--ink);letter-spacing:2px}
+.endwrap .slogan em{font-style:normal;color:var(--g)}
+.recap{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;max-width:1800px;margin-top:40px}
+.recap span{padding:12px 24px;border-radius:999px;background:#fff;box-shadow:0 8px 20px rgba(34,49,63,.08);font-size:24px;font-weight:800;color:var(--g-d)}
+.team{margin-top:44px;padding-top:26px;border-top:2px solid #DCE3D8;text-align:center;font-size:24px;font-weight:700;color:var(--ink2);letter-spacing:2px;line-height:1.7}
+.team div:first-child{font-size:26px;font-weight:900;color:var(--ink)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-cam" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9.2-9A5 5 0 0 1 12 6a5 5 0 0 1 9.2 5c-2.2 4.6-9.2 9-9.2 9z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M19 19v2H6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5 1 1.5 2 2 2 2s1-3 1-7z"/></symbol>
+    <symbol id="i-run" viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="2"/><path d="M8 21l3-6 3 2v5M6 12l3-4 4 1 2 4 3 1M11 15l2-6"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></symbol>
+    <symbol id="i-bowl" viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 3c0 2 1 2 1 4M12 3c0 2 1 2 1 4M16 3c0 2 1 2 1 4"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24"><path d="M2 13l20-8-6 15-4-6z"/><path d="M12 14l10-9"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+    <symbol id="i-fish" viewBox="0 0 24 24"><path d="M3 12c3-5 10-6 14-2l4-3v10l-4-3c-4 4-11 3-14-2z"/><circle cx="8" cy="11" r=".8"/></symbol>
+    <symbol id="i-beer" viewBox="0 0 24 24"><path d="M5 6h10v14H5zM15 9h3v6h-3"/><path d="M5 6c0-2 2-3 5-3s5 1 5 3"/></symbol>
+    <symbol id="i-comic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 11h9V3M12 11v10"/></symbol>
+    <symbol id="i-gem" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 18 3-18"/></symbol>
+    <symbol id="i-crown" viewBox="0 0 24 24"><path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/></symbol>
+    <symbol id="i-sushi" viewBox="0 0 24 24"><ellipse cx="12" cy="15" rx="8" ry="4"/><path d="M4 15v-3c0-2 3.5-4 8-4s8 2 8 4v3"/></symbol>
+    <symbol id="i-torii" viewBox="0 0 24 24"><path d="M3 5c6 1.5 12 1.5 18 0M5 9h14M7 6v15M17 6v15"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1 1 10 4a6.5 6.5 0 0 0 10 10z"/></symbol>
+  </defs>
+</svg>
+
+<div id="stage">
+  <div id="bgk"><span style="font-size:190px;left:40px;top:180px">学</span><span style="font-size:120px;left:820px;top:640px">あ</span><span style="font-size:160px;left:1700px;top:860px">日</span><span style="font-size:110px;left:1020px;top:120px">カ</span><span style="font-size:140px;left:560px;top:880px">語</span><span style="font-size:100px;left:1850px;top:170px">の</span><span style="font-size:120px;left:880px;top:700px">話</span><span style="font-size:90px;left:40px;top:620px">ア</span><span style="font-size:130px;left:1620px;top:40px">読</span></div>
+  <div id="nav"><div>拍照<i></i></div><div>對話<i></i></div><div>批改<i></i></div><div>朗讀<i></i></div><div>測驗<i></i></div><div>小組<i></i></div><div>教育<i></i></div><div>任務<i></i></div><div>商城<i></i></div></div>
+  <div id="phone"></div>
+  <section class="scene" id="s0"><div class="scr" id="s0-splash" style="background:linear-gradient(160deg,#4E8B4C,#2F5E33);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px"><div style="width:120px;height:120px;border-radius:30px;background:#fff;display:flex;align-items:center;justify-content:center"><img src="logo.png" style="width:92px"></div><div style="color:#fff;font:900 30px 'Segoe UI'">Snap to Learn</div></div><div id="intro"><img src="logo.png"><h1>Snap to Learn</h1><p>拍下生活，<em>AI 陪你學日文</em></p></div></section>
+  <div id="sb"><span>9:41</span><span>●●● ▮</span></div>
+  <div id="island"></div>
+
+  <!-- ================= S1 拍照辨識・個資打碼・單詞牆・主題收集冊 ================= -->
+  <section class="scene" id="s1">
+    <div class="co" id="s1-c1" style="top:300px"><span class="jp">ラーメン</span><small>拉麵</small></div>
+    <div class="co" id="s1-c2" style="top:420px"><span class="jp">餃子</span><small>煎餃</small></div>
+    <div class="co" id="s1-c3" style="top:540px"><span class="jp">生ビール</span><small>生啤酒</small></div>
+    <div class="co big" id="s1-c4" style="top:330px"><div class="medal" style="background:linear-gradient(135deg,#F6A28C,#D9603F);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"><svg class="i"><use href="#i-bowl"/></svg></div><small style="color:var(--ink);font-size:22px">拉麵達人</small><small>主題集滿徽章</small></div>
+    <div class="left">
+      <div class="kicker"><b>01</b>拍照辨識 × 單詞牆</div>
+      <div class="headline">打開相機，<br>生活就是<em>教材</em></div>
+      <div class="tagline">隨拍隨翻・個資自動打碼・主題收集冊</div>
+    </div>
+    <div class="scr">
+      <div class="layer" id="s1-home">
+        <div class="appbar"><img src="logo.png" style="width:34px">Snap to Learn</div>
+        <div style="padding:0 22px 10px;font-size:15px;color:var(--mute);font-weight:700">早安，Yuki！今天想學什麼？</div>
+        <div class="home-hero"><h3>拍照學日文</h3><p>對準菜單、招牌、包裝</p><div class="cam"><svg class="i"><use href="#i-cam"/></svg></div></div>
+        <div class="home-grid">
+          <div class="card">情境對話<small>居酒屋・機場・藥妝</small><svg class="i"><use href="#i-chat"/></svg></div>
+          <div class="card">閱讀大廳<small>N5 – N2 文章</small><svg class="i"><use href="#i-book"/></svg></div>
+          <div class="card">AI 造句<small>即時批改</small><svg class="i"><use href="#i-pen"/></svg></div>
+          <div class="card">學習小組<small>3 位好友在線</small><svg class="i"><use href="#i-users"/></svg></div>
+        </div>
+        <div class="tap" id="s1-tap1" style="left:313px;top:284px"></div>
+      </div>
+      <div class="layer" id="s1-cam" style="padding:0">
+        <div class="viewfinder">
+          <div class="table"></div>
+          <div class="menu jp" id="s1-menu">
+            <div class="face" id="s1-face"><i></i></div>
+            <h4>お品書き</h4>
+            <div class="row"><span>ラーメン</span><i>¥850</i><div class="box"><b>拉麵</b></div></div>
+            <div class="row"><span>餃子</span><i>¥420</i><div class="box"><b>煎餃</b></div></div>
+            <div class="row"><span>唐揚げ</span><i>¥580</i><div class="box"><b>炸雞</b></div></div>
+            <div class="row"><span>生ビール</span><i>¥550</i><div class="box"><b>生啤酒</b></div></div>
+            <div class="row"><span>枝豆</span><i>¥300</i><div class="box"><b>毛豆</b></div></div>
+            <div class="tel" id="s1-tel">TEL 03-3456-7890</div>
+            <div class="pv" id="s1-pv1"><b>人臉已打碼</b></div>
+            <div class="pv" id="s1-pv2"><b>電話已打碼</b></div>
+          </div>
+          <div class="scanline" id="s1-scan"></div>
+        </div>
+        <div class="corners" id="s1-corners"><i></i><i></i><i></i><i></i></div>
+        <div class="cam-top" id="s1-camtop">對準日文，自動辨識</div>
+        <div class="shutter" id="s1-shutter"><div></div></div>
+        <div class="analyzing" id="s1-anal" style="opacity:0">AI 解析中…</div>
+        <div class="analyzing" id="s1-priv" style="opacity:0;background:rgba(78,139,76,.92)">已自動隱藏 2 處個資</div>
+        <div class="tap" id="s1-tap2" style="left:196px;top:747px"></div>
+        <div class="flash" id="s1-flash"></div>
+        <div class="sheet" id="s1-sheet">
+          <div class="grab"></div>
+          <div class="found"><span class="chip on jp">ラーメン</span><span class="chip jp">餃子</span><span class="chip jp">唐揚げ</span><span class="chip jp">+2</span></div>
+          <div class="card wcard">
+            <div class="w jp">ラーメン</div>
+            <div class="kana jp">らーめん ・ rāmen</div>
+            <div class="mean">拉麵<span class="chip pos">名詞</span></div>
+            <div class="heart"><svg class="i"><use href="#i-heart"/></svg><svg class="i fill" id="s1-hfill"><use href="#i-heart"/></svg><div class="burst" id="s1-burst"></div></div>
+            <div class="speak"><svg class="i"><use href="#i-vol"/></svg>真人發音<div class="wave" id="s1-wave"></div></div>
+          </div>
+          <div class="ex"><div class="jp">ラーメンを一つください。</div><p>請給我一碗拉麵。</p></div>
+          <div class="tap" id="s1-tap3" style="left:326px;top:125px"></div>
+        </div>
+        <div class="toast" id="s1-toast">已加入收藏夾</div>
+      </div>
+      <div class="layer" id="s1-wall">
+        <div class="appbar">收藏夾</div>
+        <div class="tabs"><div class="on">單詞牆</div><div>資料夾</div><div>主題</div></div>
+        <div class="wall-head"><span style="font-size:20px;font-weight:900">我的單詞牆</span><b>已收藏 <span id="s1-count">0</span> 個</b></div>
+        <div class="wall-wrap"><div class="wall" id="s1-grid"></div></div>
+      </div>
+      <div class="layer" id="s1-theme">
+        <div class="appbar">收藏夾</div>
+        <div class="tabs"><div>單詞牆</div><div>資料夾</div><div class="on">主題</div></div>
+        <div class="wall-head"><span style="font-size:20px;font-weight:900">主題收集冊</span><b>已集滿 <span id="s1-full">1</span> 本</b></div>
+        <div class="themes">
+          <div class="card th-c" id="s1-ramen"><div class="ic" style="background:#FBEBDD;color:#C2622D"><svg class="i"><use href="#i-bowl"/></svg></div><b>拉麵店</b><small><span id="s1-rn">5</span> / 6</small><div class="pg"><i id="s1-rbar"></i></div><div class="stamp" id="s1-stamp">集滿</div></div>
+          <div class="card th-c"><div class="ic" style="background:#F28B8B33;color:#C93C3C"><svg class="i"><use href="#i-torii"/></svg></div><b>神社</b><small>6 / 6</small><div class="pg"><i style="width:100%"></i></div><div class="stamp" style="opacity:1;transform:rotate(-12deg)">集滿</div></div>
+          <div class="card th-c"><div class="ic" style="background:#FFF0DC;color:#E08A00"><svg class="i"><use href="#i-beer"/></svg></div><b>居酒屋</b><small>4 / 6</small><div class="pg"><i style="width:66%"></i></div></div>
+          <div class="card th-c"><div class="ic" style="background:#E3EEF8;color:#3C78B5"><svg class="i"><use href="#i-plane"/></svg></div><b>車站・機場</b><small>3 / 6</small><div class="pg"><i style="width:50%"></i></div></div>
+          <div class="card th-c"><div class="ic" style="background:#EFE6F5;color:#7E57A8"><svg class="i"><use href="#i-bag"/></svg></div><b>藥妝店</b><small>2 / 6</small><div class="pg"><i style="width:33%"></i></div></div>
+          <div class="card th-c"><div class="ic" style="background:#E3F1E2;color:var(--g)"><svg class="i"><use href="#i-fish"/></svg></div><b>壽司店</b><small>1 / 6</small><div class="pg"><i style="width:16%"></i></div></div>
+        </div>
+        <div class="toast" id="s1-toast2">解鎖徽章：拉麵達人</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= S2 情境對話 ================= -->
+  <section class="scene" id="s2">
+    <div class="co chipco" id="s2-c1" style="top:300px">便利商店</div>
+    <div class="co chipco" id="s2-c2" style="top:390px">飯店入住</div>
+    <div class="co chipco" id="s2-c3" style="top:480px">看醫生</div>
+    <div class="co chipco" id="s2-c4" style="top:570px">搭計程車</div>
+    <div class="left">
+      <div class="kicker"><b>02</b>AI 情境對話</div>
+      <div class="headline">AI 語伴，<br>陪你<em>開口說</em></div>
+      <div class="tagline">真實情境・多輪即時語音對答</div>
+    </div>
+    <div class="scr">
+      <div class="layer" id="s2-list">
+        <div class="appbar">情境對話</div>
+        <div class="tabs"><div class="on">熱門情境</div><div>旅遊</div><div>生活</div></div>
+        <div class="sgrid">
+          <div class="card" id="s2-izakaya"><div class="ic" style="background:#FFF0DC;color:#E08A00"><svg class="i"><use href="#i-beer"/></svg></div>居酒屋點餐<small>店員・初級</small></div>
+          <div class="card"><div class="ic" style="background:#FBEBDD;color:#C2622D"><svg class="i"><use href="#i-bowl"/></svg></div>一蘭拉麵<small>點餐・初級</small></div>
+          <div class="card" id="s2-airport"><div class="ic" style="background:#E3EEF8;color:#3C78B5"><svg class="i"><use href="#i-plane"/></svg></div>機場問路<small>櫃台・中級</small></div>
+          <div class="card" id="s2-drug"><div class="ic" style="background:#EFE6F5;color:#7E57A8"><svg class="i"><use href="#i-bag"/></svg></div>藥妝店購物<small>店員・初級</small></div>
+          <div class="card"><div class="ic" style="background:#E3F1E2;color:var(--g)"><svg class="i"><use href="#i-fish"/></svg></div>迴轉壽司<small>師傅・初級</small></div>
+          <div class="card"><div class="ic" style="background:#FFF4D6;color:#A08B1E"><svg class="i"><use href="#i-comic"/></svg></div>漫畫展<small>同好・中級</small></div>
+        </div>
+        <div class="tap" id="s2-tap" style="left:104px;top:236px"></div>
+      </div>
+      <div class="layer" id="s2-chat" style="background:#F1F2EC">
+        <div class="chat-top"><div class="av" style="background:#E08A00">店</div><div><b>居酒屋點餐</b><small>● AI 店員 回應中</small></div></div>
+        <div class="chat-wrap"><div class="chat" id="s2-msgs">
+          <div class="msg ai"><div class="b jp">いらっしゃいませ！何名様ですか？<span class="sp"><svg class="i" style="width:20px;height:20px"><use href="#i-vol"/></svg></span></div><div class="t">歡迎光臨！請問幾位？</div></div>
+          <div class="msg me"><div class="b jp">二人です。</div><div class="t">兩位。</div></div>
+          <div class="msg ai"><div class="b jp">こちらへどうぞ。お飲み物は何にしますか？</div><div class="t">這邊請。請問要喝點什麼？</div></div>
+          <div class="msg me"><div class="b jp">生ビールを二つください。</div><div class="t">請給我兩杯生啤酒。</div></div>
+          <div class="msg ai"><div class="b jp">かしこまりました！おつまみはいかがですか？</div><div class="t">好的！要不要來點下酒菜？</div></div>
+        </div></div>
+        <div class="live" id="s2-live"><div class="wv" id="s2-wv"></div><div class="txt jp" id="s2-livetxt"></div></div>
+        <div class="micbar">
+          <div style="position:relative"><div class="ring" id="s2-r1"></div><div class="ring" id="s2-r2"></div><div class="mic" id="s2-mic"><svg class="i"><use href="#i-mic"/></svg></div></div>
+          <div class="hint" id="s2-hint">按住說話</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= S3 造句批改 & AI 家教 ================= -->
+  <section class="scene" id="s3">
+    <div class="co bad" id="s3-c1" style="top:340px"><span class="mk" style="color:var(--red)">✗</span><span class="jp">食べるました</span></div>
+    <div class="co good" id="s3-c2" style="top:470px"><span class="mk" style="color:var(--g)">✓</span><span class="jp">食べました</span></div>
+    <div class="left">
+      <div class="kicker"><b>03</b>AI 造句批改 × AI 家教</div>
+      <div class="headline">寫錯哪裡，<br>AI <em>一眼看穿</em></div>
+      <div class="tagline">錯誤即時標記，不懂隨時問家教</div>
+    </div>
+    <div class="scr">
+      <div class="layer" id="s3-sent">
+        <div class="appbar"><svg class="i back"><use href="#i-back"/></svg>AI 造句批改</div>
+        <div class="prompt"><small>今日題目</small><div>用「<span class="jp">食べる</span>」造一個過去式句子</div></div>
+        <div class="input jp"><span id="s3-typed"></span><span class="caret" id="s3-caret"></span></div>
+        <div class="send" id="s3-send">送出批改</div>
+        <div class="dots" id="s3-dots"><i></i><i></i><i></i></div>
+        <div class="card result" id="s3-result">
+          <span class="chip tag">文法錯誤 1 處</span>
+          <div class="s jp">昨日、友達とラーメンを<span class="err">食べるました<u id="s3-u"></u></span>。</div>
+          <div class="fix jp" id="s3-fix">→ 昨日、友達とラーメンを<b style="background:var(--g-l);border-radius:4px;padding:0 3px">食べました</b>。</div>
+          <div class="why" id="s3-why"><b>動詞過去式要先變成ます形</b><br><span class="jp">食べる → 食べます → 食べました</span><br>「る」不能直接接「ました」。</div>
+        </div>
+        <div class="tap" id="s3-tap1" style="left:196px;top:348px"></div>
+      </div>
+      <div class="layer" id="s3-tutor" style="background:#F1F2EC">
+        <div class="chat-top"><div class="av" style="background:var(--g)">師</div><div><b>AI 家教</b><small>● 隨時為你解答</small></div></div>
+        <div class="chat" style="top:116px">
+          <div class="msg me" id="s3-q"><div class="b">「<span class="jp">は</span>」跟「<span class="jp">が</span>」到底差在哪？</div></div>
+          <div class="dots" id="s3-dots2" style="justify-content:flex-start;margin:0 0 0 8px"><i></i><i></i><i></i></div>
+          <div class="msg ai" id="s3-a1" style="max-width:88%"><div class="b" style="font-size:16px;font-weight:600">「<span class="jp">は</span>」用來帶出<b>話題</b>，「<span class="jp">が</span>」用來強調<b>是誰、是什麼</b>。</div></div>
+          <div class="msg ai" id="s3-a2" style="max-width:88%"><div class="b" style="font-size:16px;font-weight:600"><span class="jp" style="font-weight:800">私<u>は</u>学生です。</span><br><span style="color:var(--mute)">說到我呢，我是學生。</span><br><span class="jp" style="font-weight:800">私<u>が</u>行きます。</span><br><span style="color:var(--mute)">是「我」要去（不是別人）。</span></div></div>
+          <div class="chips" id="s3-chips"><span class="chip">再舉一個例子</span><span class="chip">出一題考我</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= S4 閱讀朗讀評分 ================= -->
+  <section class="scene" id="s4">
+    <div class="co big gold" id="s4-c1" style="top:330px"><b>95</b><small>發音準確度</small></div>
+    <div class="left">
+      <div class="kicker"><b>04</b>閱讀 × 朗讀評分</div>
+      <div class="headline">開口朗讀，<br>發音<em>即時評分</em></div>
+      <div class="tagline">AI 逐字聆聽，唸錯哪裡一看就懂</div>
+    </div>
+    <div class="scr">
+      <div class="layer" id="s4-list">
+        <div class="appbar">閱讀大廳</div>
+        <div class="tabs"><div class="on">推薦</div><div>N5</div><div>N4</div><div>N3</div></div>
+        <div class="alist">
+          <div class="card art"><div class="th" style="background:linear-gradient(135deg,#F9C6D0,#F2A0B5)"></div><div><b class="jp">日本の四季</b><small>春夏秋冬與日本人的生活</small><span class="chip lv">N4</span></div></div>
+          <div class="card art"><div class="th" style="background:linear-gradient(135deg,#B9D7F0,#7FB0DC)"></div><div><b class="jp">東京の電車</b><small>搭電車必學的站內用語</small><span class="chip lv">N3</span></div></div>
+          <div class="card art"><div class="th" style="background:linear-gradient(135deg,#F7DDB0,#E8B86A)"></div><div><b class="jp">はじめての温泉</b><small>泡湯禮儀一次看懂</small><span class="chip lv">N4</span></div></div>
+          <div class="card art"><div class="th" style="background:linear-gradient(135deg,#C7E6C5,#8CC58A)"></div><div><b class="jp">コンビニの一日</b><small>便利商店店員的日常</small><span class="chip lv">N5</span></div></div>
+        </div>
+        <div class="tap" id="s4-tap" style="left:200px;top:212px"></div>
+      </div>
+      <div class="layer" id="s4-read">
+        <div class="appbar"><svg class="i back"><use href="#i-back"/></svg>朗讀練習</div>
+        <div class="ahead"><h2 class="jp">日本の四季</h2><span class="chip lv">N4</span></div>
+        <div class="para jp" id="s4-para"><span>日本には四つの季節があります。</span><span>春には桜が咲いて、</span><span>多くの人が<em id="s4-bad">お花見</em>を楽しみます。</span><span>夏は暑いですが、</span><span>花火大会やお祭りがあります。</span></div>
+        <div class="tip" id="s4-tip"><b class="jp">お花見（おはなみ）</b><br>你唸成「<span class="jp">おはなび</span>」，聽聽看示範 ▶</div>
+        <div class="recbar"><div class="timer" id="s4-timer">00:00</div><div class="wv" id="s4-wv"></div><div class="rec"><div></div></div></div>
+        <div class="score" id="s4-score">
+          <div class="ringbox">
+            <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="8"/><circle id="s4-arc" cx="50" cy="50" r="44" fill="none" stroke="url(#gr)" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46"/><defs><linearGradient id="gr" x1="0" x2="1"><stop offset="0" stop-color="#9BE59C"/><stop offset="1" stop-color="#F2C94C"/></linearGradient></defs></svg>
+            <div class="num"><b id="s4-num">0</b><small>發音準確度</small></div>
+          </div>
+          <div class="subs"><div style="width:330px;text-align:left;padding:14px 18px">唸錯 1 處<b style="font:700 16px 'Microsoft JhengHei';color:#fff;margin-top:6px;line-height:1.5">整體很流暢！「お花見」再練習一下就更完美了。</b></div></div>
+          <div class="fx" id="s4-fx"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= S5 程度測驗 & 升級 ================= -->
+  <section class="scene" id="s5">
+    <div id="s5-ladder"><div class="rung" data-l="N2">N2</div><div class="rung" data-l="N3">N3</div><div class="rung" data-l="N4">N4</div><div class="rung" data-l="N5">N5</div></div>
+    <div class="left">
+      <div class="kicker"><b>05</b>程度測驗 × 升級挑戰</div>
+      <div class="headline">先測程度，<br>再一路<em>升級</em></div>
+      <div class="tagline">N5 – N2 快速分級，內容跟著你調整</div>
+    </div>
+    <div class="scr">
+      <div class="layer" id="s5-quiz">
+        <div class="appbar">程度測驗</div>
+        <div class="qprog"><span id="s5-qn">第 3 / 10 題</span><div class="pg"><i id="s5-qbar"></i></div></div>
+        <div class="card qcard"><small>選出正確讀音</small><div class="jp">駅</div></div>
+        <div class="opts">
+          <div class="opt jp" id="s5-right">えき<svg class="i ok"><use href="#i-check"/></svg></div>
+          <div class="opt jp">いき</div>
+          <div class="opt jp">えち</div>
+          <div class="opt jp">やく</div>
+        </div>
+        <div class="skip">我還沒學過這個</div>
+        <div class="tap" id="s5-tap1" style="left:196px;top:318px"></div>
+      </div>
+      <div class="layer" id="s5-res">
+        <div class="appbar">測驗結果</div>
+        <div class="card lvcard">
+          <small>你的日文程度</small>
+          <div class="lvbadge" id="s5-badge"><span id="s5-lv">N4</span></div>
+          <div class="lvsub" id="s5-sub">答對 8 / 10 題</div>
+          <div class="lvnote">系統會依程度推薦文章與情境</div>
+        </div>
+        <div class="lvbtn" id="s5-btn">挑戰升級測驗　N3 →</div>
+        <div class="tap" id="s5-tap2" style="left:196px;top:628px"></div>
+        <div class="fx" id="s5-fx"></div>
+        <div class="toast" id="s5-toast">升級成功！現在是 N3</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= S6 學習小組 ================= -->
+  <section class="scene" id="s6">
+    <div class="co big gold" id="s6-c1" style="top:330px"><b style="font-size:72px">No.1</b><small>超越美咲，登上第一</small></div>
+    <div class="co" id="s6-c2" style="top:360px"><small style="color:var(--mute);font-size:15px">王老師 派發了新作業</small><span style="font-size:24px;font-weight:900">閱讀：<span class="jp">日本の四季</span></span><small>截止 10/12</small></div>
+    <div class="left">
+      <div class="kicker"><b>06</b>學習小組 × 線上班級</div>
+      <div class="headline">找夥伴一起學，<br><em>動力翻倍</em></div>
+      <div class="tagline">好友組隊衝排行・老師線上派作業</div>
+    </div>
+    <div class="scr">
+      <div class="layer" id="s6-group">
+        <div class="appbar">學習小組</div>
+        <div class="ghero"><h3>日文衝刺小隊</h3><small>5 位成員・本週目標 5,000 XP</small>
+          <div class="members">
+            <div class="av" style="background:#E07A5F">美</div><div class="av" style="background:#3C78B5">哲</div><div class="av" style="background:#C6B13B">K</div><div class="av" style="background:#7E57A8">林</div><div class="av" style="background:#1E2B22">你</div>
+          </div>
+        </div>
+        <div class="tabs" style="margin-top:14px"><div class="on">本週排行</div><div>成員</div><div>作業</div></div>
+        <div class="lb" id="s6-lb">
+          <div class="lrow"><span class="rk">1</span><div class="av" style="background:#E07A5F">美</div><span class="nm">美咲</span><div class="bar"><i></i></div><span class="xp">1,280</span></div>
+          <div class="lrow me"><span class="rk">2</span><div class="av" style="background:#1E2B22">你</div><span class="nm">你</span><div class="bar"><i></i></div><span class="xp" id="s6-myxp">1,150</span><span class="crown" id="s6-crown">👑</span></div>
+          <div class="lrow"><span class="rk">3</span><div class="av" style="background:#3C78B5">哲</div><span class="nm">阿哲</span><div class="bar"><i></i></div><span class="xp">980</span></div>
+          <div class="lrow"><span class="rk">4</span><div class="av" style="background:#C6B13B">K</div><span class="nm">Ken</span><div class="bar"><i></i></div><span class="xp">860</span></div>
+          <div class="lrow"><span class="rk">5</span><div class="av" style="background:#7E57A8">林</div><span class="nm">小林</span><div class="bar"><i></i></div><span class="xp">720</span></div>
+        </div>
+        <div class="card goal"><b>小組本週目標</b><span id="s6-goal">0 / 5,000 XP</span><div class="pg"><i id="s6-gbar"></i></div></div>
+      </div>
+      <div class="layer" id="s6-class">
+        <div class="appbar"><svg class="i back"><use href="#i-back"/></svg>線上班級</div>
+        <div class="card cls"><b>日文（二）A 班</b><small>王老師・42 位同學</small></div>
+        <div class="sec">老師派發的作業</div>
+        <div class="card hw"><div class="k" style="background:#FDE7EC;color:#D0506E"><svg class="i"><use href="#i-book"/></svg></div><div><b>閱讀：<span class="jp">日本の四季</span></b><small>朗讀 + 測驗・截止 10/12</small></div><span class="chip st" style="background:#FFF0DC;color:#E08A00">新作業</span></div>
+        <div class="card hw"><div class="k" style="background:var(--gold-l);color:#A08B1E"><svg class="i"><use href="#i-pen"/></svg></div><div><b>造句：て形 × 5</b><small>AI 批改・截止 10/15</small></div><span class="chip st" style="background:#EEF0EA;color:var(--ink2)">待完成</span></div>
+        <div class="card hw"><div class="k" style="background:#E3EEF8;color:#3C78B5"><svg class="i"><use href="#i-plane"/></svg></div><div><b>對話：機場問路</b><small>情境對話・截止 10/08</small></div><span class="chip st" style="background:var(--g-l);color:var(--g)">已完成</span></div>
+        <div class="card hw"><div class="k" style="background:#EFE6F5;color:#7E57A8"><svg class="i"><use href="#i-cam"/></svg></div><div><b>拍照：校園裡的日文</b><small>拍 5 個單字・截止 10/20</small></div><span class="chip st" style="background:#EEF0EA;color:var(--ink2)">待完成</span></div>
+        <div class="notice" id="s6-notice"><div class="av" style="background:var(--g);width:40px;height:40px"><svg class="i" style="width:20px;height:20px"><use href="#i-bell"/></svg></div><div><b>王老師 派發了新作業</b><small>閱讀：日本の四季・截止 10/12</small></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 教育版：學校登入、班級代碼、老師網頁後台 ================= -->
+  <section class="scene" id="se">
+    <div class="left">
+      <div class="kicker"><b>07</b>校園教育版</div>
+      <div class="headline">老師派作業，<br>成績<em>一目了然</em></div>
+      <div class="tagline">學校 Google 登入・班級代碼・網頁後台</div>
+    </div>
+    <div class="scr" id="se-scr">
+      <div class="layer" id="se-login">
+        <div class="appbar">校園模式</div>
+        <div class="card edu-hero"><img src="logo.png"><div><b>早安，同學！</b><small>用學校帳號登入，自動建立帳號</small></div></div>
+        <div class="field"><small>學校</small><div>國立臺北商業大學<span>▾</span></div></div>
+        <div class="gbtn" id="se-gbtn"><span class="g">G</span>使用學校 Google 帳號登入</div>
+        <div class="alt">沒有學校帳號？用老師給的帳號登入</div>
+        <div class="tap" id="se-tap1" style="left:196px;top:344px"></div>
+      </div>
+      <div class="layer" id="se-join">
+        <div class="appbar">我的教室</div>
+        <div class="card joincard"><small>輸入老師給的班級代碼</small><div class="code" id="se-code"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="send" id="se-joinbtn" style="margin:16px 0 0">加入班級</div></div>
+        <div class="card joined" id="se-joined"><div class="av" style="background:var(--g)">班</div><div><b>日文（二）A 班</b><small>王老師・已加入</small></div></div>
+        <div class="tap" id="se-tap2" style="left:196px;top:272px"></div>
+      </div>
+      <div class="toast" id="se-toast">帳號建立完成！</div>
+    </div>
+    <div id="browser">
+      <div class="bbar"><i></i><i style="background:#F5BE4F"></i><i style="background:#5DC461"></i><div class="url">Snap to Learn 校園教育版</div></div>
+      <div class="bbody">
+        <div class="side"><div class="logo"><img src="logo.png">校園教育版</div><div class="nv" id="se-nv1">班級管理</div><div class="nv" id="se-nv2">出題新作業</div><div class="nv" id="se-nv3">班級報表</div><div class="nv">成績簿</div><div class="nv">公告</div></div>
+        <div class="main">
+          <div class="pane" id="se-p1">
+            <h3>班級管理<span class="btn">＋ 建立新班級</span></h3>
+            <div class="cgrid">
+              <div class="ccard" id="se-c1"><span class="bd on">開放加入中</span><b>日文（二）A 班</b><div class="cd">班級代碼<span id="se-ccode">K7Q2MX</span></div><div class="meta">學生人數：42 位・班級作業：6 份</div></div>
+              <div class="ccard" id="se-c2"><span class="bd">已關閉加入</span><b>日文會話 B 班</b><div class="cd">班級代碼<span>P4WN8T</span></div><div class="meta">學生人數：38 位・班級作業：9 份</div></div>
+            </div>
+          </div>
+          <div class="pane" id="se-p2">
+            <h3>出題新作業</h3>
+            <div class="step">步驟一：選擇作業題型</div>
+            <div class="tgrid">
+              <div class="tcard"><b>造句挑戰</b><small>指定文法與關鍵單字，AI 自動評分潤飾</small></div>
+              <div class="tcard" id="se-t2"><b>文章閱讀</b><small>挑選或上傳文章，可加選擇題、是非題</small></div>
+              <div class="tcard"><b>拍照學習</b><small>學生拍照，AI 辨識單字並生成例句</small></div>
+              <div class="tcard"><b>AI 情境對話</b><small>指定情境與輪數，老師看對話紀錄批閱</small></div>
+            </div>
+            <div class="frow"><div><small>作業標題</small><span class="jp">閱讀：日本の四季</span></div><div><small>截止時間</small><span>10/12 23:59</span></div></div>
+            <div class="chk"><i>✓</i>發布時通知學生（推播到學生手機）</div>
+            <div class="pub" id="se-pub">發布作業</div>
+          </div>
+          <div class="pane" id="se-p3">
+            <h3>班級報表<span style="font-size:14px;color:var(--mute);font-weight:700">日文（二）A 班</span></h3>
+            <div class="stats"><div><small>學期平均</small><b id="se-avg">0</b></div><div><small>及格率</small><b id="se-pass">0%</b></div><div><small>繳交率</small><b id="se-sub">0%</b></div><div><small>本週有練習</small><b id="se-week">0 位</b></div></div>
+            <div class="chart"><small>成績分布</small><div class="bars"><div><i style="height:0"></i><span>0–59</span></div><div><i style="height:0"></i><span>60–69</span></div><div><i style="height:0"></i><span>70–79</span></div><div><i style="height:0"></i><span>80–89</span></div><div><i style="height:0"></i><span>90–100</span></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cursor" id="se-cursor"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.5L9.5 21z" fill="#22313F" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+      <div class="btoast" id="se-btoast">已發布，並推播給 42 位同學</div>
+    </div>
+  </section>
+
+  <!-- ================= S7 每日任務 & 徽章 ================= -->
+  <section class="scene" id="s7">
+    <div class="co big gold" id="s7-c1" style="top:330px"><b>+30</b><small>J-Pts 入帳</small></div>
+    <div class="co big" id="s7-c2" style="top:310px"><div class="medal" style="background:linear-gradient(135deg,#E2B6FF,#8E44E8 60%,#5B2BB5);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(142,68,232,.45)"><svg class="i"><use href="#i-fire"/></svg></div><small style="color:var(--ink);font-size:22px">學習火種</small><small style="color:#8E44E8">白金級</small></div>
+    <div class="left">
+      <div class="kicker"><b>08</b>每日任務 × 成就徽章</div>
+      <div class="headline">學習像<em>打怪升級</em>，<br>天天都想回來</div>
+      <div class="tagline">完成任務領點數，點亮你的徽章牆</div>
+    </div>
+    <div class="scr">
+      <div class="layer" id="s7-task">
+        <div class="appbar">每日任務</div>
+        <div class="wallet"><div><small>我的點數</small><b><span id="s7-pts">120</span> J-Pts</b></div><div class="plus" id="s7-plus">+30</div></div>
+        <div class="card task"><div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i></div><b>拍照學 3 個單字</b><span class="pt">+10</span></div>
+        <div class="card task"><div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i></div><b>完成 1 次情境對話</b><span class="pt">+10</span></div>
+        <div class="card task"><div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i></div><b>朗讀 1 篇文章</b><span class="pt">+10</span></div>
+        <div class="claim" id="s7-claim">領取 30 J-Pts</div>
+        <div class="card week"><b>本週學習</b><div class="days"><div><i class="f">✓</i>一</div><div><i class="f">✓</i>二</div><div><i class="f">✓</i>三</div><div><i class="f">✓</i>四</div><div><i class="f">✓</i>五</div><div><i class="today">6</i>六</div><div><i class=""></i>日</div></div></div>
+        <div id="s7-coins"></div>
+        <div class="tap" id="s7-tap" style="left:196px;top:480px"></div>
+      </div>
+      <div class="layer" id="s7-prof">
+        <div class="appbar">個人主頁</div>
+        <div class="prof"><div class="av" style="background:var(--g)">Y</div><div><b>Yuki</b><small>Lv.12 ・ N3 程度</small></div></div>
+        <div class="streak"><div>連續學習<b>14 天</b></div><div>已收藏<b>128 字</b></div><div>徽章<b><span id="s7-bc">0</span> 枚</b></div></div>
+        <div class="sec">成就徽章牆</div>
+        <div class="bgrid" id="s7-badges">
+          <div class="badge"><div class="medal" style="background:linear-gradient(135deg,#FFD86B,#E0A800)"><svg class="i"><use href="#i-cap"/></svg></div><small>程度認證</small><span class="tier">金牌</span><div class="shine"></div></div>
+          <div class="badge"><div class="medal" style="background:linear-gradient(135deg,#C9D3DC,#8FA0B0)"><svg class="i"><use href="#i-book"/></svg></div><small>單字大富翁</small><span class="tier">銀牌</span><div class="shine"></div></div>
+          <div class="badge" id="s7-fire"><div class="glow" id="s7-glow"></div><div class="medal" id="s7-firemedal"><svg class="i"><use href="#i-fire"/></svg></div><small>學習火種</small><span class="tier" id="s7-tier">金牌</span><div class="shine"></div></div>
+          <div class="badge"><div class="medal" style="background:linear-gradient(135deg,#E5A46A,#B4682A)"><svg class="i"><use href="#i-run"/></svg></div><small>學習馬拉松</small><span class="tier">銅牌</span><div class="shine"></div></div>
+          <div class="badge"><div class="medal" style="background:linear-gradient(135deg,#FFD86B,#E0A800)"><svg class="i"><use href="#i-cam"/></svg></div><small>快門獵人</small><span class="tier">金牌</span><div class="shine"></div></div>
+          <div class="badge"><div class="medal" style="background:linear-gradient(135deg,#F6A28C,#D9603F)"><svg class="i"><use href="#i-bowl"/></svg></div><small>拉麵達人</small><span class="tier">主題集滿</span><div class="shine"></div></div>
+          <div class="badge"><div class="medal" style="background:linear-gradient(135deg,#8CC5E8,#3C78B5)"><svg class="i"><use href="#i-sushi"/></svg></div><small>壽司通</small><span class="tier">主題集滿</span><div class="shine"></div></div>
+          <div class="badge"><div class="medal" style="background:linear-gradient(135deg,#F28B8B,#C93C3C)"><svg class="i"><use href="#i-torii"/></svg></div><small>神社巡禮</small><span class="tier">主題集滿</span><div class="shine"></div></div>
+          <div class="badge locked"><div class="medal"><svg class="i"><use href="#i-moon"/></svg></div><small>夜貓子</small><span class="tier">未解鎖</span></div>
+        </div>
+        <div id="s7-sparks"></div>
+        <div class="toast" id="s7-toast" style="bottom:30px">學習火種 升級為白金級！</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= S8 商城 & Premium ================= -->
+  <section class="scene" id="s8">
+    <div class="co" id="s8-c1" style="top:330px"><span style="font-size:24px;font-weight:900">朗讀評分</span><small style="font-size:30px;font-family:'Segoe UI';font-weight:900">20 點／次</small></div>
+    <div class="co" id="s8-c2" style="top:470px"><span style="font-size:24px;font-weight:900">拍照辨識</span><small style="font-size:30px;font-family:'Segoe UI';font-weight:900">10 點／次</small></div>
+    <div class="left" id="s8-left">
+      <div class="kicker"><b>09</b>點數商城 × Premium</div>
+      <div class="headline">用多少買多少，<br><em>Premium</em> 無限用</div>
+      <div class="tagline">J-Pts 點數加購・訂閱方案任你選</div>
+    </div>
+    <div class="scr" id="s8-scr">
+      <div class="layer" id="s8-store">
+        <div class="appbar">商城</div>
+        <div class="tabs"><div id="s8-tb1">儲值點數</div><div class="on" id="s8-tb2">點數兌換</div><div>Premium</div></div>
+        <div class="wallet" style="margin-bottom:12px"><div><small>我的點數</small><b>150 J-Pts</b></div></div>
+        <div style="position:relative;height:560px;overflow:hidden">
+          <div class="items" id="s8-items" style="position:absolute;left:0;right:0;top:0">
+            <div class="card item"><div class="k" style="background:#FDE7EC;color:#D0506E"><svg class="i"><use href="#i-mic"/></svg></div><div><b>朗讀評分次數</b><small>額外 1 次發音評分</small></div><span class="cost">20 點</span><div class="hl"></div></div>
+            <div class="card item"><div class="k" style="background:#E3F1E2;color:var(--g)"><svg class="i"><use href="#i-cam"/></svg></div><div><b>拍照辨識次數</b><small>額外 1 次拍照解析</small></div><span class="cost">10 點</span><div class="hl"></div></div>
+            <div class="card item"><div class="k" style="background:#FFF0DC;color:#E08A00"><svg class="i"><use href="#i-chat"/></svg></div><div><b>AI 情境對話</b><small>額外 1 次對話</small></div><span class="cost">15 點</span><div class="hl"></div></div>
+            <div class="card item"><div class="k" style="background:var(--gold-l);color:#A08B1E"><svg class="i"><use href="#i-pen"/></svg></div><div><b>AI 造句批改</b><small>每次送出批改</small></div><span class="cost">5 點</span><div class="hl"></div></div>
+            <div class="card item"><div class="k" style="background:#E3EEF8;color:#3C78B5"><svg class="i"><use href="#i-book"/></svg></div><div><b>擴充單字收藏</b><small>+20 個收藏位</small></div><span class="cost">100 點</span><div class="hl"></div></div>
+          </div>
+          <div class="packs" id="s8-packs" style="position:absolute;left:0;right:0;top:0">
+            <div class="card pack"><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><div><b>70 J-Pts</b><small>入門包・小試牛刀</small></div><div class="price">NT$50</div></div>
+            <div class="card pack"><span class="chip tg">推薦</span><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><div><b>140 J-Pts</b><small>中包・最受歡迎</small></div><div class="price">NT$90</div></div>
+            <div class="card pack"><span class="chip tg">最划算</span><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><div><b>380 J-Pts</b><small>大包・平均單價最低</small></div><div class="price">NT$170</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="layer" id="s8-prem">
+        <div class="appbar">Premium 訂閱</div>
+        <div class="prem">
+          <div class="crownic"><svg class="i" style="width:30px;height:30px"><use href="#i-crown"/></svg></div>
+          <h3><span>Premium</span> Pro</h3>
+          <p>最高規格的無限暢學體驗</p>
+          <ul>
+            <li><svg class="i"><use href="#i-check"/></svg>拍照・對話・朗讀 無限次</li>
+            <li><svg class="i"><use href="#i-check"/></svg>付費文章全部解鎖</li>
+            <li><svg class="i"><use href="#i-check"/></svg>每月贈送 20 J-Pts</li>
+          </ul>
+          <div class="pr"><b>NT$149</b><small>/ 月</small></div>
+          <div class="go">立即升級</div>
+          <div class="shine" id="s8-shine"></div>
+        </div>
+        <div class="card plan2"><div><b>年訂閱 NT$1,290</b><small>平均每月 NT$107</small></div><span class="chip">贈 300 點</span></div>
+      </div>
+    </div>
+    <div id="endcard">
+      <div class="endwrap">
+        <img src="logo.png">
+        <h1>Snap to Learn</h1>
+        <div class="slogan">讓生活的每一刻，都成為<em>學習日語</em>的起點</div>
+        <div class="recap"><span>拍照辨識</span><span>AI 情境對話</span><span>AI 造句批改</span><span>朗讀評分</span><span>程度測驗</span><span>學習小組</span><span>校園教育版</span><span>成就徽章</span></div>
+        <div class="team" id="team"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="cap"><span id="captxt"></span></div>
+</div>
+
+<script>
+// 片尾團隊資訊（來源：系統手冊封面），一個字串一行；清空陣列就不顯示
+const TEAM=[
+  '國立臺北商業大學 資訊管理系｜第 115502 組',
+  '指導老師　林育志 老師',
+  '組長　彭婧奕　　組員　丁泳瑄・蘇品璇・廖唯岑・施品妤',
+];
+
+/* ---------- 時間軸引擎：每幀由 seek(秒) 決定畫面，錄影時逐幀呼叫 ---------- */
+const EASE={
+  lin:t=>t,
+  out:t=>1-Math.pow(1-t,3),
+  io:t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2,
+  back:t=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2)},
+};
+const SCENES=[]; let cur;
+// 每段長度來自 build/cues.js（tts.py 產生），跟旁白同一份設定
+// anchors：動畫當初對準的「每句旁白開始秒數」＋「該段長度」。
+// 旁白改了長度時，畫面以這些點為錨等比例伸縮，動作仍對準每句開頭。
+function scene(id,anchors){const i=SCENES.length,seg=window.CUES&&CUES[i],start=SCENES.reduce((a,s)=>a+s.dur,0);
+  const A=[0,...anchors],dur=seg?seg.dur:A[A.length-1],B=seg&&seg.parts.length===anchors.length-1?[0,...seg.parts.map(p=>p.at),dur]:A.map(a=>a*dur/A[A.length-1]);
+  cur={el:document.getElementById(id),start,dur,A,B,tracks:[],fns:[]};SCENES.push(cur);}
+// 實際秒數 → 動畫編排時的秒數
+function warp(s,l){const{A,B}=s;for(let k=1;k<B.length;k++)if(l<B[k]||k===B.length-1)return A[k-1]+(A[k]-A[k-1])*(l-B[k-1])/(B[k]-B[k-1]);return l;}
+function els(sel){if(typeof sel!=='string')return sel.length!==undefined?[...sel]:[sel];const r=[...cur.el.querySelectorAll(sel)];if(!r.length)console.warn('找不到',sel);return r;}
+// K(元素, [[秒, {o,x,y,s,r,w,bs}, 緩動], ...])
+function K(sel,kfs){els(sel).forEach(el=>{let tr=cur.tracks.find(x=>x.el===el);if(!tr){tr={el,props:{}};cur.tracks.push(tr)}const props={};kfs.forEach(([t,v,e])=>{for(const p in v)(props[p]=props[p]||[]).push([t,v[p],e||'out'])});Object.assign(tr.props,props)});}
+function F(fn){cur.fns.push(fn)}
+function val(list,t){
+  if(t<=list[0][0])return list[0][1];
+  for(let i=1;i<list.length;i++){const[t1,v1,e]=list[i];if(t<t1){const[t0,v0]=list[i-1];const k=EASE[e]((t-t0)/(t1-t0));return v0+(v1-v0)*k}}
+  return list[list.length-1][1];
+}
+function apply(tr,t){
+  const P=tr.props,s=tr.el.style,g=(k,d)=>P[k]?val(P[k],t):d;
+  if(P.o)s.opacity=g('o');
+  if(P.x||P.y||P.s||P.r)s.transform=`translate(${g('x',0)}px,${g('y',0)}px) scale(${g('s',1)}) rotate(${g('r',0)}deg)`;
+  if(P.w)s.width=g('w')+'%';
+  if(P.h)s.height=g('h')+'%';
+  if(P.bs)s.backgroundSize=g('bs')+'% 100%';
+}
+const lerp=(a,b,k)=>a+(b-a)*k, clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+// 畫面切換：tin 淡入、tout 淡出
+function L(sel,tin,tout,{dx=36}={}){const k=[[tin-.01,{o:0,x:dx}],[tin+.4,{o:1,x:0}]];if(tout!==undefined)k.push([tout,{o:1,x:0}],[tout+.35,{o:0,x:-dx}]);K(sel,k);}
+function TAP(sel,t){K(sel,[[t-.25,{o:0,s:.6}],[t,{o:1,s:1}],[t+.15,{o:1,s:.85}],[t+.45,{o:0,s:1.5}]]);}
+function leftIn(sel='.left',tin=.2,tout=cur.A[cur.A.length-1]-.75){K(sel,[[tin,{o:0,y:30}],[tin+.7,{o:1,y:0}],[tout,{o:1,y:0}],[tout+.5,{o:0,y:-20}]]);}
+function screenOut(t=cur.A[cur.A.length-1]-.45){K('.scr',[[t,{o:1}],[t+.45,{o:0}]]);}
+function bars(box,n,cls){const b=document.querySelector(box);for(let i=0;i<n;i++)b.appendChild(document.createElement('i'));return [...b.children];}
+function wave(barsEls,t,on,amp=22,base=6){barsEls.forEach((b,i)=>{const h=on?base+amp*Math.abs(Math.sin(t*9+i*1.3)*Math.sin(t*4.3+i*.7)):base;b.style.height=h+'px'});}
+const rnd=(()=>{let s=7;return()=>{s=(s*16807)%2147483647;return s/2147483647}})();
+
+const $id=id=>document.getElementById(id);
+// 從手機飛出來的卡片：tin 出現、tout 收回
+function CO(sel,tin,tout){K(sel,[[tin,{o:0,x:-140,s:.8}],[tin+.45,{o:1,x:0,s:1},'back'],[tout,{o:1,x:0,s:1}],[tout+.35,{o:0,x:40,s:.95}]]);}
+// 彩帶：從 (x,y) 往上噴
+function confetti(box,t0,x,y,n=40){const fx=document.querySelector(box);const C=['#F2C94C','#9BE59C','#FF8FA3','#8CC5E8','#fff'];const P=[];
+  for(let i=0;i<n;i++){const d=document.createElement('i');d.style.background=C[i%5];fx.appendChild(d);P.push({d,vx:(rnd()-.5)*520,vy:-260-rnd()*420,rs:(rnd()-.5)*900,t0:t0+rnd()*.15});}
+  F(t=>P.forEach(p=>{const u=t-p.t0;if(u<0||u>2.4){p.d.style.opacity=0;return}p.d.style.opacity=u>1.8?1-(u-1.8)/.6:1;p.d.style.left=(x+p.vx*u)+'px';p.d.style.top=(y+p.vy*u+420*u*u)+'px';p.d.style.transform=`rotate(${p.rs*u}deg)`;}));}
+// 星星：在 (x,y) 周圍爆開
+function sparks(box,t0,x,y,n=16){const sp=document.querySelector(box);const S=[];
+  for(let i=0;i<n;i++){const d=document.createElement('div');d.className='spark';sp.appendChild(d);S.push({d,a:rnd()*Math.PI*2,r:40+rnd()*60,t0:t0+rnd()*.4,sz:.7+rnd()*.9});}
+  F(t=>S.forEach(p=>{const u=t-p.t0;if(u<0||u>1.4){p.d.style.opacity=0;return}const k=EASE.out(u/1.4);p.d.style.opacity=1-k;p.d.style.left=(x+Math.cos(p.a)*p.r*k)+'px';p.d.style.top=(y+Math.sin(p.a)*p.r*k)+'px';p.d.style.transform=`scale(${p.sz}) rotate(${u*200}deg)`;}));}
+
+/* ======== S1 拍照 0–22.5 ======== */
+/* ======== S0 片頭 ======== */
+scene('s0',[3.2]);
+K('#intro img',[[.1,{o:0,s:.6}],[.6,{o:1,s:1},'back']]);
+K('#intro h1',[[.4,{o:0,y:30}],[.9,{o:1,y:0}]]);
+K('#intro p',[[.8,{o:0,y:20}],[1.3,{o:1,y:0}]]);
+K('#intro',[[2.4,{o:1,y:0}],[3.1,{o:0,y:-40},'io']]);
+F(t=>{const k=EASE.out(clamp((t-2.3)/.9));['phone','sb','island','s0-splash'].forEach(id=>{const e=$id(id);e.style.opacity=k;e.style.transform=`translateX(${(1-k)*700}px)`});$id('sb').classList.add('light');});
+
+scene('s1',[0.5,6.4,12.6,22.5]);
+leftIn(); screenOut();
+L('#s1-home',0,2.3);
+TAP('#s1-tap1',1.9);
+K('#s1-home .home-hero',[[1.8,{s:1}],[1.95,{s:.96}],[2.2,{s:1}]]);
+L('#s1-cam',2.3,14.8,{dx:0});
+K('#s1-menu',[[2.3,{x:-6,y:10,s:1.06,r:-3}],[3.6,{x:4,y:-4,s:1.08,r:-2}],[4.6,{x:0,y:0,s:1.05,r:-2.5}]]);
+TAP('#s1-tap2',4.5);
+K('#s1-shutter div',[[4.4,{s:1}],[4.55,{s:.8}],[4.8,{s:1}]]);
+K('#s1-flash',[[4.6,{o:0}],[4.68,{o:.95}],[5.1,{o:0}]]);
+K('#s1-camtop, #s1-shutter',[[4.9,{o:1}],[5.2,{o:0}]]);
+K('#s1-anal',[[5.2,{o:0}],[5.5,{o:1}],[9.0,{o:1}],[9.3,{o:0}]]);
+K('#s1-priv',[[9.3,{o:0,y:10}],[9.6,{o:1,y:0}],[11.2,{o:1}],[11.5,{o:0}]]);
+K('#s1-corners',[[5.0,{o:1,s:1}],[5.4,{o:1,s:.94}],[11.2,{o:1,s:.94}],[11.6,{o:0,s:.94}]]);
+F(t=>{const sc=$id('s1-scan');if(t>5.2&&t<9.0){const p=((t-5.2)%1.3)/1.3;sc.style.opacity=1;sc.style.top=(80+p*640-120)+'px'}else sc.style.opacity=0;});
+document.querySelectorAll('#s1-menu .box').forEach((b,i)=>{K(b,[[6.6+i*.3,{o:0,s:1.3}],[6.9+i*.3,{o:1,s:1}],[14.4,{o:1}],[14.8,{o:0}]])});
+// 個資打碼：人臉、電話
+F(t=>{const k=clamp((t-9.4)/.5);$id('s1-face').style.filter=`blur(${k*7}px)`;$id('s1-tel').style.filter=`blur(${k*5}px)`;});
+K('#s1-pv1, #s1-pv2',[[9.4,{o:0,s:1.15}],[9.8,{o:1,s:1}]]);
+K('#s1-sheet',[[11.4,{y:520}],[12.0,{y:0}]]);
+F(t=>{wave(window.s1w||(window.s1w=bars('#s1-wave',10)),t,t>12.0&&t<12.9,16,6)});
+TAP('#s1-tap3',13.2);
+K('#s1-hfill',[[13.25,{o:0,s:.3}],[13.55,{o:1,s:1.25},'back'],[13.75,{o:1,s:1}]]);
+(()=>{const b=$id('s1-burst');for(let i=0;i<10;i++){const d=document.createElement('i');b.appendChild(d);const a=i/10*Math.PI*2;K(d,[[13.3,{o:0,x:-4,y:-4,s:.5}],[13.4,{o:1,x:-4,y:-4,s:1}],[13.9,{o:0,x:-4+Math.cos(a)*48,y:-4+Math.sin(a)*48,s:.4}]])}})();
+K('#s1-toast',[[13.6,{o:0,y:20}],[13.9,{o:1,y:0}],[14.6,{o:1}],[14.8,{o:0}]]);
+L('#s1-wall',14.8,17.3);
+(()=>{const W=[['ラーメン','拉麵'],['生ビール','生啤酒'],['餃子','煎餃'],['寿司','壽司'],['駅','車站'],['切符','車票'],['抹茶','抹茶'],['天ぷら','天婦羅'],['温泉','溫泉'],['地図','地圖'],['電車','電車'],['傘','雨傘'],['弁当','便當'],['改札','剪票口'],['薬','藥'],['桜','櫻花'],['神社','神社'],['着物','和服'],['財布','錢包'],['お土産','伴手禮'],['唐揚げ','炸雞'],['枝豆','毛豆'],['醤油','醬油'],['自販機','販賣機']];
+  const g=$id('s1-grid');
+  W.forEach(([j,z],i)=>{const d=document.createElement('div');d.className='tile c'+(i%5+1);d.innerHTML=`<span class="jp">${j}</span><small>${z}</small>`;g.appendChild(d);
+    K(d,[[15.0+i*.05,{o:0,s:.6,y:20}],[15.35+i*.05,{o:1,s:1,y:0},'back']]);});
+  K('#s1-grid .tile:first-child',[[15.0,{o:0,s:.6}],[15.35,{o:1,s:1.12},'back'],[15.9,{o:1,s:1}]]);
+})();
+F(t=>{$id('s1-count').textContent=Math.round(lerp(0,128,EASE.out(clamp((t-15.0)/1.6))));});
+// 主題收集冊：拉麵 5/6 → 6/6 集滿
+L('#s1-theme',17.3);
+document.querySelectorAll('#s1-theme .th-c').forEach((c,i)=>K(c,[[17.5+i*.08,{o:0,y:20}],[17.85+i*.08,{o:1,y:0}]]));
+K('#s1-rbar',[[18.8,{w:83}],[19.3,{w:100}]]);
+F(t=>{$id('s1-rn').textContent=t>19.0?6:5;$id('s1-full').textContent=t>19.5?2:1;});
+K('#s1-ramen',[[17.5,{o:0,y:20}],[17.85,{o:1,y:0}],[19.0,{s:1}],[19.3,{s:1.06}],[19.8,{s:1}]]);
+K('#s1-stamp',[[19.3,{o:0,s:2.2,r:-30}],[19.6,{o:1,s:1,r:-12},'back']]);
+K('#s1-toast2',[[19.8,{o:0,y:20}],[20.1,{o:1,y:0}]]);
+F(t=>{if(t>2.3&&t<14.9)$id('sb').classList.add('light')});
+
+/* ======== S2 情境對話 0–18.5 ======== */
+scene('s2',[0.5,7.4,18.5]);
+leftIn(); screenOut();
+// 情境清單：開場出現，12.4 秒再回來展示其他情境
+K('#s2-list',[[-.01,{o:0,x:36}],[.4,{o:1,x:0}],[3.2,{o:1,x:0}],[3.55,{o:0,x:-36}],[12.3,{o:0,x:36}],[12.7,{o:1,x:0}]]);
+TAP('#s2-tap',2.8);
+K('#s2-izakaya',[[2.0,{s:1}],[2.8,{s:.95}],[3.1,{s:1.02}]]);
+K('#s2-chat',[[3.2,{o:0,x:36}],[3.6,{o:1,x:0}],[12.3,{o:1,x:0}],[12.65,{o:0,x:-36}]]);
+K('#s2-izakaya',[[2.0,{s:1}],[2.8,{s:.95}],[3.1,{s:1}],[12.9,{s:1}],[13.2,{s:1.06}],[13.6,{s:1}]]);
+K('#s2-airport',[[13.5,{s:1}],[13.8,{s:1.06}],[14.2,{s:1}]]);
+K('#s2-drug',[[14.2,{s:1}],[14.5,{s:1.06}],[14.9,{s:1}]]);
+(()=>{const M=[...document.querySelectorAll('#s2-msgs .msg')];
+  const T=[3.9,7.1,8.0,10.8,11.6];
+  M.forEach((m,i)=>K(m,[[T[i]-.01,{o:0,y:18,s:.96}],[T[i]+.35,{o:1,y:0,s:1},'back']]));
+  const holds=[[5.0,6.9,'二人です。'],[8.6,10.6,'生ビールを二つください。']];
+  const wv=bars('#s2-wv',14);
+  holds.forEach(([a,b])=>K('#s2-mic',[[a-.01,{s:1}],[a+.2,{s:1.18}],[b,{s:1.18}],[b+.2,{s:1}]]));
+  K('#s2-mic',[[4.99,{s:1}],[5.2,{s:1.18}],[6.9,{s:1.18}],[7.1,{s:1}],[8.59,{s:1}],[8.8,{s:1.18}],[10.6,{s:1.18}],[10.8,{s:1}]]);
+  F(t=>{const h=holds.find(([a,b])=>t>=a&&t<b+.15);
+    $id('s2-live').style.opacity=h?1:0;$id('s2-hint').textContent=h?'放開送出':'按住說話';
+    if(h){const[a,b,txt]=h;const k=clamp((t-a-.3)/(b-a-.6));$id('s2-livetxt').textContent=txt.slice(0,Math.round(k*txt.length));}
+    wave(wv,t,!!h,22,5);
+    ['s2-r1','s2-r2'].forEach((id,j)=>{const r=$id(id);if(h){const p=((t-h[0])/1.2+j*.5)%1;r.style.opacity=1-p;r.style.transform=`scale(${1+p*.9})`}else r.style.opacity=0;});
+  });
+})();
+
+/* ======== S3 造句批改 + AI 家教 0–16.5 ======== */
+scene('s3',[0.5,9.0,16.5]);
+leftIn(); screenOut();
+L('#s3-sent',0,8.4);
+F(t=>{const s='昨日、友達とラーメンを食べるました。';const k=clamp((t-.3)/1.5);$id('s3-typed').textContent=s.slice(0,Math.round(k*s.length));
+  $id('s3-caret').style.opacity=(t<2.2&&Math.floor(t*2.5)%2===0)?1:0;});
+TAP('#s3-tap1',2.1);
+K('#s3-send',[[2.0,{s:1}],[2.15,{s:.95}],[2.4,{s:1}],[5.4,{y:0}],[6.0,{y:-110},'io']]);
+K('#s3-dots',[[2.3,{o:0}],[2.45,{o:1}],[3.0,{o:1}],[3.15,{o:0}]]);
+F(t=>{document.querySelectorAll('#s3 .dots i').forEach((d,i)=>d.style.transform=`translateY(${-6*Math.max(0,Math.sin(t*8-i*.9))}px)`)});
+K('#s3-result',[[3.1,{o:0,y:30}],[3.5,{o:1,y:0}],[5.4,{y:0}],[6.0,{y:-110},'io']]);
+K('#s3-u',[[3.7,{w:0}],[4.3,{w:100}]]);
+K('#s3-fix',[[4.6,{o:0,y:10}],[5.0,{o:1,y:0}]]);
+K('#s3-why',[[5.6,{o:0,y:10}],[6.0,{o:1,y:0}]]);
+K('#s3-sent .prompt, #s3-sent .input',[[5.4,{y:0}],[6.0,{y:-110},'io']]);
+L('#s3-tutor',8.4);
+K('#s3-q',[[9.2,{o:0,y:18}],[9.55,{o:1,y:0},'back']]);
+K('#s3-dots2',[[9.8,{o:0}],[10.0,{o:1}],[10.9,{o:1}],[11.0,{o:0}]]);
+K('#s3-a1',[[11.0,{o:0,y:18}],[11.35,{o:1,y:0},'back']]);
+K('#s3-a2',[[12.2,{o:0,y:18}],[12.55,{o:1,y:0},'back']]);
+K('#s3-chips',[[13.4,{o:0,y:10}],[13.7,{o:1,y:0}]]);
+
+/* ======== S4 朗讀評分 0–13 ======== */
+scene('s4',[0.5,4.2,13]);
+leftIn(); screenOut();
+L('#s4-list',0,1.5);
+document.querySelectorAll('#s4-list .art').forEach((a,i)=>K(a,[[.1+i*.1,{o:0,y:20}],[.45+i*.1,{o:1,y:0}]]));
+K('#s4-list .art:first-child',[[.1,{o:0,y:20}],[.45,{o:1,y:0}],[1.1,{s:1}],[1.25,{s:.96}],[1.45,{s:1}]]);
+TAP('#s4-tap',1.15);
+L('#s4-read',1.5);
+(()=>{const sp=[...document.querySelectorAll('#s4-para > span')];const t0=2.0,per=.62;
+  sp.forEach((s,i)=>K(s,[[t0+i*per,{bs:0}],[t0+(i+1)*per,{bs:100},'lin']]));
+  const wv=bars('#s4-wv',26);
+  F(t=>{const on=t>1.9&&t<5.3;wave(wv,t,on,26,5);const sec=on?Math.floor(t-1.9):(t>=5.3?3:0);$id('s4-timer').textContent='00:0'+sec;});
+})();
+K('#s4-score',[[5.5,{o:0}],[5.8,{o:1}],[8.6,{o:1}],[8.95,{o:0}]]);
+K('#s4-score .ringbox',[[5.5,{s:.6}],[6.0,{s:1},'back'],[7.3,{s:1}],[7.5,{s:1.08}],[7.8,{s:1}]]);
+F(t=>{const k=EASE.out(clamp((t-5.8)/1.4));$id('s4-arc').style.strokeDashoffset=276.46*(1-.95*k);$id('s4-num').textContent=Math.round(95*k);});
+document.querySelectorAll('#s4-score .subs div').forEach((d,i)=>K(d,[[7.4+i*.15,{o:0,y:16}],[7.75+i*.15,{o:1,y:0}]]));
+confetti('#s4-fx',7.2,196,330,40);
+// 9 秒：標出唸得不準的字
+F(t=>{$id('s4-bad').className=t>9.1?'on':'';});
+K('#s4-tip',[[9.4,{o:0,y:12}],[9.8,{o:1,y:0}]]);
+
+/* ======== S5 程度測驗 0–11 ======== */
+scene('s5',[0.5,6.0,11]);
+leftIn(); screenOut();
+L('#s5-quiz',0,4.4);
+K('#s5-qbar',[[0,{w:30}],[2.6,{w:30}],[4.2,{w:100}]]);
+F(t=>{const n=t<2.6?3:Math.min(10,3+Math.floor((t-2.6)/1.6*7)+1);$id('s5-qn').textContent=`第 ${n} / 10 題`;
+  $id('s5-right').className='opt jp'+(t>2.25?' right':'');});
+TAP('#s5-tap1',2.1);
+K('#s5-right',[[2.0,{s:1}],[2.15,{s:.96}],[2.4,{s:1.03}],[2.7,{s:1}]]);
+L('#s5-res',4.4);
+K('#s5-badge',[[4.6,{s:.4,o:0}],[5.1,{s:1,o:1},'back']]);
+K('#s5-btn',[[6.0,{s:1,o:1}],[6.3,{s:1.05}],[6.6,{s:1}],[6.9,{s:1.05}],[7.15,{s:.95}],[7.4,{s:1}],[7.9,{o:1}],[8.2,{o:0}]]);
+TAP('#s5-tap2',7.15);
+// 升級：徽章翻面 N4 → N3
+K('#s5-badge',[[4.6,{s:.4,o:0}],[5.1,{s:1,o:1},'back'],[7.8,{s:1,r:0}],[8.3,{s:1.15,r:360},'io'],[8.7,{s:1,r:360}]]);
+F(t=>{const up=t>8.05;$id('s5-lv').textContent=up?'N3':'N4';$id('s5-badge').className='lvbadge'+(up?' up':'');$id('s5-sub').textContent=up?'升級測驗通過！':'答對 8 / 10 題';});
+confetti('#s5-fx',8.2,196,300,44);
+K('#s5-toast',[[8.4,{o:0,y:20}],[8.7,{o:1,y:0}]]);
+
+/* ======== S6 學習小組 0–15.5 ======== */
+scene('s6',[0.5,8.2,15.5]);
+leftIn(); screenOut();
+L('#s6-group',0,7.9);
+document.querySelectorAll('#s6-group .members .av').forEach((a,i)=>K(a,[[2.6+i*.15,{o:0,s:.4}],[2.95+i*.15,{o:1,s:1},'back']]));
+(()=>{const rows=[...document.querySelectorAll('#s6-lb .lrow')];const W=[85,77,65,57,48];const H=58;
+  rows.forEach((r,i)=>{K(r,[[.6+i*.1,{o:0,y:i*H+20}],[.95+i*.1,{o:1,y:i*H}]]);K(r.querySelector('.bar i'),[[3.8+i*.1,{w:0}],[4.9+i*.1,{w:W[i]}]]);});
+  K(rows[1],[[.7,{o:0,y:H+20}],[1.05,{o:1,y:H}],[5.9,{y:H}],[6.6,{y:0},'io']]);
+  K(rows[0],[[.6,{o:0,y:20}],[.95,{o:1,y:0}],[5.9,{y:0}],[6.6,{y:H},'io']]);
+  K(rows[1].querySelector('.bar i'),[[3.9,{w:0}],[5.0,{w:77}],[5.3,{w:77}],[6.2,{w:90}]]);
+  F(t=>{const k=clamp((t-5.3)/.9);$id('s6-myxp').textContent=Math.round(lerp(1150,1330,k)).toLocaleString();
+    rows[0].querySelector('.rk').textContent=t>6.3?2:1;rows[1].querySelector('.rk').textContent=t>6.3?1:2;});
+  K('#s6-crown',[[6.6,{o:0,s:.3,r:-30}],[7.0,{o:1,s:1,r:-15},'back']]);
+})();
+L('#s6-class',7.9);
+document.querySelectorAll('#s6-class .hw').forEach((h,i)=>K(h,[[8.3+i*.15,{o:0,x:40}],[8.7+i*.15,{o:1,x:0}]]));
+K('#s6-notice',[[10.9,{o:0,y:-80}],[11.4,{o:1,y:0},'back'],[14.2,{o:1,y:0}],[14.6,{o:0,y:-80}]]);
+K('#s6-class .hw:nth-child(4)',[[8.3,{o:0,x:40}],[8.7,{o:1,x:0}],[11.6,{s:1}],[11.9,{s:1.04}],[12.3,{s:1}]]);
+
+
+/* ======== 校園教育版 0–17.3 ======== */
+scene('se',[0.5,6.9,17.26]);
+leftIn();
+L('#se-login',0,2.7);
+TAP('#se-tap1',1.9);
+K('#se-gbtn',[[1.8,{s:1}],[1.95,{s:.96}],[2.2,{s:1}]]);
+K('#se-toast',[[2.3,{o:0,y:20}],[2.6,{o:1,y:0}],[3.6,{o:1}],[3.9,{o:0}]]);
+L('#se-join',2.7,6.2);
+F(t=>{const code='K7Q2MX',n=Math.round(clamp((t-3.2)/1.2)*6);document.querySelectorAll('#se-code i').forEach((b,i)=>{b.textContent=i<n?code[i]:'';b.className=i<n?'f':'';});});
+TAP('#se-tap2',4.8);
+K('#se-joinbtn',[[4.7,{s:1}],[4.85,{s:.95}],[5.1,{s:1}]]);
+K('#se-joined',[[5.2,{o:0,y:16}],[5.55,{o:1,y:0},'back']]);
+// 6.2 秒：手機退場、瀏覽器（老師網頁後台）進場；16.2 秒手機再回來接下一段
+K('#se-scr',[[6.2,{o:1,x:0}],[6.9,{o:0,x:500},'io'],[16.2,{o:0,x:500}],[17.0,{o:1,x:0},'io']]);
+F(t=>{const k=t<11?EASE.io(clamp((t-6.2)/.7)):1-EASE.io(clamp((t-16.2)/.8));['phone','sb','island'].forEach(id=>{const e=$id(id);e.style.opacity=1-k;e.style.transform=`translateX(${500*k}px)`});});
+K('#browser',[[6.4,{o:0,x:80}],[7.1,{o:1,x:0}],[16.0,{o:1,x:0}],[16.5,{o:0,x:-60}]]);
+F(t=>{['se-nv1','se-nv2','se-nv3'].forEach((id,i)=>$id(id).className='nv'+((i===0&&t<9.6)||(i===1&&t>=9.6&&t<12.6)||(i===2&&t>=12.6)?' on':''));});
+K('#se-p1',[[6.9,{o:1}],[9.6,{o:1}],[9.8,{o:0}]]);
+K('#se-c1',[[7.1,{o:0,y:16}],[7.5,{o:1,y:0}],[8.2,{s:1}],[8.45,{s:1.04}],[8.8,{s:1}]]);
+K('#se-c2',[[7.3,{o:0,y:16}],[7.7,{o:1,y:0}]]);
+K('#se-p2',[[9.7,{o:0}],[9.9,{o:1}],[12.6,{o:1}],[12.8,{o:0}]]);
+F(t=>{$id('se-t2').className='tcard'+(t>10.4?' sel':'');});
+K('#se-pub',[[11.7,{s:1}],[11.85,{s:.94}],[12.05,{s:1}]]);
+K('#se-btoast',[[11.95,{o:0,y:16}],[12.25,{o:1,y:0}],[13.2,{o:1}],[13.5,{o:0}]]);
+K('#se-p3',[[12.7,{o:0}],[12.9,{o:1}]]);
+F(t=>{const k=EASE.out(clamp((t-12.9)/1.2));$id('se-avg').textContent=(84.2*k).toFixed(1);$id('se-pass').textContent=Math.round(93*k)+'%';$id('se-sub').textContent=Math.round(97*k)+'%';$id('se-week').textContent=Math.round(36*k)+' 位';});
+document.querySelectorAll('#se-p3 .bars i').forEach((b,i)=>{const H=[16,30,62,100,56][i];K(b,[[13.1+i*.1,{h:0}],[14.0+i*.1,{h:H}]]);});
+// 游標：點「出題新作業」→ 選「文章閱讀」→ 按「發布作業」→ 點「班級報表」
+K('#se-cursor',[[7.0,{o:0,x:620,y:420}],[7.4,{o:1,x:620,y:420}],[9.2,{x:95,y:182},'io'],[9.5,{s:1}],[9.6,{s:.8}],[9.75,{s:1}],[10.0,{x:95,y:182}],[10.3,{x:690,y:182},'io'],[10.35,{s:1}],[10.45,{s:.8}],[10.6,{s:1}],[11.2,{x:690,y:182}],[11.75,{x:784,y:592},'io'],[11.8,{s:1}],[11.9,{s:.8}],[12.05,{s:1}],[12.1,{x:784,y:592}],[12.55,{x:95,y:229},'io'],[12.6,{s:1}],[12.7,{s:.8}],[12.85,{s:1}],[13.6,{o:1,x:95,y:229}],[14.0,{o:0,x:95,y:229}]]);
+
+/* ======== S7 每日任務 & 徽章 0–13.5 ======== */
+scene('s7',[0.5,6.4,13.5]);
+leftIn(); screenOut();
+L('#s7-task',0,5.6);
+document.querySelectorAll('#s7-task .ck i').forEach((c,i)=>K(c,[[.5+i*.35,{o:0,s:.3}],[.8+i*.35,{o:1,s:1},'back']]));
+K('#s7-claim',[[1.9,{s:1}],[2.2,{s:1.05}],[2.45,{s:.94}],[2.7,{s:1}],[2.9,{o:1}],[3.2,{o:.45}]]);
+TAP('#s7-tap',2.45);
+(()=>{const box=$id('s7-coins');const P=[];
+  for(let i=0;i<22;i++){const d=document.createElement('div');d.className='coin';d.textContent='J';box.appendChild(d);
+    P.push({d,vx:(rnd()-.5)*340,vy:-520-rnd()*260,t0:2.6+i*.04,rs:(rnd()-.5)*720});}
+  F(t=>P.forEach(p=>{const u=t-p.t0;if(u<0||u>2.0){p.d.style.opacity=0;return}
+    let x=180+p.vx*u,y=470+p.vy*u+700*u*u;
+    if(u>1.1){const k=EASE.io((u-1.1)/.9);x=lerp(180+p.vx*1.1,300,k);y=lerp(470+p.vy*1.1+700*1.21,140,k);}
+    p.d.style.opacity=u>1.8?Math.max(0,(2.0-u)/.2):1;p.d.style.left=x+'px';p.d.style.top=Math.min(y,760)+'px';p.d.style.transform=`rotate(${p.rs*u}deg) scale(${u>1.1?lerp(1,.5,clamp((u-1.1)/.9)):1})`;}));
+  F(t=>{$id('s7-pts').textContent=Math.round(lerp(120,150,clamp((t-3.8)/1.0)));});
+})();
+K('#s7-plus',[[3.8,{o:0,y:10,s:.6}],[4.2,{o:1,y:0,s:1.2},'back'],[5.2,{o:1,s:1}]]);
+K('#s7-task .wallet',[[3.7,{s:1}],[4.0,{s:1.05}],[4.9,{s:1.05}],[5.2,{s:1}]]);
+L('#s7-prof',5.6);
+(()=>{const B=[...document.querySelectorAll('#s7-badges .badge')];
+  B.forEach((b,i)=>{K(b,[[6.2+i*.12,{o:0,s:.5}],[6.55+i*.12,{o:1,s:1},'back']]);const sh=b.querySelector('.shine');if(sh)K(sh,[[7.8+i*.15,{x:0}],[8.4+i*.15,{x:200},'lin']]);});
+  F(t=>{$id('s7-bc').textContent=Math.min(8,Math.max(0,Math.floor((t-6.2)/.12)+1));});
+  K('#s7-fire',[[6.44,{o:0,s:.5}],[6.79,{o:1,s:1},'back'],[9.4,{s:1}],[9.8,{s:1.14}],[11.2,{s:1.14}],[11.6,{s:1}]]);
+  K('#s7-glow',[[9.5,{o:0,s:.5}],[10.0,{o:1,s:1.3}],[12,{o:.8,s:1.1}]]);
+  F(t=>{const up=t>9.9;$id('s7-firemedal').style.background=up?'linear-gradient(135deg,#E2B6FF,#8E44E8 60%,#5B2BB5)':'linear-gradient(135deg,#F0A35E,#C46A1B)';$id('s7-tier').textContent=up?'白金級':'金牌';$id('s7-tier').style.color=up?'#8E44E8':'';});
+  sparks('#s7-sparks',9.8,318,352,16);
+})();
+K('#s7-toast',[[10.2,{o:0,y:20}],[10.5,{o:1,y:0}]]);
+
+/* ======== S8 商城 & Premium 0–22.5 ======== */
+scene('s8',[0.5,8.6,15.4,22.5]);
+K('#s8-left',[[.2,{o:0,y:30}],[.9,{o:1,y:0}],[13.8,{o:1,y:0}],[14.3,{o:0,y:-20}]]);
+L('#s8-store',0,8.3);
+document.querySelectorAll('#s8-items .item').forEach((it,i)=>K(it,[[.3+i*.1,{o:0,y:20}],[.65+i*.1,{o:1,y:0}]]));
+K('#s8-items .item:nth-child(1) .hl',[[2.8,{o:0}],[3.1,{o:1}],[5.0,{o:1}],[5.3,{o:0}]]);
+K('#s8-items .item:nth-child(2) .hl',[[3.4,{o:0}],[3.7,{o:1}],[5.0,{o:1}],[5.3,{o:0}]]);
+K('#s8-items .item:nth-child(1)',[[.3,{o:0,y:20}],[.65,{o:1,y:0}],[2.8,{s:1}],[3.1,{s:1.03}],[5.0,{s:1.03}],[5.3,{s:1}]]);
+K('#s8-items .item:nth-child(2)',[[.4,{o:0,y:20}],[.75,{o:1,y:0}],[3.4,{s:1}],[3.7,{s:1.03}],[5.0,{s:1.03}],[5.3,{s:1}]]);
+// 5.4 秒：切到「儲值點數」三款點數包
+K('#s8-items',[[5.3,{y:0,o:1}],[5.9,{y:420,o:0},'io']]);
+K('#s8-packs',[[5.3,{y:-380,o:0}],[6.0,{y:0,o:1},'io']]);
+document.querySelectorAll('#s8-packs .pack').forEach((p,i)=>K(p,[[5.7+i*.2,{o:0,s:.9}],[6.15+i*.2,{o:1,s:1},'back']]));
+F(t=>{const on=t>5.7;$id('s8-tb1').className=on?'on':'';$id('s8-tb2').className=on?'':'on';});
+L('#s8-prem',8.3);
+K('#s8-prem .prem',[[8.4,{s:.92,o:0}],[9.0,{s:1,o:1},'back']]);
+K('#s8-shine',[[9.6,{x:0}],[10.5,{x:520},'lin'],[11.8,{x:0}],[12.7,{x:520},'lin']]);
+K('#s8-prem .go',[[12.4,{s:1}],[12.7,{s:1.05}],[13.0,{s:1}]]);
+// 14 秒：手機退場，片尾卡出現
+K('#s8-scr',[[13.8,{o:1,x:0}],[14.5,{o:0,x:200},'io']]);
+K('#endcard',[[14.4,{o:0,y:30}],[15.2,{o:1,y:0}]]);
+document.querySelectorAll('#endcard .recap span').forEach((c,i)=>K(c,[[15.4+i*.1,{o:0,y:16}],[15.8+i*.1,{o:1,y:0}]]));
+K('#team',[[16.6,{o:0}],[17.2,{o:1}]]);
+F(()=>{const t=$id('team');if(!t.dataset.done){t.innerHTML=TEAM.map(l=>`<div>${l}</div>`).join('');t.dataset.done=1;}t.style.display=TEAM.length?'':'none';});
+F(t=>{const k=EASE.io(clamp((t-13.8)/.7));['phone','sb','island'].forEach(id=>{const e=$id(id);e.style.opacity=1-k;e.style.transform=`translateX(${200*k}px)`});});
+
+
+/* ======== 手機外的重點卡片、補充畫面 ======== */
+function use(id){cur=SCENES.find(s=>s.el.id===id)}
+use('s1'); CO('#s1-c1',6.9,11.2); CO('#s1-c2',7.2,11.2); CO('#s1-c3',7.5,11.2); CO('#s1-c4',19.7,21.9);
+use('s2'); CO('#s2-c1',13.0,17.8); CO('#s2-c2',13.3,17.8); CO('#s2-c3',13.6,17.8); CO('#s2-c4',13.9,17.8);
+use('s3'); CO('#s3-c1',3.9,8.2); CO('#s3-c2',4.8,8.2);
+use('s4'); CO('#s4-c1',7.2,12.3);
+F(t=>{document.querySelector('#s4-c1 b').textContent=Math.round(95*EASE.out(clamp((t-7.2)/1.2)));});
+use('s5');
+(()=>{const R=[...document.querySelectorAll('#s5 .rung')];
+  R.forEach((r,i)=>K(r,[[4.5+(3-i)*.12,{o:0,x:-60}],[4.9+(3-i)*.12,{o:1,x:0}],[10.3,{o:1}],[10.6,{o:0}]]));
+  K(R[1],[[4.74,{o:0,x:-60}],[5.14,{o:1,x:0}],[8.0,{s:1}],[8.3,{s:1.12}],[8.7,{s:1}],[10.3,{o:1}],[10.6,{o:0}]]);
+  F(t=>R.forEach(r=>{const l=r.dataset.l,up=t>8.05,lv=up?'N3':'N4';r.className='rung'+(l===lv?(up?' up':' cur'):'');r.innerHTML=l+(l===lv?'<small>目前程度</small>':'');}));
+})();
+use('s6'); CO('#s6-c1',6.7,7.6); CO('#s6-c2',11.5,14.8);
+K('#s6-gbar',[[3.9,{w:0}],[5.4,{w:85}]]);
+F(t=>{$id('s6-goal').textContent=Math.round(lerp(0,4260,EASE.out(clamp((t-3.9)/1.5)))).toLocaleString()+' / 5,000 XP';});
+use('s7'); CO('#s7-c1',3.9,5.8); CO('#s7-c2',10.0,13.0);
+document.querySelectorAll('#s7 .week .days div').forEach((d,i)=>K(d,[[.3+i*.08,{o:0,y:10}],[.6+i*.08,{o:1,y:0}]]));
+use('s8'); CO('#s8-c1',2.9,5.4); CO('#s8-c2',3.5,5.4);
+
+/* ---------- 字幕 ---------- */
+window.CUES=window.CUES||[];
+function caption(T){
+  const i=SCENES.findIndex(s=>T>=s.start&&T<s.start+s.dur),l=T-(i<0?0:SCENES[i].start),seg=CUES[i];const cap=document.getElementById('cap');
+  const c=seg&&seg.cues.find(c=>l>=c.start&&l<c.end);
+  if(!c){cap.style.opacity=0;return}
+  document.getElementById('captxt').textContent=c.text;
+  cap.style.opacity=Math.min(1,(l-c.start)/.12,(c.end-l)/.12);
+}
+
+function seek(T){
+  const sb=document.getElementById('sb');sb.classList.remove('light');
+  ['phone','sb','island'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=1;e.style.transform=''});
+  // 章節列：第 1～8 段亮起並跑進度；片頭與片尾卡時隱藏
+  const si=SCENES.findIndex(s=>T>=s.start&&T<s.start+s.dur),nav=document.getElementById('nav');
+  [...nav.children].forEach((d,k)=>{const n=k+1;d.className=n<si?'done':n===si?'on':'';d.querySelector('i').style.width=n===si?(100*(T-SCENES[si].start)/SCENES[si].dur)+'%':'0';});
+  const last=SCENES.length-1,s8=SCENES[last],endk=si===last?clamp((warp(s8,T-s8.start)-13.8)/.5):0;
+  nav.style.opacity=si<=0?0:Math.min(clamp((T-SCENES[1].start)/.6),1-endk);
+  document.getElementById('bgk').style.opacity=1-endk;
+  document.querySelectorAll('#bgk span').forEach((e,k)=>{e.style.transform=`translate(${Math.sin(T*.13+k)*18}px,${Math.cos(T*.17+k*1.7)*24}px)`;});
+  for(const s of SCENES){const l=T-s.start,on=l>=0&&l<s.dur;s.el.style.display=on?'block':'none';if(!on)continue;
+    const w=warp(s,l);for(const tr of s.tracks)apply(tr,w);for(const f of s.fns)f(w);}
+  caption(T);
+}
+window.TOTAL=SCENES.reduce((a,s)=>a+s.dur,0);
+// 直接用瀏覽器開也能預覽：?t=秒數 停在某一幀；不帶參數就即時播放
+(()=>{const q=new URLSearchParams(location.search);if(window.__RENDER__)return;
+  if(q.has('t')){seek(+q.get('t'));return}
+  const t0=performance.now();(function loop(){const T=(performance.now()-t0)/1000%TOTAL;seek(T);requestAnimationFrame(loop)})();})();
+</script>
+</body>
+</html>

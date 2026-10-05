@@ -2,7 +2,7 @@
 
 老師端（建立教室、產生 join_code、管理成員）由另一位同學負責，
 這個檔案只處理學生這一側：用代碼加入、看自己加入了哪些教室、
-教室頁的公告／成績分頁、退出教室。
+教室頁的公告／成績分頁。學生不能自己退出，要離開班級由老師移出。
 
 join_code 的產生規則在老師端，這裡不產生、只負責比對，
 但必須容忍學生手動輸入的各種寫法（小寫、前後空白、中間的空格或連字號）。
@@ -78,17 +78,17 @@ def preview_classroom():
 
 
 def _suggested_name(user_id):
-    """加入班級時姓名欄的預設值：之前在別班填過的真實姓名，沒有就用 Google 帳號的名字（第一次登入時存成 username）"""
+    """加入班級時姓名欄的預設值：之前在別班填過的真實姓名。
+
+    第一次加入留空，讓學生自己打；帶 Google 名字的話學生會直接按確認，等於沒填。
+    """
     if not user_id:
         return ''
     last = ClassroomMember.query.filter(
         ClassroomMember.student_id == user_id,
         ClassroomMember.display_name.isnot(None),
     ).order_by(ClassroomMember.joined_at.desc()).first()
-    if last:
-        return last.display_name
-    user = User.query.get(user_id)
-    return (user.username or '') if user else ''
+    return last.display_name if last else ''
 
 
 @classroom_bp.route('/join', methods=['POST'])
@@ -296,28 +296,4 @@ def classroom_grades(classroom_id):
 
     return jsonify({"status": "success", **get_my_grades(classroom_id, user_id)}), 200
 
-
-@classroom_bp.route('/leave', methods=['POST'])
-def leave_classroom():
-    """學生退出教室。
-
-    只刪除成員關聯，作業繳交紀錄與學生自己的學習紀錄都保留 ——
-    退出不該讓已經完成的作業成績消失，老師之後仍要查得到。
-    """
-    data = request.get_json() or {}
-    user_id = data.get('user_id')
-    classroom_id = data.get('classroom_id')
-
-    if not user_id or not classroom_id:
-        return jsonify({"error": "缺少使用者 ID 或教室 ID"}), 400
-
-    member = ClassroomMember.query.filter_by(
-        classroom_id=classroom_id, student_id=user_id
-    ).first()
-    if not member:
-        return jsonify({"error": "你不在這個教室裡"}), 404
-
-    db.session.delete(member)
-    db.session.commit()
-
-    return jsonify({"status": "success", "message": "已退出教室"}), 200
+# 學生不能自己退出教室：名冊由老師管理，要離開班級請老師在後台「班級名冊」移出

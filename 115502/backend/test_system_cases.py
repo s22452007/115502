@@ -3320,15 +3320,13 @@ def _(c):
     web.post(f'/teacher/classroom/{rid1}/students/add', data={'roster': '98000001 甲\n98000002 乙\n98000003 丙'})
     f2 = flashes(web)
     n2 = count(User, email='98000001') + count(User, email='98000003')
-    web.post(f'/teacher/classroom/{rid1}/students/add', data={'roster': '98000001 甲\n98000002 乙'})
-    f3 = flashes(web)
+    page3 = html(web.post(f'/teacher/classroom/{rid1}/students/add', data={'roster': '98000001 甲\n98000002 乙'}))
     with S.app_context():
         made3 = [u.school_id for u in User.query.filter(User.email.in_(['98000001', '98000002'])).all()]
         u1 = User.query.filter_by(email='98000001').first()
         u1_id = u1.id if u1 else None
     web2 = teacher_client(lin_id, '林無校老師')
-    web2.post(f'/teacher/classroom/{rid2}/students/add', data={'roster': '98000009 丁'})
-    f4 = flashes(web2)
+    page4 = html(web2.post(f'/teacher/classroom/{rid2}/students/add', data={'roster': '98000009 丁'}))
     with S.app_context():
         s9 = User.query.filter_by(email='98000009').first()
         s9_before, s9_id = (s9.school_id if s9 else 'none'), (s9.id if s9 else None)
@@ -3339,18 +3337,19 @@ def _(c):
         lin_after = db.session.get(User, lin_id).school_id
         s9_after = db.session.get(User, s9_id).school_id if s9_id else None
     page6 = boss.get('/school/list').get_data(as_text=True)
-    web.post(f'/teacher/classroom/{rid1}/student/{u1_id}/reset_password')
+    page7 = html(web.post(f'/teacher/classroom/{rid1}/student/{u1_id}/reset_password'))
     f7 = flashes(web)
-    c.log(f'1. {f1a}，陳老師 school_id={chen_school}；{f1b}，林老師 school_id={lin_school}；2. {f2}，帳號 {n2} 個；3. {f3}，學校={made3}；'
-          f'4. {f4}，學校={s9_before}；5. 2 / 2={"2 / 2" in page5}、已滿={"已滿" in page5}；6. {f6}，林老師 school_id={lin_after}、學生 school_id={s9_after}，3 / 2={"3 / 2" in page6}；'
-          f'7. {f7}')
+    c.log(f'1. {f1a}，陳老師 school_id={chen_school}；{f1b}，林老師 school_id={lin_school}；2. {f2}，帳號 {n2} 個；'
+          f'3. 畫面提示新建 2 個帳號={"新建立 2 個學生帳號" in page3}，學校={made3}；4. 畫面提示新建 1 個帳號={"新建立 1 個學生帳號" in page4}，學校={s9_before}；'
+          f'5. 2 / 2={"2 / 2" in page5}、已滿={"已滿" in page5}；6. {f6}，林老師 school_id={lin_after}、學生 school_id={s9_after}，3 / 2={"3 / 2" in page6}；'
+          f'7. 畫面顯示臨時密碼={"臨時密碼" in page7}，提示={f7}')
     check(chen_school == sid and lin_school is None, '新增老師時的學校不正確')
     check(any('合約名額不足' in m for m in f2) and n2 == 0, '超過名額仍建立帳號')
-    check(any('新建立 2 個學生帳號' in m for m in f3) and made3 == [sid, sid], '名冊帳號沒有歸到老師的學校')
-    check(any('新建立 1 個學生帳號' in m for m in f4) and s9_before is None, '沒有學校的老師建帳號不正確')
+    check('新建立 2 個學生帳號' in page3 and made3 == [sid, sid], '名冊帳號沒有歸到老師的學校')
+    check('新建立 1 個學生帳號' in page4 and s9_before is None, '沒有學校的老師建帳號不正確')
     check('2 / 2' in page5 and '已滿' in page5, '後台名額沒有算進名冊帳號')
     check(lin_after == sid and s9_after == sid and '3 / 2' in page6 and any('1 個學生帳號一併算進' in m for m in f6), '設定老師學校沒有帶動學生')
-    check(any('臨時密碼' in m or '已重設' in m for m in f7) or not any('Google' in m for m in f7), '名冊帳號被當成 Google 帳號')
+    check('臨時密碼' in page7 and not any('Google' in m for m in f7), '名冊帳號被當成 Google 帳號')
 
 
 # ----------------------------------------------------------------------

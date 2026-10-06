@@ -4,6 +4,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/widgets/common/sentence_feedback.dart';
+import 'package:jpn_learning_app/screens/scenario/grammar_tip_screen.dart';
 
 class MakeSentenceScreen extends StatefulWidget {
   final String imagePath;
@@ -141,6 +142,31 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
             translation: translation,
             isCorrect: isValid,
           ),
+
+          if (corrections.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => GrammarTipScreen.show(
+                  context,
+                  userSentence: _submittedSentence ?? '',
+                  correctedSentence: corrected,
+                  corrections: corrections,
+                  translation: translation,
+                  grammarNote: (_feedbackResult!['grammar_note'] ?? '').toString(),
+                ),
+                icon: const Icon(Icons.menu_book_rounded, size: 20),
+                label: const Text('語法小教室', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -288,22 +288,26 @@ def evaluate_user_sentence(sentence, vocabs, context_description):
         2. 如果有使用，檢查文法是否正確、語意是否自然。
            - 有錯誤或不自然：`is_valid` 填 false，每一個要改的地方放進 `corrections` 一筆（最多 5 筆）：
              `original` 是原句中要改的那一小段（照抄原句，不加讀音標記）、
-             `corrected` 是改成的寫法（不加讀音標記）、
-             `reason` 用一句話說明為什麼（30 字以內）。
+             `corrected` 是改成的寫法（不加讀音標記；這段應該整個刪掉時填空字串）、
+             `reason` 用一句話說明為什麼（30 字以內）、
+             `type` 填「語法」（助詞、活用、句型、語順等）或「詞彙」（用字、說法不道地等）其中之一。
            - 完全正確：`is_valid` 填 true，`corrections` 給空陣列。
         3. `feedback` 是一句總評（30 字以內），正確就稱讚、有錯就鼓勵，不要在這裡重複解釋錯誤。
         4. `corrected_sentence`：修正後的完整句子（正確的話就是原句），漢字一律用 `[漢字|平假名]` 標記讀音，
            例如 `[犬|いぬ]に`、`[新|あたら]しい`。方括號只能用來標讀音，片假名、平假名和單字都不要加方括號（不要寫成 `[リード]`）。
         5. `translation`：`corrected_sentence` 的繁體中文翻譯。
-        6. 所有說明一律用繁體中文，不要夾雜英文術語（例如不要寫 particle，要寫「助詞」），不要用 markdown 符號。
+        6. `grammar_note`：有修改時，挑這句最值得學的一個重點，用 2～3 句話講清楚規則和使用時機（80 字以內），
+           可以舉一個短例子，例子裡的日文直接寫、不要加讀音標記；完全正確或沒有用到單字時填空字串。
+        7. 所有說明一律用繁體中文，不要夾雜英文術語（例如不要寫 particle，要寫「助詞」），不要用 markdown 符號。
 
         請「嚴格」以下列 JSON 格式回傳，不可加上 json 或 markdown 標籤：
         {{
           "is_valid": true或false,
           "feedback": "一句總評",
           "corrections": [
-            {{"original": "原句中要改的片段", "corrected": "改成的寫法", "reason": "一句話說明"}}
+            {{"original": "原句中要改的片段", "corrected": "改成的寫法", "reason": "一句話說明", "type": "語法或詞彙"}}
           ],
+          "grammar_note": "這句最值得學的重點講解，沒有修改時填空字串",
           "corrected_sentence": "修正後或原本正確的日文句子（漢字用 [漢字|平假名] 標記）",
           "translation": "繁體中文翻譯"
         }}
@@ -320,9 +324,16 @@ def evaluate_user_sentence(sentence, vocabs, context_description):
         # 整理修改建議：AI 偶爾會漏欄位或多給，只留格式完整的前 5 筆，App 才能穩定分區顯示
         corrections = []
         for c in result.get('corrections') or []:
-            if isinstance(c, dict) and c.get('original') and c.get('corrected'):
-                corrections.append({k: str(c.get(k) or '').strip() for k in ('original', 'corrected', 'reason')})
+            if isinstance(c, dict) and c.get('original'):
+                item = {k: str(c.get(k) or '').strip() for k in ('original', 'corrected', 'reason')}
+                if not item['corrected']:
+                    item['corrected'] = '（刪去）'  # 這段整個不要，App 才不會顯示成「原本 → 空白」
+                item['type'] = '詞彙' if str(c.get('type') or '').strip() == '詞彙' else '語法'
+                corrections.append(item)
         result['corrections'] = corrections[:5]
+        # 講解是純文字顯示，AI 若還是加了 [漢字|かな] 讀音標記就只留漢字
+        note = re.sub(r'\[([^\[\]|]+)\|[^\[\]]*\]', r'\1', str(result.get('grammar_note') or '')).strip()
+        result['grammar_note'] = note if corrections else ''
         return {"success": True, "result": result}
     except Exception as e:
         print(f"評估句子失敗: {e}")

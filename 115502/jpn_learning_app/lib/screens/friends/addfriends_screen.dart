@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
-import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart'; 
+import 'package:jpn_learning_app/screens/friends/myfriends_screen.dart';
+import 'package:jpn_learning_app/screens/friends/scan_friend_qr_screen.dart';
 import 'package:jpn_learning_app/utils/api_client.dart'; 
 
 import 'package:jpn_learning_app/widgets/friends/found_user_card.dart';
@@ -77,6 +78,16 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
     }
   }
 
+  Future<void> _scanQr() async {
+    final friendId = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanFriendQrScreen()),
+    );
+    if (friendId == null || !mounted) return;
+    _searchController.text = friendId;
+    _performSearch();
+  }
+
   Future<void> _sendFriendRequest(int targetUserId) async {
     final myUserId = context.read<UserProvider>().userId;
     if (myUserId == null) return;
@@ -108,7 +119,8 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final myFriendId = context.watch<UserProvider>().friendId ?? '尚未產生';
+    final rawFriendId = context.watch<UserProvider>().friendId;
+    final myFriendId = rawFriendId ?? '尚未產生';
 
     return SubPageTemplate(
       title: '新增好友',
@@ -140,7 +152,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                 ),
 
               const SizedBox(height: 24),
-              MyIdCard(myId: myFriendId),
+              MyIdCard(myId: myFriendId, hasId: rawFriendId != null),
               const SizedBox(height: 32),
 
               const Text('好友邀請', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
@@ -185,6 +197,11 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           hintText: '輸入用戶專屬 ID 搜尋',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           prefixIcon: IconButton(icon: const Icon(Icons.search, color: Colors.grey), onPressed: _performSearch),
+          suffixIcon: IconButton(
+            icon: Icon(Icons.qr_code_scanner, color: _darkGreen),
+            tooltip: '掃描 QR Code',
+            onPressed: _scanQr,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),

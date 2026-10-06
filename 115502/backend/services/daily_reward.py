@@ -3,6 +3,7 @@ from datetime import date
 from flask import Blueprint, request, jsonify
 from utils.db import db
 from models import User, PointTransaction, TransactionType
+from utils.account_helper import uses_points
 
 daily_reward_bp = Blueprint('daily_reward', __name__)
 
@@ -70,7 +71,9 @@ def get_status():
         'reading_done': reading_done,
         'all_done': all_done,
         'claimed': claimed,
-        'can_claim': all_done and not claimed,
+        'can_claim': all_done and not claimed and uses_points(user),
+        # 校園教育版學生沒有點數獎勵，App 只顯示任務清單
+        'reward_enabled': uses_points(user),
         'streak_days': streak,
         'reward_preview': {
             'pts_min': pts_min,
@@ -90,6 +93,9 @@ def claim_reward():
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': '找不到使用者'}), 404
+
+    if not uses_points(user):
+        return jsonify({'error': '校園教育版沒有點數獎勵'}), 400
 
     _ensure_today(user)
 

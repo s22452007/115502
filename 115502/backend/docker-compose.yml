@@ -1,20 +1,52 @@
 # 一鍵啟動後端：docker compose up -d --build
-# 兩個服務共用同一個映像；DB 與照片用 volume 掛到容器外，確保重建容器資料不遺失。
+# 三個服務：mysql（資料庫）、api（手機 App 連這個）、admin（管理後台）。api 與 admin 共用同一個映像，
+# 都用 gunicorn 啟動（多 worker、多執行緒），不再用 Flask 的開發伺服器。
+# 資料庫放在 volume mysql_data、照片放 ./static/photos，重建容器資料不會遺失。
+#
+# 第一次啟動前：把 .env.example 裡「資料庫」那段複製到 .env，填好 MYSQL_PASSWORD、MYSQL_ROOT_PASSWORD。
+# 既有的 SQLite 資料（instance/jlens.db）要搬進 MySQL：見 DEPLOY.md「從 SQLite 搬到 MySQL」。
 
 services:
+  # MySQL 8（utf8mb4：日文、emoji 都能存）
+  mysql:
+    image: mysql:8.4
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-jlens}
+      MYSQL_USER: ${MYSQL_USER:-jlens}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?請在 backend/.env 設定 MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?請在 backend/.env 設定 MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"   # 只開給這台機器自己（搬資料腳本、資料庫工具用），外面連不到
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
   # 主 API（手機 App 連這個）
   api:
     build: .
     image: jlens-backend            # 建好的映像命名，讓 admin 直接重用、不用再 build 一次
-    command: python app.py
+    command: gunicorn -c gunicorn.conf.py -b 0.0.0.0:5050 app:app
     ports:
       - "5050:5050"
     env_file:
       - .env                        # 把 GEMINI 金鑰等環境變數注入容器
+    environment:
+      # 容器內固定連 mysql 服務（.env 裡的 DATABASE_URL 只給本機 python app.py 用，這裡會覆蓋掉）
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-jlens}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-jlens}?charset=utf8mb4
+    depends_on:
+      mysql:
+        condition: service_healthy  # 等 MySQL 真的能連了才啟動，避免一開始連不上
     volumes:
       # 開發便利：把後端原始碼 bind-mount 進容器，修改立刻生效（開發時啟用）
       - ./:/app
-      - ./instance:/app/instance          # SQLite 資料庫持久化
+      - ./instance:/app/instance          # 登入通行證密鑰 auth_secret.key；沒設 DATABASE_URL 時 SQLite 也放這
       - ./static/photos:/app/static/photos # 使用者上傳照片持久化
       - ./secrets:/app/secrets:ro         # Firebase 推播金鑰（沒有也能啟動，只是不推播）
     restart: unless-stopped
@@ -22,15 +54,21 @@ services:
   # 後台管理（管理員網頁後台）
   admin:
     image: jlens-backend            # 重用 api 建好的映像
-    command: python admin_app.py
+    command: gunicorn -c gunicorn.conf.py -b 0.0.0.0:5001 admin_app:app
     depends_on:
-      - api                         # 等 api 先把映像 build 出來
+      mysql:
+        condition: service_healthy
+      api:
+        condition: service_started  # 等 api 先把映像 build 出來
     ports:
       - "5001:5001"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-jlens}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-jlens}?charset=utf8mb4
     volumes:
-      - ./instance:/app/instance          # 與 api 共用同一個資料庫檔
+      - ./:/app
+      - ./instance:/app/instance
       - ./static/photos:/app/static/photos
       - ./secrets:/app/secrets:ro         # 老師發公告、出作業、批改時推播要用
     restart: unless-stopped
@@ -60,3 +98,6 @@ services:
     profiles:
       - tunnel                              # 歸到 tunnel profile，預設不啟動
     restart: unless-stopped
+
+volumes:
+  mysql_data:                               # MySQL 資料檔；docker compose down 不會刪，down -v 才會

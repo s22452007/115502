@@ -144,6 +144,7 @@
                             <tr>
                                 <th style="width: 70px;">ID</th>
                                 <th>老師</th>
+                                <th>學校</th>
                                 <th>班級數</th>
                                 <th>狀態</th>
                                 <th>建立時間</th>
@@ -167,6 +168,13 @@
                                         {% if t.apply_note %}<div class="apply-note">「{{ t.apply_note }}」</div>{% endif %}
                                     </div>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <span>{% if t.school_name %}{{ t.school_name }}{% else %}<span style="color:#ccc;">—</span>{% endif %}</span>
+                                    <button type="button" class="btn btn-sm btn-link p-0 ms-1" style="color:#aaa;" title="設定學校" data-bs-toggle="modal" data-bs-target="#schoolModal"
+                                            data-action="{{ url_for('teacher_account_school', user_id=t.id) }}" data-name="{{ t.username }}" data-school="{{ t.school_id or '' }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
                                 </td>
                                 <td>{{ t.classroom_count }} 班</td>
                                 <td>
@@ -205,7 +213,7 @@
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="6" class="text-center py-5 text-muted">還沒有老師帳號，點右上角「建立老師帳號」。</td></tr>
+                            <tr><td colspan="7" class="text-center py-5 text-muted">還沒有老師帳號，點右上角「建立老師帳號」。</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -239,6 +247,14 @@
                             <label class="form-label">初始密碼</label>
                             <input autocomplete="off" type="password" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
                             <div class="form-hint">建立後請把 Email 與密碼交給老師</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">學校</label>
+                            <select name="school_id" class="form-select">
+                                <option value="">（未設定）</option>
+                                {% for s in schools %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                            </select>
+                            <div class="form-hint">老師貼名單建立的學生帳號會算進這間學校的合約名額</div>
                         </div>
                     </div>
                     <div class="modal-footer border-0">
@@ -280,7 +296,42 @@
 
 </div>
 
+    <!-- 設定老師所屬學校：全部老師共用一個視窗 -->
+    <div class="modal fade" id="schoolModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 16px;">
+                <form method="POST" autocomplete="off">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" style="color: var(--green-accent);"><i class="bi bi-building me-2"></i>「<span id="schoolModalName"></span>」的學校</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <select name="school_id" class="form-select">
+                            <option value="">（未設定）</option>
+                            {% for s in schools %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                        </select>
+                        <div class="form-hint">老師班上貼名單建立、還沒有學校的學生帳號會一併算進這間學校的合約名額</div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-snap w-100 py-2">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    var m = document.getElementById('schoolModal');
+    m.addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget, form = m.querySelector('form');
+        form.action = btn.dataset.action;
+        document.getElementById('schoolModalName').textContent = btn.dataset.name;
+        form.elements['school_id'].value = btn.dataset.school || '';
+    });
+})();
+</script>
 {% include 'admin/_flash_autohide.html' %}
 {% include 'admin/_password_strength.html' %}
 {% include 'admin/_password_toggle.html' %}

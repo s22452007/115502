@@ -615,6 +615,12 @@ def edu_google_login():
         if account_type != AccountType.STUDENT:
             return jsonify({"status": "wrong_portal", "error": "這是老師帳號，請從網頁後台登入"}), 403
 
+    # 合約名額：這間學校未停用的學生帳號已達上限，就不再收新學生（已有帳號的照常登入；
+    # 管理者停用帳號會釋出名額）。剛在 App 新增的學校還沒有學生，不用檢查
+    if (is_new or not user.school_id) and not creating_school and school.seats_full():
+        return jsonify({"status": "seat_full",
+                        "error": f"{school.name}的校園教育版名額已滿（{school.seat_limit} 人），請聯繫老師或系統管理員"}), 403
+
     if creating_school:
         db.session.add(school)
         db.session.flush()

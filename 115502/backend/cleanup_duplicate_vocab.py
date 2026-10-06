@@ -1,3 +1,4 @@
+# ⚠️ 只適用 SQLite（instance/jlens.db）的舊版工具。資料表結構現在由 migrations/ 管理、啟動時自動套用；伺服器改用 MySQL 後此腳本不適用。
 # -*- coding: utf-8 -*-
 """
 清理 T04 vocab 重複單字的一次性維護腳本。

@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from utils.db import db, ensure_model_columns
+from utils.db import db, configure_app_db, init_database, skip_db_init, safe_uri
 
 # 匯入各個模組的 Blueprint
 from services.quiz import quiz_bp
@@ -31,6 +31,7 @@ from services.student_assignment import student_assignment_bp
 
 # 自動抓取 app.py 所在的絕對路徑
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))  # DATABASE_URL、金鑰等設定
 
 app = Flask(__name__)
 # 允許跨網域請求；網頁版要讀得到自動延長後的新通行證與拒絕原因，所以把這兩個標頭開放給前端
@@ -43,34 +44,9 @@ app.after_request(_attach_renewed_token)
 
 print("================ 我是最新版、超乾淨的 app.py 喔喔喔 ================")
 
-# 強制把資料庫路徑綁定在 backend/instance/jlens.db
-instance_path = os.path.join(BASE_DIR, 'instance')
-db_path = os.path.join(instance_path, 'jlens.db')
-
-# 防呆機制：如果 instance 資料夾還不存在，就自動幫你建一個
-os.makedirs(instance_path, exist_ok=True)
-
-# 設定 SQLite 資料庫，使用絕對路徑
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-from sqlalchemy.pool import NullPool
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'poolclass': NullPool,
-    'connect_args': {'timeout': 30, 'check_same_thread': False},
-}
-
-# 初始化資料庫
-db.init_app(app)
-
-# 啟用 WAL 模式：允許多個讀取並發，大幅減少 "database is locked" 錯誤
-from sqlalchemy import event as _sa_event
-with app.app_context():
-    @_sa_event.listens_for(db.engine, 'connect')
-    def _set_sqlite_wal(dbapi_conn, _):
-        cur = dbapi_conn.cursor()
-        cur.execute('PRAGMA journal_mode=WAL')
-        cur.execute('PRAGMA busy_timeout=30000')
-        cur.close()
+# 資料庫：.env 有 DATABASE_URL 就連 MySQL，沒有就用 backend/instance/jlens.db（SQLite）。
+# 連線設定、SQLite 的 WAL 模式都集中在 utils/db.py，後台 admin_app.py 也用同一套。
+DB_URI = configure_app_db(app, BASE_DIR)
 
 # 註冊 API 路由 (綁定網址前綴)
 app.register_blueprint(quiz_bp, url_prefix='/api/quiz')
@@ -91,78 +67,17 @@ app.register_blueprint(chat_history_bp, url_prefix='/api/chat_history')
 app.register_blueprint(sentence_bp, url_prefix='/api/sentence')
 app.register_blueprint(classroom_bp, url_prefix='/api/classroom')
 app.register_blueprint(student_assignment_bp, url_prefix='/api/assignment')
-# 啟動時自動建立資料表與執行遷移
-with app.app_context():
-    db.create_all()  # 建立所有新表
-    # 模型有、舊資料庫沒有的欄位自動補上（各組員的 jlens.db 不進 git）
-    try:
-        for _table, _column in ensure_model_columns(db):
-            print(f'[DB] 自動補上缺少的欄位 {_table}.{_column}')
-    except Exception as _e:
-        print(f'[DB] 自動補欄位失敗：{_e}')
+# 資料表版本控管（Flask-Migrate / Alembic）：模型改了欄位請執行
+#   flask --app app db migrate -m "說明"   產生 migrations/versions/ 底下的遷移檔並一起 commit
+# 組員 pull 之後啟動時會自動 upgrade，不用手動下指令。
+from flask_migrate import Migrate
+migrate = Migrate(app, db, render_as_batch=True, directory=os.path.join(BASE_DIR, 'migrations'))
 
+
+def _seed_defaults():
+    """啟動時種入預設資料（訂閱方案、購點方案、預設場景、主題官方單字），已存在的不動"""
     from models import SubscriptionPlan, PointPackage
-    from utils.db import db as _db
-    from sqlalchemy import text
-
-    # ── SQLite 欄位遷移：新增 billing_cycle / price_monthly nullable 支援 ──
-    for col_sql in [
-        'ALTER TABLE subscription_plan ADD COLUMN billing_cycle VARCHAR(10)',
-    ]:
-        try:
-            with _db.engine.connect() as conn:
-                conn.execute(text(col_sql))
-                conn.commit()
-        except Exception:
-            pass  # 欄位已存在，略過
-
-    # 如果資料庫缺少 user_photo.context_description 欄位，嘗試新增（容錯，避免舊 DB crash）
-    try:
-        with _db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE user_photo ADD COLUMN context_description TEXT"))
-            conn.commit()
-    except Exception:
-        pass
-
-    # ── 移除 user_subscription.status NOT NULL 欄位（若存在）──
-    import sqlite3 as _sqlite3
-    _db_path = os.path.join(BASE_DIR, 'instance', 'jlens.db')
-    try:
-        _conn = _sqlite3.connect(_db_path, timeout=15)
-        _conn.execute('PRAGMA journal_mode=WAL')
-        _cur = _conn.cursor()
-        _cur.execute("PRAGMA table_info(user_subscription);")
-        _us_cols = [row[1] for row in _cur.fetchall()]
-        if 'status' in _us_cols:
-            _cur.execute("CREATE TABLE IF NOT EXISTS user_subscription_bak AS SELECT * FROM user_subscription;")
-            _cur.execute("DROP INDEX IF EXISTS uq_user_active_subscription;")
-            _cur.execute("DROP TABLE user_subscription;")
-            _cur.execute("""
-                CREATE TABLE user_subscription (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    plan_id INTEGER NOT NULL,
-                    billing_cycle VARCHAR(10) NOT NULL,
-                    start_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    end_date DATETIME NOT NULL,
-                    auto_renew BOOLEAN DEFAULT 1,
-                    payment_method VARCHAR(50),
-                    payment_status VARCHAR(20) NOT NULL DEFAULT 'paid',
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(user_id) REFERENCES user(id),
-                    FOREIGN KEY(plan_id) REFERENCES subscription_plan(id)
-                );
-            """)
-            _target = ['id','user_id','plan_id','billing_cycle','start_date','end_date',
-                       'auto_renew','payment_method','payment_status','created_at']
-            _copy = ', '.join(c for c in _target if c in _us_cols)
-            _cur.execute(f"INSERT INTO user_subscription ({_copy}) SELECT {_copy} FROM user_subscription_bak;")
-            _cur.execute("DROP TABLE user_subscription_bak;")
-            _cur.execute("CREATE INDEX IF NOT EXISTS idx_user_sub_user ON user_subscription(user_id);")
-            _conn.commit()
-        _conn.close()
-    except Exception as _e:
-        print(f"⚠️ user_subscription 欄位修正警告：{_e}")
+    _db = db
 
     # 跟 utils/account_helper.py 的每日次數一致；單字收藏擴充實際是 50/100 點＝半價（services/store.py）
     _FEATURES = [
@@ -260,6 +175,11 @@ with app.app_context():
     except Exception as _e:
         print(f"⚠️ 主題官方單字種入警告：{_e}")
 
+
+# 啟動時自動建立資料表、執行遷移、補欄位、種預設資料（跟 admin_app.py 共用，誰先啟動都行）
+if not skip_db_init():
+    init_database(app, seed=_seed_defaults)
+
 # ==========================================
 # 🛎️ 專屬櫃檯：負責接收 Flutter 傳來的聊天包裹
 # ==========================================
@@ -340,7 +260,7 @@ def chat():
 # 🛑 app.run 必須永遠在整個檔案的最下面！
 if __name__ == '__main__':
     print("[Startup] 後端伺服器啟動中...")
-    print(f"[Database] 資料庫已牢牢綁定於: {db_path}") 
+    print(f"[Database] 使用資料庫: {safe_uri(DB_URI)}")
 
     # 加上 host='0.0.0.0' 代表允許區域網路內的所有設備連線
     app.run(host='0.0.0.0', port=5050, debug=True)

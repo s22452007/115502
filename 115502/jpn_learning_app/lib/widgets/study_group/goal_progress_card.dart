@@ -33,6 +33,8 @@ class GoalProgressCard extends StatelessWidget {
     if (type == 'articles') unit = '篇閱讀';
 
     bool isGoalReached = current >= goal;
+    // 校園教育版學生沒有點數：達標只有結業，沒有獎勵
+    final isEduStudent = context.watch<UserProvider>().isEduStudent;
 
     return Container(
       width: double.infinity,
@@ -63,7 +65,7 @@ class GoalProgressCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text('還差 ${goal - current} ${unit.replaceAll('拍照', '').replaceAll('登入', '')} ・ 截止時間：週日 23:59', style: const TextStyle(fontSize: 14, color: subText)),
             const SizedBox(height: 10),
-            const Text('完成目標後，可各自領取獎勵！', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textDark)),
+            Text(isEduStudent ? '完成目標後即可結業！' : '完成目標後，可各自領取獎勵！', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textDark)),
           ],
 
           if (isGoalReached) ...[
@@ -75,7 +77,7 @@ class GoalProgressCard extends StatelessWidget {
               // 達標後一律顯示金黃色的領獎按鈕
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.card_giftcard, size: 24),
-                label: const Text("領取獎勵並結業！", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                label: Text(isEduStudent ? "完成結業！" : "領取獎勵並結業！", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber.shade600, 
                   foregroundColor: Colors.white,
@@ -84,7 +86,7 @@ class GoalProgressCard extends StatelessWidget {
                 ),
                 onPressed: () async {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('正在向伺服器驗證並領取獎勵...'))
+                    SnackBar(content: Text(isEduStudent ? '正在向伺服器驗證...' : '正在向伺服器驗證並領取獎勵...'))
                   );
 
                   final userId = context.read<UserProvider>().userId;

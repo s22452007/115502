@@ -1,3 +1,4 @@
+# ⚠️ 只適用 SQLite（instance/jlens.db）的舊版工具。資料表結構現在由 migrations/ 管理、啟動時自動套用；伺服器改用 MySQL 後此腳本不適用。
 import sqlite3
 import os
 
@@ -968,6 +969,7 @@ try:
         student_domains VARCHAR(200) NOT NULL,
         student_id_pattern VARCHAR(100) NOT NULL DEFAULT '^\\d+$',
         is_active BOOLEAN DEFAULT 1,
+        seat_limit INTEGER NOT NULL DEFAULT 100,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -976,6 +978,7 @@ except sqlite3.OperationalError as e:
     print(f"⚠️ 學校表升級警告：{e}")
 add_column("user", "school_id INTEGER")
 add_column("school", "created_by_user_id INTEGER")   # 學生在 App 新增的學校記下是誰
+add_column("school", "seat_limit INTEGER NOT NULL DEFAULT 100")   # 合約名額（100 或 500 人）
 # 老師建立的學生帳號以前初始密碼＝學號，知道學號的人搶先登入就能改密碼、佔走帳號。
 # 還沒換過密碼的一律改成隨機密碼（沒人知道），學生要登入請老師在班級名冊按「重設密碼」拿新的臨時密碼
 try:

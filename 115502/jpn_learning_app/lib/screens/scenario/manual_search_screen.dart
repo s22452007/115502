@@ -46,7 +46,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   List<Map<String, dynamic>> _dialects = [];
   int? _selectedDialectId;
   String _voiceGender = 'female';
-  int _customCost = 200; // 新增一個自訂角色的點數（以後端回傳為準）
+  int _customCost = 200; // 新增一個自訂角色的點數（以後端回傳為準；校園教育版學生為 0，免費）
 
   // 試聽：音檔是後端事先產生好的，抓過的存在記憶體裡不重複下載
   final AudioPlayer _previewPlayer = AudioPlayer();
@@ -442,7 +442,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
         voiceGender: _voiceGender,
         onPreview: _togglePreview,
         onSubmit: (fields) async {
-          if (user.jPts < _customCost) {
+          if (_customCost > 0 && user.jPts < _customCost) {
             return {'error': '點數不足喔！需要 $_customCost 點，請先儲值'};
           }
           return ApiClient.createCustomCharacter(
@@ -484,7 +484,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('刪除「${char['name']}」？'),
-        content: const Text('刪除後無法復原，也不會退還點數。'),
+        content: Text(_customCost > 0 ? '刪除後無法復原，也不會退還點數。' : '刪除後無法復原。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1125,7 +1125,7 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
                   ),
                 )
               : Text(
-                  '花 ${widget.cost} 點新增',
+                  widget.cost > 0 ? '花 ${widget.cost} 點新增' : '新增角色',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

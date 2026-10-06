@@ -113,7 +113,7 @@
                             <button type="button" class="btn btn-link text-muted text-decoration-none px-2" id="nameCancel">取消</button>
                         </form>
                         <div class="pf-meta">
-                            {{ teacher.email }}{% if joined %}<span class="dot">·</span>{{ joined }} 加入{% endif %}
+                            {{ teacher.email }}{% if school_name %}<span class="dot">·</span>{{ school_name }}{% endif %}{% if joined %}<span class="dot">·</span>{{ joined }} 加入{% endif %}
                         </div>
                     </div>
                 </div>

@@ -1613,6 +1613,10 @@ class ApiClient {
         final bytes = audioResponse.bodyBytes;
 
         debugPrint('🟢 [進度 4] 檔案讀取成功！大小為: ${bytes.length} bytes');
+        if (bytes.isEmpty) {
+          // 瀏覽器沒錄到任何內容（多半是麥克風被其他分頁占用），不用送到後端
+          return {'status': 'unrecognized', 'reason': 'empty', 'message': '沒有收到任何錄音內容，錄音檔是空的。'};
+        }
         request.files.add(
           http.MultipartFile.fromBytes(
             'audio',
@@ -1639,9 +1643,17 @@ class ApiClient {
       final String responseBody = utf8.decode(response.bodyBytes);
       return jsonDecode(responseBody);
     } catch (e) {
-      debugPrint('❌ [發生錯誤] 錄音上傳失敗: $e');
-      // 捕捉到錯誤後回傳，讓 UI 停止轉圈圈並顯示錯誤提示
-      return {'status': 'error', 'message': e.toString()};
+      // 失敗時帶 reason 讓文章頁分得出是逾時、連不上還是伺服器壞掉，說明才能講到原因
+      // （原本直接回 e.toString()，使用者會看到一串英文例外訊息）
+      final String reason;
+      if (e is TimeoutException) {
+        reason = 'timeout';
+      } else if (e is FormatException) {
+        reason = 'server';
+      } else {
+        reason = 'network';
+      }
+      return {'status': 'error', 'reason': reason, 'message': _netError(e, url)['error']};
     }
   }
 

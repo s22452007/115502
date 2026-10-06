@@ -121,7 +121,10 @@ class _SentenceHistoryScreenState extends State<SentenceHistoryScreen> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(record['user_sentence'], maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
-                  trailing: isClaimed
+                  // 校園教育版學生沒有點數獎勵，不顯示領取按鈕
+                  trailing: context.read<UserProvider>().isEduStudent
+                      ? null
+                      : isClaimed
                       ? const Icon(Icons.check_circle, color: Colors.grey, size: 30)
                       : ElevatedButton(
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, elevation: 0),

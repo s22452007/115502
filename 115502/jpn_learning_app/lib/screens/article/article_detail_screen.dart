@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -9,6 +11,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'article_result_screen.dart';
+import 'reading_analyzing_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 // 通用的標音元件（這個檔案底下另有文章專用的 FuriganaText，用前綴區分）
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart' as common;
@@ -32,6 +35,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   bool _isRecording = false;
   bool _isAnalyzing = false;
   final AudioRecorder _audioRecorder = AudioRecorder();
+
+  // 錄音期間的收音狀況，辨識失敗時用來說明原因
+  StreamSubscription<Amplitude>? _amplitudeSub;
+  double? _maxDb; // 這次錄音聽到的最大音量（dBFS：0 最大、-160 無聲）；null＝平台沒有回報
+  final Stopwatch _recordWatch = Stopwatch();
 
   // 原本這裡寫死 8，所有人的朗讀成績和點數都記到 8 號使用者身上
   int? get currentUserId => context.read<UserProvider>().userId; 
@@ -106,6 +114,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
   @override
   void dispose() {
+    _amplitudeSub?.cancel();
     _audioRecorder.dispose();
     super.dispose();
   }
@@ -674,53 +683,73 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   // ====================================================
   Future<void> _toggleRecording() async {
     if (_isRecording) {
+      await _amplitudeSub?.cancel();
+      _amplitudeSub = null;
+      _recordWatch.stop();
+      final recordedMs = _recordWatch.elapsedMilliseconds;
       final path = await _audioRecorder.stop();
-      debugPrint('🎤 錄音結束，取得路徑：$path'); // 追蹤是否有成功拿到檔案
+      debugPrint('🎤 錄音結束，路徑：$path，長度 ${recordedMs}ms，最大音量 ${_maxDb?.toStringAsFixed(1) ?? '未知'} dB');
+      if (!mounted) return;
+      setState(() => _isRecording = false);
 
-      setState(() {
-        _isRecording = false;
-        _isAnalyzing = true;
-      });
-
-      if (path != null && path.isNotEmpty) {
-        // 1. 呼叫語音評分 API
-        final result = await ApiClient.evaluateArticleAudio(
-          path,
-          widget.article.content,
-          userId: currentUserId,
-          articleId: widget.article.id,
-        );
-        if (!mounted) return;
-
-        if (result['status'] == 'quota_exceeded') {
-          // 後端判定今天的次數已用完（例如在別台裝置用掉了）
-          setState(() {
-            _isAnalyzing = false;
-            if (_readingLimit != null) _readingUsed = _readingLimit!;
-            _readingExtra = 0;
-          });
-          _showReadingQuotaDialog(result['message']?.toString());
-          return;
-        }
-
-        if (result['status'] == 'success') {
-          setState(() {
-            if (result['used_extra'] == true && _readingExtra > 0) _readingExtra--;
-            _readingUsed++;
-          });
-          // 🛡️ 防呆：確保分數是整數
-          final int score = double.tryParse(result['score']?.toString() ?? '0')?.toInt() ?? 0;
-
-          // 2. 🌟 呼叫成績結算與點數發放 API
-          await _submitScoreAndShowResult(score, result);
-        } else {
-          setState(() => _isAnalyzing = false);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('解析失敗：${result['message'] ?? '未知錯誤'}')));
-        }
-      } else {
-        setState(() => _isAnalyzing = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('⚠️ 無法取得錄音檔案，請確認麥克風權限或重試')));
+      // 還沒送出就能確定的失敗：直接說明原因，不進等待畫面
+      if (path == null || path.isEmpty) {
+        _showRecognitionFailedDialog('no_file');
+        return;
       }
+      if (recordedMs < 1000) {
+        _showRecognitionFailedDialog('too_short');
+        return;
+      }
+
+      // 等待畫面與拍照辨識同一套規格。評分與結算都在這一頁做完：
+      // 成功時把等待畫面直接換成評分報告，失敗時在等待畫面上說明原因再退回文章頁。
+      setState(() => _isAnalyzing = true);
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ReadingAnalyzingScreen()));
+
+      // 1. 呼叫語音評分 API
+      final result = await ApiClient.evaluateArticleAudio(
+        path,
+        widget.article.content,
+        userId: currentUserId,
+        articleId: widget.article.id,
+      );
+      if (!mounted) return;
+      final status = result['status']?.toString();
+
+      if (status == 'quota_exceeded') {
+        // 後端判定今天的次數已用完（例如在別台裝置用掉了）
+        Navigator.pop(context); // 關閉等待畫面
+        setState(() {
+          _isAnalyzing = false;
+          if (_readingLimit != null) _readingUsed = _readingLimit!;
+          _readingExtra = 0;
+        });
+        _showReadingQuotaDialog(result['message']?.toString());
+        return;
+      }
+
+      if (status == 'success') {
+        setState(() {
+          if (result['used_extra'] == true && _readingExtra > 0) _readingExtra--;
+          _readingUsed++;
+        });
+        // 🛡️ 防呆：確保分數是整數
+        final int score = double.tryParse(result['score']?.toString() ?? '0')?.toInt() ?? 0;
+
+        // 2. 🌟 呼叫成績結算與點數發放 API
+        await _submitScoreAndShowResult(score, result);
+        return;
+      }
+
+      // 辨識不到（unrecognized）或評分服務出錯（error）：說明原因，按下按鈕後連等待畫面一起退回文章頁
+      setState(() => _isAnalyzing = false);
+      _showRecognitionFailedDialog(
+        result['reason']?.toString() ?? (status == 'unrecognized' ? 'no_speech' : 'server'),
+        serverMessage: result['message']?.toString(),
+        transcript: result['transcript']?.toString(),
+        closeAnalyzing: true,
+      );
     } else {
       // 次數用完就不讓開始錄音，免得錄完才被擋
       if (_readingLeft == 0) {
@@ -731,20 +760,189 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         String? filePath;
         if (!kIsWeb) {
           final dir = await getApplicationDocumentsDirectory();
-          filePath = '${dir.path}/reading_test.m4a'; 
+          filePath = '${dir.path}/reading_test.m4a';
         }
-        
+
         // 🌟 修復核心：Web 平台不能傳遞空字串當路徑，必須明確傳 null
         await _audioRecorder.start(
-          const RecordConfig(), 
+          const RecordConfig(),
           path: kIsWeb ? '' : (filePath ?? ''),
         );
-        
+
+        // 記錄錄音長度與最大音量，辨識不到時才分得出是「太短」「太小聲」還是「聽不懂」
+        _maxDb = null;
+        _recordWatch
+          ..reset()
+          ..start();
+        await _amplitudeSub?.cancel();
+        _amplitudeSub = _audioRecorder
+            .onAmplitudeChanged(const Duration(milliseconds: 300))
+            .listen((amp) {
+          // 平台不支援音量回報時會一直是 -160，當作沒有資料
+          if (amp.current > -160) {
+            _maxDb = _maxDb == null ? amp.current : math.max(_maxDb!, amp.current);
+          }
+        }, onError: (_) {});
+
+        if (!mounted) return;
         setState(() => _isRecording = true);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🔴 開始錄音，請對麥克風朗讀！')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🔴 開始錄音，請對麥克風朗讀！')));
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('必須允許麥克風權限才能錄音喔！')));
+        if (mounted) _showRecognitionFailedDialog('permission');
       }
+    }
+  }
+
+  /// 辨識不到、或評分沒完成時的說明：講清楚「為什麼」與「該怎麼做」，
+  /// 版面與拍照辨識失敗的對話框相同。[closeAnalyzing] 為 true 時按下按鈕會連等待畫面一起關掉。
+  void _showRecognitionFailedDialog(
+    String reason, {
+    String? serverMessage,
+    String? transcript,
+    bool closeAnalyzing = false,
+  }) {
+    final info = _recognitionFailureInfo(reason, serverMessage: serverMessage, transcript: transcript);
+    // 失敗不會算進今日次數（後端只在評分成功時留下紀錄）；不限次數的帳號不用提
+    final showQuotaNote = closeAnalyzing && _readingLeft != null;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(info.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(info.why, style: const TextStyle(height: 1.5, fontWeight: FontWeight.w600)),
+            if (info.tips.isNotEmpty) const SizedBox(height: 12),
+            for (final tip in info.tips)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('・', style: TextStyle(height: 1.5)),
+                    Expanded(child: Text(tip, style: const TextStyle(height: 1.5))),
+                  ],
+                ),
+              ),
+            if (showQuotaNote) ...[
+              const SizedBox(height: 12),
+              const Text('這次不會算進今日朗讀次數。',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSubtle, height: 1.5)),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx); // 關閉說明
+              if (closeAnalyzing) Navigator.pop(context); // 退回文章頁
+            },
+            child: Text(info.action,
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 各種失敗原因對應的標題、原因與該怎麼做。
+  /// reason 來源：前端自己判斷（permission / no_file / too_short）、
+  /// 後端 /articles/evaluate 回的 reason（empty / no_speech / not_japanese / too_noisy / ai_busy / ai_quota / ai_not_configured / server）、
+  /// ApiClient 的連線錯誤（timeout / network / server）。
+  ({String title, String why, List<String> tips, String action}) _recognitionFailureInfo(
+    String reason, {
+    String? serverMessage,
+    String? transcript,
+  }) {
+    const failed = '辨識沒有成功';
+    const notScored = '評分沒有完成';
+    switch (reason) {
+      case 'permission':
+        return (
+          title: '無法開始錄音',
+          why: '沒有麥克風權限，App 收不到你的聲音。',
+          tips: ['到手機「設定」允許這個 App 使用麥克風，再回來錄音。'],
+          action: '知道了',
+        );
+      case 'no_file':
+      case 'empty':
+        return (
+          title: failed,
+          why: '這次錄音沒有錄到任何內容。',
+          tips: ['確認麥克風沒有被通話或其他錄音 App 占用。', '關掉 App 重新開啟後再錄一次。'],
+          action: '重新錄音',
+        );
+      case 'too_short':
+        return (
+          title: failed,
+          why: '錄音不到 1 秒，AI 來不及聽到內容。',
+          tips: ['按下「開始朗讀」後再開口，唸完整篇再按「結束錄音」。'],
+          action: '重新錄音',
+        );
+      case 'no_speech':
+        // 有錄音期間的音量資料時，分得出是「沒收到聲音」還是「有聲音但聽不出日文」
+        final tooQuiet = _maxDb != null && _maxDb! < -45;
+        if (tooQuiet) {
+          return (
+            title: failed,
+            why: '整段錄音的音量都很小，麥克風幾乎沒有收到你的聲音。',
+            tips: ['確認手指或保護殼沒有遮住麥克風。', '離麥克風近一點、大聲一點再唸一次。'],
+            action: '重新錄音',
+          );
+        }
+        return (
+          title: failed,
+          why: '有收到聲音，但 AI 聽不出任何日文內容。',
+          tips: ['到安靜的地方，離麥克風近一點，放慢速度清楚地唸。'],
+          action: '重新錄音',
+        );
+      case 'not_japanese':
+        final heard = (transcript ?? '').trim();
+        final shown = heard.length > 40 ? '${heard.substring(0, 40)}…' : heard;
+        return (
+          title: failed,
+          why: heard.isEmpty ? 'AI 聽到的內容不是日文。' : 'AI 聽到的不是日文，而是：「$shown」',
+          tips: ['請用日文朗讀上方的文章。', '錄音時避免旁人說話一起被錄進去。'],
+          action: '重新錄音',
+        );
+      case 'too_noisy':
+        return (
+          title: failed,
+          why: '背景雜音太大，AI 分不出你的聲音。',
+          tips: ['關掉音樂、電視，或換到安靜的地方再錄一次。'],
+          action: '重新錄音',
+        );
+      case 'timeout':
+        return (
+          title: notScored,
+          why: '等了 60 秒伺服器還沒有回應，這次錄音沒有被評分。',
+          tips: ['確認網路連線正常。', '錄音長度盡量控制在 1 分鐘內。'],
+          action: '重新錄音',
+        );
+      case 'network':
+        return (
+          title: notScored,
+          why: '連不上伺服器，錄音沒有送出去。',
+          tips: ['確認手機網路或 Wi-Fi 已連線後再試一次。'],
+          action: '重新錄音',
+        );
+      case 'ai_busy':
+        return (
+          title: notScored,
+          why: 'AI 服務目前使用人數較多，這次錄音沒有被評分。',
+          tips: ['稍等幾秒再錄一次。'],
+          action: '重新錄音',
+        );
+      default: // ai_quota、ai_not_configured、server
+        return (
+          title: notScored,
+          why: serverMessage ?? '語音評分服務暫時無法使用，請稍後再試。',
+          tips: const [],
+          action: '重新錄音',
+        );
     }
   }
 
@@ -767,10 +965,10 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     if (!mounted) return;
     setState(() => _isAnalyzing = false);
 
-    // 跳轉到結果報告頁面
-    await Navigator.push(
-      context, 
-      MaterialPageRoute(builder: (context) => ArticleResultScreen(resultData: evaluateResult))
+    // 把等待畫面直接換成評分報告（不先退回文章頁再跳，畫面才不會閃一下）
+    await Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => ArticleResultScreen(resultData: evaluateResult)),
     );
 
     // 從作業進來的：先告訴學生這次有沒有交到作業
@@ -788,16 +986,17 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       );
     }
 
-    // 從結果報告頁面返回後，顯示點數與成就動畫
+    // 從結果報告頁面返回後，顯示點數與成就動畫（校園教育版學生沒有點數，只顯示成績）
+    final isEduStudent = context.read<UserProvider>().isEduStudent;
     if (submitResult['status'] == 'success' && submitResult['is_new_record'] == true) {
-      final pointsEarned = submitResult['points_earned'] ?? 0;
+      final pointsEarned = isEduStudent ? 0 : (submitResult['points_earned'] ?? 0);
       final highestScore = submitResult['highest_score'] ?? score;
       _showRewardDialog(pointsEarned, highestScore);
     } else if (submitResult['status'] == 'success') {
       final pointsEarned = submitResult['points_earned'] ?? 0;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('練習完成！獲得 $pointsEarned J-pts 獎勵。'),
+          content: Text(isEduStudent ? '練習完成！' : '練習完成！獲得 $pointsEarned J-pts 獎勵。'),
           backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
         )
@@ -835,6 +1034,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   '本次得分：$score 分',
                   style: const TextStyle(fontSize: 16, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                 ),
+                if (points > 0) ...[
                 const SizedBox(height: 24),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -855,6 +1055,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     ],
                   ),
                 ),
+                ],
                 const SizedBox(height: 30),
                 SizedBox(
                   width: double.infinity,

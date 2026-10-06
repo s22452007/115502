@@ -16,8 +16,14 @@ def is_edu_student(user):
     return getattr(user, 'account_type', AccountType.GENERAL) == AccountType.STUDENT
 
 
+def is_google_student(user):
+    """用學校 Google 帳號登入的學生（沒有密碼可重設）。
+    老師貼名單建的備用帳號 email 是學號、沒有 @；兩種帳號現在都有 school_id，所以不能看 school_id 分辨。"""
+    return is_edu_student(user) and '@' in (getattr(user, 'email', '') or '')
+
+
 def has_unlimited_usage(user):
-    """這個帳號是否不受每日次數限制。
+    """這個帳號是否不受每日次數與單字收藏上限限制。
 
     目前等同於「是不是教育版學生」，但特意分成兩個函式：
     呼叫端關心的是「能不能無限使用」，而不是帳號類型本身。
@@ -56,6 +62,15 @@ def today_start_utc():
 def is_payment_free(user):
     """這個帳號是否完全不需要付費／扣點。
 
-    教育版學生的解鎖文章、造句超額、小組押金全部免費。
+    教育版學生的解鎖文章、造句超額、小組押金、自訂 AI 角色全部免費。
     """
     return is_edu_student(user)
+
+
+def uses_points(user):
+    """這個帳號有沒有 J-Pts 點數機制。
+
+    校園教育版學生沒有點數：每日任務、造句、朗讀、主題收集冊、學習小組都不發點數，
+    自訂 AI 角色免費新增、單字收藏沒有上限；App 端也不顯示任何點數介面。
+    """
+    return not is_edu_student(user)

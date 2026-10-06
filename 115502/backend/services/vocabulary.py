@@ -7,6 +7,7 @@ from models import User, UserVocab, UserFolder, Vocab
 from sqlalchemy import func
 
 from services.store import ITEM_COSTS, VOCAB_SLOTS_PER_PURCHASE
+from utils.account_helper import has_unlimited_usage
 vocab_bp = Blueprint('vocab', __name__)
 
 
@@ -160,7 +161,7 @@ def collect_vocab():
         UserVocab.user_id == user_id,
         UserVocab.collected_at.isnot(None),
     ).count()
-    if collected_count >= vocab_slot:
+    if collected_count >= vocab_slot and not has_unlimited_usage(user):   # 教育版學生沒有收藏上限
         cost_hint = ITEM_COSTS['vocab_expand_premium'] if user.is_premium else ITEM_COSTS['vocab_expand']
         return jsonify({
             "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +{VOCAB_SLOTS_PER_PURCHASE} 個位置",
@@ -474,7 +475,7 @@ def collect_from_article():
         UserVocab.collected_at.isnot(None)
     ).count()
     
-    if collected_count >= vocab_slot:
+    if collected_count >= vocab_slot and not has_unlimited_usage(user):   # 教育版學生沒有收藏上限
         cost_hint = ITEM_COSTS['vocab_expand_premium'] if user.is_premium else ITEM_COSTS['vocab_expand']
         return jsonify({
             "error": f"收藏已達上限（{vocab_slot} 個），花 {cost_hint} 點可擴充 +{VOCAB_SLOTS_PER_PURCHASE} 個位置"

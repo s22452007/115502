@@ -4,6 +4,7 @@ import string
 from datetime import datetime, timedelta
 from utils.db import db
 from utils.level_names import level_label  # 報表裡的文章難度不直接顯示 N5～N1
+from utils.account_helper import is_google_student
 from models import (
     User, Classroom, ClassroomMember, Assignment, AssignmentSubmission,
     TaskType, SubmissionStatus, AccountType, LatePolicy, ClassroomAnnouncement,
@@ -166,7 +167,7 @@ def get_classroom_student_stats(classroom_id):
             'student_no': row['student_no'],
             'display_name': row['display_name'],
             'email': student.email or '',
-            'google_login': bool(student.school_id),   # 學校 Google 帳號登入，沒有密碼可重設
+            'google_login': is_google_student(student),   # 學校 Google 帳號登入，沒有密碼可重設
             'joined_at': tw_fmt(m.joined_at, '%Y-%m-%d'),
             'completed_assignments': completed_count,
             'total_assignments': total_assignments,

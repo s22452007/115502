@@ -119,8 +119,11 @@ def _claimed_tiers(user_id, scene_ids):
     return claimed
 
 
-def _reward_state(unlocked, total, scene_id, claimed_set):
-    """回傳這個主題兩個 tier 的狀態：locked / claimable / claimed。"""
+def _reward_state(unlocked, total, scene_id, claimed_set, with_points=True):
+    """回傳這個主題兩個 tier 的狀態：locked / claimable / claimed。
+
+    with_points=False（校園教育版學生沒有點數）：只剩「集滿」的徽章可以領，點數與拍照次數都是 0。
+    """
     ratio = (unlocked / total) if total else 0.0
     reached = {
         'half': total > 0 and ratio >= 0.5,
@@ -128,6 +131,8 @@ def _reward_state(unlocked, total, scene_id, claimed_set):
     }
     state = {}
     for tier, cfg in THEME_REWARDS.items():
+        if not with_points and not cfg['badge']:
+            continue
         if (scene_id, tier) in claimed_set:
             s = 'claimed'
         elif reached[tier]:
@@ -136,8 +141,8 @@ def _reward_state(unlocked, total, scene_id, claimed_set):
             s = 'locked'
         state[tier] = {
             'state': s,
-            'points': cfg['points'],
-            'extra_photo': cfg['extra_photo'],
+            'points': cfg['points'] if with_points else 0,
+            'extra_photo': cfg['extra_photo'] if with_points else 0,
             'badge': cfg['badge'],
             'label': cfg['label'],
         }
@@ -484,7 +489,8 @@ def get_themes(user_id):
     目標字數（＝該主題單字牆總數）、完成度、最近拍攝時間。
     完成度 = 該主題已解鎖 distinct 單字數 / 該主題單字總數（與單字牆一致）。
     """
-    from models import Scene, Vocab, UserVocab
+    from models import Scene, Vocab, UserVocab, User
+    from utils.account_helper import uses_points
 
     # 1. 使用者拍過的照片，依 scene 聚合封面 / 照片數 / 最近時間
     photos = (UserPhoto.query
@@ -509,6 +515,7 @@ def get_themes(user_id):
 
     # 3. 逐場景統計單字牆數據（完成度只算官方字；AI 額外字另外計為 bonus）
     claimed_set = _claimed_tiers(user_id, list(scene_by_id.keys()))
+    with_points = uses_points(User.query.get(user_id))
     results = []
     for sid, scene in scene_by_id.items():
         unlocked, total = _theme_progress(user_id, sid)
@@ -530,7 +537,7 @@ def get_themes(user_id):
             'bonus_count': bonus,  # 官方清單以外、自己拍到的額外單字
             'progress': min(1.0, round(unlocked / total, 3)) if total else 0.0,
             'last_at': agg['last_at'].strftime('%Y.%m.%d') if agg.get('last_at') else '',
-            'rewards': _reward_state(unlocked, total, sid, claimed_set),
+            'rewards': _reward_state(unlocked, total, sid, claimed_set, with_points),
         })
 
     # 4. 排序：有獎勵可領的排最前面，其次是已開始探索的，最後才是還沒碰過的主題
@@ -570,6 +577,10 @@ def claim_theme_reward():
     scene = Scene.query.get(scene_id)
     if not scene:
         return jsonify({'error': '找不到主題'}), 404
+    from utils.account_helper import uses_points
+    with_points = uses_points(user)
+    if not with_points and not THEME_REWARDS[tier]['badge']:
+        return jsonify({'error': '校園教育版沒有點數獎勵'}), 400
 
     # 1. 重新計算進度，確認真的達標
     unlocked, total = _theme_progress(user_id, scene_id)
@@ -584,15 +595,18 @@ def claim_theme_reward():
         return jsonify({'error': '這個獎勵已經領過了'}), 400
 
     cfg = THEME_REWARDS[tier]
+    # 校園教育版學生沒有點數：集滿只發徽章
+    pts = cfg['points'] if with_points else 0
+    extra_photo = cfg['extra_photo'] if with_points else 0
 
     # 3. 發點數與額外拍照次數
-    user.j_pts = (user.j_pts or 0) + cfg['points']
-    if cfg['extra_photo']:
-        user.photo_extra_count = (user.photo_extra_count or 0) + cfg['extra_photo']
+    user.j_pts = (user.j_pts or 0) + pts
+    if extra_photo:
+        user.photo_extra_count = (user.photo_extra_count or 0) + extra_photo
 
     db.session.add(PointTransaction(
         user_id=user.id,
-        points=cfg['points'],
+        points=pts,
         price=0,
         payment_method='theme_reward',
         transaction_type=TransactionType.REWARD,
@@ -617,8 +631,8 @@ def claim_theme_reward():
         'theme_name': scene.name,
         'tier': tier,
         'label': cfg['label'],
-        'pts_earned': cfg['points'],
-        'bonus_photo': cfg['extra_photo'],
+        'pts_earned': pts,
+        'bonus_photo': extra_photo,
         'badge_name': badge_name,
         'j_pts': user.j_pts,
     }), 200

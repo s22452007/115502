@@ -614,7 +614,7 @@ class _ClaimPill extends StatelessWidget {
             const Icon(Icons.card_giftcard, size: 15, color: Colors.white),
             const SizedBox(width: 5),
             Text(
-              '領取 +$points',
+              points > 0 ? '領取 +$points' : '領取徽章',
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w900,

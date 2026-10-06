@@ -4,7 +4,7 @@ AI 對話角色：預設老師、使用者自訂角色，以及腔調的解鎖�
 
 規則：
   - 「預設老師」免費，維持原本的家教模式。
-  - 自訂角色：花 200 點新增，存在 custom_character 表；對話時人設會放進 AI 的指令。
+  - 自訂角色：花 200 點新增（校園教育版學生沒有點數，免費新增），存在 custom_character 表；對話時人設會放進 AI 的指令。
   - 每新增一個自訂角色，可以解鎖「一種」腔調（新增時選，或之後再選；選了不能換）。
     解鎖的腔調之後和任何角色對話都能用，刪掉角色也不會收回；標準語永遠免費。
   - 新增過自訂角色就能用男聲。
@@ -15,12 +15,18 @@ AI 對話角色：預設老師、使用者自訂角色，以及腔調的解鎖�
 from flask import Blueprint, request, jsonify
 from sqlalchemy import or_
 from models import db, User, PointTransaction, TransactionType, Dialect, CustomCharacter
+from utils.account_helper import is_payment_free
 
 character_bp = Blueprint('character', __name__)
 
 STANDARD_JP_NAME = '標準語'   # 標準語免費，不佔腔調名額
 
 CUSTOM_CHARACTER_COST = 200
+
+
+def custom_character_cost(user):
+    """新增一個自訂角色要花的點數；校園教育版學生免費（仍留一筆 0 點的紀錄當腔調名額憑證）"""
+    return 0 if is_payment_free(user) else CUSTOM_CHARACTER_COST
 _CUSTOM_FEATURE_PREFIX = 'custom_character:'
 _LEGACY_FEATURE_PREFIX = 'character:'
 
@@ -136,7 +142,7 @@ def list_characters():
     return jsonify({
         'characters': [DEFAULT_CHARACTER],
         'custom_characters': [_custom_to_dict(c) for c in customs],
-        'custom_character_cost': CUSTOM_CHARACTER_COST,
+        'custom_character_cost': custom_character_cost(User.query.get(user_id) if user_id else None),
         **_status(user_id),
     }), 200
 
@@ -175,8 +181,9 @@ def create_custom_character():
         user = User.query.get(user_id)
         if not user:
             return jsonify({"error": "找不到此使用者"}), 404
-        if user.j_pts < CUSTOM_CHARACTER_COST:
-            return jsonify({"error": f"點數不足，需要 {CUSTOM_CHARACTER_COST} 點"}), 400
+        cost = custom_character_cost(user)
+        if (user.j_pts or 0) < cost:
+            return jsonify({"error": f"點數不足，需要 {cost} 點"}), 400
 
         character = CustomCharacter(user_id=user_id, **values)
         db.session.add(character)
@@ -184,10 +191,10 @@ def create_custom_character():
         feature = f'{_CUSTOM_FEATURE_PREFIX}{character.id}'   # 同時是腔調名額的憑證
         if dialect is not None:
             feature += f':dialect:{dialect.id}'
-        user.j_pts -= CUSTOM_CHARACTER_COST
+        user.j_pts = (user.j_pts or 0) - cost
         db.session.add(PointTransaction(
             user_id=user_id,
-            points=-CUSTOM_CHARACTER_COST,
+            points=-cost,
             price=0,
             payment_method='points',
             transaction_type=TransactionType.SPEND,

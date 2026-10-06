@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d C:\\Users\\user\\115502\\115502\\backend && C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe app.py"],
+      "port": 5050
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d C:\\Users\\user\\115502\\115502\\backend && C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe admin_app.py"],
+      "port": 5001
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d C:\\Users\\user\\115502\\115502\\jpn_learning_app && flutter run -d web-server --release --web-port 8080 --web-hostname localhost"],
+      "port": 8080
+    }
+  ]
+}

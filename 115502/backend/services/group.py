@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from utils.db import db
 from models import User, StudyGroup, GroupMember, GroupInvite, Friendship, PointTransaction, TransactionType
-from utils.account_helper import is_payment_free
+from utils.account_helper import is_payment_free, uses_points
 from datetime import datetime, timezone
 
 group_bp = Blueprint('group', __name__)
@@ -63,6 +63,9 @@ def handle_deposit_and_free_quota(user):
 
 def _give_group_reward(user, member, group):
     """按本週加入次數（是否付押金）與訂閱狀態給予獎勵，回傳描述字串。"""
+    # 校園教育版學生沒有點數：沒付過押金、也不發點數，只有結業
+    if not uses_points(user):
+        return ''
     # 目標難度分級
     if group.goal_target <= 15:
         tier = 0  # 輕鬆
@@ -550,7 +553,8 @@ def claim_reward():
             db.session.delete(group)
             db.session.commit()
 
-        return jsonify({"message": f"太棒了！{reward_desc}！你已順利結業！", "new_j_pts": user.j_pts}), 200
+        message = f"太棒了！{reward_desc}！你已順利結業！" if reward_desc else "太棒了！你已順利結業！"
+        return jsonify({"message": message, "new_j_pts": user.j_pts}), 200
 
     except Exception as e:
         db.session.rollback()

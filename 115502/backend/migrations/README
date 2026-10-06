@@ -1,0 +1,12 @@
+資料表版本控管（Flask-Migrate / Alembic）
+
+- versions/ 底下每個檔案是一次資料表結構變更，依序套用。api / admin 啟動時會自動把還沒跑過的套用上去，
+  組員 pull 之後直接啟動即可，不用手動下指令。
+- 改了 models.py（新增欄位、新表、改型別）之後，在 backend 資料夾執行：
+      py -3 -m flask --app app db migrate -m "說明這次改了什麼"
+  檢查產生的 versions/xxxx_說明.py 內容正確，再跟 models.py 一起 commit。
+- 忘了產生遷移檔也不會壞：啟動時會自動補上缺少的欄位並印出提醒（utils/db.py 的 ensure_model_columns），
+  但只會補欄位、不會改型別或刪欄位，所以還是請補上遷移檔。
+- 手動套用 / 退回：
+      py -3 -m flask --app app db upgrade
+      py -3 -m flask --app app db downgrade

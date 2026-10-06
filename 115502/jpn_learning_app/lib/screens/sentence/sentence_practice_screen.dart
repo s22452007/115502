@@ -453,6 +453,8 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
   void _showEvaluationResultDialog(Map<String, dynamic> result) {
     final score = result['score'] ?? 0;
     final points = result['points_earned'] ?? 0;
+    // 校園教育版學生沒有點數：不顯示可領取獎勵，也沒有「去領點數」
+    final isEduStudent = context.read<UserProvider>().isEduStudent;
     // corrected_ruby 是含讀音標記的版本（舊版後端沒有就用 corrected_sentence）
     final correctedSentence =
         (result['corrected_ruby'] ?? result['corrected_sentence'] ?? '').toString();
@@ -525,6 +527,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                           ),
                         ],
                       ),
+                      if (!isEduStudent) ...[
                       Container(
                         height: 40,
                         width: 1,
@@ -547,6 +550,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                           ),
                         ],
                       ),
+                      ],
                     ],
                   ),
                   if (vocabBonus > 0 || unusedVocabs.isNotEmpty) ...[
@@ -598,6 +602,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                           ),
                         ),
                       ),
+                      if (!isEduStudent) ...[
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
@@ -628,6 +633,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                           ),
                         ),
                       ),
+                      ],
                     ],
                   ),
                 ],

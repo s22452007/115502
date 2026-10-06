@@ -6,7 +6,6 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
-import sqlite3
 import os
 import json
 import re
@@ -18,29 +17,34 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 from flask import session, flash, redirect, url_for, render_template, request, jsonify
 from functools import wraps
-from utils.db import db, ensure_model_columns
+from utils.db import db, configure_app_db, init_database, skip_db_init, safe_uri
+from utils.rawsql import RawConnection, DBError
 from models import Admin, Vocab, SystemLog, Article, Achievement, User, AccountType, School
+from utils.account_helper import is_google_student
 from school_seed import DEFAULT_STUDENT_ID_PATTERN, OLD_DEFAULT_STUDENT_ID_PATTERN
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import func
+from sqlalchemy import func, inspect as sa_inspect
 from dotenv import load_dotenv
 
 
-def utc_to_tw(utc_str):
-    """把資料庫的 UTC 時間字串轉成台灣時間 (+8)"""
-    if not utc_str:
+def utc_to_tw(utc_value):
+    """把資料庫的 UTC 時間轉成台灣時間 (+8) 的字串。
+    SQLite 取出來的是字串、MySQL 取出來的是 datetime，兩種都接受。"""
+    if not utc_value:
         return ''
+    if isinstance(utc_value, datetime):
+        return (utc_value + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M')
     try:
         # 支援帶微秒和不帶微秒的格式
         for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
             try:
-                dt = datetime.strptime(utc_str, fmt)
+                dt = datetime.strptime(str(utc_value), fmt)
                 return (dt + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M')
             except ValueError:
                 continue
-        return utc_str
+        return str(utc_value)
     except Exception:
-        return utc_str
+        return str(utc_value)
 
 app = Flask(__name__)
 
@@ -50,10 +54,10 @@ from utils.level_names import level_label, level_title
 app.add_template_filter(level_label, 'level_label')
 app.add_template_filter(level_title, 'level_title')
 
-app.secret_key = 'jlens_admin_secure_key_2024'
-
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(BASE_DIR, '.env'))  # GOOGLE_WEB_CLIENT_ID、TEACHER_GOOGLE_DOMAINS 等設定
+load_dotenv(os.path.join(BASE_DIR, '.env'))  # GOOGLE_WEB_CLIENT_ID、TEACHER_GOOGLE_DOMAINS、DATABASE_URL 等設定
+# 後台登入 session 的簽章金鑰；正式部署請在 .env 設 ADMIN_SECRET_KEY，沒設就用開發用的預設值
+app.secret_key = os.getenv('ADMIN_SECRET_KEY') or 'jlens_admin_secure_key_2024'
 
 # ---- 老師用學校 Google 帳號登入 ----
 # GOOGLE_WEB_CLIENT_ID：Firebase 專案裡「Web client」的 OAuth client ID（與 App 的 serverClientId 同一個）。
@@ -68,29 +72,19 @@ TEACHER_GOOGLE_STUDENT_PATTERN = os.getenv('TEACHER_GOOGLE_STUDENT_PATTERN', r'^
 # TEACHER_GOOGLE_ALLOWED_EMAILS：例外名單（逗號分隔），列在這裡的 Email 即使 @ 前是學號也能登入老師後台
 TEACHER_GOOGLE_ALLOWED_EMAILS = {e.strip().lower() for e in (os.getenv('TEACHER_GOOGLE_ALLOWED_EMAILS') or '').split(',') if e.strip()}
 
-path1 = os.path.join(BASE_DIR, 'instance', 'jlens.db')
-path2 = os.path.join(BASE_DIR, 'jlens.db')
-DB_FILE_PATH = path1 if os.path.exists(path1) else path2
+# 資料庫：.env 有 DATABASE_URL 就連 MySQL，沒有就用 backend/instance/jlens.db（SQLite），跟 app.py 同一套設定
+DB_URI = configure_app_db(app, BASE_DIR)
 
+from flask_migrate import Migrate
+migrate = Migrate(app, db, render_as_batch=True, directory=os.path.join(BASE_DIR, 'migrations'))
 
-from sqlalchemy.pool import NullPool
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_FILE_PATH
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'poolclass': NullPool,
-    'connect_args': {'timeout': 15},
-}
-db.init_app(app)
-
-# jlens.db 不進 git、每位組員電腦上都是自己的資料庫；模型新增欄位後（例如 admin.last_login_at）
-# 舊資料庫一查就 no such column 而 500。啟動時自動建缺少的表、補缺少的欄位，pull 完直接能跑。
-with app.app_context():
+# jlens.db 不進 git、每位組員電腦上都是自己的資料庫；模型新增欄位後舊資料庫一查就 no such column 而 500。
+# 啟動時自動建缺少的表、跑遷移、補缺少的欄位（utils/db.py 的 init_database，與 app.py 共用），pull 完直接能跑。
+if not skip_db_init():
     try:
-        db.create_all()
-        for _table, _column in ensure_model_columns(db):
-            print(f'[DB] 自動補上缺少的欄位 {_table}.{_column}')
+        init_database(app)
     except Exception as _e:
-        print(f'[DB] 自動補欄位失敗（請手動執行 upgrade_db.py 或聯繫負責人）：{_e}')
+        print(f'[DB] 資料庫初始化失敗（請確認 DATABASE_URL 或聯繫負責人）：{_e}')
 
 
 @app.context_processor
@@ -102,13 +96,13 @@ def _inject_sidebar_badges():
     try:
         conn = get_db_connection()
         try:
-            n = conn.execute('SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""').fetchone()[0]
+            n = conn.execute("SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ''").fetchone()[0]
             pending_teachers = conn.execute(
                 "SELECT COUNT(*) FROM user WHERE account_type = 'teacher' AND teacher_status = 'pending'"
             ).fetchone()[0]
         finally:
             conn.close()
-    except sqlite3.Error:
+    except DBError:
         pass
     return {'sidebar_feedback_pending': n, 'sidebar_teacher_pending': pending_teachers}
 
@@ -169,16 +163,10 @@ def _teacher_domain_labels():
 # ==========================================
 # 🚀 自動路徑偵測
 # ==========================================
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-# 優先嘗試 instance 下的路徑
-DB_FILE_PATH = os.path.join(BASE_DIR, 'instance', 'jlens.db')
-
 def get_db_connection():
-    conn = sqlite3.connect(DB_FILE_PATH, check_same_thread=False, timeout=15)
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.execute('PRAGMA busy_timeout=15000')
-    conn.row_factory = sqlite3.Row
-    return conn
+    """後台原生 SQL 用的連線：走 SQLAlchemy 的 engine，SQLite / MySQL 都能跑（見 utils/rawsql.py）。
+    用法跟 sqlite3 一樣：execute('... ?', params)、fetchone()/fetchall()、row['欄位']、commit()、close()。"""
+    return RawConnection(db.engine)
 
 # ==========================================
 # 🔐 1. 守門員：檢查是否登入
@@ -415,6 +403,7 @@ def teacher_google_login():
                     f'如果你是老師，請點下方「申請老師帳號」，由管理者確認後開通')
 
     user = User.query.filter_by(email=email).first()
+    school = _school_for_domain(domain)   # 信箱網域對得上的學校；對不上由管理者在「教師帳號管理」設定
     if user is None:
         # 學校網域驗證通過的第一次登入：自動建立老師帳號，不需要管理者手動建
         user = User(
@@ -424,6 +413,7 @@ def teacher_google_login():
             account_type=AccountType.TEACHER,
             avatar=claims.get('picture') or None,
             teacher_status='pending',   # 學校帳號證明不了是老師，要等管理者核准
+            school_id=school.id if school else None,
         )
         db.session.add(user)
         db.session.flush()
@@ -431,7 +421,7 @@ def teacher_google_login():
             admin_id=None, user_id=user.id,
             action='CREATE', target_table='user', target_id=user.id,
             new_value={'email': email, 'username': user.username, 'account_type': AccountType.TEACHER,
-                       'via': 'google', 'teacher_status': 'pending'}
+                       'via': 'google', 'teacher_status': 'pending', 'school': school.name if school else None}
         ))
         db.session.commit()
         print(f"[NEW] 以學校 Google 帳號建立老師: {email}")
@@ -440,6 +430,10 @@ def teacher_google_login():
     elif getattr(user, 'is_suspended', False):
         return fail('此老師帳號已被停用，請聯繫系統管理員')
 
+    if not user.school_id and school:
+        # 以前建的老師帳號還沒有學校：這次登入補上
+        user.school_id = school.id
+        db.session.commit()
     print(f"[OK] 老師 Google 登入成功: {email} (user_id={user.id})")
     return _start_teacher_session(user)
 
@@ -448,6 +442,28 @@ def _is_student_like_email(email):
     """學校信箱帳號是學號的（例如 11156047@ntub.edu.tw）視為學生，不能當老師帳號；白名單裡的例外"""
     return bool(TEACHER_GOOGLE_STUDENT_PATTERN and email.lower() not in TEACHER_GOOGLE_ALLOWED_EMAILS
                 and re.fullmatch(TEACHER_GOOGLE_STUDENT_PATTERN, email.split('@')[0]))
+
+
+def _school_for_domain(domain):
+    """信箱網域對得上哪間啟用中的學校（老師帳號自動綁學校用）；對不上回傳 None"""
+    domain = (domain or '').lower()
+    return max((s for s in School.query.filter_by(is_active=True).all() if s.domain_allowed(domain)),
+               key=lambda s: s.domain_match_len(domain), default=None)
+
+
+def _bind_roster_students(teacher, school):
+    """老師設定學校時，老師班上還沒有學校的名冊帳號（學號帳號）一併歸到這間學校，回傳改了幾個。
+    用學校 Google 帳號登入的學生本來就有學校，不動"""
+    students = (User.query.join(ClassroomMember, ClassroomMember.student_id == User.id)
+                .join(Classroom, Classroom.id == ClassroomMember.classroom_id)
+                .filter(Classroom.teacher_id == teacher.id, User.account_type == AccountType.STUDENT,
+                        User.school_id.is_(None)).all())
+    moved = 0
+    for s in students:
+        if not is_google_student(s):
+            s.school_id = school.id
+            moved += 1
+    return moved
 
 
 # ==========================================
@@ -559,6 +575,7 @@ def teacher_apply_verify():
     if error:
         return render_template('teacher/apply.html', step='password', form=form, token=token, error=error)
 
+    school = _school_for_domain(form['email'].split('@')[-1])
     teacher = User(
         email=form['email'],
         username=form['username'],
@@ -567,6 +584,7 @@ def teacher_apply_verify():
         teacher_status='pending',   # 信箱證明了是本人，但是不是老師要等管理者對照名錄
         teacher_department=form['department'],
         teacher_apply_note=form.get('note') or None,
+        school_id=school.id if school else None,
     )
     db.session.add(teacher)
     db.session.flush()
@@ -750,8 +768,7 @@ def admin_dashboard():
         photo_count = conn.execute('SELECT COUNT(*) FROM user_photo').fetchone()[0]
     except: photo_count = 0
     try:
-        vocab_exists = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='vocab'").fetchone()
-        vocab_count = conn.execute('SELECT COUNT(*) FROM vocab').fetchone()[0] if vocab_exists else 0
+        vocab_count = conn.execute('SELECT COUNT(*) FROM vocab').fetchone()[0]
     except: vocab_count = 0
     try:
         today_str = date.today().strftime('%Y-%m-%d')
@@ -764,7 +781,7 @@ def admin_dashboard():
     except: feedback_total = 0
     try:
         feedback_pending = conn.execute(
-            'SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""'
+            "SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ''"
         ).fetchone()[0]
     except: feedback_pending = 0
     try:
@@ -785,7 +802,7 @@ def admin_dashboard():
     def q1(sql, params=()):
         try:
             return conn.execute(sql, params).fetchone()[0] or 0
-        except sqlite3.Error:
+        except DBError:
             return 0
 
     # 與小組總覽頁的 _group_status 用同一套 ISO 週規則
@@ -795,8 +812,12 @@ def admin_dashboard():
             1 for (created_raw,) in conn.execute('SELECT created_at FROM study_group').fetchall()
             if (lambda d: d and _now.isocalendar()[:2] > d.isocalendar()[:2])(_parse_db_datetime(created_raw))
         )
-    except sqlite3.Error:
+    except DBError:
         expired_groups = 0
+    # 時間條件都在 Python 算好當參數傳進去（資料庫存 UTC），SQLite 與 MySQL 的日期函式不同，不在 SQL 裡算
+    _utcnow = datetime.utcnow()
+    week_ago = (_utcnow - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+    two_weeks_ago = (_utcnow - timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
     todo = {
         'pending_teachers': q1("SELECT COUNT(*) FROM user WHERE account_type = 'teacher' AND teacher_status = 'pending'"),
         'feedback_pending': feedback_pending,
@@ -805,21 +826,21 @@ def admin_dashboard():
         'default_password_admins': q1("SELECT COUNT(*) FROM admin WHERE must_change_password = 1") if session.get('role') == 'super_admin' else None,
     }
     weekly = {
-        'photos': q1("SELECT COUNT(*) FROM user_photo WHERE created_at >= datetime('now', '-7 days')"),
-        'sentences': q1("SELECT COUNT(*) FROM sentence_practice_record WHERE created_at >= datetime('now', '-7 days')"),
-        'readings': q1("SELECT COUNT(*) FROM score_record WHERE created_at >= datetime('now', '-7 days')"),
-        'unlocks': q1("SELECT COUNT(*) FROM unlocked_articles WHERE unlocked_at >= datetime('now', '-7 days')"),
-        'chats': q1("SELECT COUNT(*) FROM chat_session WHERE started_at >= datetime('now', '-7 days')"),
-        'groups': q1("SELECT COUNT(*) FROM study_group WHERE created_at >= datetime('now', '-7 days')"),
-        'new_users': q1("SELECT COUNT(*) FROM user WHERE created_at >= datetime('now', '-7 days')"),
+        'photos': q1("SELECT COUNT(*) FROM user_photo WHERE created_at >= ?", (week_ago,)),
+        'sentences': q1("SELECT COUNT(*) FROM sentence_practice_record WHERE created_at >= ?", (week_ago,)),
+        'readings': q1("SELECT COUNT(*) FROM score_record WHERE created_at >= ?", (week_ago,)),
+        'unlocks': q1("SELECT COUNT(*) FROM unlocked_articles WHERE unlocked_at >= ?", (week_ago,)),
+        'chats': q1("SELECT COUNT(*) FROM chat_session WHERE started_at >= ?", (week_ago,)),
+        'groups': q1("SELECT COUNT(*) FROM study_group WHERE created_at >= ?", (week_ago,)),
+        'new_users': q1("SELECT COUNT(*) FROM user WHERE created_at >= ?", (week_ago,)),
     }
     content = {
-        'articles_published': q1("SELECT COUNT(*) FROM articles WHERE is_published IS NOT 0"),
+        'articles_published': q1("SELECT COUNT(*) FROM articles WHERE (is_published IS NULL OR is_published != 0)"),
         'articles_total': q1("SELECT COUNT(*) FROM articles"),
         'premium_users': q1("SELECT COUNT(*) FROM user WHERE is_premium = 1"),
     }
     edu = {
-        'classrooms': q1("SELECT COUNT(*) FROM classroom WHERE is_archived IS NOT 1"),
+        'classrooms': q1("SELECT COUNT(*) FROM classroom WHERE (is_archived IS NULL OR is_archived != 1)"),
     }
     tw_now = datetime.utcnow() + timedelta(hours=8)
 
@@ -832,11 +853,12 @@ def admin_dashboard():
                        ('sentence_practice_record', 'created_at'), ('score_record', 'created_at')):
         try:
             rows = conn.execute(
-                f"SELECT DISTINCT date({col}, '+8 hours') AS d, user_id FROM {table} "
-                f"WHERE {col} >= datetime('now', '-14 days')").fetchall()
-        except sqlite3.Error:
+                f"SELECT {col}, user_id FROM {table} WHERE {col} >= ?", (two_weeks_ago,)).fetchall()
+        except DBError:
             continue
-        for d, uid in rows:
+        for ts, uid in rows:
+            ts = _parse_db_datetime(ts)
+            d = (ts + timedelta(hours=8)).date().isoformat() if ts else None
             if d in active_users and uid is not None:
                 active_users[d].add(uid)
                 all_active.add(uid)
@@ -936,14 +958,15 @@ def toggle_suspend_user(user_id):
 @super_admin_required
 def plan_list():
     conn = get_db_connection()
+    now_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     plans = conn.execute('SELECT * FROM subscription_plan ORDER BY is_active DESC, id ASC').fetchall()
     plans = [dict(p) for p in plans]
     for p in plans:
         count = conn.execute(
             """SELECT COUNT(*) as cnt FROM user_subscription
-               WHERE plan_id=? AND end_date >= datetime('now')
+               WHERE plan_id=? AND end_date >= ?
                  AND billing_cycle != 'trial' AND auto_renew != 0""",
-            (p['id'],)
+            (p['id'], now_str)
         ).fetchone()
         p['active_users'] = count['cnt'] if count else 0
     free_users = conn.execute(
@@ -1178,11 +1201,11 @@ def photo_list():
                     FROM assignment_submission sub JOIN assignment a ON a.id = sub.assignment_id
                     WHERE a.task_type = 'photo' AND sub.result_ref_id IN (%s)
                 ''' % ','.join('?' * len(ids)), ids).fetchall()}
-            except sqlite3.Error:
+            except DBError:
                 used = set()
             for p in photos:
                 p['is_submission'] = p['id'] in used
-    except sqlite3.Error:
+    except DBError:
         photos, total = [], 0
     finally:
         conn.close()
@@ -1249,14 +1272,14 @@ def feedback_list():
         LEFT JOIN user u ON f.user_id = u.id
     '''
     if status == 'pending':
-        query = base + 'WHERE (f.reply IS NULL OR f.reply = "") ORDER BY f.created_at DESC'
+        query = base + "WHERE (f.reply IS NULL OR f.reply = '') ORDER BY f.created_at DESC"
     elif status == 'replied':
-        query = base + 'WHERE f.reply IS NOT NULL AND f.reply != "" ORDER BY f.created_at DESC'
+        query = base + "WHERE f.reply IS NOT NULL AND f.reply != '' ORDER BY f.created_at DESC"
     else:
         query = base + 'ORDER BY f.created_at DESC'
     feedbacks = conn.execute(query).fetchall()
     pending_count = conn.execute(
-        'SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ""'
+        "SELECT COUNT(*) FROM feedback WHERE reply IS NULL OR reply = ''"
     ).fetchone()[0]
     conn.close()
     feedbacks = [
@@ -1315,7 +1338,10 @@ def user_list():
     conn = get_db_connection()
 
     # 檢查欄位是否存在
-    cols = [row[1] for row in conn.execute("PRAGMA table_info(user)").fetchall()]
+    cols = [c['name'] for c in sa_inspect(db.engine).get_columns('user')]
+    _utcnow = datetime.utcnow()
+    yesterday = (_utcnow - timedelta(days=1)).strftime('%Y-%m-%d')
+    now_str = _utcnow.strftime('%Y-%m-%d %H:%M:%S')
     has_last_seen    = 'last_seen_at'          in cols
     has_is_premium   = 'is_premium'            in cols
     has_trial_used   = 'trial_used'            in cols
@@ -1333,7 +1359,7 @@ def user_list():
     base_query = f'''
         SELECT u.id, u.email, u.username, u.friend_id, u.japanese_level,
                u.j_pts,
-               CASE WHEN u.last_login_date >= DATE('now', '-1 day') THEN u.streak_days ELSE 0 END as streak_days,
+               CASE WHEN u.last_login_date >= ? THEN u.streak_days ELSE 0 END as streak_days,
                u.total_active_days,
                u.avatar,
                DATE(u.created_at) as created_at,
@@ -1346,7 +1372,7 @@ def user_list():
                (SELECT COUNT(*) FROM user_vocab WHERE user_id = u.id AND collected_at IS NOT NULL) as vocab_count,
                (SELECT COUNT(*) FROM user_folder WHERE user_id = u.id) as folder_count,
                (SELECT COUNT(*) FROM friendship WHERE user_id = u.id) as friend_count,
-               (SELECT CASE WHEN sub.end_date < datetime('now') THEN 'expired'
+               (SELECT CASE WHEN sub.end_date < ? THEN 'expired'
                             WHEN sub.billing_cycle = 'trial' THEN 'trial'
                             WHEN sub.auto_renew = 0 THEN 'cancelled'
                             ELSE 'active' END
@@ -1361,9 +1387,9 @@ def user_list():
             ORDER BY u.created_at DESC
         '''
         pattern = f'%{keyword}%'
-        users = conn.execute(query, (pattern, pattern, pattern)).fetchall()
+        users = conn.execute(query, (yesterday, now_str, pattern, pattern, pattern)).fetchall()
     else:
-        users = conn.execute(base_query + 'ORDER BY u.created_at DESC').fetchall()
+        users = conn.execute(base_query + 'ORDER BY u.created_at DESC', (yesterday, now_str)).fetchall()
     conn.close()
     users = [
         {**dict(u), 'last_seen_at': utc_to_tw(u['last_seen_at']) if u['last_seen_at'] else None}
@@ -1382,6 +1408,7 @@ def user_detail(user_id):
         conn.close()
         return redirect(url_for('user_list'))
     user = dict(user)
+    now_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     user['last_seen_at'] = utc_to_tw(user.get('last_seen_at') or '')
     user['created_at']   = utc_to_tw(user.get('created_at') or '')
     account_type = user.get('account_type') or 'general'
@@ -1401,7 +1428,7 @@ def user_detail(user_id):
             via_google = conn.execute(
                 "SELECT COUNT(*) FROM system_log WHERE target_table = 'user' AND target_id = ? AND action = 'CREATE' "
                 "AND new_value LIKE '%\"via\": \"google\"%'", (user_id,)).fetchone()[0] > 0
-        except sqlite3.Error:
+        except DBError:
             classrooms, via_google = [], False
         teacher_info = {
             'classrooms': classrooms,
@@ -1426,14 +1453,14 @@ def user_detail(user_id):
             ''', (user_id,)).fetchall()]
             for m in memberships:
                 m['joined_at'] = utc_to_tw(m['joined_at'] or '')
-        except sqlite3.Error:
+        except DBError:
             memberships = []
         student_info = {'memberships': memberships}
 
     try:
         subscriptions = conn.execute('''
             SELECT us.id,
-                   CASE WHEN us.end_date < datetime('now') THEN 'expired'
+                   CASE WHEN us.end_date < ? THEN 'expired'
                         WHEN us.billing_cycle = 'trial' THEN 'trial'
                         WHEN us.auto_renew = 0 THEN 'cancelled'
                         ELSE 'active' END as status,
@@ -1443,7 +1470,7 @@ def user_detail(user_id):
             LEFT JOIN subscription_plan sp ON sp.id = us.plan_id
             WHERE us.user_id = ?
             ORDER BY us.created_at DESC
-        ''', (user_id,)).fetchall()
+        ''', (now_str, user_id)).fetchall()
         subscriptions = [{**dict(s),
             'created_at': utc_to_tw(s['created_at']),
             'start_date': utc_to_tw(s['start_date'] or ''),
@@ -1832,7 +1859,7 @@ def article_list():
         ).fetchall()
         conn.close()
         unlock_counts = {r['article_id']: r['c'] for r in rows}
-    except sqlite3.Error:
+    except DBError:
         unlock_counts = {}
 
     # 依等級統計，方便確認每個級別各上架了幾篇
@@ -2033,9 +2060,11 @@ GROUP_STATUS_LABELS = {'active': '進行中', 'achieved': '已達標', 'expired'
 
 
 def _parse_db_datetime(value):
-    """把 SQLite 取出的時間字串轉成 datetime（資料庫存的是 UTC），失敗回傳 None"""
+    """把資料庫取出的時間轉成 datetime（存的是 UTC）：SQLite 是字串、MySQL 已經是 datetime。失敗回傳 None"""
     if not value:
         return None
+    if isinstance(value, datetime):
+        return value
     for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
         try:
             return datetime.strptime(str(value), fmt)
@@ -2080,7 +2109,7 @@ def group_list():
         pending_rows = conn.execute(
             "SELECT group_id, COUNT(*) AS c FROM group_invite WHERE status = 'pending' GROUP BY group_id"
         ).fetchall()
-    except sqlite3.Error:
+    except DBError:
         groups, members, pending_rows = [], [], []
     finally:
         conn.close()
@@ -2157,7 +2186,7 @@ def record_list():
         for key, table in (('sentence', 'sentence_practice_record'), ('reading', 'score_record')):
             try:
                 tab_counts[key] = conn.execute('SELECT COUNT(*) FROM ' + table).fetchone()[0]
-            except sqlite3.Error:
+            except DBError:
                 tab_counts[key] = 0
 
         if tab == 'sentence':
@@ -2226,12 +2255,12 @@ def record_list():
                 FROM score_record s
                 LEFT JOIN user u ON u.id = s.user_id
                 LEFT JOIN articles a ON a.id = s.article_id
-                GROUP BY s.user_id, s.article_id
+                GROUP BY s.user_id, s.article_id, u.username, u.email, a.title
                 HAVING COUNT(*) >= ?
                 ORDER BY times DESC
                 LIMIT 8
             ''', (REPEAT_THRESHOLD,)).fetchall()]
-    except sqlite3.Error:
+    except DBError:
         records, summary, total = [], [], 0
     finally:
         conn.close()
@@ -2281,7 +2310,7 @@ def achievement_list():
             FROM user_achievement ua JOIN user u ON u.id = ua.user_id
             ORDER BY ua.unlocked_at DESC
         ''').fetchall()
-    except sqlite3.Error:
+    except DBError:
         user_total, achievements, holder_rows = 0, [], []
     finally:
         conn.close()
@@ -2469,6 +2498,7 @@ def _render_teacher_profile(teacher, name_value=None, **messages):
     joined = (teacher.created_at + timedelta(hours=8)).strftime('%Y/%m/%d') if teacher.created_at else ''
     avatar = teacher.avatar if (teacher.avatar or '').startswith('http') else None   # Google 大頭貼
     return render_template('teacher/profile.html', teacher=teacher, active_menu='profile',
+                           school_name=(School.query.get(teacher.school_id).name if teacher.school_id else None),
                            name_value=(teacher.username or '') if name_value is None else name_value,
                            google_only=_teacher_google_only(teacher), joined=joined, avatar=avatar,
                            force_pw=bool(session.get('teacher_must_change_password')), **messages)
@@ -2982,7 +3012,7 @@ def teacher_student_reset_password(classroom_id, student_id):
     if (student.account_type or AccountType.GENERAL) != AccountType.STUDENT:
         flash("這不是校園教育版的學生帳號，無法在這裡重設密碼", "danger")
         return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
-    if student.school_id:
+    if is_google_student(student):
         flash("這位學生用學校 Google 帳號登入，沒有密碼可以重設；登不進去請學生確認選對學校、用學校帳號登入", "danger")
         return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
     temp_password = _student_temp_password()
@@ -3062,6 +3092,19 @@ def teacher_students_add(classroom_id):
         flash(f"一次最多加入 {ROSTER_MAX_LINES} 位學生，請分批貼上", "danger")
         return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
 
+    # 老師綁了學校：貼名單新建的學生帳號算進那間學校的合約名額，名額不夠就整批不建
+    teacher = User.query.get(session.get('teacher_user_id'))
+    school = School.query.get(teacher.school_id) if teacher and teacher.school_id else None
+    if school:
+        wanted = list(dict.fromkeys(no for no, _ in rows))
+        existing = {u.email for u in User.query.filter(User.email.in_(wanted)).all()}
+        new_count = sum(1 for no in wanted if no not in existing)
+        used = school.seats_used()
+        if new_count and used + new_count > (school.seat_limit or 0):
+            flash(f"{school.name}的合約名額不足：名額 {school.seat_limit} 人、已用 {used} 人，這次要新建 {new_count} 個帳號。"
+                  f"請聯繫系統管理員加購名額", "danger")
+            return redirect(url_for('teacher_classroom_students', classroom_id=classroom_id))
+
     created, joined, already, conflicts = [], [], [], []
     new_passwords = []   # 只顯示這一次的初始密碼
     seen = set()
@@ -3078,6 +3121,7 @@ def teacher_students_add(classroom_id):
                 friend_id=generate_friend_id(),
                 account_type=AccountType.STUDENT,
                 must_change_password=True,   # 初始密碼老師也知道，第一次登入要自己換掉
+                school_id=school.id if school else None,   # 老師所屬學校，算進合約名額
             )
             new_passwords.append({'account': student_no, 'name': name, 'password': temp_password})
             db.session.add(user)
@@ -3336,6 +3380,7 @@ def _render_teacher_account_list(temp_password=None):
     classroom_counts = dict(
         db.session.query(Classroom.teacher_id, func.count(Classroom.id)).group_by(Classroom.teacher_id).all()
     )
+    school_names = {s.id: s.name for s in School.query.all()}
     rows = [{
         'id': t.id,
         'username': t.username,
@@ -3346,13 +3391,17 @@ def _render_teacher_account_list(temp_password=None):
         'apply_note': t.teacher_apply_note,
         'student_like': _is_student_like_email(t.email),   # 審核時提醒管理者特別確認
         'classroom_count': classroom_counts.get(t.id, 0),
+        'school_id': t.school_id,
+        'school_name': school_names.get(t.school_id),
         'created_at': utc_to_tw(t.created_at.strftime('%Y-%m-%d %H:%M:%S')) if t.created_at else '',
     } for t in teachers]
     rows.sort(key=lambda r: 0 if r['status'] == 'pending' else 1)  # 待審核排最前面
     pending_count = sum(1 for r in rows if r['status'] == 'pending')
     return render_template('teacher_account/list.html', teachers=rows, pending_count=pending_count,
                            mail_ready=mailer.is_configured(), temp_password=temp_password,
-                           reset_minutes=TEACHER_RESET_LINK_MINUTES)
+                           reset_minutes=TEACHER_RESET_LINK_MINUTES,
+                           schools=[{'id': s.id, 'name': s.name}
+                                    for s in School.query.filter_by(is_active=True).order_by(School.name).all()])
 
 
 @app.route('/school/list')
@@ -3361,6 +3410,13 @@ def school_list():
     """學校管理：學生在 App 選的學校清單（網域、學號格式、停用）"""
     student_counts = dict(
         db.session.query(User.school_id, func.count(User.id)).filter(User.school_id.isnot(None)).group_by(User.school_id).all()
+    )
+    # 佔用合約名額的＝未停用的學生帳號（停用就釋出名額）
+    seats_used = dict(
+        db.session.query(User.school_id, func.count(User.id))
+        .filter(User.school_id.isnot(None), User.account_type == AccountType.STUDENT,
+                db.or_(User.is_suspended.is_(None), User.is_suspended.is_(False)))
+        .group_by(User.school_id).all()
     )
     schools = [{
         'id': s.id,
@@ -3371,6 +3427,8 @@ def school_list():
         'pattern_custom': s.student_id_pattern not in (DEFAULT_STUDENT_ID_PATTERN, OLD_DEFAULT_STUDENT_ID_PATTERN),
         'is_active': s.is_active is not False,
         'student_count': student_counts.get(s.id, 0),
+        'seat_limit': s.seat_limit or SCHOOL_SEAT_UNIT,
+        'seats_used': seats_used.get(s.id, 0),
         # 學生在 App 新增的學校：顯示是誰新增的，名稱打錯時管理者知道要改
         'created_by': getattr(User.query.get(s.created_by_user_id), 'email', None) if s.created_by_user_id else None,
     } for s in School.query.order_by(School.name).all()]
@@ -3378,7 +3436,8 @@ def school_list():
     for s in schools:
         s['featured'] = bool(s['student_count'] or s['created_by'] or not s['is_active'] or s['pattern_custom'])
     schools.sort(key=lambda s: -s['student_count'])  # 穩定排序，同人數維持校名順序
-    return render_template('school/list.html', schools=schools, default_pattern=DEFAULT_STUDENT_ID_PATTERN)
+    return render_template('school/list.html', schools=schools, default_pattern=DEFAULT_STUDENT_ID_PATTERN,
+                           seat_unit=SCHOOL_SEAT_UNIT)
 
 
 @app.route('/teacher_account/approve/<int:user_id>', methods=['POST'])
@@ -3467,6 +3526,10 @@ def teacher_account_add():
         error = f'Email「{email}」已經被使用'
     elif User.query.filter_by(username=username, account_type=AccountType.TEACHER).first():
         error = f'已經有老師叫「{username}」，請換一個（例如加上科目或班級）'
+    raw_school = (request.form.get('school_id') or '').strip()
+    school = School.query.get(int(raw_school)) if raw_school.isdigit() else None
+    if not error and raw_school and not school:
+        error = '找不到這間學校'
     if error:
         flash(error, 'error')
         return redirect(url_for('teacher_account_list'))
@@ -3477,16 +3540,48 @@ def teacher_account_add():
         password_hash=generate_password_hash(password),
         account_type=AccountType.TEACHER,
         must_change_password=True,   # 密碼是管理者設的，老師第一次用密碼登入要自己換掉
+        school_id=school.id if school else None,
     )
     db.session.add(teacher)
     db.session.flush()
     db.session.add(SystemLog(
         admin_id=admin_id, user_id=teacher.id,
         action='CREATE', target_table='user', target_id=teacher.id,
-        new_value={'email': email, 'username': username, 'account_type': AccountType.TEACHER}
+        new_value={'email': email, 'username': username, 'account_type': AccountType.TEACHER,
+                   'school': school.name if school else None}
     ))
     db.session.commit()
     flash(f'已建立老師帳號「{username}」，請將 Email 與密碼交給老師，從登入頁的「老師」分頁登入', 'success')
+    return redirect(url_for('teacher_account_list'))
+
+
+@app.route('/teacher_account/school/<int:user_id>', methods=['POST'])
+@super_admin_required
+def teacher_account_school(user_id):
+    """設定老師所屬學校：老師貼名單建立的學生帳號跟著算進這間學校的合約名額"""
+    teacher = User.query.filter_by(id=user_id, account_type=AccountType.TEACHER).first_or_404()
+    raw = (request.form.get('school_id') or '').strip()
+    school = School.query.get(int(raw)) if raw.isdigit() else None
+    if raw and not school:
+        flash('找不到這間學校', 'error')
+        return redirect(url_for('teacher_account_list'))
+    old_id = teacher.school_id
+    teacher.school_id = school.id if school else None
+    moved = _bind_roster_students(teacher, school) if school else 0
+    db.session.add(SystemLog(
+        admin_id=session.get('admin_id'), user_id=teacher.id,
+        action='UPDATE', target_table='user', target_id=teacher.id,
+        old_value={'school_id': old_id},
+        new_value={'school_id': teacher.school_id, 'school': school.name if school else None, 'roster_students_bound': moved}
+    ))
+    db.session.commit()
+    if school:
+        msg = f'已將「{teacher.username}」設為{school.name}的老師'
+        if moved:
+            msg += f'，老師建立的 {moved} 個學生帳號一併算進該校名額（目前 {school.seats_used()} / {school.seat_limit} 人）'
+        flash(msg, 'success')
+    else:
+        flash(f'已清除「{teacher.username}」的學校', 'success')
     return redirect(url_for('teacher_account_list'))
 
 
@@ -3562,6 +3657,7 @@ def teacher_account_toggle(user_id):
 
 # ---- 學校：學生在 App 先選學校，再用學校 Google 帳號登入 ----
 SCHOOL_DOMAIN_RE = re.compile(r'^\.?[a-z0-9-]+(\.[a-z0-9-]+)+$')
+SCHOOL_SEAT_UNIT = 100   # 合約名額以 100 人為一單位，學校加購後由管理者調高
 
 
 def _school_form():
@@ -3580,7 +3676,14 @@ def _school_form():
         re.compile(pattern)
     except re.error:
         return None, '學號格式（正規式）寫錯了，請檢查括號與符號'
-    return {'name': name, 'student_domains': ','.join(domains), 'student_id_pattern': pattern[:100]}, None
+    try:
+        seat_limit = int(request.form.get('seat_limit') or SCHOOL_SEAT_UNIT)
+    except ValueError:
+        seat_limit = 0
+    if seat_limit <= 0 or seat_limit % SCHOOL_SEAT_UNIT:
+        return None, f'合約名額要是 {SCHOOL_SEAT_UNIT} 的倍數（{SCHOOL_SEAT_UNIT}、{SCHOOL_SEAT_UNIT * 2}、{SCHOOL_SEAT_UNIT * 3}…）'
+    return {'name': name, 'student_domains': ','.join(domains), 'student_id_pattern': pattern[:100],
+            'seat_limit': seat_limit}, None
 
 
 @app.route('/school/add', methods=['POST'])
@@ -3612,7 +3715,8 @@ def school_edit(school_id):
     if error:
         flash(error, 'error')
         return redirect(url_for('school_list'))
-    old = {'name': school.name, 'student_domains': school.student_domains, 'student_id_pattern': school.student_id_pattern}
+    old = {'name': school.name, 'student_domains': school.student_domains, 'student_id_pattern': school.student_id_pattern,
+           'seat_limit': school.seat_limit}
     for key, value in form.items():
         setattr(school, key, value)
     db.session.add(SystemLog(admin_id=session.get('admin_id'), action='UPDATE',

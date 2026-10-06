@@ -207,7 +207,7 @@ with redirect_stdout(LOG), redirect_stderr(LOG):
 
 S = student_module.app      # 學生端 App API（正式環境 port 5050）
 A = admin_module.app        # 管理後台（正式環境 port 5001）
-admin_module.DB_FILE_PATH = TMP_DB          # 後台直接用 sqlite3 的頁面也改用暫存檔
+# 後台原生 SQL 現在走 SQLAlchemy 的 engine（utils/rawsql.py），換掉 engine 就一併指到暫存檔，不用再另外改路徑
 scenario_module.UPLOAD_FOLDER = UPLOAD_DIR  # 拍照上傳改存暫存資料夾
 admin_module.PHOTO_DIR = UPLOAD_DIR         # 後台刪照片也只動暫存資料夾，不碰真實的 static/photos
 
@@ -3249,6 +3249,108 @@ def _(c):
     check(r4.status_code == 200 and J(r4).get('school_created') is False and J(r4).get('school_name') == '新設大學' and n_typo == 0,
           '同網域重複建立學校')
     check('新設大學' in names, '新學校沒有出現在清單')
+
+
+@case('A13', '學校合約名額上限',
+      pre='後台已建立「名額學院」（@seat.edu.tw），合約名額暫設為 1 人（後台表單要填 100 的倍數，此處直接改資料庫以便測試）',
+      steps='1. s0000001@seat.edu.tw 登入（第 1 位學生）\n2. s0000002@seat.edu.tw 登入（第 2 位）\n3. s0000001@ 再登入一次\n'
+            '4. 管理者停用 s0000001@ 後，s0000002@ 再登入\n5. 後台「學校管理」查看名額；把名額改成 150、再改成 300',
+      expect='1. HTTP 200，建立帳號\n2. HTTP 403，status=seat_full，提示名額已滿（1 人），不建立帳號\n3. HTTP 200，已有帳號不受名額影響\n'
+             '4. HTTP 200，停用的帳號釋出名額\n5. 頁面顯示 1 / 1 與「已滿」；改 150 被拒（要是 100 的倍數）、改 300 成功',
+      note='Google 身分憑證驗證以模擬方式進行')
+def _(c):
+    with S.app_context():
+        s = School(name='名額學院', student_domains='seat.edu.tw', seat_limit=1)
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+    r1 = edu_google('valid:s0000001@seat.edu.tw', school_id=sid)
+    r2 = edu_google('valid:s0000002@seat.edu.tw', school_id=sid)
+    n2 = count(User, email='s0000002@seat.edu.tw')
+    r3 = edu_google('valid:s0000001@seat.edu.tw', school_id=sid)
+    set_user(J(r1).get('user_id'), is_suspended=True)
+    r4 = edu_google('valid:s0000002@seat.edu.tw', school_id=sid)
+    boss = super_client()
+    page = boss.get('/school/list').get_data(as_text=True)
+    post = lambda url, **d: (boss.post(url, data=d), flashes(boss))[1]
+    form = {'name': '名額學院', 'student_domains': 'seat.edu.tw', 'student_id_pattern': ''}
+    f5a = post(f'/school/edit/{sid}', **form, seat_limit='150')
+    f5b = post(f'/school/edit/{sid}', **form, seat_limit='300')
+    with S.app_context():
+        limit_after = db.session.get(School, sid).seat_limit
+    c.log(f'1. {http(r1, "is_new")}；2. {http(r2, "status", "error")}，帳號 {n2} 筆；3. {http(r3, "is_new")}；4. {http(r4, "is_new")}；'
+          f'5. 頁面顯示 1 / 1={"1 / 1" in page}、已滿={"已滿" in page}；改 150：{f5a}；改 300：{f5b}，名額={limit_after}')
+    check(r1.status_code == 200 and J(r1).get('is_new') is True, '第 1 位學生無法登入')
+    check(r2.status_code == 403 and J(r2).get('status') == 'seat_full' and '1 人' in J(r2).get('error', '') and n2 == 0, '超過名額仍建立帳號')
+    check(r3.status_code == 200 and J(r3).get('is_new') is False, '已有帳號的學生被名額擋下')
+    check(r4.status_code == 200 and J(r4).get('is_new') is True, '停用帳號後名額沒有釋出')
+    check('1 / 1' in page and '已滿' in page, '後台沒有顯示名額使用狀況')
+    check('倍數' in str(f5a) and limit_after == 300, '名額修改不正確')
+
+
+@case('A13', '老師綁定學校，貼名單建立的學生帳號算進合約名額',
+      pre='後台已建立「名冊學院」（@roster.edu.tw），合約名額暫設為 2 人；最高管理者已登入',
+      steps='1. 於「教師帳號管理」新增老師 chen@roster.edu.tw，學校選名冊學院；再新增 lin@other.test，不選學校\n'
+            '2. 陳老師在自己的班級貼名單 3 位學生\n3. 改貼 2 位學生\n4. 林老師在自己的班級貼名單 1 位學生\n'
+            '5. 「學校管理」查看名冊學院名額\n6. 管理者把林老師設為名冊學院的老師，再查看名額\n7. 陳老師重設名冊學生的密碼',
+      expect='1. 陳老師綁定名冊學院；林老師沒有學校\n2. 提示合約名額不足（名額 2 人、已用 0 人、要新建 3 個），不建立帳號\n'
+             '3. 建立 2 個帳號，都屬於名冊學院\n4. 建立 1 個帳號，沒有學校（不計名額）\n5. 顯示 2 / 2 與「已滿」\n'
+             '6. 林老師綁定名冊學院，他建立的學生一併算進去，顯示 3 / 2\n7. 名冊帳號仍可重設密碼（不是 Google 帳號）')
+def _(c):
+    boss = super_client()
+    with S.app_context():
+        s = School(name='名冊學院', student_domains='roster.edu.tw', seat_limit=2)
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+    add = lambda **d: (boss.post('/teacher_account/add', data=d), flashes(boss))[1]
+    f1a = add(email='chen@roster.edu.tw', username='陳名冊老師', password='Sensei#2026a', school_id=str(sid))
+    f1b = add(email='lin@other.test', username='林無校老師', password='Sensei#2026a')
+    with S.app_context():
+        chen = User.query.filter_by(email='chen@roster.edu.tw').first()
+        lin = User.query.filter_by(email='lin@other.test').first()
+        chen_school, lin_school = chen.school_id, lin.school_id
+        chen.must_change_password = lin.must_change_password = False
+        r1 = Classroom(teacher_id=chen.id, name='名冊一班', join_code='RSTR01', is_open=True)
+        r2 = Classroom(teacher_id=lin.id, name='無校一班', join_code='RSTR02', is_open=True)
+        db.session.add_all([r1, r2])
+        db.session.commit()
+        rid1, rid2, chen_id, lin_id = r1.id, r2.id, chen.id, lin.id
+    web = teacher_client(chen_id, '陳名冊老師')
+    web.post(f'/teacher/classroom/{rid1}/students/add', data={'roster': '98000001 甲\n98000002 乙\n98000003 丙'})
+    f2 = flashes(web)
+    n2 = count(User, email='98000001') + count(User, email='98000003')
+    web.post(f'/teacher/classroom/{rid1}/students/add', data={'roster': '98000001 甲\n98000002 乙'})
+    f3 = flashes(web)
+    with S.app_context():
+        made3 = [u.school_id for u in User.query.filter(User.email.in_(['98000001', '98000002'])).all()]
+        u1 = User.query.filter_by(email='98000001').first()
+        u1_id = u1.id if u1 else None
+    web2 = teacher_client(lin_id, '林無校老師')
+    web2.post(f'/teacher/classroom/{rid2}/students/add', data={'roster': '98000009 丁'})
+    f4 = flashes(web2)
+    with S.app_context():
+        s9 = User.query.filter_by(email='98000009').first()
+        s9_before, s9_id = (s9.school_id if s9 else 'none'), (s9.id if s9 else None)
+    page5 = boss.get('/school/list').get_data(as_text=True)
+    boss.post(f'/teacher_account/school/{lin_id}', data={'school_id': str(sid)})
+    f6 = flashes(boss)
+    with S.app_context():
+        lin_after = db.session.get(User, lin_id).school_id
+        s9_after = db.session.get(User, s9_id).school_id if s9_id else None
+    page6 = boss.get('/school/list').get_data(as_text=True)
+    web.post(f'/teacher/classroom/{rid1}/student/{u1_id}/reset_password')
+    f7 = flashes(web)
+    c.log(f'1. {f1a}，陳老師 school_id={chen_school}；{f1b}，林老師 school_id={lin_school}；2. {f2}，帳號 {n2} 個；3. {f3}，學校={made3}；'
+          f'4. {f4}，學校={s9_before}；5. 2 / 2={"2 / 2" in page5}、已滿={"已滿" in page5}；6. {f6}，林老師 school_id={lin_after}、學生 school_id={s9_after}，3 / 2={"3 / 2" in page6}；'
+          f'7. {f7}')
+    check(chen_school == sid and lin_school is None, '新增老師時的學校不正確')
+    check(any('合約名額不足' in m for m in f2) and n2 == 0, '超過名額仍建立帳號')
+    check(any('新建立 2 個學生帳號' in m for m in f3) and made3 == [sid, sid], '名冊帳號沒有歸到老師的學校')
+    check(any('新建立 1 個學生帳號' in m for m in f4) and s9_before is None, '沒有學校的老師建帳號不正確')
+    check('2 / 2' in page5 and '已滿' in page5, '後台名額沒有算進名冊帳號')
+    check(lin_after == sid and s9_after == sid and '3 / 2' in page6 and any('1 個學生帳號一併算進' in m for m in f6), '設定老師學校沒有帶動學生')
+    check(any('臨時密碼' in m or '已重設' in m for m in f7) or not any('Google' in m for m in f7), '名冊帳號被當成 Google 帳號')
 
 
 # ----------------------------------------------------------------------

@@ -92,7 +92,7 @@ class DailyGoalCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (claimed) ...[
+              if (claimed && !userProvider.isEduStudent) ...[
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -151,7 +151,8 @@ class DailyGoalCard extends StatelessWidget {
             remaining: _remaining(userProvider.readingCountToday, userProvider.readingDailyLimit, 0),
             unlimited: userProvider.isEduStudent,
           ),
-          if (!claimed) ...[
+          // 校園教育版學生沒有點數獎勵：只顯示任務清單，沒有領取按鈕與點數預告
+          if (!claimed && !userProvider.isEduStudent) ...[
             const SizedBox(height: 16),
             if (allDone)
               SizedBox(

@@ -14,7 +14,8 @@ python-dotenv==1.2.2
 
 # --- AI（兩個 SDK 都有用到）---
 google-genai            # utils/ai_helper.py: from google import genai（新版 SDK）
-google-generativeai     # 舊版 SDK，正式功能已全部改用 google-genai；只剩 test_models.py、utils/test.py 測試腳本還在用
+# google-generativeai：舊版 SDK，正式功能已全部改用 google-genai，只剩 test_models.py、utils/test.py 測試腳本還在用，
+#   而且它要求的 protobuf<6 跟 firebase-admin 7.7 要求的 protobuf>=6 衝突，裝進映像會讓 pip 解析失敗，所以不裝。
 
 # --- 語音 ---
 gTTS
@@ -22,7 +23,14 @@ gTTS
 # --- 圖片 ---
 Pillow                  # utils/ai_helper.py: 照片送 Gemini 前先縮圖
 
-# --- MySQL 驅動（目前用 SQLite 不需要，之後要換 MySQL 時已備好）---
-PyMySQL==1.1.2
+# --- 正式啟動（取代 Flask 開發伺服器；設定見 gunicorn.conf.py）---
+gunicorn==23.0.0
+
+# --- 資料表版本控管（migrations/；啟動時自動 upgrade）---
+Flask-Migrate==4.1.0
+
+# --- MySQL 驅動（.env 有 DATABASE_URL 才會用到；cryptography 是 MySQL 8 預設密碼驗證方式需要的）---
+PyMySQL==1.2.3
+cryptography
 google-auth             # admin_app.py: 後台老師 Google 登入，驗證 ID token
 firebase-admin==7.7.0   # utils/push.py: 手機推播（金鑰放 secrets/，沒有金鑰時自動略過）

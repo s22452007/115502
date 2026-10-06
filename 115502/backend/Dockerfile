@@ -17,5 +17,5 @@ COPY . .
 # 5050 = 主 API（給手機 App）、5001 = 後台管理
 EXPOSE 5050 5001
 
-# 預設啟動主 API；後台由 docker-compose 另開一個服務、用不同指令跑
-CMD ["python", "app.py"]
+# 預設用 gunicorn 啟動主 API（設定見 gunicorn.conf.py）；後台由 docker-compose 另開一個服務、用不同指令跑
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "-b", "0.0.0.0:5050", "app:app"]

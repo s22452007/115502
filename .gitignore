@@ -42,3 +42,6 @@ $RECYCLE.BIN/
 # 用 **/ 前綴以匹配巢狀子資料夾（例如 115502/.claude/...）
 **/.claude/settings.local.json
 **/.vscode/settings.json
+### Python 快取（不進 git）
+__pycache__/
+*.pyc

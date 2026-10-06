@@ -1,57 +1,39 @@
-import sqlite3
-import os
-from werkzeug.security import generate_password_hash
+"""建立預設管理員帳號（SQLite、MySQL 都適用，依 .env 的 DATABASE_URL 決定連哪個）。
 
-# 自動對準你的資料庫位置
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'instance', 'jlens.db')
-if not os.path.exists(DB_PATH):
-    DB_PATH = os.path.join(BASE_DIR, 'jlens.db')
+用法（在 backend 資料夾執行）：
+    py -3 init_admins.py
+    docker compose exec api python init_admins.py      # 伺服器上在容器裡跑
+
+帳號＝學號、預設密碼＝學號，第一次登入後台會被要求立刻改密碼；已存在的帳號不會動。
+資料表若還沒建好，匯入 admin_app 時會自動建立（utils/db.init_database）。
+"""
+import sys
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
+from admin_app import app
+from utils.db import db, safe_uri
+from models import Admin
 
 admin_ids = ['11156001', '11156006', '11156015', '11156039', '11156047']
 
-def init_default_admins():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    print("🛠️ 開始檢查並升級資料庫欄位...")
-    # 自動幫舊的 admin 資料表補上 role 欄位
-    try:
-        cursor.execute("ALTER TABLE admin ADD COLUMN role VARCHAR(20) DEFAULT 'admin'")
-        print("✅ 成功為 admin 資料表加入 'role' 權限欄位！")
-    except sqlite3.OperationalError:
-        print("⚡ 'role' 欄位已存在，無需新增。")
-        
-    # 自動幫舊的 admin 資料表補上 created_at 欄位
-    try:
-        cursor.execute("ALTER TABLE admin ADD COLUMN created_at DATETIME")
-        print("✅ 成功為 admin 資料表加入 'created_at' 時間欄位！")
-    except sqlite3.OperationalError:
-        pass
-    for col in ("is_active BOOLEAN DEFAULT 1", "must_change_password BOOLEAN DEFAULT 0", "last_login_at DATETIME"):
-        try:
-            cursor.execute(f"ALTER TABLE admin ADD COLUMN {col}")
-        except sqlite3.OperationalError:
-            pass
 
-    print("\n👤 開始初始化管理員帳號...")
-    
-    for uid in admin_ids:
-        hashed_pw = generate_password_hash(uid)
-        try:
-            # 統一給予 super_admin 權限
-            # 預設密碼＝學號，第一次登入會被要求立刻改掉
-            cursor.execute(
-                "INSERT INTO admin (username, password_hash, role, is_active, must_change_password) VALUES (?, ?, ?, 1, 1)",
-                (uid, hashed_pw, 'super_admin')
-            )
+def init_default_admins():
+    with app.app_context():
+        print(f"👤 開始初始化管理員帳號（資料庫：{safe_uri(str(db.engine.url))}）...")
+        for uid in admin_ids:
+            if Admin.query.filter_by(username=uid).first():
+                print(f"⚠️ 帳號 {uid} 已經存在，跳過。")
+                continue
+            # 統一給予 super_admin 權限；預設密碼＝學號，第一次登入會被要求立刻改掉
+            admin = Admin(username=uid, role='super_admin', is_active=True, must_change_password=True)
+            admin.set_password(uid)
+            db.session.add(admin)
             print(f"✅ 帳號 {uid} 建立成功！(預設密碼: {uid}，首次登入需修改)")
-        except sqlite3.IntegrityError:
-            print(f"⚠️ 帳號 {uid} 已經存在，跳過。")
-            
-    conn.commit()
-    conn.close()
-    print("🎉 資料庫升級與初始化大功告成！")
+        db.session.commit()
+        print("🎉 管理員帳號初始化完成！")
+
 
 if __name__ == '__main__':
     init_default_admins()

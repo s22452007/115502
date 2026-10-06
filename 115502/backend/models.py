@@ -3,6 +3,11 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
 TW = timezone(timedelta(hours=8))
+
+# 可能超過 64 KB 的長文字（base64 頭像、文章全文、對話內容）：MySQL 的 TEXT 上限只有 64 KB，
+# 改用 MEDIUMTEXT（16 MB）；SQLite 沒有這個限制，維持 TEXT。
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
+LongText = db.Text().with_variant(MEDIUMTEXT(), 'mysql')
 created_at = db.Column(db.DateTime, default=lambda: datetime.now(TW))
 
 class TransactionType:
@@ -27,8 +32,8 @@ class User(db.Model):
     username = db.Column(db.String(30), nullable=True)  # 暱稱，可以跟別人重複（辨識靠 friend_id）
     friend_id = db.Column(db.String(20), unique=True, nullable=True)
     japanese_level = db.Column(db.String(50), nullable=True)
-    avatar = db.Column(db.Text, nullable=True)
-    ai_cheat_sheet = db.Column(db.Text, nullable=True)
+    avatar = db.Column(LongText, nullable=True)
+    ai_cheat_sheet = db.Column(LongText, nullable=True)
     # 點數與活躍度
     j_pts = db.Column(db.Integer, default=0)
     streak_days = db.Column(db.Integer, default=1)
@@ -84,6 +89,8 @@ class User(db.Model):
     must_change_password = db.Column(db.Boolean, default=False)
     # 校園教育版學生用學校 Google 帳號登入時選的學校（School.id）。
     # 有值＝Google 學生帳號（沒有密碼）；老師貼名單建立的學號帳號是空的
+    # 所屬學校：學生＝用學校 Google 帳號登入時選的學校（或老師貼名單建帳號時老師的學校）；
+    # 老師＝信箱網域對得上的學校，對不上由管理者在「教師帳號管理」設定。算合約名額用
     school_id = db.Column(db.Integer, db.ForeignKey('school.id'), nullable=True)
     # 每日任務
     daily_task_date = db.Column(db.Date, nullable=True)
@@ -441,8 +448,8 @@ class Article(db.Model):
     theme = db.Column(db.String(50), nullable=False) # 主題，例如: 'daily', 'travel', 'business', 'culture', 'news'
     level = db.Column(db.String(10), nullable=False) # 難度等級，例如: 'N5', 'N4', 'N3' 等
     title = db.Column(db.String(255), nullable=False) # 文章標題
-    content = db.Column(db.Text, nullable=False) # 文章內容 (日文)
-    translation = db.Column(db.Text, nullable=True) # 中文翻譯
+    content = db.Column(LongText, nullable=False) # 文章內容 (日文)
+    translation = db.Column(LongText, nullable=True) # 中文翻譯
     grammar_points = db.Column(db.JSON, nullable=True) # 重點文法解析 (存成 JSON 格式)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -558,7 +565,7 @@ class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
     role = db.Column(db.String(10), nullable=False)   # 'user' = 使用者、'ai' = AI 回覆
-    content = db.Column(db.Text, nullable=False)      # 保留原始內容（含 [漢字|假名] 標音）
+    content = db.Column(LongText, nullable=False)      # 保留原始內容（含 [漢字|假名] 標音）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # T_custom_character: 使用者自訂的 AI 對話角色（花點數新增，人設會放進 AI 的指令）
@@ -634,10 +641,26 @@ class School(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     # 學生在 App 自己新增的學校記下是誰（管理者在後台新增的是空的）
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    # 合約名額：依採購合約，這間學校最多能有幾個學生帳號同時使用（後台只能選 100 或 500）。
+    # 計算的是用學校 Google 帳號登入建立、未停用的學生帳號；老師貼名單建的備用帳號沒有學校，不計入
+    seat_limit = db.Column(db.Integer, default=100, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def domain_list(self):
         return [d.strip().lower().lstrip('@') for d in (self.student_domains or '').split(',') if d.strip()]
+
+    def seats_used(self):
+        """目前佔用名額的學生數（這間學校未停用的學生帳號）"""
+        if not self.id:
+            return 0
+        return User.query.filter(
+            User.school_id == self.id,
+            User.account_type == AccountType.STUDENT,
+            db.or_(User.is_suspended.is_(None), User.is_suspended.is_(False)),
+        ).count()
+
+    def seats_full(self):
+        return self.seats_used() >= (self.seat_limit or 0)
 
     def domain_match_len(self, domain):
         """這個網域符合的設定有多長，不符合回傳 0。附中的網域在大學底下（hs.ntnu.edu.tw），

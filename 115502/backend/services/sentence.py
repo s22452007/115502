@@ -15,7 +15,7 @@ from models import db, User, SentencePracticeRecord, PointTransaction, Transacti
 from utils import gemini_client
 from utils.ai_helper import JSON_CONFIG, parse_gemini_json
 from utils.group_helper import add_group_progress_and_check_reward
-from utils.account_helper import is_payment_free, sentence_daily_limit, today_start_utc, has_unlimited_usage
+from utils.account_helper import is_payment_free, sentence_daily_limit, today_start_utc, has_unlimited_usage, uses_points
 
 sentence_bp = Blueprint('sentence', __name__)
 
@@ -302,6 +302,9 @@ def evaluate_sentence():
         used = _used_vocabs(user_sentence, selected_vocabs, result.get('used_vocabs'))
         vocab_bonus = VOCAB_BONUS_EACH * min(len(used), VOCAB_BONUS_MAX_WORDS) if score >= 60 else 0
         points_earned = base_points + vocab_bonus
+        # 校園教育版學生沒有點數：批改照常、不發獎勵，紀錄直接標成已領取（歷史頁不會出現「領取」）
+        if not uses_points(user):
+            base_points = vocab_bonus = points_earned = 0
         result['used_vocabs'] = used
         result['unused_vocabs'] = [w for w in (selected_vocabs or []) if w not in used]
         result['base_points'] = base_points
@@ -319,7 +322,7 @@ def evaluate_sentence():
                 ai_feedback=result.get('strict_feedback', ''),
                 score=score,
                 points_earned=points_earned,
-                is_claimed=False
+                is_claimed=not uses_points(user)
             )
             db.session.add(new_record)
             db.session.commit()

@@ -11,7 +11,7 @@ from models import db, User, Article, UnlockedArticle
 from datetime import datetime
 from models import db, User, Article, ArticleProgress, ScoreRecord, ReadingEvaluation, PointTransaction, TransactionType
 from utils.group_helper import add_group_progress_and_check_reward
-from utils.account_helper import is_payment_free, has_unlimited_usage, reading_daily_limit, today_start_utc
+from utils.account_helper import is_payment_free, has_unlimited_usage, reading_daily_limit, today_start_utc, uses_points
 
 # 宣告 Blueprint
 article_bp = Blueprint('article', __name__)
@@ -151,7 +151,8 @@ def evaluate_audio():
     #      沒有其他功能都有的「金鑰／模型備援、塞車重試」，一出錯就直接失敗
     audio_bytes = audio_file.read()
     if not audio_bytes:
-        return jsonify({"status": "error", "message": "錄音檔是空的，請再錄一次。"}), 200
+        return jsonify({"status": "unrecognized", "reason": "empty",
+                        "message": UNRECOGNIZED_MESSAGES['empty']}), 200
     mime_type = _detect_audio_mime(audio_bytes, audio_file.filename or '', audio_file.mimetype or '')
     print(f"DEBUG: 收到錄音 {len(audio_bytes)} bytes，格式判定為 {mime_type}")
 
@@ -159,13 +160,30 @@ def evaluate_audio():
         audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
 
         print("DEBUG: [階段 1] 正在聆聽真實錄音，進行轉錄...")
-        stt_prompt = "請仔細聆聽這段日文錄音，『一字不漏』地寫下你聽到的日文。如果發音含糊、唸錯或有口音，請直接寫出你實際聽到的『錯誤發音』，絕對不要自動修正為正確的日文。請只輸出日文文字。"
+        stt_prompt = (
+            "請仔細聆聽這段日文錄音，『一字不漏』地寫下你聽到的日文。"
+            "如果發音含糊、唸錯或有口音，請直接寫出你實際聽到的『錯誤發音』，絕對不要自動修正為正確的日文。"
+            "請只輸出日文文字，不要加任何說明。\n"
+            "但遇到下列情況時，請『只』輸出對應的代碼，不要輸出其他文字：\n"
+            "・整段錄音沒有人聲（靜音、只有環境音或雜訊）→ [NO_SPEECH]\n"
+            "・有人聲，但說的不是日文（例如中文、英文）→ [NOT_JAPANESE]\n"
+            "・有人聲，但背景雜音太大、完全聽不出內容 → [TOO_NOISY]"
+        )
 
         stt_response = gemini_client.generate_content('article', [audio_part, stt_prompt])
         transcript = (stt_response.text or '').strip()
 
-        if not transcript or len(transcript) < 2:
-            return None  # 交由外層回覆「聽不清楚」的訊息
+        # 辨識不到就在這裡結束，把「為什麼」交給前端顯示（不評分、不算次數）
+        reason = classify_transcript(transcript)
+        if reason:
+            print(f"DEBUG: [階段 1] 辨識不到，原因={reason}，AI 輸出={transcript[:60]!r}")
+            return {
+                "status": "unrecognized",
+                "reason": reason,
+                "message": UNRECOGNIZED_MESSAGES[reason],
+                # 「不是日文」時附上 AI 聽到的內容，使用者才知道被錄進去的是什麼
+                "transcript": _strip_recognition_codes(transcript) if reason == 'not_japanese' else '',
+            }
 
         print("DEBUG: [階段 2] 正在根據真實錄音進行嚴格比對...")
         feedback_prompt = f"""
@@ -206,11 +224,8 @@ def evaluate_audio():
 
     try:
         result = _analyze()
-        if result is None:
-            return jsonify({
-                "status": "error",
-                "message": "無法辨識到有效的語音，請確認麥克風收音或大聲再試一次！"
-            }), 200
+        if result.get('status') == 'unrecognized':
+            return jsonify(result), 200
 
         # 把 AI 給的分數存在後端，前端只拿到 evaluation_id，結算時以這裡存的分數為準。
         # 沒帶 user_id / article_id 的呼叫拿不到 id，也就無法結算成績。
@@ -235,20 +250,63 @@ def evaluate_audio():
             result['score'] = evaluation.score  # 讓畫面顯示的分數跟存下來的一致
         return jsonify(result), 200
 
+    # 以下是「有聽到、但評分服務出錯」：reason 讓前端分得出是 AI 額度、塞車還是後端錯誤
     except gemini_client.GeminiQuotaExhausted as e:
         # 額度用完：給使用者看得懂的說明
-        return jsonify({"status": "error", "message": str(e)}), 200
+        return jsonify({"status": "error", "reason": "ai_quota", "message": str(e)}), 200
 
     except gemini_client.GeminiNotConfigured as e:
         print(f"⚠️ {e}")
-        return jsonify({"status": "error", "message": "語音評分服務尚未設定完成，請聯繫開發人員。"}), 200
+        return jsonify({"status": "error", "reason": "ai_not_configured",
+                        "message": "語音評分服務尚未設定完成，請聯繫開發人員。"}), 200
 
     except Exception as e:
         traceback.print_exc()
         print(f"🚨 [article] 語音評分失敗：{type(e).__name__}: {e}")
         if gemini_client.is_overloaded_error(e):
-            return jsonify({"status": "error", "message": "AI 服務目前使用人數較多，請稍等幾秒再試一次。"}), 200
-        return jsonify({"status": "error", "message": "語音評分失敗了，請確認網路連線後再錄一次。"}), 200
+            return jsonify({"status": "error", "reason": "ai_busy",
+                            "message": "AI 服務目前使用人數較多，請稍等幾秒再試一次。"}), 200
+        return jsonify({"status": "error", "reason": "server",
+                        "message": "語音評分失敗了，請確認網路連線後再錄一次。"}), 200
+
+
+# 辨識不到時回給前端的原因代碼與說明。
+# AI 失敗、聽不清楚都不會留下 ReadingEvaluation，所以不會算進每日次數、也不扣加購次數。
+UNRECOGNIZED_MESSAGES = {
+    'empty': '沒有收到任何錄音內容，錄音檔是空的。',
+    'no_speech': 'AI 聽不出任何日文內容，錄音裡沒有清楚的人聲。',
+    'not_japanese': 'AI 聽到的內容不是日文。',
+    'too_noisy': '背景雜音太大，AI 分不出你的聲音。',
+}
+_RECOGNITION_CODE_RE = re.compile(r'\[?\b(NO_SPEECH|NOT_JAPANESE|TOO_NOISY)\b\]?')
+# 平假名、片假名（含擴充與半形）。日文句子一定會有假名，完全沒有就不是日文
+_KANA_RE = re.compile(r'[\u3040-\u30ff\u31f0-\u31ff\uff66-\uff9f]')
+
+
+def classify_transcript(transcript):
+    """
+    判斷 AI 的轉錄結果是不是「辨識不到」。可以拿去評分就回傳 None，否則回傳原因代碼：
+      no_speech     AI 回 [NO_SPEECH]、空白，或短到不可能是一句話
+      not_japanese  AI 回 [NOT_JAPANESE]，或轉錄文字裡連一個假名都沒有（多半是用中文唸）
+      too_noisy     AI 回 [TOO_NOISY]
+    """
+    text = (transcript or '').strip()
+    upper = text.upper()
+    if not text or 'NO_SPEECH' in upper:
+        return 'no_speech'
+    if 'NOT_JAPANESE' in upper:
+        return 'not_japanese'
+    if 'TOO_NOISY' in upper:
+        return 'too_noisy'
+    if len(text) < 2:
+        return 'no_speech'
+    if not _KANA_RE.search(text):
+        return 'not_japanese'
+    return None
+
+
+def _strip_recognition_codes(text):
+    return _RECOGNITION_CODE_RE.sub('', text or '').strip()
 
 
 def _detect_audio_mime(data, filename='', declared=''):
@@ -392,6 +450,10 @@ def submit_score():
     try:
         # 1. 🏅 區間點數獎勵邏輯 (90分以上50點, 80分以上30點, 及格10點, 參加5點)
         points_earned = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
+        user = User.query.get(user_id)
+        # 校園教育版學生沒有點數：成績照算、不發 J-Pts
+        if user and not uses_points(user):
+            points_earned = 0
 
         # 2. 📈 檢查最高分並更新 ArticleProgress
         progress = ArticleProgress.query.filter_by(user_id=user_id, article_id=article_id).first()
@@ -415,8 +477,7 @@ def submit_score():
         db.session.add(new_record)
 
         # 4. 💰 更新使用者的總點數 (j_pts)
-        user = User.query.get(user_id)
-        if user:
+        if user and points_earned > 0:
             user.j_pts = (user.j_pts or 0) + points_earned
             # 得到的點數也記一筆交易紀錄（跟每日任務獎勵一樣）
             db.session.add(PointTransaction(

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
@@ -236,11 +238,14 @@ class _FreeNotice extends StatelessWidget {
             '拍照辨識出來的單字會直接進到你的收集冊，完全免費，每天只有拍照次數的限制。',
             style: TextStyle(fontSize: 14, height: 1.6, color: AppColors.textDark),
           ),
+          // 校園教育版學生沒有點數，這句不顯示
+          if (!context.read<UserProvider>().isEduStudent) ...[
           const SizedBox(height: 10),
           const Text(
             '點數只有在「把單字收藏到資料夾」或「擴充資料夾容量」時才會用到。',
             style: TextStyle(fontSize: 13, height: 1.6, color: AppColors.textGrey),
           ),
+          ],
         ],
       ),
     );

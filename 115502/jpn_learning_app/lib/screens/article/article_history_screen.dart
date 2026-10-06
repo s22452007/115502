@@ -65,6 +65,7 @@ class _ArticleHistoryScreenState extends State<ArticleHistoryScreen> {
               final record = records[index];
               final score = record['score'] ?? 0;
               final points = record['points_earned'] ?? 0;
+              final isEduStudent = context.read<UserProvider>().isEduStudent;
               final date = record['date'] ?? '';
               final title = record['article_title'] ?? '未知文章';
 
@@ -126,7 +127,8 @@ class _ArticleHistoryScreenState extends State<ArticleHistoryScreen> {
                         ],
                       ),
                     ),
-                    // 右側：獲得點數
+                    // 右側：獲得點數（校園教育版學生沒有點數，不顯示）
+                    if (!isEduStudent)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [

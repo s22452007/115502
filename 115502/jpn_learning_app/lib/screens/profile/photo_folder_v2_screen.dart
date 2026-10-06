@@ -335,6 +335,8 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
     final isNearFull = !isFull && _vocabCount >= (_vocabSlot * 0.8).ceil();
     final isPremium = context.read<UserProvider>().isPremium;
     final expandCost = isPremium ? 50 : 100;
+    // 校園教育版學生沒有收藏上限、也沒有點數：不顯示容量條與擴充提示
+    final isEduStudent = context.read<UserProvider>().isEduStudent;
 
     return Column(
       children: [
@@ -371,6 +373,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
                   _buildStatItem('$folderCount', '資料夾'),
                 ],
               ),
+              if (!isEduStudent) ...[
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -397,10 +400,11 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
                   ),
                 ),
               ),
+              ],
             ],
           ),
         ),
-        if (isFull) ...[
+        if (!isEduStudent && isFull) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(20),
@@ -435,7 +439,7 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
               ],
             ),
           ),
-        ] else if (isNearFull) ...[
+        ] else if (!isEduStudent && isNearFull) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

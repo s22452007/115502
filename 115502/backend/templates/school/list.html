@@ -136,7 +136,7 @@
                         <thead>
                             <tr>
                                 <th>學校</th>
-                                <th>學生數</th>
+                                <th>學生數／合約名額</th>
                                 <th class="text-center" style="width: 200px;">操作</th>
                             </tr>
                         </thead>
@@ -151,11 +151,11 @@
                                     </div>
                                     {% if s.created_by %}<div class="sub"><span class="apply-tag">App 新增</span> {{ s.created_by }}</div>{% endif %}
                                 </td>
-                                <td>{% if s.student_count %}{{ s.student_count }} 位{% else %}<span style="color:#ccc;">—</span>{% endif %}</td>
+                                <td>{% if s.seats_used >= s.seat_limit %}<span style="color:#c0392b; font-weight:bold;">{{ s.seats_used }} / {{ s.seat_limit }}</span> <span class="state-pending" style="background:#fdecea; color:#c0392b;">已滿</span>{% else %}{{ s.seats_used }} / {{ s.seat_limit }}{% endif %}</td>
                                 <td class="text-center">
                                     <div class="d-flex gap-2 justify-content-center">
                                         <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px; white-space:nowrap;" data-bs-toggle="modal" data-bs-target="#schoolEditModal"
-                                                data-action="{{ url_for('school_edit', school_id=s.id) }}" data-name="{{ s.name }}" data-domains="{{ s.student_domains }}" data-pattern="{{ s.pattern }}">
+                                                data-action="{{ url_for('school_edit', school_id=s.id) }}" data-name="{{ s.name }}" data-domains="{{ s.student_domains }}" data-pattern="{{ s.pattern }}" data-seat="{{ s.seat_limit }}">
                                             <i class="bi bi-pencil"></i> 編輯
                                         </button>
                                         <form action="{{ url_for('school_toggle', school_id=s.id) }}" method="POST"
@@ -201,6 +201,11 @@
             <label class="form-label">學號格式（正規式）</label>
             <input autocomplete="off" type="text" name="student_id_pattern" class="form-control" value="{{ default_pattern }}" placeholder="{{ default_pattern }}">
             <div class="form-hint">信箱 @ 前面要符合才算學生，一般不用改。預設＝最多兩個英文字母＋數字（11156047、b09901001 都算）；只想取數字當學號可寫 <code>^s(\d{8})$</code>，括號內就是學號</div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">合約名額</label>
+            <input autocomplete="off" type="number" name="seat_limit" class="form-control" min="{{ seat_unit }}" step="{{ seat_unit }}" value="{{ seat_unit }}" required>
+            <div class="form-hint">以 {{ seat_unit }} 人為一單位，學校加購名額後在這裡調高。未停用的學生帳號（含老師貼名單建立的）達到名額後，新的學生無法再登入；停用帳號會釋出名額</div>
         </div>
     {% endmacro %}
 
@@ -252,6 +257,7 @@
         form.elements['name'].value = btn.dataset.name;
         form.elements['student_domains'].value = btn.dataset.domains;
         form.elements['student_id_pattern'].value = btn.dataset.pattern;
+        form.elements['seat_limit'].value = btn.dataset.seat;
     });
 
     var panel = document.getElementById('schoolPanel');

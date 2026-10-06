@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+      "runtimeArgs": ["backend/app.py"],
+      "port": 5050
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8080", "--web-hostname", "localhost", "--target", "lib/main.dart"],
+      "cwd": "jpn_learning_app",
+      "port": 8080
+    }
+  ]
+}

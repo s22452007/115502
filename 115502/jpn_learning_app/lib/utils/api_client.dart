@@ -1303,6 +1303,21 @@ class ApiClient {
     }
   }
 
+  /// 提醒隊友：後端推播給同組其他成員，10 分鐘內只能按一次
+  static Future<Map<String, dynamic>> remindTeammates(int userId) async {
+    final url = Uri.parse('$baseUrl/group/remind');
+    try {
+      final response = await client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': '連線失敗'};
+    }
+  }
+
   static Future<Map<String, dynamic>> askTutorQuestion(String question) async {
     final url = Uri.parse('$baseUrl/tutor/ask');
     try {

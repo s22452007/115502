@@ -116,9 +116,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     } catch (e) {
       debugPrint('教室清單載入失敗: $e');
     }
-    if (!mounted || !context.read<UserProvider>().isEduStudent) return;
-    // 校園教育版學生：登記推播、排作業截止提醒、打開從通知點進來的頁面
+    if (!mounted) return;
+    // 所有帳號都登記推播（學習小組的「提醒隊友」一般會員也會收到）
     PushService.register(userId);
+    if (!context.read<UserProvider>().isEduStudent) return;
+    // 校園教育版學生：排作業截止提醒、打開從通知點進來的頁面
     PushService.openPending();
     try {
       final assignments = await ApiClient.getStudentAssignments(userId);

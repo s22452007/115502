@@ -11,9 +11,10 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/screens/edu/assignment_detail_screen.dart';
 import 'package:jpn_learning_app/screens/edu/classroom_announcement_screen.dart';
 
-/// 手機推播（Firebase Cloud Messaging）：老師發公告、出作業、批改完成時，後端推到學生手機。
+/// 手機推播（Firebase Cloud Messaging）：老師發公告、出作業、批改完成時，後端推到學生手機；
+/// 學習小組成員按「提醒隊友」時推給同組隊友。
 ///
-/// - 校園教育版學生登入後 [register]，把這支手機的 token 交給後端；登出時 [unregister]
+/// - 使用者登入後 [register]，把這支手機的 token 交給後端；登出時 [unregister]
 /// - App 在背景或關閉時，通知由系統直接顯示；App 開著時系統不會跳，改用本機通知顯示
 /// - 點通知打開對應的作業或公告。App 不會記住登入，從關閉狀態點進來會先到登入頁，
 ///   所以先記下來，登入進首頁後由 [openPending] 再打開

@@ -255,6 +255,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                         imagePath: widget.imagePath,
                         vocabs: _vocabs,
                         contextDescription: widget.analysisData?['scene_category'],
+                        photoId: (widget.analysisData?['photo_id'] as num?)?.toInt(),
                       ),
                     ),
                   );

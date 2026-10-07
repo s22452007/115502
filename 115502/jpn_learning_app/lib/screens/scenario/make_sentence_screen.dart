@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -10,12 +12,18 @@ class MakeSentenceScreen extends StatefulWidget {
   final String imagePath;
   final List<Map<String, dynamic>> vocabs;
   final String? contextDescription;
+  /// 這次練習的照片：批改結果會存成這張照片的造句紀錄，在「我的單字探險」照片詳情頁回顧
+  final int? photoId;
+  /// 拍完照進來才有「跳過 / 回主頁」；從照片詳情頁進來用返回鍵回去就好
+  final bool showSkipButton;
 
   const MakeSentenceScreen({
     Key? key,
     required this.imagePath,
     required this.vocabs,
     this.contextDescription,
+    this.photoId,
+    this.showSkipButton = true,
   }) : super(key: key);
 
   @override
@@ -51,6 +59,8 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
         Uri.parse('${ApiClient.baseUrl}/scenario/evaluate_sentence'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
+          'user_id': context.read<UserProvider>().userId,
+          'photo_id': widget.photoId,
           'sentence': text,
           'vocabs': widget.vocabs,
           'context_description': widget.contextDescription,
@@ -176,7 +186,7 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
   Widget build(BuildContext context) {
     return SubPageTemplate(
       title: '練習造句',
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: !widget.showSkipButton ? null : SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: OutlinedButton(

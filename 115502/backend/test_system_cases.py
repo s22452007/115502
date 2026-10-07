@@ -218,7 +218,7 @@ with A.app_context():
     assert db.engine.url.database == TMP_DB, db.engine.url.database
 
 from models import (
-    User, Admin, Scene, Vocab, UserVocab, UserFolder, UserPhoto, UserPhotoVocab, QuizQuestion,
+    User, Admin, Scene, Vocab, UserVocab, UserFolder, UserPhoto, UserPhotoVocab, PhotoSentenceRecord, QuizQuestion,
     Achievement, UserAchievement, FriendRequest, Friendship, StudyGroup, GroupMember, GroupInvite,
     Feedback, PointPackage, SubscriptionPlan, UserSubscription, PointTransaction, ChatSession,
     ChatMessage, SystemLog, AccountType, Article, ScoreRecord, ReadingEvaluation, UnlockedArticle,
@@ -4104,6 +4104,62 @@ def _(c):
     check(r1.status_code == 200 and J(r1).get('score') == 90 and J(r1).get('feedback'), '批改結果不正確')
     check(r2.status_code == 400 and J(r2).get('error') == '缺少句子或單字資料', '缺少句子未擋下')
     check(r3.status_code == 500 and J(r3).get('error'), 'AI 失敗時沒有回報錯誤')
+
+
+@case('A02', '練習造句紀錄（我的單字探險）',
+      pre='使用者 H 拍了一張照片；另一位使用者 X；AI 批改以模擬資料替代',
+      steps='1. H 用這張照片練習造句兩次（第一次有錯、附語法小教室講解，第二次正確）\n'
+            '2. GET /api/scenario/photo_sentences 查這張照片的紀錄\n3. GET /api/scenario/unlocked/{H}\n'
+            '4. X 用 H 的照片練習造句、X 查 H 的紀錄\n5. 查 H 的造句挑戰紀錄\n6. H 刪除帳號',
+      expect='1. HTTP 200，各回傳 record_id\n2. 2 筆、新的在前，保留修改建議與語法小教室講解\n3. 這張照片 sentence_count=2\n'
+             '4. HTTP 403\n5. 造句挑戰沒有多出紀錄（不佔每日造句次數與獎勵）\n6. 這些練習紀錄一併刪除',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    h, x = register('photosent'), register('photosentx')
+    FAKE['scan_ok'] = True
+    photo_id = J(analyze_photo(h, 'desk.jpg')).get('photo_id')
+    replies = [
+        {'is_valid': False, 'feedback': '助詞要改', 'corrected_sentence': '机[の|の]上に本があります。',
+         'corrections': [{'original': 'を', 'corrected': 'に', 'reason': '表示存在的位置用に', 'type': '語法'}],
+         'grammar_note': '「〜に〜があります」表示某處有某物。', 'translation': '桌上有書。'},
+        {'is_valid': True, 'feedback': '完全正確', 'corrected_sentence': '机の上に本があります。', 'corrections': [],
+         'grammar_note': '', 'translation': '桌上有書。'},
+    ]
+
+    def fake_eval(sentence, vocabs, context_description=None):
+        return {'success': True, 'result': dict(replies.pop(0))}
+
+    orig = ai_helper.evaluate_user_sentence
+    ai_helper.evaluate_user_sentence = fake_eval
+    try:
+        body = {'user_id': h['id'], 'photo_id': photo_id, 'vocabs': ['机', '本']}
+        r1 = SC.post('/api/scenario/evaluate_sentence', json=dict(body, sentence='机の上を本があります。'))
+        r2 = SC.post('/api/scenario/evaluate_sentence', json=dict(body, sentence='机の上に本があります。'))
+        replies.append(dict(replies[-1] if replies else {'is_valid': True}))
+        r4a = SC.post('/api/scenario/evaluate_sentence', headers=auth_header(x),
+                      json={'user_id': x['id'], 'photo_id': photo_id, 'vocabs': ['机'], 'sentence': '机です。'})
+    finally:
+        ai_helper.evaluate_user_sentence = orig
+    lst = J(SC.get('/api/scenario/photo_sentences', query_string={'user_id': h['id'], 'photo_id': photo_id})).get('records', [])
+    card = next((s for s in J(SC.get(f'/api/scenario/unlocked/{h["id"]}')).get('scenes', []) if s['photo_id'] == photo_id), {})
+    r4b = SC.get('/api/scenario/photo_sentences', headers=auth_header(x),
+                 query_string={'user_id': h['id'], 'photo_id': photo_id})
+    with S.app_context():
+        challenge = SentencePracticeRecord.query.filter_by(user_id=h['id']).count()
+    rd = SC.post('/api/user/delete_account', json={'user_id': h['id']})
+    with S.app_context():
+        left = PhotoSentenceRecord.query.filter_by(user_id=h['id']).count()
+    c.log(f'1. HTTP {r1.status_code}/{r2.status_code}，record_id={J(r1).get("record_id")}/{J(r2).get("record_id")}；'
+          f'2. {len(lst)} 筆，第一筆「{lst[0]["sentence"] if lst else ""}」；3. sentence_count={card.get("sentence_count")}；'
+          f'4. X 練習 HTTP {r4a.status_code}、X 查詢 HTTP {r4b.status_code}；5. 造句挑戰紀錄 {challenge} 筆；'
+          f'6. 刪帳號 HTTP {rd.status_code}，剩下 {left} 筆')
+    check(r1.status_code == 200 and r2.status_code == 200 and J(r1).get('record_id') and J(r2).get('record_id'), '練習造句沒有存成紀錄')
+    check(len(lst) == 2 and lst[0]['sentence'] == '机の上に本があります。' and lst[0]['is_valid'] is True
+          and lst[1]['result'].get('grammar_note') and lst[1]['result'].get('corrections'), '紀錄內容或排序不正確')
+    check(card.get('sentence_count') == 2, '照片清單的造句次數不正確')
+    check(r4a.status_code == 403 and r4b.status_code == 403, '可以用別人的照片練習或看到別人的紀錄')
+    check(challenge == 0, '拍照練習造句被算進造句挑戰')
+    check(rd.status_code == 200 and left == 0, '刪除帳號沒有清掉練習造句紀錄')
 
 
 @case('A03', '單字詳情依程度顯示分級例句',

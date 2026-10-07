@@ -216,6 +216,7 @@ class UserPhoto(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     scene = db.relationship('Scene', foreign_keys=[scene_id])
     photo_vocabs = db.relationship('UserPhotoVocab', backref='photo', lazy=True, cascade="all, delete-orphan")
+    photo_sentences = db.relationship('PhotoSentenceRecord', backref='photo', lazy=True, cascade="all, delete-orphan")
 
 # T07: 照片辨識單字明細表
 class UserPhotoVocab(db.Model):
@@ -225,6 +226,19 @@ class UserPhotoVocab(db.Model):
     vocab_id = db.Column(db.Integer, db.ForeignKey('vocab.id'), nullable=False)
     context_sentence = db.Column(db.Text, nullable=True)  # 依使用者拍照當下情境生成的專屬例句
     vocab = db.relationship('Vocab', backref='photo_vocabs', lazy=True)
+
+# T41: 拍照後「練習造句」的紀錄，連同 AI 批改與語法小教室的內容，在「我的單字探險」的照片詳情頁回顧。
+# 跟造句挑戰（T29）分開存：不算每日造句次數、每日任務與點數獎勵，也不算進老師端的造句練習次數。
+class PhotoSentenceRecord(db.Model):
+    __tablename__ = 'photo_sentence_record'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    photo_id = db.Column(db.Integer, db.ForeignKey('user_photo.id'), nullable=True, index=True)
+    sentence = db.Column(db.Text, nullable=False)
+    is_valid = db.Column(db.Boolean, default=False)   # AI 判定整句正確
+    # AI 批改結果：feedback、corrected_sentence、translation、corrections、grammar_note
+    result = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # T08: 使用者單字收藏表
 class UserVocab(db.Model):

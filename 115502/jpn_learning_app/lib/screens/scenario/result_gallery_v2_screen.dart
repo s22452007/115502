@@ -364,8 +364,10 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    // 讓提示文字顯示這張照片解鎖了幾個字
-                                    '這張照片解鎖了 ${scene['vocab_count']} 個單字 >',
+                                    // 讓提示文字顯示這張照片解鎖了幾個字；練習過造句就一併顯示次數
+                                    (scene['sentence_count'] ?? 0) > 0
+                                        ? '解鎖 ${scene['vocab_count']} 個單字・造句 ${scene['sentence_count']} 次 >'
+                                        : '這張照片解鎖了 ${scene['vocab_count']} 個單字 >',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Colors.grey.shade500,

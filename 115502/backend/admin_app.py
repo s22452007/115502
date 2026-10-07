@@ -1227,6 +1227,7 @@ def delete_photo(photo_id):
             return redirect(back)
         image_path = row['image_path']
         conn.execute('DELETE FROM user_photo_vocab WHERE photo_id = ?', (photo_id,))
+        conn.execute('DELETE FROM photo_sentence_record WHERE photo_id = ?', (photo_id,))
         conn.execute('DELETE FROM user_photo WHERE id = ?', (photo_id,))
         conn.commit()
         # 照片檔案：其他紀錄沒有用到同一個檔案才刪（種子資料可能多人共用同一張示範圖）

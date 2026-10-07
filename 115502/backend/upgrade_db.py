@@ -1067,6 +1067,31 @@ try:
 except sqlite3.OperationalError as e:
     print(f"⚠️ custom_character 建立警告：{e}")
 
+# ==========================================
+# 建立 photo_sentence_record（拍照後「練習造句」的紀錄，含語法小教室內容）
+# 在「我的單字探險」的照片詳情頁回顧；跟造句挑戰分開，不算每日次數與點數獎勵。
+# 對應遷移檔 migrations/versions/a7c2e91d4b10，表已存在時遷移會自動跳過。
+# ==========================================
+try:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS photo_sentence_record (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        photo_id INTEGER,
+        sentence TEXT NOT NULL,
+        is_valid BOOLEAN DEFAULT 0,
+        result JSON,
+        created_at DATETIME,
+        FOREIGN KEY(user_id) REFERENCES user(id),
+        FOREIGN KEY(photo_id) REFERENCES user_photo(id)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_photo_sentence_record_user_id ON photo_sentence_record (user_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_photo_sentence_record_photo_id ON photo_sentence_record (photo_id);")
+    print("✅ photo_sentence_record 拍照練習造句紀錄資料表確認完畢")
+except sqlite3.OperationalError as e:
+    print(f"⚠️ photo_sentence_record 建立警告：{e}")
+
 # 儲存並關閉
 conn.commit()
 conn.close()

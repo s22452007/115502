@@ -1027,6 +1027,18 @@ class ApiClient {
     throw Exception('無法載入');
   }
 
+  /// 「我的單字探險」照片詳情頁：用這張照片練習造句的紀錄（新的在前）。
+  /// 每筆 {id, sentence, is_valid, result{feedback, corrected_sentence, translation, corrections, grammar_note}, created_at}
+  static Future<List<Map<String, dynamic>>> getPhotoSentences(int userId, int photoId) async {
+    final url = Uri.parse('$baseUrl/scenario/photo_sentences?user_id=$userId&photo_id=$photoId');
+    final response = await client.get(url);
+    if (response.statusCode == 200) {
+      final list = json.decode(response.body)['records'] as List? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    throw Exception('無法載入造句紀錄');
+  }
+
   /// 文章字典用：用單字查字庫的初級例句與是否已收藏。
   /// 回傳 {found, vocab_id, sentence, translation, is_favorited}；失敗時回傳 {found: false}。
   static Future<Map<String, dynamic>> lookupVocab(int userId, String word) async {

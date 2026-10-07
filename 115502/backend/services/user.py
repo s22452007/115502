@@ -15,7 +15,7 @@ from models import (
     User, UserAchievement, UserVocab, UserFolder,
     Achievement, FriendRequest, Friendship, GroupMember, GroupInvite, StudyGroup,
     Feedback, PointTransaction, Vocab, TransactionType, AccountType,
-    UserPhoto, UserPhotoVocab, ChatSession, ChatMessage, Notification, UserSubscription,
+    UserPhoto, UserPhotoVocab, PhotoSentenceRecord, ChatSession, ChatMessage, Notification, UserSubscription,
     ArticleProgress, UnlockedArticle, ScoreRecord, ReadingEvaluation, SentencePracticeRecord, SystemLog,
     CustomCharacter,
 )
@@ -300,6 +300,7 @@ def delete_account():
         photos = UserPhoto.query.filter_by(user_id=user_id).all()
         photo_paths = {p.image_path for p in photos if p.image_path}
         photo_ids = [p.id for p in photos]
+        PhotoSentenceRecord.query.filter_by(user_id=user_id).delete(synchronize_session=False)
         if photo_ids:
             UserPhotoVocab.query.filter(UserPhotoVocab.photo_id.in_(photo_ids)).delete(synchronize_session=False)
         UserPhoto.query.filter_by(user_id=user_id).delete(synchronize_session=False)

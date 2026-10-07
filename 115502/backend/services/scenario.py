@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import UserPhoto, UserPhotoVocab, UserVocab, Scene
+from models import UserPhoto, UserPhotoVocab, UserVocab, Scene, PhotoSentenceRecord
 import os
 import uuid
 
@@ -463,7 +463,8 @@ def get_unlocked_scenes(user_id):
     for p in photos:
         # 2. 算一下這張照片下面掛了幾個單字
         vocab_count = UserPhotoVocab.query.filter_by(photo_id=p.id).count()
-        
+        sentence_count = PhotoSentenceRecord.query.filter_by(photo_id=p.id).count()
+
         results.append({
             "photo_id": p.id,
             "scene_id": p.scene_id if p.scene_id else 0, 
@@ -472,7 +473,8 @@ def get_unlocked_scenes(user_id):
             "image_path": p.image_path,
             "context_description": p.context_description, # 當初輸入的情境原文（可為 null）
             "unlocked_at": p.created_at.strftime('%Y.%m.%d'),
-            "vocab_count": vocab_count
+            "vocab_count": vocab_count,
+            "sentence_count": sentence_count,   # 用這張照片練習造句的次數
         })
 
     return jsonify({
@@ -790,14 +792,31 @@ def get_all_scenes():
 def evaluate_sentence():
     """
     評估使用者用辨識出單字造的句子。
+
+    帶了 user_id 就把句子與批改結果（含語法小教室內容）存成一筆 PhotoSentenceRecord，
+    之後在「我的單字探險」的照片詳情頁回顧；photo_id 是這次練習的照片。
     """
+    from utils.db import db
+    from utils.auth_token import forbid_unless_owner
+
     data = request.json
-    sentence = data.get('sentence')
+    sentence = (data.get('sentence') or '').strip()
     vocabs = data.get('vocabs')
     context_description = data.get('context_description')
+    user_id = data.get('user_id')
+    photo_id = data.get('photo_id')
 
     if not sentence or not vocabs:
         return jsonify({'error': '缺少句子或單字資料'}), 400
+
+    photo = None
+    if photo_id:
+        photo = UserPhoto.query.get(photo_id)
+        if not photo:
+            return jsonify({'error': '找不到照片'}), 404
+        denied = forbid_unless_owner(photo.user_id)   # 只能用自己的照片練習
+        if denied:
+            return denied
 
     from utils.ai_helper import evaluate_user_sentence
     ai_result = evaluate_user_sentence(sentence, vocabs, context_description)
@@ -805,4 +824,40 @@ def evaluate_sentence():
     if not ai_result.get("success"):
         return jsonify({'error': ai_result.get("error", "評估失敗")}), 500
 
-    return jsonify(ai_result.get("result")), 200
+    result = ai_result.get("result") or {}
+    if user_id:
+        record = PhotoSentenceRecord(
+            user_id=user_id,
+            photo_id=photo.id if photo else None,
+            sentence=sentence,
+            is_valid=bool(result.get('is_valid')),
+            result=result,
+        )
+        db.session.add(record)
+        db.session.commit()
+        result = dict(result, record_id=record.id)
+
+    return jsonify(result), 200
+
+
+@scenario_bp.route('/photo_sentences', methods=['GET'])
+def get_photo_sentences():
+    """某張照片的練習造句紀錄（新的在前），給「我的單字探險」照片詳情頁顯示並重開語法小教室。"""
+    from datetime import timedelta
+
+    user_id = request.args.get('user_id', type=int)
+    photo_id = request.args.get('photo_id', type=int)
+    if not user_id or not photo_id:
+        return jsonify({'error': '缺少 user_id 或 photo_id'}), 400
+
+    records = (PhotoSentenceRecord.query
+               .filter_by(user_id=user_id, photo_id=photo_id)
+               .order_by(PhotoSentenceRecord.created_at.desc(), PhotoSentenceRecord.id.desc())
+               .all())
+    return jsonify({'records': [{
+        'id': r.id,
+        'sentence': r.sentence,
+        'is_valid': bool(r.is_valid),
+        'result': r.result or {},
+        'created_at': (r.created_at + timedelta(hours=8)).strftime('%Y.%m.%d %H:%M') if r.created_at else '',
+    } for r in records]}), 200

@@ -457,7 +457,11 @@ class SystemLog(db.Model):
 
 class Article(db.Model):
     __tablename__ = 'articles'
-    
+
+    # 老師出文章作業時上傳的新文章，theme 固定存這個值。這種文章只給該作業的學生
+    # （從作業詳情帶出全文），App 文章清單、後台文章管理與老師選文清單都排除
+    EDU_THEME = 'edu'
+
     id = db.Column(db.Integer, primary_key=True)
     theme = db.Column(db.String(50), nullable=False) # 主題，例如: 'daily', 'travel', 'business', 'culture', 'news'
     level = db.Column(db.String(10), nullable=False) # 難度等級，例如: 'N5', 'N4', 'N3' 等

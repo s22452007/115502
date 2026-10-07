@@ -4168,6 +4168,89 @@ def _(c):
     check(rd.status_code == 200 and left == 0, '刪除帳號沒有清掉練習造句紀錄')
 
 
+@case('A02', '練習造句紀錄的批改內容、無效輸入與後台刪除照片',
+      pre='使用者 H 拍了照片一、照片二（AI 辨識以模擬資料替代）；AI 批改以模擬資料替代；管理者已登入後台',
+      steps='1. 查詢照片二的造句紀錄（還沒造過句）\n2. H 用照片一造句「冷蔵庫を牛乳があります。」、用照片二造句一次\n'
+            '3. 用不存在的照片編號造句；句子只有空白；沒有單字；AI 批改失敗\n'
+            '4. GET /api/scenario/photo_sentences 缺少 photo_id、photo_id 不是數字\n'
+            '5. 管理者在「照片管控」刪除照片一，H 再查照片一、照片二的紀錄，並用照片一再造句',
+      expect='1. HTTP 200，records 為空\n2. 各回傳 record_id；照片一的紀錄完整保存 AI 批改結果（是否正確、總評、修改後句子、翻譯、修改建議、語法小教室）\n'
+             '3. 依序 HTTP 404「找不到照片」、HTTP 400「缺少句子或單字資料」（兩次）、HTTP 500 回傳錯誤訊息，都不新增紀錄\n'
+             '4. 皆 HTTP 400，「缺少 user_id 或 photo_id」\n'
+             '5. 照片一的造句紀錄一併刪除（查詢為空），照片二的紀錄不受影響；用已刪除的照片造句 HTTP 404',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    h = register('photosentbad')
+    FAKE['scan_ok'] = True
+    p1 = J(analyze_photo(h, 'kitchen1.jpg')).get('photo_id')
+    p2 = J(analyze_photo(h, 'kitchen2.jpg')).get('photo_id')
+    reply = {'is_valid': False, 'feedback': '助詞用錯了', 'corrected_sentence': '冷蔵庫に牛乳があります。',
+             'translation': '冰箱裡有牛奶。',
+             'corrections': [{'original': 'を', 'corrected': 'に', 'reason': '表示存在的位置用に', 'type': '語法'}],
+             'grammar_note': '「場所に＋物があります」表示某處有某物。'}
+    state = {'ok': True}
+
+    def fake_eval(sentence, vocabs, context_description=None):
+        if not state['ok']:
+            return {'success': False, 'error': 'AI 服務目前使用人數較多，請稍等幾秒再試一次。'}
+        return {'success': True, 'result': dict(reply)}
+
+    def records(pid):
+        return SC.get(f'/api/scenario/photo_sentences?user_id={h["id"]}&photo_id={pid}')
+
+    def n_records(**kw):
+        with S.app_context():
+            return PhotoSentenceRecord.query.filter_by(user_id=h['id'], **kw).count()
+
+    def practice(**kw):
+        return SC.post('/api/scenario/evaluate_sentence', json=dict({'user_id': h['id'], 'vocabs': ['冷蔵庫']}, **kw))
+
+    r1 = records(p2)
+    orig = ai_helper.evaluate_user_sentence
+    ai_helper.evaluate_user_sentence = fake_eval
+    try:
+        r2a = practice(photo_id=p1, sentence='冷蔵庫を牛乳があります。')
+        r2b = practice(photo_id=p2, sentence='冷蔵庫に牛乳があります。')
+        n2 = n_records()
+        r3a = practice(photo_id=99999999, sentence='冷蔵庫に牛乳があります。')
+        r3b = practice(photo_id=p1, sentence='   ')
+        r3c = practice(photo_id=p1, sentence='冷蔵庫に牛乳があります。', vocabs=[])
+        state['ok'] = False
+        r3d = practice(photo_id=p1, sentence='冷蔵庫に牛乳があります。')
+        state['ok'] = True
+        n3 = n_records()
+        with S.app_context():
+            saved = db.session.get(PhotoSentenceRecord, J(r2a).get('record_id'))
+            saved = (saved.photo_id, saved.sentence, saved.is_valid, saved.result) if saved else None
+        r4a = SC.get(f'/api/scenario/photo_sentences?user_id={h["id"]}')
+        r4b = SC.get(f'/api/scenario/photo_sentences?user_id={h["id"]}&photo_id=abc')
+        cl = admin_client('sys_staff', 'Staff@1234')
+        r5 = cl.post(f'/photo/delete/{p1}')
+        left1, left2 = n_records(photo_id=p1), n_records(photo_id=p2)
+        q1, q2 = J(records(p1)).get('records'), J(records(p2)).get('records', [])
+        r5b = practice(photo_id=p1, sentence='冷蔵庫に牛乳があります。')
+    finally:
+        ai_helper.evaluate_user_sentence = orig
+    c.log(f'1. {http(r1, "records")}；2. record_id={J(r2a).get("record_id")}/{J(r2b).get("record_id")}，紀錄 {n2} 筆，'
+          f'照片一的紀錄（照片, 句子, 正確）={saved[:3] if saved else None}、保存的批改欄位={sorted(saved[3]) if saved else None}；'
+          f'3. {http(r3a, "error")}；{http(r3b, "error")}；{http(r3c, "error")}；{http(r3d, "error")}，紀錄仍 {n3} 筆；'
+          f'4. {http(r4a, "error")}；{http(r4b, "error")}；'
+          f'5. 刪照片 HTTP {r5.status_code}，照片一紀錄 {left1} 筆（查詢 {len(q1 or [])} 筆）、照片二紀錄 {left2} 筆（查詢 {len(q2)} 筆），'
+          f'用已刪除的照片造句 {http(r5b, "error")}')
+    check(p1 and p2 and r1.status_code == 200 and J(r1).get('records') == [], '沒造過句的照片紀錄不是空的')
+    check(r2a.status_code == 200 and r2b.status_code == 200 and J(r2a).get('record_id') and J(r2b).get('record_id') and n2 == 2,
+          '造句沒有存成紀錄')
+    check(saved and saved[:3] == (p1, '冷蔵庫を牛乳があります。', False) and saved[3] == reply, '紀錄沒有完整保存 AI 批改結果')
+    check(r3a.status_code == 404 and J(r3a).get('error') == '找不到照片', '不存在的照片未擋下')
+    check(r3b.status_code == 400 and J(r3b).get('error') == '缺少句子或單字資料'
+          and r3c.status_code == 400 and J(r3c).get('error') == '缺少句子或單字資料', '空白句子或沒有單字未擋下')
+    check(r3d.status_code == 500 and J(r3d).get('error') and n3 == 2, 'AI 失敗時的處理不正確或多出紀錄')
+    check(r4a.status_code == 400 and J(r4a).get('error') == '缺少 user_id 或 photo_id'
+          and r4b.status_code == 400 and J(r4b).get('error') == '缺少 user_id 或 photo_id', '查詢參數不完整未擋下')
+    check(r5.status_code == 302 and left1 == 0 and q1 == [] and left2 == 1 and len(q2) == 1, '刪除照片時造句紀錄沒有一併處理')
+    check(r5b.status_code == 404 and J(r5b).get('error') == '找不到照片', '可以用已刪除的照片造句')
+
+
 @case('A03', '單字詳情依程度顯示分級例句',
       pre='單字「紅葉」已有四個難度的例句（A11-06 由文章收藏時補上）；使用者 L5 程度 N5、L1 程度 N1，L1 已收藏這個單字',
       steps='1. L5 GET /api/vocab/detail/{紅葉}\n2. L1 GET /api/vocab/detail/{紅葉}\n3. 查詢不存在的單字',
@@ -4357,6 +4440,111 @@ def _(c):
     check(r3.status_code == 400 and J(r3).get('error') == '小組已達標，無法再發送邀請！', '達標後仍可邀請')
     check(r2.status_code == 200 and '結業' in J(r2).get('message', '') and after > before, '達標領獎失敗')
     check(n_member == 0 and n_group == 0 and r4.status_code == 404, '領獎後小組沒有解散或可重複領獎')
+
+
+# A06 學習小組「提醒隊友」（services/group.py remind_teammates）：推播以模擬方式進行
+import services.group as group_service
+
+
+def remind_group(u):
+    return SC.post('/api/group/remind', json={'user_id': u['id']})
+
+
+def team_up(leader, members, name, progress=0):
+    """leader 建立小組（目標拍照 30 次），members 接受邀請加入；必要時把進度設成 progress"""
+    gid = J(SC.post('/api/group/create', json={'user_id': leader['id'], 'name': name, 'goal_type': 'scans',
+                                               'goal_target': 30, 'friend_ids': [m['friend_id'] for m in members]})).get('group_id')
+    for m in members:
+        accept_group_invite(m)
+    if progress:
+        with S.app_context():
+            db.session.get(StudyGroup, gid).current_progress = progress
+            db.session.commit()
+    return gid
+
+
+def age_last_remind(u, gid, seconds):
+    """模擬上次提醒是 seconds 秒前（冷卻時間記在記憶體）"""
+    group_service._last_remind[(u['id'], gid)] = datetime.now(timezone.utc) - timedelta(seconds=seconds)
+
+
+@case('A06', '提醒隊友：推播給同組隊友，10 分鐘內不能重複提醒',
+      pre='隊長 R1（暱稱「阿志」）的小組「提醒測試小組」目標拍照 30 次、目前 12 次；隊友 R2、R3 已登記手機，隊友 R4 沒有登記手機；R1 自己也登記了手機',
+      steps='1. R1 POST /api/group/remind\n2. R1 立刻再按一次\n3. 模擬上次提醒是 7 分半前，R1 再按\n4. 模擬上次提醒是 11 分鐘前，R1 再按\n'
+            '5. R2 在 R1 剛提醒完時按提醒',
+      expect='1. HTTP 200，「已提醒隊友繼續學習！」，sent=2；只推播給 R2、R3 的手機（不含 R1 自己與沒登記的 R4），'
+             '標題「學習小組提醒」，內容「阿志 提醒你：一起完成「探索新場景」挑戰吧！（目前 12/30）」\n'
+             '2. HTTP 429，「剛剛已經提醒過了，10 分鐘後再試吧！」，不推播\n3. HTTP 429，「剛剛已經提醒過了，3 分鐘後再試吧！」\n'
+             '4. HTTP 200，再次推播給 R2、R3\n5. HTTP 200，推播給 R1、R3（每個人的冷卻時間分開計算）',
+      note='推播以模擬方式進行，未連線 Firebase')
+def _(c):
+    r1, r2, r3, r4 = (register('remind') for _ in range(4))
+    set_user(r1['id'], username='阿志')
+    gid = team_up(r1, [r2, r3, r4], '提醒測試小組', progress=12)
+    for u, tok in ((r1, 'tok-remind-r1'), (r2, 'tok-remind-r2'), (r3, 'tok-remind-r3')):
+        push_token(u['id'], tok)
+    PUSH_FAKE.update(ready=True, dead=[])
+    del PUSHED[:]
+    try:
+        d1 = remind_group(r1)
+        p1 = list(PUSHED)
+        d2 = remind_group(r1)
+        p2 = PUSHED[len(p1):]
+        age_last_remind(r1, gid, 450)
+        d3 = remind_group(r1)
+        age_last_remind(r1, gid, 660)
+        n4 = len(PUSHED)
+        d4 = remind_group(r1)
+        p4 = PUSHED[n4:]
+        n5 = len(PUSHED)
+        d5 = remind_group(r2)
+        p5 = PUSHED[n5:]
+    finally:
+        PUSH_FAKE.update(ready=False, dead=[])
+    c.log(f'1. {http(d1, "message", "sent")}，推播={[(p["tokens"], p["title"], p["body"]) for p in p1]}；2. {http(d2, "error")}，推播 {len(p2)} 則；'
+          f'3. {http(d3, "error")}；4. {http(d4, "message", "sent")}，推播對象={[p["tokens"] for p in p4]}；'
+          f'5. {http(d5, "message", "sent")}，推播對象={[p["tokens"] for p in p5]}')
+    check(gid and d1.status_code == 200 and J(d1).get('message') == '已提醒隊友繼續學習！' and J(d1).get('sent') == 2, '提醒隊友失敗')
+    check(len(p1) == 1 and p1[0]['tokens'] == ['tok-remind-r2', 'tok-remind-r3'] and p1[0]['title'] == '學習小組提醒'
+          and p1[0]['body'] == '阿志 提醒你：一起完成「探索新場景」挑戰吧！（目前 12/30）'
+          and p1[0]['data'] == {'type': 'study_group', 'group_id': str(gid)}, '推播對象或內容不正確')
+    check(d2.status_code == 429 and J(d2).get('error') == '剛剛已經提醒過了，10 分鐘後再試吧！' and not p2, '10 分鐘內可以重複提醒')
+    check(d3.status_code == 429 and J(d3).get('error') == '剛剛已經提醒過了，3 分鐘後再試吧！', '剩餘等待時間不正確')
+    check(d4.status_code == 200 and [p['tokens'] for p in p4] == [['tok-remind-r2', 'tok-remind-r3']], '超過 10 分鐘後無法再提醒')
+    check(d5.status_code == 200 and [p['tokens'] for p in p5] == [['tok-remind-r1', 'tok-remind-r3']], '其他隊友受到別人的冷卻時間影響')
+
+
+@case('A06', '提醒隊友的限制：個人挑戰、未加入小組與隊友沒開通知',
+      pre='S1 的小組沒有其他成員（個人挑戰）；S2 沒有加入任何小組；隊長 T1 與隊友 T2 同組，T2 尚未登記手機',
+      steps='1. S1 POST /api/group/remind\n2. S2 POST /api/group/remind\n3. T1 按提醒\n4. T2 登記手機後，T1 立刻再按一次',
+      expect='1. HTTP 400，「小組裡還沒有其他隊友」\n2. HTTP 404，「你目前沒有加入學習小組」\n'
+             '3. HTTP 200，sent=0，「隊友目前沒有開啟通知，這次沒有送出提醒」，不推播，也不進入 10 分鐘冷卻\n'
+             '4. HTTP 200，「已提醒隊友繼續學習！」，推播給 T2',
+      note='推播以模擬方式進行，未連線 Firebase')
+def _(c):
+    s1, s2, t1, t2 = (register('remindx') for _ in range(4))
+    team_up(s1, [], '一個人的挑戰')
+    team_up(t1, [t2], '還沒開通知小組')
+    PUSH_FAKE.update(ready=True, dead=[])
+    del PUSHED[:]
+    try:
+        d1 = remind_group(s1)
+        d2 = remind_group(s2)
+        d3 = remind_group(t1)
+        n3 = len(PUSHED)
+        push_token(t2['id'], 'tok-remind-t2')
+        d4 = remind_group(t1)
+        p4 = list(PUSHED)
+    finally:
+        PUSH_FAKE.update(ready=False, dead=[])
+    c.log(f'1. {http(d1, "error")}；2. {http(d2, "error")}；3. {http(d3, "message", "sent")}，推播 {n3} 則；'
+          f'4. {http(d4, "message", "sent")}，推播對象={[p["tokens"] for p in p4]}')
+    check(d1.status_code == 400 and J(d1).get('error') == '小組裡還沒有其他隊友', '個人挑戰可以提醒隊友')
+    check(d2.status_code == 404 and J(d2).get('error') == '你目前沒有加入學習小組', '沒有小組可以提醒隊友')
+    check(d3.status_code == 200 and J(d3).get('sent') == 0 and J(d3).get('message') == '隊友目前沒有開啟通知，這次沒有送出提醒'
+          and n3 == 0, '隊友都沒登記手機時的回應不正確')
+    check(d4.status_code == 200 and J(d4).get('message') == '已提醒隊友繼續學習！' and [p['tokens'] for p in p4] == [['tok-remind-t2']],
+          '沒送出的提醒仍進入冷卻時間')
 
 
 @case('A07', '月繳訂閱排程升級為年繳',
@@ -4799,6 +4987,63 @@ def _(c):
     c.log(f'1. 多出 {n1} 個方案；2. HTTP {r2.status_code}，方案（月費, 贈點, 啟用）={info[1:] if info else None}、操作日誌 {n_log} 筆，App 方案={names}')
     check(n1 == 0, '名稱空白的方案被新增')
     check(info and info[1:] == (399, 60, True) and n_log == 1 and '測試季訂閱' in names, '新增訂閱方案失敗')
+
+
+@case('A10', '教材單字已被照片辨識或使用者收藏用到時無法刪除',
+      pre='管理者已新增教材單字「刪除測試甲」「刪除測試乙」「刪除測試丙」；使用者 VU 有一張照片的辨識結果含「刪除測試甲」（以測試工具寫入照片單字明細），'
+          'VU 收藏了「刪除測試乙」；「刪除測試丙」沒有被用到',
+      steps='於「教材單字」頁：\n1. 刪除「刪除測試甲」\n2. 刪除「刪除測試乙」\n3. 刪除「刪除測試丙」\n'
+            '4. 於「照片管控」刪除 VU 的那張照片後，再刪除「刪除測試甲」\n5. VU 於 App 查看收藏夾',
+      expect='1. 提示「「刪除測試甲」已被 1 張照片的辨識結果、0 筆圖鑑或收藏紀錄用到，無法刪除」，單字保留、不寫入刪除日誌\n'
+             '2. 提示「「刪除測試乙」已被 0 張照片的辨識結果、1 筆圖鑑或收藏紀錄用到，無法刪除」，單字保留\n'
+             '3. 單字刪除並寫入操作日誌\n4. 照片刪除後「刪除測試甲」不再被用到，可以刪除\n5. 預設單字本仍有 1 個單字，「刪除測試乙」的收藏不受影響',
+      note='AI 回應以模擬資料替代')
+def _(c):
+    cl = admin_client('sys_staff', 'Staff@1234')
+    vu = register('vocabuse')
+    ids = {}
+    for w in ('刪除測試甲', '刪除測試乙', '刪除測試丙'):
+        cl.post('/vocab/add', data={'word': w, 'kana': 'さくじょてすと', 'meaning': '後台刪除測試單字'})
+        with S.app_context():
+            ids[w] = Vocab.query.filter_by(word=w).first().id
+    FAKE['scan_ok'] = True
+    pid = J(analyze_photo(vu, 'vocabuse.jpg')).get('photo_id')
+    with S.app_context():
+        db.session.add(UserPhotoVocab(photo_id=pid, vocab_id=ids['刪除測試甲']))
+        db.session.commit()
+    rc = SC.post('/api/vocab/collect', json={'user_id': vu['id'], 'vocab_id': ids['刪除測試乙']})
+
+    def delete(w):
+        # 單字編號可能沿用先前個案刪掉的編號，操作日誌以這次刪除前後的差值計算
+        before = logs('vocab', ids[w], 'DELETE')
+        r = cl.post(f'/vocab/delete/{ids[w]}')
+        return r, flashes(cl), count(Vocab, id=ids[w]), logs('vocab', ids[w], 'DELETE') - before
+
+    r1, f1, n1, l1 = delete('刪除測試甲')
+    r2, f2, n2, l2 = delete('刪除測試乙')
+    r3, f3, n3, l3 = delete('刪除測試丙')
+    rp = cl.post(f'/photo/delete/{pid}')
+    flashes(cl)
+    r4, f4, n4, l4 = delete('刪除測試甲')
+    fav = favorites(vu).get('預設單字本', {}).get('count')
+    with S.app_context():
+        kept = UserVocab.query.filter_by(user_id=vu['id'], vocab_id=ids['刪除測試乙']).count()
+    c.log(f'前置：收藏 HTTP {rc.status_code}；1. HTTP {r1.status_code}，{f1}，單字剩 {n1} 筆、新增刪除日誌 {l1} 筆；'
+          f'2. HTTP {r2.status_code}，{f2}，單字剩 {n2} 筆、新增刪除日誌 {l2} 筆；3. HTTP {r3.status_code}，提示={f3}，單字剩 {n3} 筆、新增刪除日誌 {l3} 筆；'
+          f'4. 刪照片 HTTP {rp.status_code}，再刪單字 HTTP {r4.status_code}，提示={f4}，單字剩 {n4} 筆、新增刪除日誌 {l4} 筆；'
+          f'5. 預設單字本 {fav} 個單字，「刪除測試乙」的收藏 {kept} 筆')
+    with S.app_context():   # 清掉仍被收藏的測試單字，避免影響之後的個案
+        UserVocab.query.filter_by(vocab_id=ids['刪除測試乙']).delete()
+        Vocab.query.filter_by(id=ids['刪除測試乙']).delete()
+        db.session.commit()
+    check(rc.status_code in (200, 201) and pid, '前置作業失敗')
+    check(r1.status_code == 302 and f1 == ['「刪除測試甲」已被 1 張照片的辨識結果、0 筆圖鑑或收藏紀錄用到，無法刪除']
+          and n1 == 1 and l1 == 0, '被照片辨識結果用到的單字被刪除')
+    check(r2.status_code == 302 and f2 == ['「刪除測試乙」已被 0 張照片的辨識結果、1 筆圖鑑或收藏紀錄用到，無法刪除']
+          and n2 == 1 and l2 == 0, '被使用者收藏的單字被刪除')
+    check(r3.status_code == 302 and not f3 and n3 == 0 and l3 == 1, '沒被用到的單字無法刪除')
+    check(rp.status_code == 302 and r4.status_code == 302 and not f4 and n4 == 0 and l4 == 1, '照片刪除後單字仍無法刪除')
+    check(fav == 1 and kept == 1, '使用者的收藏受到影響')
 
 
 # ----------------------------------------------------------------------

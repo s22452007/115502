@@ -51,9 +51,11 @@ def get_article_dashboard():
         return jsonify({"error": "缺少 user_id"}), 400
 
     try:
-        # 1. 抓出該難度等級「已上架」的所有文章（後台可隨時下架）
+        # 1. 抓出該難度等級「已上架」的所有文章（後台可隨時下架）。
+        #    老師為作業上傳的文章只給該作業的學生，不列在這裡（舊資料可能是已上架，所以也看 theme）
         articles = Article.query.filter_by(level=user_level).filter(
-            Article.is_published.isnot(False)
+            Article.is_published.isnot(False),
+            Article.theme != Article.EDU_THEME,
         ).order_by(Article.id).all()
 
         # 2. 抓出這個玩家「已經解鎖」的所有文章 ID 清單

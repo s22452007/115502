@@ -66,6 +66,19 @@ class _PremiumTabState extends State<PremiumTab> {
     return cycle == 'monthly' ? 'Premium (月繳)' : 'Premium (年繳)';
   }
 
+  // 功能清單用後台設定的（/api/subscription/plans 回傳的欄位叫 features）；
+  // 後台沒填時回傳空陣列，這時才用預設清單
+  static List<String> _featuresOf(Map<String, dynamic> plan) {
+    final raw = plan['features'];
+    if (raw is List && raw.isNotEmpty) {
+      return raw.map((f) => f.toString()).toList();
+    }
+    return const [
+      '每日 10 次拍照辨識', '每日 10 次 AI 對話', '每日 5 次造句 AI 批改', '每日 5 次文章朗讀評分',
+      '單字收藏擴充半價', '小組押金 5 折'
+    ];
+  }
+
   void _goToCheckout(Map<String, dynamic>? plan) {
     if (plan == null) return;
     final cycle = _cycleOf(plan);
@@ -74,10 +87,7 @@ class _PremiumTabState extends State<PremiumTab> {
       planName: _cardTitle(plan),
       priceMonthly: (plan['price_monthly'] as num?)?.toInt() ?? 149,
       priceYearly: (plan['price_yearly'] as num?)?.toInt() ?? 1290,
-      features: List<String>.from(plan['features_json'] ?? [
-        '每日 10 次拍照辨識', '每日 10 次 AI 對話', '每日 5 次造句 AI 批改', '每日 5 次文章朗讀評分',
-        '單字收藏擴充半價', '小組押金 5 折'
-      ]),
+      features: _featuresOf(plan),
       pointsGrantMonthly: (plan['points_grant_monthly'] as num?)?.toInt() ?? 20,
       pointsGrantYearly: (plan['points_grant_yearly'] as num?)?.toInt() ?? 300,
       initialBillingCycle: cycle,

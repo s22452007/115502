@@ -835,8 +835,10 @@ def admin_dashboard():
         'new_users': q1("SELECT COUNT(*) FROM user WHERE created_at >= ?", (week_ago,)),
     }
     content = {
-        'articles_published': q1("SELECT COUNT(*) FROM articles WHERE (is_published IS NULL OR is_published != 0)"),
-        'articles_total': q1("SELECT COUNT(*) FROM articles"),
+        # 不算老師為作業上傳的文章（theme = Article.EDU_THEME），跟文章管理頁一致
+        'articles_published': q1("SELECT COUNT(*) FROM articles WHERE (is_published IS NULL OR is_published != 0) AND theme != ?",
+                                 (Article.EDU_THEME,)),
+        'articles_total': q1("SELECT COUNT(*) FROM articles WHERE theme != ?", (Article.EDU_THEME,)),
         'premium_users': q1("SELECT COUNT(*) FROM user WHERE is_premium = 1"),
     }
     edu = {
@@ -1730,7 +1732,7 @@ def vocab_delete(id):
     photo_uses = UserPhotoVocab.query.filter_by(vocab_id=id).count()
     saved_uses = UserVocab.query.filter_by(vocab_id=id).count()
     if photo_uses or saved_uses:
-        flash(f'「{vocab.word}」已被 {photo_uses} 張照片的辨識結果、{saved_uses} 筆使用者收藏用到，無法刪除', 'error')
+        flash(f'「{vocab.word}」已被 {photo_uses} 張照片的辨識結果、{saved_uses} 筆圖鑑或收藏紀錄用到，無法刪除', 'error')
         return redirect(url_for('vocab_list'))
     db.session.delete(vocab)
     db.session.add(SystemLog(
@@ -1851,7 +1853,8 @@ def article_list():
     level = request.args.get('level', '')
     keyword = (request.args.get('keyword') or '').strip()
 
-    query = Article.query
+    # 老師為作業上傳的文章只給該作業的學生，不在這裡管理（避免被上架給一般使用者）
+    query = Article.query.filter(Article.theme != Article.EDU_THEME)
     if level in ARTICLE_LEVELS:
         query = query.filter_by(level=level)
     if keyword:
@@ -1873,7 +1876,7 @@ def article_list():
     # 依等級統計，方便確認每個級別各上架了幾篇
     level_stats = []
     for lv in ARTICLE_LEVELS:
-        lv_articles = Article.query.filter_by(level=lv).all()
+        lv_articles = Article.query.filter_by(level=lv).filter(Article.theme != Article.EDU_THEME).all()
         level_stats.append({
             'level': lv,
             'total': len(lv_articles),
@@ -2778,7 +2781,10 @@ def teacher_assignment_create(classroom_id):
                 flash(f"已推播通知到 {pushed} 位學生的手機", "info")
         return redirect(url_for('teacher_classroom_assignments', classroom_id=classroom_id))
 
-    existing_articles = Article.query.filter(Article.is_published.isnot(False)).order_by(Article.level, Article.id).all()
+    # 選既有文章只列上架中的一般文章；其他作業上傳的文章只屬於那份作業
+    existing_articles = Article.query.filter(
+        Article.is_published.isnot(False), Article.theme != Article.EDU_THEME
+    ).order_by(Article.level, Article.id).all()
     # 對話作業可選腔調；拍照作業的主題提示用現有場景名稱當建議選項（老師仍可自由輸入）
     dialects = Dialect.query.filter_by(is_active=True).order_by(Dialect.id).all()
     scene_names = [sc.name for sc in Scene.query.order_by(Scene.id).all()]

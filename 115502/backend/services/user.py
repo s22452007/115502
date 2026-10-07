@@ -17,7 +17,7 @@ from models import (
     Feedback, PointTransaction, Vocab, TransactionType, AccountType,
     UserPhoto, UserPhotoVocab, PhotoSentenceRecord, ChatSession, ChatMessage, Notification, UserSubscription,
     ArticleProgress, UnlockedArticle, ScoreRecord, ReadingEvaluation, SentencePracticeRecord, SystemLog,
-    CustomCharacter,
+    CustomCharacter, PasswordResetCode, School,
 )
 
 user_bp = Blueprint('user', __name__)
@@ -312,13 +312,19 @@ def delete_account():
         ChatSession.query.filter_by(user_id=user_id).delete(synchronize_session=False)
         CustomCharacter.query.filter_by(user_id=user_id).delete(synchronize_session=False)
 
+        # PasswordResetCode（T39 忘記密碼驗證碼）外鍵指向 user 又沒有 cascade，
+        # 沒先刪的話 MySQL 上用過忘記密碼的帳號會因外鍵限制刪除失敗
         for model in (Notification, Feedback, UserSubscription, PointTransaction,
                       ArticleProgress, UnlockedArticle, ScoreRecord, ReadingEvaluation,
-                      SentencePracticeRecord):
+                      SentencePracticeRecord, PasswordResetCode):
             model.query.filter_by(user_id=user_id).delete(synchronize_session=False)
 
         # 系統日誌是後台的稽核紀錄，保留紀錄、只拿掉跟這個人的關聯
         SystemLog.query.filter_by(user_id=user_id).update({'user_id': None}, synchronize_session=False)
+        # 學校的「由誰在 App 新增」同理，學校留著、只拿掉關聯。
+        # 教室、班級成員、作業繳交只屬於教育版帳號，上面已經擋掉不會走到這裡
+        School.query.filter_by(created_by_user_id=user_id).update(
+            {'created_by_user_id': None}, synchronize_session=False)
 
         UserAchievement.query.filter_by(user_id=user_id).delete()
         UserVocab.query.filter_by(user_id=user_id).delete()

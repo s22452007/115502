@@ -697,13 +697,9 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.translate, color: AppColors.primary),
-                title: const Text('翻譯成中文'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                },
-              ),
+              // 原本還有「翻譯成中文」「收藏此句」，但都沒有作用，已拿掉：
+              // AI 回覆每句日文下面本來就附中文翻譯（services/tutor.py 的回覆規則），
+              // 收藏也只有單字收藏（T08 對應單字表），沒有地方存整句。
               ListTile(
                 leading: const Icon(Icons.volume_up, color: AppColors.primary),
                 title: const Text('播放語音 (TTS)'),
@@ -711,19 +707,6 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   Navigator.pop(ctx);
                   // 只念日文句子，跳過中文說明與翻譯
                   _playTts(_japaneseLinesOf(messageText));
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.bookmark_add,
-                  color: AppColors.primary,
-                ),
-                title: const Text('收藏此句'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('已加入收藏！')));
                 },
               ),
               const SizedBox(height: 16),

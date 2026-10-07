@@ -225,17 +225,18 @@ def create_sentence_assignment(classroom_id, title, instructions, grammar_point,
 
 def create_article_assignment(classroom_id, title, instructions, article_id=None, new_article=None, has_quiz=False, questions=None, due_at=None):
     """建立文章閱讀作業（支援新建文章、選擇題與是非題出題）。"""
-    # 1. 若是上傳全新文章
+    # 1. 若是上傳全新文章：只給這份作業的學生用（學生從作業詳情拿到全文），
+    #    不上架到一般文章清單；theme 標成 Article.EDU_THEME，各清單靠它排除
     if new_article:
         art = Article(
             title=new_article['title'].strip(),
-            theme='edu',
+            theme=Article.EDU_THEME,
             level=new_article.get('level', 'N3').strip(),
             content=new_article['content'].strip(),
             translation=new_article.get('translation', '').strip(),
             grammar_points=new_article.get('grammar_points', []),
-            is_free=True,
-            is_published=True,
+            is_free=True,          # 免費才能朗讀評分、結算（教育版學生本來就不用解鎖）
+            is_published=False,
             created_at=datetime.utcnow()
         )
         db.session.add(art)

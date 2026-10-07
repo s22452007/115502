@@ -158,7 +158,7 @@ class SystemSettingsScreen extends StatelessWidget {
             SizedBox(height: 12),
             Text('刪除後以下資料將永久消失，無法復原：'),
             SizedBox(height: 8),
-            Text('• 所有學習紀錄與能力值'),
+            Text('• 所有學習紀錄與 J-pts 點數'),
             Text('• 收藏的單字與資料夾'),
             Text('• 成就徽章'),
             Text('• 好友關係與學習小組'),

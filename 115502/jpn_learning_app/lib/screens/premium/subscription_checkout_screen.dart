@@ -172,7 +172,7 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(color: const Color(0xFFEDF3EF), borderRadius: BorderRadius.circular(20)),
             child: Text(
-              _isTrialFlow ? '⭐ 本次訂閱享 7 天免費試用。' : '⭐ 訂閱即享 Premium 完整權益與無限收藏。',
+              _isTrialFlow ? '⭐ 本次訂閱享 7 天免費試用。' : '⭐ 訂閱即享 Premium 完整權益與單字收藏擴充半價。',
               style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w700, height: 1.5),
             ),
           ),

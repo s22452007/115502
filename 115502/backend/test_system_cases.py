@@ -2606,24 +2606,30 @@ def _(c):
 @case('A11', '文章提供假名標音、中文翻譯與文法解析',
       pre='同 A11-01 的 N3 文章',
       steps='GET /api/articles/dashboard?user_id=R&level=N3，檢查每篇文章的 content、translation、grammar_points',
-      expect='每篇 content 以 <ruby>漢字<rt>假名</rt></ruby> 標音；translation 有中文翻譯；grammar_points 列出文法（expression、meaning、example）')
+      expect='已解鎖的文章：content 以 <ruby>漢字<rt>假名</rt></ruby> 標音；translation 有中文翻譯；grammar_points 列出文法（expression、meaning、example）\n'
+             '未解鎖的付費文章：content、translation 為空、grammar_points 為 null（不提前給全文）')
 def _(c):
     data = J(SC.get(f'/api/articles/dashboard?user_id={STATE["reader"]["id"]}&level=N3')).get('data', [])
     rows = []
-    ok = bool(data)
+    ok = any(a.get('is_unlocked') for a in data)
     for a in data:
+        if not a.get('is_unlocked'):
+            hidden = not a.get('content') and not a.get('translation') and a.get('grammar_points') is None
+            rows.append(f'「{a["title"]}」未解鎖，全文已隱藏={hidden}')
+            ok = ok and hidden
+            continue
         g = ((a.get('grammar_points') or {}).get('grammars') or [{}])[0]
         has_ruby = '<ruby>' in (a.get('content') or '') and '<rt>' in (a.get('content') or '')
         rows.append(f'「{a["title"]}」標音={has_ruby}、翻譯「{a.get("translation")}」、文法 {g.get("expression")}（{g.get("meaning")}）')
         ok = ok and has_ruby and bool(a.get('translation')) and all(g.get(k) for k in ('expression', 'meaning', 'example'))
     c.log('；'.join(rows))
-    check(ok, '有文章缺少標音、翻譯或文法解析')
+    check(ok, '已解鎖文章缺少標音、翻譯或文法解析，或未解鎖文章提前給了全文')
 
 
 @case('A11', '以點數解鎖付費文章',
       pre='使用者 R 為 0 點；「京都の秋」需 50 點',
       steps='1. POST /api/articles/unlock，user_id=R、article_id=京都の秋\n2. R 購買 60 點後再解鎖一次\n3. 再解鎖第三次\n4. GET /api/articles/dashboard 與 /api/user/transactions/{R}',
-      expect='1. HTTP 400，status=not_enough_points、「J-pts 不足，解鎖此文章需要 50 點」\n2. HTTP 200，status=success、扣 50 點（new_j_pts=10）\n3. HTTP 200，status=already_unlocked，不再扣點\n4. 文章 is_unlocked=true；交易紀錄有 -50（article_unlock）')
+      expect='1. HTTP 400，status=not_enough_points、「J-pts 不足，解鎖此文章需要 50 點」\n2. HTTP 200，status=success、扣 50 點（new_j_pts=10）\n3. HTTP 200，status=already_unlocked，不再扣點\n4. 文章 is_unlocked=true 並回傳全文；交易紀錄有 -50（article_unlock）')
 def _(c):
     u, aid = STATE['reader'], STATE['art_paid']
     r1 = SC.post('/api/articles/unlock', json={'user_id': u['id'], 'article_id': aid})
@@ -2639,7 +2645,7 @@ def _(c):
           and J(r1).get('message') == 'J-pts 不足，解鎖此文章需要 50 點', '點數不足未擋下')
     check(r2.status_code == 200 and J(r2).get('status') == 'success' and J(r2).get('new_j_pts') == 10, '解鎖失敗')
     check(r3.status_code == 200 and J(r3).get('status') == 'already_unlocked' and J(r3).get('new_j_pts') == 10, '重複解鎖又扣點')
-    check(art.get('is_unlocked') is True and tx == [(-50, 'article_unlock')], '解鎖狀態或交易紀錄不正確')
+    check(art.get('is_unlocked') is True and bool(art.get('content')) and tx == [(-50, 'article_unlock')], '解鎖狀態、全文或交易紀錄不正確')
 
 
 @case('A11', '朗讀錄音 AI 評分、結算點數並保留朗讀歷史',

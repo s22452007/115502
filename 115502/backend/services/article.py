@@ -72,14 +72,15 @@ def get_article_dashboard():
             # 動態判斷：如果是免費文章，或是玩家已經解鎖過，is_unlocked 就是 True
             is_unlocked = is_free or (a.id in unlocked_article_ids)
 
+            # 還沒解鎖的付費文章只給標題與價格，全文、翻譯、文法等解鎖後重新抓清單才拿得到
             result.append({
                 "id": a.id,
                 "theme": a.theme,
                 "level": a.level,
                 "title": a.title,
-                "content": a.content,
-                "translation": a.translation,
-                "grammar_points": a.grammar_points,
+                "content": a.content if is_unlocked else "",
+                "translation": a.translation if is_unlocked else "",
+                "grammar_points": a.grammar_points if is_unlocked else None,
                 "is_free": is_free,
                 "unlock_cost": 0 if is_free else (a.unlock_cost or DEFAULT_UNLOCK_COST),
                 "is_unlocked": is_unlocked

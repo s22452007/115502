@@ -1,5 +1,6 @@
 """手機推播（Firebase Cloud Messaging）：老師發公告、出作業、批改完成時通知學生；
-學習小組成員按「提醒隊友」時通知同組隊友（services/group.py 的 /remind）。
+學習小組成員按「提醒隊友」時通知同組隊友（services/group.py 的 /remind）；
+試用剩不到 24 小時時提醒即將扣款（utils/subscription_helper.py）。
 
 金鑰：Firebase 主控台 →「專案設定」→「服務帳戶」→「產生新的私密金鑰」，
 存成 backend/secrets/firebase-service-account.json（.env 的 FIREBASE_CREDENTIALS 可改路徑）。

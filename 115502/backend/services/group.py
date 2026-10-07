@@ -16,6 +16,11 @@ def get_current_year_week():
     return f"{year}-{week}"
 
 
+def group_deposit_amount(user):
+    """免費額度用完後的押金：訂閱用戶 10 點、免費用戶 20 點"""
+    return 10 if user.is_premium else 20
+
+
 def handle_deposit_and_free_quota(user):
     """
     處理每週免費次數與押金邏輯，回傳 (success, msg, deposit_amount)。
@@ -43,7 +48,7 @@ def handle_deposit_and_free_quota(user):
         return True, "OK", 0
     else:
         # 本週免費額度已用完：需要押金
-        deposit = 10 if user.is_premium else 20
+        deposit = group_deposit_amount(user)
         if user.j_pts < deposit:
             quota_label = '3 次' if user.is_premium else '1 次'
             return False, f"本週免費額度（{quota_label}）已用完，且點數不足 {deposit} 點押金！", 0
@@ -612,6 +617,14 @@ def check_quota(user_id):
     if not user:
         return jsonify({"error": "找不到用戶"}), 404
 
+    # 教育版學生加入小組不計次數、不收押金（同 handle_deposit_and_free_quota），App 就不會跳押金提醒
+    if is_payment_free(user):
+        return jsonify({
+            "is_free": True,
+            "unlimited": True,
+            "deposit": 0,
+        }), 200
+
     current_week = get_current_year_week()
     if getattr(user, 'last_free_group_week', None) != current_week:
         free_used = 0
@@ -626,4 +639,5 @@ def check_quota(user_id):
         "free_used": free_used,
         "free_quota": free_quota,
         "remaining_free": remaining,
+        "deposit": 0 if remaining > 0 else group_deposit_amount(user),
     }), 200

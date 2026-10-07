@@ -130,7 +130,7 @@ def get_task():
         "data": selected_task,
         "level": level,
         "today_count": today_count,
-        # 每日免費批改次數：免費版 3、Premium 10，教育版不限（App 依這兩個欄位顯示剩餘次數）
+        # 每日免費批改次數：免費版 3、Premium 5，教育版不限（App 依這兩個欄位顯示剩餘次數）
         "daily_limit": sentence_daily_limit(user) if user else 3,
         "unlimited": has_unlimited_usage(user),
     }), 200

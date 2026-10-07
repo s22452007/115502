@@ -101,4 +101,5 @@ const Map<String, String> transactionTypeLabels = {
   'deposit': '押金扣除',
   'deposit_refund': '押金退還',
   'group_reward': '小組達成獎勵',
+  'admin_adjust': '管理者調整',
 };

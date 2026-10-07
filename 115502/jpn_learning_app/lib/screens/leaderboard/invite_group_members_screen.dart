@@ -119,8 +119,10 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
     // 如果是建立小組，才需要檢查免費額度跟收押金
     if (isCreating) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('檢查額度中...')));
-      final bool isFree = await ApiClient.checkFreeQuota(userId);
-      
+      final quota = await ApiClient.checkGroupQuota(userId);
+      final bool isFree = quota['is_free'] == true;
+      final int deposit = quota['deposit'] as int;
+
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
@@ -132,9 +134,9 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text('⚠️ 押金與對賭提醒', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: const Text(
-              '您本週的免費小組額度已用完。\n\n本次建立將會扣除 20 J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
-              style: TextStyle(height: 1.5),
+            content: Text(
+              '您本週的免費小組額度已用完。\n\n本次建立將會扣除 $deposit J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
+              style: const TextStyle(height: 1.5),
             ),
             actions: [
               TextButton(

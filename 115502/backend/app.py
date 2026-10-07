@@ -94,7 +94,14 @@ def _seed_defaults():
     # 只在方案不存在時建立預設值。已存在的方案由管理者在後台維護（價格、上下架、功能說明），
     # 啟動時不能再寫回預設值，否則後台的修改一重啟就被蓋掉。
     # （原本還會寫入 points_grant，但模型沒有這個欄位，全新資料庫建立方案時會直接 TypeError。）
-    if not SubscriptionPlan.query.filter_by(name='Premium Pro 月訂閱').first():
+    # 用 billing_cycle 判斷有沒有方案（跟 services/subscription.py 找方案的方式一致），
+    # 不用名稱：後台改了方案名稱，重啟後才不會又多建一筆。下面會停用的舊通用方案「Premium Pro」不算
+    def _has_plan(cycle):
+        return SubscriptionPlan.query.filter(
+            SubscriptionPlan.billing_cycle == cycle, SubscriptionPlan.name != 'Premium Pro'
+        ).first() is not None
+
+    if not _has_plan('monthly'):
         _db.session.add(SubscriptionPlan(
             name='Premium Pro 月訂閱',
             billing_cycle='monthly',
@@ -106,7 +113,7 @@ def _seed_defaults():
             is_active=True,
         ))
 
-    if not SubscriptionPlan.query.filter_by(name='Premium Pro 年訂閱').first():
+    if not _has_plan('yearly'):
         _db.session.add(SubscriptionPlan(
             name='Premium Pro 年訂閱',
             billing_cycle='yearly',

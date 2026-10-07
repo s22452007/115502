@@ -53,7 +53,9 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
     // 如果他按下「接受」，進行雙重防呆 (免費/付費都要警告鎖定機制)
     if (action == 'accept') {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('檢查額度中...')));
-      final bool isFree = await ApiClient.checkFreeQuota(userId);
+      final quota = await ApiClient.checkGroupQuota(userId);
+      final bool isFree = quota['is_free'] == true;
+      final int deposit = quota['deposit'] as int;
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
@@ -61,8 +63,8 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
       // 根據免費或付費，給予不同的警告內容
       final String dialogTitle = isFree ? '🎯 學習挑戰確認' : '⚠️ 押金與對賭提醒';
       final String dialogContent = isFree
-          ? '本週首次加入免費！\n\n⚠️ 注意：這是一場為期至本週日結算的挑戰，一旦加入，直到結算前都絕對無法中途退出喔！準備好要一起學習了嗎？'
-          : '您本週的免費小組額度已用完。\n\n本次加入將扣除 20 J-Pts 作為對賭押金（達標後退還）。\n\n⚠️ 注意：一旦加入，直到本週日結算前絕對無法中途退出！確定要繼續嗎？';
+          ? '本次加入免押金！\n\n⚠️ 注意：這是一場為期至本週日結算的挑戰，一旦加入，直到結算前都絕對無法中途退出喔！準備好要一起學習了嗎？'
+          : '您本週的免費小組額度已用完。\n\n本次加入將扣除 $deposit J-Pts 作為對賭押金（達標後退還）。\n\n⚠️ 注意：一旦加入，直到本週日結算前絕對無法中途退出！確定要繼續嗎？';
       final String confirmButtonText = isFree ? '確定加入' : '確定扣除並加入';
 
       final bool confirm = await showDialog(

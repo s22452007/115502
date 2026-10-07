@@ -754,16 +754,22 @@ class ApiClient {
     }
   }
 
-  static Future<bool> checkFreeQuota(int userId) async {
+  // 回傳 is_free（本週還有免費額度）與 deposit（額度用完時要扣的押金：訂閱 10、免費 20、教育版 0）
+  static Future<Map<String, dynamic>> checkGroupQuota(int userId) async {
     try {
       final response = await client.get(
         Uri.parse('$baseUrl/group/check_quota/$userId'),
       );
-      if (response.statusCode == 200)
-        return json.decode(response.body)['is_free'] ?? false;
-      return false;
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {
+          'is_free': data['is_free'] ?? false,
+          'deposit': (data['deposit'] as num?)?.toInt() ?? 20,
+        };
+      }
+      return {'is_free': false, 'deposit': 20};
     } catch (e) {
-      return false;
+      return {'is_free': false, 'deposit': 20};
     }
   }
 
@@ -1325,21 +1331,6 @@ class ApiClient {
         body: jsonEncode({'user_id': userId}),
       );
       return jsonDecode(response.body);
-    } catch (e) {
-      return {'error': '連線失敗'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> askTutorQuestion(String question) async {
-    final url = Uri.parse('$baseUrl/tutor/ask');
-    try {
-      final response = await client.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'question': question}),
-      );
-      if (response.statusCode == 200) return jsonDecode(response.body);
-      return {'error': '後端錯誤'};
     } catch (e) {
       return {'error': '連線失敗'};
     }

@@ -248,11 +248,15 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
       if (featureId != null && featureId.startsWith('character:')) return '購買對話角色';
       if (featureId != null && featureId.startsWith('custom_character:')) return '新增自訂角色';
       switch (featureId) {
-        case 'photo_extra': return '加購';
+        case 'photo_extra': return '拍照辨識加購';
         case 'ai_extra': return 'AI 對話加購';
+        case 'reading_extra': return '朗讀評分加購';
+        case 'sentence_extra': return '造句批改加購';
         case 'vocab_expand': return '單字收藏擴充';
         case 'vocab_expand_premium': return '單字收藏擴充 (會員優惠)';
-        case 'group_deposit': return '學習小組押金';
+        case 'group_deposit':
+        case 'group_deposit_free':
+        case 'group_deposit_premium': return '學習小組押金';
         case 'article_unlock': return '解鎖閱讀文章';
         default: return featureId ?? '未知功能';
       }
@@ -283,6 +287,15 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
         bgColor = const Color(0xFFE3F2FD);
         titleText = baseLabel;
         break;
+      case 'admin_adjust':
+        // related_feature 存的是管理者填的原因，沒填時是「管理者調整」
+        icon = Icons.admin_panel_settings_rounded;
+        iconColor = const Color(0xFF6D4C41);
+        bgColor = const Color(0xFFEFEBE9);
+        titleText = (rawFeature == null || rawFeature.isEmpty || rawFeature == baseLabel)
+            ? baseLabel
+            : '$baseLabel：$rawFeature';
+        break;
       case 'purchase':
       default:
         icon = Icons.add_circle_rounded;
@@ -293,7 +306,8 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
     }
 
     final ptsLabel = pts > 0 && !isSpend ? '+$pts' : '$pts';
-    final ptsColor = isSpend ? const Color(0xFFE53935) : AppColors.primary;
+    // 管理者也可能扣點，負數一律用紅色
+    final ptsColor = isSpend || pts < 0 ? const Color(0xFFE53935) : AppColors.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

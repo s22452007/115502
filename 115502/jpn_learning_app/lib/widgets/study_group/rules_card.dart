@@ -39,7 +39,7 @@ class RulesCard extends StatelessWidget {
           const SizedBox(height: 12),
           _buildRuleRow(Icons.lock_outline_rounded, '鎖定防逃', '一旦建立或加入，結算前「絕對無法」退出。'),
           const SizedBox(height: 12),
-          _buildRuleRow(Icons.monetization_on_outlined, '押金機制', '每週首次加入免費！第 2 次起需付 20 點押金。'),
+          _buildRuleRow(Icons.monetization_on_outlined, '押金機制', '每週免費 1 次（訂閱 3 次），之後需付 20 點押金（訂閱 10 點）。'),
           const SizedBox(height: 12),
           _buildRuleRow(Icons.card_giftcard_rounded, '各自結業', '達標後可隨時領獎、退押金並結業；失敗則沒收。'),
         ],

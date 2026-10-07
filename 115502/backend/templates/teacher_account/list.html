@@ -277,9 +277,8 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
-                        <label class="form-label">新密碼</label>
-                        <input autocomplete="off" type="password" name="password" class="form-control" minlength="8" placeholder="至少 8 個字元，混合英文、數字或符號" required>
-                        <div class="form-hint">老師忘記密碼時由管理者在這裡重設，再把新密碼告訴老師</div>
+                        <label class="form-label">老師信箱</label>
+                        <div class="fw-bold">{{ t.email }}</div>
                     </div>
                     <div class="modal-footer border-0 flex-column align-items-stretch gap-1">
                         {% if mail_ready %}

@@ -747,8 +747,8 @@ def rename_photo():
     from utils.db import db
     data = request.json
     photo_id = data.get('photo_id')
-    new_title = data.get('custom_title')
-    
+    new_title = (data.get('custom_title') or '').strip()
+
     if not photo_id or not new_title:
         return jsonify({'error': '缺少 photo_id 或 custom_title'}), 400
         

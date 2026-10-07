@@ -230,10 +230,12 @@ def _check_trial_notice(user, sub, now):
         return
     time_left = (sub.end_date - now).total_seconds()
     if 0 < time_left <= 86400:  # 24 小時以內
-        db.session.add(Notification(
-            user_id=user.id,
-            title='試用即將結束',
-            body='您的免費試用明天結束，將自動開始收費NT$149/月，如不需要請提前取消。',
-        ))
+        price = (sub.plan.price_monthly if sub.plan else None) or 149   # 試用接的是月訂方案，價格以後台設定為準
+        title = '試用即將結束'
+        body = f'您的免費試用明天結束，將自動開始收費NT${price}/月，如不需要請提前取消。'
+        db.session.add(Notification(user_id=user.id, title=title, body=body))
         user.trial_notice_sent = True
         db.session.commit()
+        # 通知表只是留紀錄，App 沒有通知列表，要靠推播讓使用者看到（沒設定 Firebase 時會自動略過）
+        from utils.push import notify_users
+        notify_users([user.id], title, body, {'type': 'subscription'})

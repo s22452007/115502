@@ -223,6 +223,9 @@ def ensure_model_columns(database=None, tables=None):
                 else:
                     default_sql = "'" + str(default).replace("'", "''") + "'"
                 ddl += f' DEFAULT {default_sql}'
+                # 有預設值才能加 NOT NULL（既有資料列會直接填入預設值），沒有預設值的只能先允許空值
+                if not column.nullable:
+                    ddl += ' NOT NULL'
             with engine.connect() as conn:
                 conn.execute(text(ddl))
                 conn.commit()

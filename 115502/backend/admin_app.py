@@ -1725,6 +1725,13 @@ def vocab_edit(id):
 def vocab_delete(id):
     admin_id = session.get('admin_id')
     vocab = Vocab.query.get_or_404(id)
+    # 照片辨識結果（T07）、使用者收藏（T08）的 vocab_id 都不能為空，被用到的單字刪了會讓那些紀錄失去單字
+    from models import UserVocab, UserPhotoVocab
+    photo_uses = UserPhotoVocab.query.filter_by(vocab_id=id).count()
+    saved_uses = UserVocab.query.filter_by(vocab_id=id).count()
+    if photo_uses or saved_uses:
+        flash(f'「{vocab.word}」已被 {photo_uses} 張照片的辨識結果、{saved_uses} 筆使用者收藏用到，無法刪除', 'error')
+        return redirect(url_for('vocab_list'))
     db.session.delete(vocab)
     db.session.add(SystemLog(
         admin_id=admin_id, user_id=None,
@@ -2031,6 +2038,7 @@ def article_delete(article_id):
         conn.execute('DELETE FROM unlocked_articles WHERE article_id = ?', (article_id,))
         conn.execute('DELETE FROM article_progress WHERE article_id = ?', (article_id,))
         conn.execute('DELETE FROM score_record WHERE article_id = ?', (article_id,))
+        conn.execute('DELETE FROM reading_evaluation WHERE article_id = ?', (article_id,))
         conn.commit()
     finally:
         conn.close()
@@ -3496,6 +3504,8 @@ def teacher_account_reject(user_id):
         action='DELETE', target_table='user', target_id=teacher.id,
         old_value={'email': teacher.email, 'username': teacher.username, 'teacher_status': 'pending'}
     ))
+    # 申請時寫的 CREATE 日誌 user_id 指向這個帳號（有外鍵），先清空才刪得掉；日誌本身保留，target_id 仍記得是誰
+    SystemLog.query.filter_by(user_id=teacher.id).update({'user_id': None}, synchronize_session=False)
     db.session.delete(teacher)
     db.session.commit()
     flash(f'已拒絕並移除「{teacher.username}」（{teacher.email}）的申請', 'success')

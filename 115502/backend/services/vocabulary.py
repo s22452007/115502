@@ -93,7 +93,7 @@ def get_folder_vocabs():
 def create_folder():
     data = request.get_json()
     user_id = data.get('user_id')
-    name = data.get('name')
+    name = (data.get('name') or '').strip()
 
     if not user_id or not name:
         return jsonify({"error": "缺少必要資料"}), 400

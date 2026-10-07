@@ -19,6 +19,7 @@ def get_plans():
         'plans': [{
             'id': p.id,
             'name': p.name,
+            'billing_cycle': p.billing_cycle,
             'price_monthly': p.price_monthly,
             'price_yearly': p.price_yearly,
             'features': p.features_json or [],

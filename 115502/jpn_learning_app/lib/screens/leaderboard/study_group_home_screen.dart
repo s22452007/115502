@@ -7,6 +7,8 @@ import 'package:jpn_learning_app/widgets/study_group/group_info_card.dart';
 import 'package:jpn_learning_app/widgets/study_group/goal_progress_card.dart';
 import 'package:jpn_learning_app/widgets/study_group/ranking_list_card.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/providers/user_provider.dart';
 
 class StudyGroupHomeScreen extends StatelessWidget {
   final Map<String, dynamic> groupData;
@@ -19,6 +21,16 @@ class StudyGroupHomeScreen extends StatelessWidget {
   }) : super(key: key);
 
   static const Color subText = Color(0xFF6E6E6E);
+
+  // 推播給同組其他成員；後端限制 10 分鐘內只能提醒一次
+  Future<void> _remindTeammates(BuildContext context) async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final res = await ApiClient.remindTeammates(userId);
+    final text = (res['error'] ?? res['message'] ?? '提醒失敗，請稍後再試').toString();
+    messenger.showSnackBar(SnackBar(content: Text(text)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,11 +77,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
                 child: SizedBox(
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已提醒隊友繼續學習！')),
-                      );
-                    },
+                    onPressed: () => _remindTeammates(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary.withOpacity(0.9),
                       shape: RoundedRectangleBorder(

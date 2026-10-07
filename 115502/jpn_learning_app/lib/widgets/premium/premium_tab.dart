@@ -14,8 +14,9 @@ class PremiumTab extends StatefulWidget {
 }
 
 class _PremiumTabState extends State<PremiumTab> {
+  // 後台上架中的訂閱方案（月繳在前、年繳在後），卡片依此畫出，後台改價、停用、新增方案都會反映
+  List<Map<String, dynamic>> _plans = [];
   Map<String, dynamic>? _monthlyPlan;
-  Map<String, dynamic>? _yearlyPlan;
   bool _isLoading = true;
 
   // 🌟 與儲值點數分頁完全統一的扁平化配色設定
@@ -39,29 +40,38 @@ class _PremiumTabState extends State<PremiumTab> {
       final res = await ApiClient.getSubscriptionPlans();
       if (!mounted) return;
       final plans = (res['plans'] as List? ?? []).cast<Map<String, dynamic>>();
-      Map<String, dynamic>? monthly;
-      Map<String, dynamic>? yearly;
-      for (final p in plans) {
-        final cycle = p['billing_cycle'] as String?;
-        if (cycle == 'monthly') { monthly = p; }
-        else if (cycle == 'yearly') { yearly = p; }
-        else if (monthly == null && (p['price_monthly'] != null && p['price_monthly'] != 0)) { monthly = p; }
-        else if (yearly == null && (p['price_yearly'] != null && p['price_yearly'] != 0)) { yearly = p; }
-      }
+      final monthly = plans.where((p) => _cycleOf(p) == 'monthly').toList();
+      final yearly = plans.where((p) => _cycleOf(p) == 'yearly').toList();
       setState(() {
-        _monthlyPlan = monthly ?? (plans.isNotEmpty ? plans.first : null);
-        _yearlyPlan  = yearly  ?? (plans.isNotEmpty ? plans.first : null);
+        _plans = [...monthly, ...yearly];
+        _monthlyPlan = monthly.isNotEmpty ? monthly.first : null;
         _isLoading = false;
       });
     } catch (e) { if (mounted) setState(() => _isLoading = false); }
   }
 
-  void _goToCheckout(String cycle) {
-    final plan = cycle == 'monthly' ? _monthlyPlan : _yearlyPlan;
+  // 舊資料可能沒有 billing_cycle，依有填的價格判斷
+  static String _cycleOf(Map<String, dynamic> p) {
+    final cycle = p['billing_cycle'] as String?;
+    if (cycle == 'monthly' || cycle == 'yearly') return cycle!;
+    final monthly = (p['price_monthly'] as num?) ?? 0;
+    return monthly > 0 ? 'monthly' : 'yearly';
+  }
+
+  // 同一種週期只有一個方案時沿用原本的標題，有多個時用後台設定的方案名稱區分
+  String _cardTitle(Map<String, dynamic> plan) {
+    final cycle = _cycleOf(plan);
+    final sameCycle = _plans.where((p) => _cycleOf(p) == cycle).length;
+    if (sameCycle > 1) return plan['name']?.toString() ?? '';
+    return cycle == 'monthly' ? 'Premium (月繳)' : 'Premium (年繳)';
+  }
+
+  void _goToCheckout(Map<String, dynamic>? plan) {
     if (plan == null) return;
+    final cycle = _cycleOf(plan);
     Navigator.push(context, MaterialPageRoute(builder: (_) => SubscriptionCheckoutScreen(
       planId: plan['id'],
-      planName: cycle == 'monthly' ? 'Premium (月繳)' : 'Premium (年繳)',
+      planName: _cardTitle(plan),
       priceMonthly: (plan['price_monthly'] as num?)?.toInt() ?? 149,
       priceYearly: (plan['price_yearly'] as num?)?.toInt() ?? 1290,
       features: List<String>.from(plan['features_json'] ?? [
@@ -99,31 +109,7 @@ class _PremiumTabState extends State<PremiumTab> {
 
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
 
-    final String monthlyBtnText;
-    final VoidCallback? monthlyOnTap;
-    final String? monthlyBtnSubText;
-
-    if (isPremium && currentCycle == 'monthly') {
-      monthlyBtnText = '目前方案';
-      monthlyOnTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
-      monthlyBtnSubText = null;
-    } else if (isPremium && currentCycle == 'yearly') {
-      monthlyBtnText = '前往訂閱管理';
-      monthlyOnTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
-      monthlyBtnSubText = '目前已是年繳方案';
-    } else if (isPremium) {
-      monthlyBtnText = '切換為月繳';
-      monthlyOnTap = () => _goToCheckout('monthly');
-      monthlyBtnSubText = null;
-    } else if (!trialUsed) {
-      monthlyBtnText = '開始 7 天免費試用';
-      monthlyOnTap = _goToTrialScreen;
-      monthlyBtnSubText = null;
-    } else {
-      monthlyBtnText = '立即訂閱月繳';
-      monthlyOnTap = () => _goToCheckout('monthly');
-      monthlyBtnSubText = '免費試用資格已使用';
-    }
+    final currentPlanName = userProvider.subscriptionPlanName;
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -142,45 +128,105 @@ class _PremiumTabState extends State<PremiumTab> {
           btnText: !isPremium ? '目前方案' : null,
           onTap: null,
         ),
-        const SizedBox(height: 14),
 
-        // 2. 月繳方案卡片
-        _buildFlatPlanCard(
-          title: 'Premium (月繳)',
-          isCurrent: isPremium && currentCycle == 'monthly',
-          badgeText: '每月贈送 20 點', 
-          priceText: 'NT\$ 149 / 月',
-          features: ['享 7 天免費試用，隨時可取消', '每日 10 次拍照辨識', '每日 10 次 AI 對話', '每日 5 次造句 AI 批改', '每日 5 次文章朗讀評分', '單字擴充半價、小組押金 5 折'],
-          btnText: monthlyBtnText,
-          btnSubText: monthlyBtnSubText,
-          btnColor: AppColors.primary,
-          onTap: monthlyOnTap,
-        ),
-        const SizedBox(height: 14),
-
-        // 3. 年繳方案卡片
-        _buildFlatPlanCard(
-          title: 'Premium (年繳)',
-          isCurrent: isPremium && currentCycle == 'yearly',
-          badgeText: '年度精選 贈送 300 點', 
-          priceText: 'NT\$ 1290 / 年',
-          subtitle: '平均每月只要 NT\$ 107，現省 NT\$ 498！',
-          features: ['包含月繳所有特權', '一次性獲得 300 J-Pts', '最劃算的長期學習投資'],
-          isScheduledUpgrade: isPremium && currentCycle == 'monthly' && pendingUpgradeStart != null,
-          scheduledDate: _formatIsoDate(pendingUpgradeStart),
-          btnText: (isPremium && currentCycle == 'yearly')
-              ? '目前方案'
-              : (isPremium && pendingUpgradeStart != null)
-                  ? null
-                  : (isPremium ? '排程升級為年繳' : '立即升級年繳'),
-          btnColor: const Color(0xFFFF7043), // 🌟 與儲值點數的「最划算橘色」遙相呼應
-          onTap: (isPremium && currentCycle == 'yearly')
-              ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
-              : (isPremium && pendingUpgradeStart == null)
-                  ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
-                  : (!isPremium ? () => _goToCheckout('yearly') : null),
-        ),
+        // 2. 後台上架中的訂閱方案（月繳在前、年繳在後）
+        for (final plan in _plans) ...[
+          const SizedBox(height: 14),
+          _cycleOf(plan) == 'monthly'
+              ? _buildMonthlyCard(plan, isPremium: isPremium, trialUsed: trialUsed, currentCycle: currentCycle, currentPlanName: currentPlanName)
+              : _buildYearlyCard(plan, isPremium: isPremium, currentCycle: currentCycle, currentPlanName: currentPlanName, pendingUpgradeStart: pendingUpgradeStart),
+        ],
       ],
+    );
+  }
+
+  // 同週期有多個方案時，用目前訂閱的方案名稱判斷是哪一張
+  bool _isCurrentPlan(Map<String, dynamic> plan, {required bool isPremium, required String currentCycle, required String? currentPlanName}) {
+    final cycle = _cycleOf(plan);
+    if (!isPremium || currentCycle != cycle) return false;
+    final sameCycle = _plans.where((p) => _cycleOf(p) == cycle).length;
+    if (sameCycle == 1) return true;
+    return currentPlanName == plan['name'] || currentPlanName == _cardTitle(plan);
+  }
+
+  Widget _buildMonthlyCard(Map<String, dynamic> plan, {required bool isPremium, required bool trialUsed, required String currentCycle, required String? currentPlanName}) {
+    final isCurrent = _isCurrentPlan(plan, isPremium: isPremium, currentCycle: currentCycle, currentPlanName: currentPlanName);
+    final isTrialPlan = identical(plan, _monthlyPlan);
+    final price = (plan['price_monthly'] as num?)?.toInt() ?? 0;
+    final points = (plan['points_grant_monthly'] as num?)?.toInt() ?? 0;
+
+    final String btnText;
+    final VoidCallback? onTap;
+    String? btnSubText;
+    if (isCurrent) {
+      btnText = '目前方案';
+      onTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
+    } else if (isPremium && currentCycle == 'yearly') {
+      btnText = '前往訂閱管理';
+      onTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()));
+      btnSubText = '目前已是年繳方案';
+    } else if (isPremium) {
+      btnText = '切換為月繳';
+      onTap = () => _goToCheckout(plan);
+    } else if (!trialUsed && isTrialPlan) {
+      btnText = '開始 7 天免費試用';
+      onTap = _goToTrialScreen;
+    } else {
+      btnText = '立即訂閱月繳';
+      onTap = () => _goToCheckout(plan);
+      if (trialUsed) btnSubText = '免費試用資格已使用';
+    }
+
+    return _buildFlatPlanCard(
+      title: _cardTitle(plan),
+      isCurrent: isCurrent,
+      badgeText: points > 0 ? '每月贈送 $points 點' : null,
+      priceText: 'NT\$ $price / 月',
+      features: [
+        if (isTrialPlan) '享 7 天免費試用，隨時可取消',
+        '每日 10 次拍照辨識', '每日 10 次 AI 對話', '每日 5 次造句 AI 批改', '每日 5 次文章朗讀評分', '單字擴充半價、小組押金 5 折',
+      ],
+      btnText: btnText,
+      btnSubText: btnSubText,
+      btnColor: AppColors.primary,
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildYearlyCard(Map<String, dynamic> plan, {required bool isPremium, required String currentCycle, required String? currentPlanName, required String? pendingUpgradeStart}) {
+    final isCurrent = _isCurrentPlan(plan, isPremium: isPremium, currentCycle: currentCycle, currentPlanName: currentPlanName);
+    final price = (plan['price_yearly'] as num?)?.toInt() ?? 0;
+    final points = (plan['points_grant_yearly'] as num?)?.toInt() ?? 0;
+
+    // 和第一個月繳方案比較，算出平均月費與一年省下的金額
+    String? subtitle;
+    final monthlyPrice = (_monthlyPlan?['price_monthly'] as num?)?.toInt();
+    if (price > 0) {
+      final avg = (price / 12).round();
+      final saved = monthlyPrice == null ? 0 : monthlyPrice * 12 - price;
+      subtitle = saved > 0 ? '平均每月只要 NT\$ $avg，現省 NT\$ $saved！' : '平均每月只要 NT\$ $avg';
+    }
+
+    return _buildFlatPlanCard(
+      title: _cardTitle(plan),
+      isCurrent: isCurrent,
+      badgeText: points > 0 ? '年度精選 贈送 $points 點' : null,
+      priceText: 'NT\$ $price / 年',
+      subtitle: subtitle,
+      features: ['包含月繳所有特權', if (points > 0) '一次性獲得 $points J-Pts', '最劃算的長期學習投資'],
+      isScheduledUpgrade: isPremium && currentCycle == 'monthly' && pendingUpgradeStart != null,
+      scheduledDate: _formatIsoDate(pendingUpgradeStart),
+      btnText: (isPremium && currentCycle == 'yearly')
+          ? (isCurrent ? '目前方案' : '前往訂閱管理')
+          : (isPremium && pendingUpgradeStart != null)
+              ? null
+              : (isPremium ? '排程升級為年繳' : '立即升級年繳'),
+      btnColor: const Color(0xFFFF7043), // 🌟 與儲值點數的「最划算橘色」遙相呼應
+      onTap: isPremium
+          ? ((currentCycle == 'yearly' || pendingUpgradeStart == null)
+              ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionManagementScreen()))
+              : null)
+          : () => _goToCheckout(plan),
     );
   }
 

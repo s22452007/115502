@@ -559,7 +559,50 @@ def claim_reward():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"領獎失敗: {str(e)}"}), 500
-    
+
+# ==========================================
+# 8-1. 提醒隊友 (POST /remind)：推播給同組其他成員
+# ==========================================
+GOAL_LABELS = {'scans': '探索新場景', 'logins': '全體共同打卡', 'sentences': '造句練習', 'articles': '閱讀練習'}
+REMIND_COOLDOWN_SECONDS = 10 * 60
+# 記在記憶體就好：重啟後歸零沒關係，只是避免連按把隊友手機洗版
+_last_remind = {}
+
+@group_bp.route('/remind', methods=['POST'])
+def remind_teammates():
+    from utils.push import notify_users
+
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    member = GroupMember.query.filter_by(user_id=user_id).first()
+    if not member:
+        return jsonify({"error": "你目前沒有加入學習小組"}), 404
+
+    key = (user_id, member.group_id)
+    elapsed = (datetime.now(timezone.utc) - _last_remind[key]).total_seconds() if key in _last_remind else None
+    if elapsed is not None and elapsed < REMIND_COOLDOWN_SECONDS:
+        wait = int((REMIND_COOLDOWN_SECONDS - elapsed) // 60) + 1
+        return jsonify({"error": f"剛剛已經提醒過了，{wait} 分鐘後再試吧！"}), 429
+
+    teammate_ids = [m.user_id for m in GroupMember.query.filter_by(group_id=member.group_id).all()
+                    if m.user_id != user_id]
+    if not teammate_ids:
+        return jsonify({"error": "小組裡還沒有其他隊友"}), 400
+
+    sender = User.query.get(user_id)
+    group = member.group
+    goal = GOAL_LABELS.get(group.goal_type, '小組挑戰')
+    sent = notify_users(
+        teammate_ids,
+        '學習小組提醒',
+        f'{sender.username} 提醒你：一起完成「{goal}」挑戰吧！（目前 {group.current_progress}/{group.goal_target}）',
+        {'type': 'study_group', 'group_id': group.id},
+    )
+    if sent == 0:
+        return jsonify({"status": "success", "sent": 0, "message": "隊友目前沒有開啟通知，這次沒有送出提醒"}), 200
+    _last_remind[key] = datetime.now(timezone.utc)
+    return jsonify({"status": "success", "sent": sent, "message": "已提醒隊友繼續學習！"}), 200
+
 # ==========================================
 # 9. 檢查本週是否還有免費額度 (GET /check_quota/<user_id>)
 # ==========================================

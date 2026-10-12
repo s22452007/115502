@@ -255,7 +255,7 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                    const Icon(AppIcons.forward, color: Colors.white70, size: AppIcons.navSize),
                   ],
                 ),
               ),

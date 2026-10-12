@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
   final String topicTitle;
@@ -124,7 +125,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
             top: 50,
             left: 16,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              icon: const Icon(AppIcons.back, color: Colors.white, size: AppIcons.navSize),
               onPressed: () => Navigator.pop(context),
             ),
           ),

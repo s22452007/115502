@@ -866,7 +866,7 @@ class _ThemeDetailScreenState extends State<ThemeDetailScreen> {
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right, color: Colors.grey),
+                    const Icon(AppIcons.forward, color: Colors.grey, size: AppIcons.navSize),
                   ],
                 ),
               ),

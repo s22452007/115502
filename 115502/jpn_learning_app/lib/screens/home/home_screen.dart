@@ -649,9 +649,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ),
               ),
               const Icon(
-                Icons.arrow_forward_ios_rounded,
+                AppIcons.forward,
                 color: Colors.white,
-                size: 18,
+                size: AppIcons.navSize,
               ),
             ],
           ),
@@ -723,9 +723,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ),
               ),
               Icon(
-                Icons.arrow_forward_ios_rounded,
+                AppIcons.forward,
                 color: const Color(0xFF8E9AAB).withOpacity(0.5),
-                size: 18,
+                size: AppIcons.navSize,
               ),
             ],
           ),

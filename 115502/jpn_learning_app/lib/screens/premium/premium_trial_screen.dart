@@ -68,9 +68,9 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
       children: [
         IconButton(
           icon: const Icon(
-            Icons.arrow_back_ios,
+            AppIcons.back,
             color: Color.fromARGB(255, 0, 0, 0),
-            size: 20,
+            size: AppIcons.navSize,
           ),
           onPressed: () => Navigator.pop(context),
         ),

@@ -139,7 +139,7 @@ class StudyGroupHomeScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)), 
+          icon: const Icon(AppIcons.back, color: Color.fromARGB(255, 0, 0, 0), size: AppIcons.navSize),
           onPressed: () {
             Navigator.pushAndRemoveUntil(
               context,

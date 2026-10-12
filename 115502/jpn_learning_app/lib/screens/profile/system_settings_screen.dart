@@ -8,6 +8,7 @@ import 'package:jpn_learning_app/screens/auth/login_screen.dart';
 import 'package:jpn_learning_app/screens/auth/edu_login_screen.dart';
 import 'package:jpn_learning_app/services/notification_service.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class SystemSettingsScreen extends StatelessWidget {
   const SystemSettingsScreen({super.key});
@@ -128,8 +129,8 @@ class SystemSettingsScreen extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.chevron_right_rounded,
-                                color: Color(0xFFEF9A9A), size: 26),
+                            const Icon(AppIcons.forward,
+                                color: Color(0xFFEF9A9A), size: AppIcons.navSize),
                           ],
                         ),
                       ),
@@ -325,9 +326,9 @@ class SystemSettingsScreen extends StatelessWidget {
                 ),
               ),
               const Icon(
-                Icons.chevron_right_rounded,
+                AppIcons.forward,
                 color: Color(0xFFB0B0B0),
-                size: 28,
+                size: AppIcons.navSize,
               ),
             ],
           ),

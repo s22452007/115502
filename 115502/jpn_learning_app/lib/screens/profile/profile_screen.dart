@@ -440,7 +440,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white),
+            const Icon(AppIcons.forward, color: Colors.white, size: AppIcons.navSize),
           ],
         ),
       ),
@@ -461,7 +461,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             if (trailingText != null) Text(trailingText, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+            Icon(AppIcons.forward, color: Colors.grey.shade400, size: AppIcons.navSize),
           ],
         ),
       ),

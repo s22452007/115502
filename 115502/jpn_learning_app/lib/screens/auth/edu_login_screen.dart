@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
 import 'package:jpn_learning_app/screens/auth/force_change_password_screen.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 /// 校園教育版登入頁。兩種登入方式：
 ///
@@ -263,7 +264,7 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
         backgroundColor: const Color(0xFFF0F4F8),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          icon: const Icon(AppIcons.back, color: Colors.black87, size: AppIcons.navSize),
           // 學生登出後會直接被帶到這一頁，底下沒有上一頁；這時返回鍵改成回版本選擇頁
           onPressed: () {
             if (Navigator.canPop(context)) {
@@ -461,7 +462,7 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
                     ),
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: Colors.grey),
+                const Icon(AppIcons.forward, color: Colors.grey, size: AppIcons.navSize),
               ],
             ),
           ),
@@ -716,7 +717,7 @@ class _SchoolSearchPageState extends State<_SchoolSearchPage> {
         centerTitle: true,
         title: const Text('學校', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          icon: const Icon(AppIcons.back, color: Colors.black87, size: AppIcons.navSize),
           onPressed: () => Navigator.pop(context),
         ),
       ),

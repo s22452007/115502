@@ -307,8 +307,8 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                     ),
                     const Spacer(),
                     Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16,
+                      AppIcons.forward,
+                      size: AppIcons.navSize,
                       color: Colors.grey[400],
                     ),
                   ],

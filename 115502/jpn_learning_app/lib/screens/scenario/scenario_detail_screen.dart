@@ -167,7 +167,7 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
       pinned: true,
       backgroundColor: AppColors.primary,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: Color.fromARGB(255, 0, 0, 0)),
+        icon: const Icon(AppIcons.back, color: Color.fromARGB(255, 0, 0, 0), size: AppIcons.navSize),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
@@ -404,7 +404,7 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, color: AppColors.textGrey),
+                const Icon(AppIcons.forward, color: AppColors.textGrey, size: AppIcons.navSize),
               ],
             ),
           ),

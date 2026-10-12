@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 Future<void> showGooglePlayPurchaseSheet({
   required BuildContext context,
@@ -341,9 +342,9 @@ class _PaymentRow extends StatelessWidget {
           ),
         ),
         const Icon(
-          Icons.chevron_right_rounded,
+          AppIcons.forward,
           color: subText,
-          size: 22,
+          size: AppIcons.navSize,
         ),
       ],
     );

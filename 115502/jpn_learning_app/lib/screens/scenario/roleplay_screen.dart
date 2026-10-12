@@ -961,7 +961,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           backgroundColor: AppColors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
+            icon: const Icon(AppIcons.back, color: AppColors.textDark, size: AppIcons.navSize),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -985,7 +985,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
+          icon: const Icon(AppIcons.back, color: AppColors.textDark, size: AppIcons.navSize),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(

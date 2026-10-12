@@ -509,7 +509,7 @@ class _CameraScreenState extends State<CameraScreen>
             top: 48,
             left: 16,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              icon: const Icon(AppIcons.back, color: Colors.white, size: AppIcons.navSize),
               onPressed: () => Navigator.pop(context),
             ),
           ),

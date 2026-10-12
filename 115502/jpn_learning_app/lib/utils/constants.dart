@@ -74,11 +74,12 @@ class AppTextStyles {
 }
 
 class AppIcons {
-  static const IconData back = Icons.arrow_back_ios;
+  // 頁面切換使用成對的圓角 chevron，避免各頁混用 arrow_back、arrow_back_ios。
+  static const IconData back = Icons.chevron_left_rounded;
   static const IconData forward = Icons.chevron_right_rounded;
-  static const IconData forwardSmall = Icons.arrow_forward_ios_rounded;
+  static const IconData forwardSmall = Icons.chevron_right_rounded;
 
-  static const double navSize = 18;
+  static const double navSize = 20;
 }
 
 // 日期格式化工具函式

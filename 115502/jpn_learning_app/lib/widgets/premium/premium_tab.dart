@@ -364,8 +364,7 @@ class _PremiumTabState extends State<PremiumTab> {
                 style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 14)
               )
             ),
-            // 🌟 修正點：已換成系統確切支援的標準 arrow_forward_ios，紅線完全清除
-            Icon(Icons.arrow_forward_ios, color: AppColors.primary, size: 16),
+            Icon(AppIcons.forward, color: AppColors.primary, size: AppIcons.navSize),
           ],
         ),
       ),

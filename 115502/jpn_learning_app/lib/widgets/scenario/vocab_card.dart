@@ -249,7 +249,7 @@ class _VocabCardState extends State<VocabCard> {
                                     ),
                                   ),
                                   // 箭頭引導
-                                  Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+                                  Icon(AppIcons.forward, color: Colors.grey.shade400, size: AppIcons.navSize),
                                 ],
                               ),
                             ),

@@ -74,6 +74,10 @@ class DailyGoalCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -255,21 +259,27 @@ class _TaskRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             color: done
                 ? AppColors.primary
                 : AppColors.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: done
+                  ? AppColors.primary
+                  : AppColors.primary.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
           ),
           child: Icon(
             done ? Icons.check : icon,
-            size: 16,
+            size: 20,
             color: done ? Colors.white : AppColors.primary,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Text(
           label,
           style: TextStyle(

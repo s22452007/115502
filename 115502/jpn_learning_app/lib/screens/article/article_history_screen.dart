@@ -30,7 +30,10 @@ class _ArticleHistoryScreenState extends State<ArticleHistoryScreen> {
         backgroundColor: const Color(0xFFF4F7F5),
         elevation: 0,
         scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF2C3E50)),
+        leading: IconButton(
+          icon: const Icon(AppIcons.back, color: AppColors.primary, size: AppIcons.navSize),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
           '歷史成績紀錄',
           style: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.w900),

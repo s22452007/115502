@@ -96,6 +96,10 @@ class _SentenceHistoryScreenState extends State<SentenceHistoryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F5),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(AppIcons.back, color: AppColors.primary, size: AppIcons.navSize),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('造句紀錄與獎勵', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: const Color(0xFFF4F7F5),
         elevation: 0,

@@ -157,7 +157,10 @@ class _ArticleQuizScreenState extends State<ArticleQuizScreen> {
           style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.w900),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Color(0xFF2C3E50)),
+        leading: IconButton(
+          icon: const Icon(AppIcons.back, color: AppColors.primary, size: AppIcons.navSize),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),

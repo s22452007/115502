@@ -686,6 +686,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF4F7F5),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(AppIcons.back, color: AppColors.primary, size: AppIcons.navSize),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           _isAssignment ? '作業：造句挑戰' : '造句挑戰',
           style: const TextStyle(

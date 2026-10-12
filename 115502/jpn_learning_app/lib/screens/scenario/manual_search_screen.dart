@@ -960,35 +960,89 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
     );
   }
 
-  Widget _dialectOption(int? id, String label, String? samplePath) {
+  // 腔調選項：跟主畫面的腔調列同一套樣式（圓角卡片、選中淡綠底＋綠框、右邊試聽）
+  Widget _dialectOption(
+    int? id,
+    String label, {
+    String? region,
+    String? samplePath,
+  }) {
     final selected = _dialectId == id;
-    return Row(
-      children: [
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: ChoiceChip(
-              label: Text(label),
-              selected: selected,
-              showCheckmark: false,
-              selectedColor: AppColors.primary,
-              backgroundColor: Colors.white,
-              labelStyle: TextStyle(
-                color: selected ? Colors.white : AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-              onSelected: (_) => setState(() => _dialectId = id),
-            ),
+    return GestureDetector(
+      onTap: () => setState(() => _dialectId = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(left: 14, right: 4),
+        constraints: const BoxConstraints(minHeight: 46),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary.withValues(alpha: 0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppColors.primary : Colors.grey.shade300,
+            width: selected ? 1.5 : 1,
           ),
         ),
-        if (samplePath != null)
-          IconButton(
-            tooltip: '試聽',
-            icon: const Icon(Icons.play_circle_outline),
-            color: AppColors.primary,
-            onPressed: () => widget.onPreview(samplePath),
-          ),
-      ],
+        child: Row(
+          children: [
+            // 單選圓點
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? AppColors.primary : Colors.grey.shade400,
+                  width: selected ? 5 : 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: id == null && !selected
+                        ? Colors.grey.shade600
+                        : AppColors.textDark,
+                  ),
+                  children: [
+                    if (region != null && region.isNotEmpty)
+                      TextSpan(
+                        text: '　$region',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                  ],
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (samplePath != null)
+              IconButton(
+                tooltip: '試聽',
+                icon: const Icon(Icons.play_circle_outline),
+                color: AppColors.primary,
+                onPressed: () {
+                  // 按試聽就順便選起來
+                  setState(() => _dialectId = id);
+                  widget.onPreview(samplePath);
+                },
+              )
+            else
+              const SizedBox(width: 48, height: 48),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1007,7 +1061,7 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
               ),
             ),
           ),
-          Text('必填', style: TextStyle(color: Colors.red, fontSize: 14)),
+          Text('* 必填', style: TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
       content: SingleChildScrollView(
@@ -1074,63 +1128,122 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
               cursorColor: AppColors.primary,
             ),
             if (widget.dialects.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '附贈腔調（選了不能換）',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+              const SizedBox(height: 24),
+              const Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '附贈腔調',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '選了不能換',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              _dialectOption(null, '之後再選', null),
+              const SizedBox(height: 10),
+              _dialectOption(null, '之後再選'),
               for (final d in widget.dialects)
                 _dialectOption(
                   (d['id'] as num).toInt(),
                   d['name'] as String,
-                  (d['samples'] as Map?)?[widget.voiceGender] as String?,
+                  region: d['region'] as String?,
+                  samplePath:
+                      (d['samples'] as Map?)?[widget.voiceGender] as String?,
                 ),
             ],
             if (_submitError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  _submitError!,
-                  style: const TextStyle(color: Colors.red, fontSize: 13),
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 16,
+                      color: Colors.redAccent,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _submitError!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],
         ),
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
       actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.pop(context),
-          child: const Text('取消', style: TextStyle(color: Colors.grey)),
-        ),
-        ElevatedButton(
-          onPressed: _submitting ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: _submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  widget.cost > 0 ? '花 ${widget.cost} 點新增' : '新增角色',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _submitting ? null : () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                  side: BorderSide(color: Colors.grey.shade300),
+                  minimumSize: const Size(0, 46),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: const Text('取消'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: _submitting ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  elevation: 0,
+                  minimumSize: const Size(0, 46),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        widget.cost > 0 ? '花 ${widget.cost} 點新增' : '新增角色',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ),
       ],
     );

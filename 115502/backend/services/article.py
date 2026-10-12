@@ -98,6 +98,42 @@ def get_article_dashboard():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+def _feedback_to_text(value):
+    """把 AI 回傳的評語統一轉成純文字。
+    Gemini 偶爾會把 mistakes 的每一項回成物件（{"word": ..., "correct": ..., "explanation": ...}）
+    或巢狀陣列，前端直接顯示就會看到 JSON；這裡一律攤平成一句話，畫面上只會出現文字。"""
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+    if isinstance(value, dict):
+        parts = [_feedback_to_text(v) for v in value.values()]
+        return '，'.join(p for p in parts if p)
+    if isinstance(value, (list, tuple)):
+        parts = [_feedback_to_text(v) for v in value]
+        return '，'.join(p for p in parts if p)
+    return str(value).strip()
+
+
+def _normalize_mistakes(mistakes):
+    """mistakes 一律回傳「純文字字串」的清單，過濾空字串。"""
+    if isinstance(mistakes, str):
+        text = mistakes.strip()
+        return [text] if text else []
+    if isinstance(mistakes, dict):
+        mistakes = list(mistakes.values())
+    if not isinstance(mistakes, (list, tuple)):
+        return []
+    result = []
+    for item in mistakes:
+        text = _feedback_to_text(item)
+        if text:
+            result.append(text)
+    return result
+
+
 # ==========================================
 # 2. 語音發音評估 (STT + LLM 雙階段真實評分)
 # ==========================================
@@ -197,11 +233,14 @@ def evaluate_audio():
         【重要指令】：
         1. 請嚴格執行比對規則。
         2. 所有的評語、糾正與解釋，請務必全部使用「繁體中文」撰寫，絕對不可以使用日文給予評語。
+        3. mistakes 陣列裡的每一項都必須是「一句完整的繁體中文文字」，直接描述唸錯的地方、正確唸法與原因；
+           絕對不可以是物件、巢狀 JSON 或 key-value 形式。
+        4. overall_feedback 也必須是一段純文字，不可以放 JSON。
 
         請以純 JSON 格式回傳（請不要加上 ```json 等 Markdown 標記，只要 JSON 本身）：
         {{
             "score": 100,
-            "mistakes": [],
+            "mistakes": ["把「学校（がっこう）」唸成了「がこう」，少了促音，請把「っ」停頓一拍再唸「こう」。"],
             "overall_feedback": "請在這裡使用繁體中文撰寫評語"
         }}
         """
@@ -221,8 +260,8 @@ def evaluate_audio():
             "transcript": transcript,
             "score": final_score,
             "completion_rate": f"{final_score}%",
-            "mistakes": feedback_data.get("mistakes", []),
-            "overall_feedback": feedback_data.get("overall_feedback", "做得好！繼續保持練習。")
+            "mistakes": _normalize_mistakes(feedback_data.get("mistakes")),
+            "overall_feedback": _feedback_to_text(feedback_data.get("overall_feedback")) or "做得好！繼續保持練習。"
         }
 
     try:

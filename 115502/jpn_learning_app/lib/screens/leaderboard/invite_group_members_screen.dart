@@ -6,6 +6,8 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 
 // 匯入自訂的 UI 積木
 import 'package:jpn_learning_app/widgets/study_group/invite_friend_card.dart';
@@ -129,28 +131,15 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
 
       // 如果「不是」免費的，跳出押金警告窗
       if (!isFree) {
-        final bool confirm = await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('⚠️ 押金與對賭提醒', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: Text(
+        if (!mounted) return;
+        final bool confirm = await AppDialog.confirm(
+          context,
+          title: '⚠️ 押金與對賭提醒',
+          message:
               '您本週的免費小組額度已用完。\n\n本次建立將會扣除 $deposit J-Pts 作為對賭押金（小組達標後退還）。\n\n確定要繼續嗎？',
-              style: const TextStyle(height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('先不要', style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('確定繼續', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        ) ?? false;
+          cancelText: '先不要',
+          confirmText: '確定繼續',
+        );
 
         if (!confirm) return; // 玩家按取消就終止
       }
@@ -249,27 +238,22 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
 
     return SubPageTemplate(
       title: '邀請好友加入小組',
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
-          child: SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary.withOpacity(0.9),
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              ),
-              // 把 null 判斷拿掉，永遠都可以按！
-              onPressed: () => _submitAction(selectedCount),
-              child: Text(
-                // 根據選擇人數，動態改變按鈕文字
-                isCreating 
-                    ? (selectedCount == 0 ? '建立個人挑戰 🔥' : '確認建立小組 ($selectedCount 位)')
-                    : (selectedCount == 0 ? '略過邀請' : '發送邀請 ($selectedCount 位)'),
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
-              ),
-            ),
+      extendBody: true,
+      bottomNavigationBar: FloatingBottomBar(
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          ),
+          // 把 null 判斷拿掉，永遠都可以按！
+          onPressed: () => _submitAction(selectedCount),
+          child: Text(
+            // 根據選擇人數，動態改變按鈕文字
+            isCreating
+                ? (selectedCount == 0 ? '建立個人挑戰 🔥' : '確認建立小組 ($selectedCount 位)')
+                : (selectedCount == 0 ? '略過邀請' : '發送邀請 ($selectedCount 位)'),
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
           ),
         ),
       ),
@@ -301,7 +285,12 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
                 else
                   Expanded(
                     child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                      padding: EdgeInsets.fromLTRB(
+                        18,
+                        8,
+                        18,
+                        FloatingBottomBar.bodyBottomPadding(context),
+                      ),
                       itemCount: _filteredFriends.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {

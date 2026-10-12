@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
 import 'package:jpn_learning_app/screens/scenario/make_sentence_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/grammar_tip_screen.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class ScenarioDetailScreen extends StatefulWidget {
   final dynamic scene;
@@ -81,47 +82,21 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
     int photoId,
     String currentName,
   ) async {
-    final TextEditingController titleController = TextEditingController(
-      text: currentName,
+    final newTitle = await AppDialog.input(
+      context,
+      title: '修改照片名稱',
+      initialValue: currentName,
+      labelText: '照片名稱',
+      confirmText: '確認修改',
     );
+    if (newTitle == null || newTitle.isEmpty || newTitle == currentName) return;
 
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('修改照片名稱'),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(
-            labelText: '照片名稱',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newTitle = titleController.text.trim();
-              if (newTitle.isNotEmpty && newTitle != currentName) {
-                await ApiClient.renamePhoto(photoId, newTitle);
-                if (mounted) {
-                  setState(() {
-                    widget.scene['scene_name'] = newTitle;
-                  });
-                }
-              }
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('確認修改', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+    await ApiClient.renamePhoto(photoId, newTitle);
+    if (mounted) {
+      setState(() {
+        widget.scene['scene_name'] = newTitle;
+      });
+    }
   }
 
   @override

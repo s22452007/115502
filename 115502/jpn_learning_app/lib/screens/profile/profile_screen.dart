@@ -14,6 +14,7 @@ import 'package:jpn_learning_app/widgets/common/bottom_nav_bar.dart';
 import 'package:jpn_learning_app/widgets/common/app_drawer.dart';
 import 'package:jpn_learning_app/widgets/common/user_avatar.dart';
 import 'package:jpn_learning_app/widgets/common/avatar_picker.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
@@ -529,10 +530,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('挑戰升級測驗',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+      builder: (ctx) => AppDialog(
+        title: '挑戰升級測驗',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,32 +541,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ? '將依你目前的程度出題。'
                   : '你目前的稱號是「${AppHelpers.getLevelTitle(currentLevel)}」，'
                       '這次會挑戰「${AppHelpers.getLevelTitle(target)}」的題目。',
-              style: const TextStyle(fontSize: 15, height: 1.5),
             ),
             const SizedBox(height: 12),
             const Text('• 答對率達 70% 就升一級\n• 沒通過也不會降級，隨時可以再挑戰',
-                style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.6)),
+                style: TextStyle(color: Colors.grey, height: 1.6)),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('稍後再說', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const UpgradeTestScreen()));
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: const Text('開始測驗', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+        cancelText: '稍後再說',
+        onCancel: () => Navigator.pop(ctx),
+        confirmText: '開始測驗',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const UpgradeTestScreen()));
+        },
       ),
     );
   }

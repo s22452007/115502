@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class StoreTab extends StatefulWidget { 
   const StoreTab({Key? key}) : super(key: key); 
@@ -33,36 +34,15 @@ class _StoreTabState extends State<StoreTab> {
   }
 
   // 🌟 扁平化確認對話框 (大圓角、零陰影)
-  void _showConfirmPurchaseDialog(Map<String, dynamic> item) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('確認兌換', style: TextStyle(fontWeight: FontWeight.w900, color: _textDark)),
-        content: Text('確定要花費 ${item['cost']} J-Pts\n兌換「${item['name']}」嗎？', style: const TextStyle(fontSize: 15, height: 1.5, color: _textDark, fontWeight: FontWeight.w600)),
-        actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx), 
-            child: const Text('取消', style: TextStyle(color: _subText, fontWeight: FontWeight.bold))
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _executePurchase(item);
-            },
-            child: const Text('確定兌換', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  Future<void> _showConfirmPurchaseDialog(Map<String, dynamic> item) async {
+    final ok = await AppDialog.confirm(
+      context,
+      title: '確認兌換',
+      message: '確定要花費 ${item['cost']} J-Pts\n兌換「${item['name']}」嗎？',
+      confirmText: '確定兌換',
     );
+    if (!ok || !mounted) return;
+    _executePurchase(item);
   }
 
   Future<void> _executePurchase(Map<String, dynamic> item) async {

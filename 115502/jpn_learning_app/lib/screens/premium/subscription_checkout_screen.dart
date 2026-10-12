@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class SubscriptionCheckoutScreen extends StatefulWidget {
   final int planId;
@@ -103,24 +104,15 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 64),
-            const SizedBox(height: 16),
-            const Text('付款成功！', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: _textDark)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () { Navigator.pop(ctx); Navigator.pop(context, true); },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              child: const Text('開始使用', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            )
-          ],
-        ),
+      builder: (ctx) => AppDialog(
+        header: const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 64),
+        title: '付款成功！',
+        centered: true,
+        confirmText: '開始使用',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          Navigator.pop(context, true);
+        },
       ),
     );
   }

@@ -12,6 +12,7 @@ import 'package:jpn_learning_app/screens/auth/level_select_screen.dart';
 import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
 import 'package:jpn_learning_app/screens/auth/force_change_password_screen.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 /// 校園教育版登入頁。兩種登入方式：
 ///
@@ -81,9 +82,15 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
   /// 後端拿這個帳號的信箱網域登記學校（只收 .edu.tw），學生不用自己打網域
   Future<void> _addSchool() async {
     // 輸入框的控制器交給對話框自己管：對話框關閉動畫還在跑時就 dispose 會紅畫面
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => _AddSchoolDialog(accent: _eduBlue),
+    final name = await AppDialog.input(
+      context,
+      title: '新增學校',
+      hintText: '學校全名，例如：國立○○科技大學、○○市立○○高中',
+      helperText: '接著用你的學校 Google 帳號登入，系統會用你的學校信箱登記這間學校，之後同學就能直接選。',
+      confirmText: '下一步',
+      maxLength: 50,
+      allowEmpty: true,
+      accent: _eduBlue,
     );
     if (name == null || !mounted) return;
     if (name.isEmpty) {
@@ -550,56 +557,6 @@ class _EduLoginScreenState extends State<EduLoginScreen> {
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 18),
       ),
-    );
-  }
-}
-
-/// 新增學校：輸入學校名稱，按「下一步」回傳名稱，取消回傳 null
-class _AddSchoolDialog extends StatefulWidget {
-  final Color accent;
-
-  const _AddSchoolDialog({required this.accent});
-
-  @override
-  State<_AddSchoolDialog> createState() => _AddSchoolDialogState();
-}
-
-class _AddSchoolDialogState extends State<_AddSchoolDialog> {
-  final TextEditingController _nameCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('新增學校'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _nameCtrl,
-            autofocus: true,
-            maxLength: 50,
-            decoration: const InputDecoration(hintText: '學校全名，例如：國立○○科技大學、○○市立○○高中'),
-          ),
-          const Text(
-            '接著用你的學校 Google 帳號登入，系統會用你的學校信箱登記這間學校，之後同學就能直接選。',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _nameCtrl.text.trim()),
-          child: Text('下一步', style: TextStyle(color: widget.accent, fontWeight: FontWeight.bold)),
-        ),
-      ],
     );
   }
 }

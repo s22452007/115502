@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 
 // 引入首頁與我們的工具箱、彈窗
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
@@ -47,51 +48,54 @@ class TestResultScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      extendBody: true,
+      bottomNavigationBar: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: FloatingBottomBar(
+            borderRadius: 16,
+            child: ElevatedButton(
+              onPressed: () => _start(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text('開始探索', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
+        bottom: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                    child: Column(
-                      children: [
-                        const Text('測驗完成！',
-                            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppColors.title)),
-                        const SizedBox(height: 6),
-                        const Text('我們依照你的作答，幫你找到合適的起點',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14, color: AppColors.textGrey)),
-                        const SizedBox(height: 24),
-                        _buildResultCard(),
-                        const SizedBox(height: 16),
-                        _buildLadderCard(current),
-                        const SizedBox(height: 16),
-                        _buildNote(),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () => _start(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: const Text('開始探索', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ),
-              ],
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                32,
+                24,
+                FloatingBottomBar.bodyBottomPadding(context),
+              ),
+              child: Column(
+                children: [
+                  const Text('測驗完成！',
+                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppColors.title)),
+                  const SizedBox(height: 6),
+                  const Text('我們依照你的作答，幫你找到合適的起點',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: AppColors.textGrey)),
+                  const SizedBox(height: 24),
+                  _buildResultCard(),
+                  const SizedBox(height: 16),
+                  _buildLadderCard(current),
+                  const SizedBox(height: 16),
+                  _buildNote(),
+                ],
+              ),
             ),
           ),
         ),

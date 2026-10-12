@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 import '../../models/badge_model.dart';
 import '../../providers/user_provider.dart';
 
@@ -219,83 +220,68 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
   void _showBadgeDetailDialog(BadgeModel badge, int progress, int currentLevel, Map<String, dynamic> theme) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          contentPadding: const EdgeInsets.all(24),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 超大徽章
-              _buildBadgeIcon(badge.icon, theme, size: 100, iconSize: 50),
-              const SizedBox(height: 16),
-              Text(badge.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(badge.description, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: Colors.grey, height: 1.5)),
-              const SizedBox(height: 24),
-              
-              // 5 階里程碑節點展示
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text('晉級軌跡：', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-              const SizedBox(height: 16),
-              
-              Column(
-                children: List.generate(5, (index) {
-                  final isReached = currentLevel >= (index + 1);
-                  final milestoneTheme = _getLevelTheme(index + 1); // 獲取該階層應有的顏色
-                  final label = badge.levelLabels != null ? badge.levelLabels![index] : 'Lv.${index + 1}';
-                  final target = badge.milestones[index];
+      builder: (ctx) => AppDialog(
+        // 超大徽章
+        header: _buildBadgeIcon(badge.icon, theme, size: 100, iconSize: 50),
+        title: badge.title,
+        titleColor: AppColors.textDark,
+        centered: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(badge.description, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: Row(
-                      children: [
-                        // 圓形小節點
-                        Container(
-                          width: 24, height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isReached ? (milestoneTheme['isGradient'] ? Colors.purple : milestoneTheme['color']) : Colors.grey[300],
-                          ),
-                          child: isReached ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
-                        ),
-                        const SizedBox(width: 12),
-                        // 階級名稱與目標
-                        Expanded(
-                          child: Text(
-                            '$label (目標: $target)',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: isReached ? FontWeight.bold : FontWeight.normal,
-                              color: isReached ? Colors.black87 : Colors.grey[500],
-                            ),
-                          ),
-                        ),
-                      ],
+            // 5 階里程碑節點展示
+            const Text(
+              '晉級軌跡：',
+              textAlign: TextAlign.start,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+
+            ...List.generate(5, (index) {
+              final isReached = currentLevel >= (index + 1);
+              final milestoneTheme = _getLevelTheme(index + 1); // 獲取該階層應有的顏色
+              final label = badge.levelLabels != null ? badge.levelLabels![index] : 'Lv.${index + 1}';
+              final target = badge.milestones[index];
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Row(
+                  children: [
+                    // 圓形小節點
+                    Container(
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isReached ? (milestoneTheme['isGradient'] ? Colors.purple : milestoneTheme['color']) : Colors.grey[300],
+                      ),
+                      child: isReached ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
                     ),
-                  );
-                }),
-              ),
-              
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A7C59),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('繼續努力', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 12),
+                    // 階級名稱與目標
+                    Expanded(
+                      child: Text(
+                        '$label (目標: $target)',
+                        textAlign: TextAlign.start,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: isReached ? FontWeight.bold : FontWeight.normal,
+                          color: isReached ? Colors.black87 : Colors.grey[500],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              )
-            ],
-          ),
-        );
-      },
+              );
+            }),
+          ],
+        ),
+        confirmText: '繼續努力',
+        onConfirm: () => Navigator.pop(ctx),
+      ),
     );
   }
 }
@@ -396,25 +382,13 @@ class _ThemeBadgeTile extends StatelessWidget {
     final color = unlocked ? AppColors.secondary : Colors.grey.shade300;
 
     return GestureDetector(
-      onTap: () => showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(unlocked ? badge['name'] : '尚未取得',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          content: Text(
-            unlocked
-                ? '${badge['description']}\n\n取得於 ${badge['unlocked_at']}'
-                : '${badge['description']}',
-            style: const TextStyle(fontSize: 14, height: 1.6),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('關閉'),
-            ),
-          ],
-        ),
+      onTap: () => AppDialog.message(
+        context,
+        title: unlocked ? '${badge['name']}' : '尚未取得',
+        message: unlocked
+            ? '${badge['description']}\n\n取得於 ${badge['unlocked_at']}'
+            : '${badge['description']}',
+        buttonText: '關閉',
       ),
       child: SizedBox(
         width: 78,

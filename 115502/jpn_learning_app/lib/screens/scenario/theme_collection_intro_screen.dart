@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 
@@ -29,7 +30,47 @@ class ThemeCollectionIntroScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
+      extendBody: true,
+      bottomNavigationBar: FloatingBottomBar(
+        borderRadius: 27,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(27),
+            ),
+          ),
+          onPressed: () {
+            // 直接接到相機，引導完就能馬上開出第一本冊子
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()),
+            );
+          },
+          child: const Text(
+            '開始拍第一張',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        secondary: TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            isFirstTime ? '先看看收集冊' : '知道了',
+            style: const TextStyle(
+              fontSize: 15,
+              color: AppColors.textGrey,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Align(
@@ -41,7 +82,12 @@ class ThemeCollectionIntroScreen extends StatelessWidget {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(28, 8, 28, 24),
+                padding: EdgeInsets.fromLTRB(
+                  28,
+                  8,
+                  28,
+                  FloatingBottomBar.bodyBottomPadding(context, hasSecondary: true),
+                ),
                 children: [
                   const Text(
                     '把眼前的東西\n變成一本單字圖鑑',
@@ -73,54 +119,6 @@ class ThemeCollectionIntroScreen extends StatelessWidget {
 
                   const SizedBox(height: 28),
                   const _FreeNotice(),
-                ],
-              ),
-            ),
-
-            // 底部動作區
-            Padding(
-              padding: const EdgeInsets.fromLTRB(28, 8, 28, 20),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(27),
-                        ),
-                      ),
-                      onPressed: () {
-                        // 直接接到相機，引導完就能馬上開出第一本冊子
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const CameraScreen()),
-                        );
-                      },
-                      child: const Text(
-                        '開始拍第一張',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      isFirstTime ? '先看看收集冊' : '知道了',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textGrey,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

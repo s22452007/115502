@@ -11,6 +11,9 @@ class SubPageTemplate extends StatelessWidget {
   final List<Widget>? actions;
   final bool hideAppBar;
 
+  /// 讓 body 延伸到 bottomNavigationBar 底下，搭配 FloatingBottomBar 用
+  final bool extendBody;
+
   const SubPageTemplate({
     super.key,
     required this.title,
@@ -19,6 +22,7 @@ class SubPageTemplate extends StatelessWidget {
     this.bottomNavigationBar,
     this.actions,
     this.hideAppBar = false,
+    this.extendBody = false,
   });
 
   @override
@@ -59,6 +63,7 @@ class SubPageTemplate extends StatelessWidget {
       body: body,
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: bottomNavigationBar,
+      extendBody: extendBody,
     );
   }
 }

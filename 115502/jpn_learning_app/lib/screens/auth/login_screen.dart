@@ -23,6 +23,7 @@ import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
 import 'package:jpn_learning_app/screens/auth/force_change_password_screen.dart';
 import 'package:jpn_learning_app/utils/password_policy.dart';
 import 'package:jpn_learning_app/widgets/common/password_strength_meter.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 import 'package:jpn_learning_app/screens/auth/onboarding_screen.dart';
 import 'package:jpn_learning_app/screens/auth/privacy_policy_screen.dart'; // 新增：新手引導頁面
 
@@ -205,24 +206,12 @@ class _LoginScreenState extends State<LoginScreen> {
         final errMsg = result['error'] ?? '登入失敗';
         if (errMsg.contains('停用')) {
           if (!mounted) return;
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Row(children: [
-                Icon(Icons.block, color: Colors.red),
-                SizedBox(width: 8),
-                Text('帳號已停用', style: TextStyle(fontWeight: FontWeight.bold)),
-              ]),
-              content: const Text('此帳號已被停用，如有疑問請聯繫客服。', style: TextStyle(height: 1.5)),
-              actions: [
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                  child: const Text('確定'),
-                ),
-              ],
-            ),
+          AppDialog.message(
+            context,
+            title: '帳號已停用',
+            message: '此帳號已被停用，如有疑問請聯繫客服。',
+            buttonText: '確定',
+            destructive: true,
           );
         } else {
           if (!mounted) return;
@@ -255,20 +244,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final scheduledStart = DateTime.tryParse(pending['scheduled_start']?.toString() ?? '');
     if (scheduledStart == null || scheduledStart.isAfter(DateTime.now())) return false;
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('年繳升級排程已到期'),
-        content: Text(
+    return AppDialog.confirm(
+      context,
+      title: '年繳升級排程已到期',
+      message:
           "您先前排程的年繳升級已於 ${scheduledStart.toLocal().year}-${scheduledStart.toLocal().month.toString().padLeft(2, '0')}-${scheduledStart.toLocal().day.toString().padLeft(2, '0')} 到期，是否要現在付款完成升級？",
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('稍後再說')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('前往付款', style: TextStyle(color: Color(0xFF4E8B4C)))),
-        ],
-      ),
+      cancelText: '稍後再說',
+      confirmText: '前往付款',
     );
-    return result == true;
   }
 
   Future<void> _openPendingUpgradeCheckout(String? pendingStart, String? currentSubscriptionEndDate) async {

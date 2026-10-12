@@ -4,6 +4,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 import 'single_vocab_detail_screen.dart';
 
@@ -143,19 +144,11 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     final otherFolders = widget.allFolders.where((f) => f['id'] != widget.folderId).toList();
 
     if (otherFolders.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('無法移動'),
-          content: const Text('目前沒有其他單字本，請先建立一個新的單字本。'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('知道了', style: TextStyle(color: AppColors.primary)),
-            ),
-          ],
-        ),
+      AppDialog.message(
+        context,
+        title: '無法移動',
+        message: '目前沒有其他單字本，請先建立一個新的單字本。',
+        buttonText: '知道了',
       );
       return;
     }

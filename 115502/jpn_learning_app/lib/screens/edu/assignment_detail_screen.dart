@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
@@ -203,6 +204,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: Color(0xFF2C3E50)),
         ),
+        extendBody: true,
         body: _buildBody(),
         bottomNavigationBar: _a == null ? null : _buildBottomButton(),
       ),
@@ -237,7 +239,12 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     final latePolicy = _latePolicyText(a);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        FloatingBottomBar.bodyBottomPadding(context),
+      ),
       children: [
         // 標題區
         _card(
@@ -398,43 +405,33 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     final bool isPending = status == 'pending';
     // 老師設定截止後不收：後端也會擋，這裡先不讓學生開始作答，免得做完才發現交不出去
     if (_a!['is_closed'] == true) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: null,
-              icon: const Icon(Icons.lock_clock_outlined),
-              label: const Text('已截止，老師設定不收遲交',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
+      return FloatingBottomBar(
+        borderRadius: 16,
+        child: ElevatedButton.icon(
+          onPressed: null,
+          icon: const Icon(Icons.lock_clock_outlined),
+          label: const Text('已截止，老師設定不收遲交',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
       );
     }
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-        child: SizedBox(
-          height: 52,
-          child: ElevatedButton.icon(
-            onPressed: _startPractice,
-            icon: Icon(isPending ? Icons.play_arrow_rounded : Icons.replay_rounded),
-            label: Text(isPending ? '開始作答' : '再做一次',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isPending ? const Color(0xFF4A90E2) : Colors.white,
-              foregroundColor: isPending ? Colors.white : const Color(0xFF4A90E2),
-              side: isPending ? null : const BorderSide(color: Color(0xFF4A90E2)),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-          ),
+    return FloatingBottomBar(
+      borderRadius: 16,
+      child: ElevatedButton.icon(
+        onPressed: _startPractice,
+        icon: Icon(isPending ? Icons.play_arrow_rounded : Icons.replay_rounded),
+        label: Text(isPending ? '開始作答' : '再做一次',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isPending ? const Color(0xFF4A90E2) : Colors.white,
+          foregroundColor: isPending ? Colors.white : const Color(0xFF4A90E2),
+          side: isPending ? null : const BorderSide(color: Color(0xFF4A90E2)),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );

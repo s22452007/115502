@@ -225,7 +225,7 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18, color: Colors.black87),
+            icon: const Icon(AppIcons.back, size: AppIcons.navSize, color: Colors.black87),
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text('升級測驗',
@@ -399,8 +399,8 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
                   height: 50,
                   child: NavigationToolbar(
                     leading: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios,
-                          size: 18, color: Colors.black87),
+                      icon: const Icon(AppIcons.back,
+                          size: AppIcons.navSize, color: Colors.black87),
                       onPressed: () => Navigator.pop(context),
                     ),
                     centerMiddle: true,

@@ -203,7 +203,7 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.primary),
+              const Icon(AppIcons.forward, color: AppColors.primary, size: AppIcons.navSize),
             ],
           ),
         ),

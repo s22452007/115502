@@ -387,7 +387,7 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: _flatCanvasColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          icon: const Icon(AppIcons.back, color: Colors.black87, size: AppIcons.navSize),
           onPressed: () {
             if (Navigator.canPop(context)) {
               Navigator.pop(context);

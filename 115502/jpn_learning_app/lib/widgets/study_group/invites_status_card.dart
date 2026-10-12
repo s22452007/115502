@@ -84,7 +84,7 @@ class InvitesStatusCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+            Icon(AppIcons.forward, color: AppColors.primary, size: AppIcons.navSize),
           ],
         ),
       ),

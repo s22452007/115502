@@ -134,7 +134,7 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: _textDark, size: 20),
+          icon: const Icon(AppIcons.back, color: _textDark, size: AppIcons.navSize),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('確認訂閱內容', style: TextStyle(color: _textDark, fontWeight: FontWeight.w900)),

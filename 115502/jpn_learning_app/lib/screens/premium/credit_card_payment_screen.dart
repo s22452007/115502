@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class CreditCardPaymentScreen extends StatefulWidget {
   final int points;
@@ -73,7 +74,7 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: deepText),
+          icon: const Icon(AppIcons.back, color: deepText, size: AppIcons.navSize),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(

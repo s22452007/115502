@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 /// 一筆作業的卡片：「我的作業」清單和教室頁的「作業」分頁共用。
 ///
@@ -77,7 +78,7 @@ class AssignmentTile extends StatelessWidget {
           style: TextStyle(color: isPending && isOverdue ? Colors.red : null),
         ),
         trailing: isPending
-            ? const Icon(Icons.chevron_right, color: Colors.grey)
+            ? const Icon(AppIcons.forward, color: Colors.grey, size: AppIcons.navSize)
             : Text(
                 score != null ? '$score 分' : (status == 'graded' ? '已批閱' : '已繳交'),
                 style: const TextStyle(

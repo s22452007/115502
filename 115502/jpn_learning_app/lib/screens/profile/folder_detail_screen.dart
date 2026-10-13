@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 import 'single_vocab_detail_screen.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 class FolderDetailScreen extends StatefulWidget {
   final int? folderId;
@@ -114,6 +115,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
 
   Future<void> _speak(String text) async {
     await _flutterTts.setLanguage("ja-JP");
+    await TtsSpeed.applyTo(_flutterTts);
     await _flutterTts.speak(text);
   }
 
@@ -277,6 +279,12 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
           ],
         ),
         centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Center(child: TtsSpeedChip()),
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))

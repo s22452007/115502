@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 class VocabCard extends StatefulWidget {
   final dynamic vocab;
@@ -30,6 +31,7 @@ class _VocabCardState extends State<VocabCard> {
 
   Future<void> _speak(String text) async {
     await _flutterTts.setLanguage("ja-JP");
+    await TtsSpeed.applyTo(_flutterTts);
     await _flutterTts.speak(text);
   }
 

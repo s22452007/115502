@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 /// 單字底部表單類別
 /// 提供靜態方法來顯示場景單字的解鎖進度
@@ -27,6 +28,7 @@ class VocabBottomSheet {
     
     Future<void> speak(String text) async {
       await flutterTts.setLanguage("ja-JP");
+      await TtsSpeed.applyTo(flutterTts);
       await flutterTts.speak(text);
     }
 

@@ -3,6 +3,7 @@ import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
   final String topicTitle;
@@ -60,6 +61,7 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
 
   Future<void> _speak(String text) async {
     await _flutterTts.setLanguage("ja-JP");
+    await TtsSpeed.applyTo(_flutterTts);
     await _flutterTts.speak(text);
   }
 
@@ -158,13 +160,22 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 情境標題
-                  Text(
-                    widget.topicTitle,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: _darkGreen,
+                  // 情境標題（右邊是單字發音的速度切換）
+                  SizedBox(
+                    width: double.infinity,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Text(
+                          widget.topicTitle,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: _darkGreen,
+                          ),
+                        ),
+                        const Positioned(right: 20, child: TtsSpeedChip()),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),

@@ -6,9 +6,15 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
 
 class ApiClient {
+  // 真手機展示時打包指定後端位址，例如：
+  //   flutter build apk --dart-define=API_BASE=https://xxx.trycloudflare.com/api
+  static const String _apiBaseOverride = String.fromEnvironment('API_BASE');
+
   // 動態判斷平台，自動切換對應的本地端 IP
   static String get baseUrl {
-    if (kIsWeb) {
+    if (_apiBaseOverride.isNotEmpty) {
+      return _apiBaseOverride;
+    } else if (kIsWeb) {
       return 'http://127.0.0.1:5050/api';
     } else if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:5050/api';

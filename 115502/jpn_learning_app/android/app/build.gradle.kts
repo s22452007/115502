@@ -39,6 +39,10 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // R8 壓縮會拿掉 flutter_local_notifications（Gson）需要的泛型資訊，排程通知直接失敗，
+            // 也會因 ML Kit 沒裝的選用模組而編譯失敗，所以 release 不做程式碼壓縮。
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

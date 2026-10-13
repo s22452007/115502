@@ -213,6 +213,46 @@ def get_keys(feature):
 
 def generate_content(feature, contents, config=None, model=None):
     """
+    所有 AI 功能的統一入口：Gemini 與 OpenRouter 互為備援（見 openrouter_client.py）。
+    沒設定 OPENROUTER_API_KEY、呼叫端指定了 Gemini 模型、或要求語音輸出時，只走 Gemini。
+    兩邊都失敗時丟出主要供應者的錯誤（該供應者沒設定的話丟另一邊的），
+    呼叫端原本對 GeminiQuotaExhausted、503 的處理都照常有效。
+    """
+    from utils import openrouter_client
+
+    if model is not None or not openrouter_client.supports(config) or not openrouter_client.is_configured():
+        return _generate_with_gemini(feature, contents, config, model)
+
+    def via_gemini():
+        return _generate_with_gemini(feature, contents, config)
+
+    def via_openrouter():
+        return openrouter_client.generate_content(feature, contents, config)
+
+    if openrouter_client.is_primary():
+        steps = [('OpenRouter', via_openrouter), ('Gemini', via_gemini)]
+    else:
+        steps = [('Gemini', via_gemini), ('OpenRouter', via_openrouter)]
+
+    errors = []
+    for index, (name, call) in enumerate(steps):
+        try:
+            return call()
+        except Exception as e:
+            errors.append(e)
+            if index + 1 < len(steps):
+                print(f'⚠️ [{feature}] {name} 失敗，改用 {steps[index + 1][0]}：{str(e)[:200]}')
+
+    configured = [e for e in errors if not isinstance(e, GeminiNotConfigured)]
+    final = configured[0] if configured else errors[0]
+    if isinstance(final, openrouter_client.OpenRouterError) and is_quota_error(final) \
+            and not is_overloaded_error(final):
+        raise GeminiQuotaExhausted(feature, final) from final
+    raise final
+
+
+def _generate_with_gemini(feature, contents, config=None, model=None):
+    """
     以指定功能的金鑰呼叫 Gemini。
 
     額度用完時的切換順序：

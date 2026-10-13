@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
 import 'package:jpn_learning_app/screens/scenario/make_sentence_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/grammar_tip_screen.dart';
 import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 class ScenarioDetailScreen extends StatefulWidget {
   final dynamic scene;
@@ -255,13 +256,20 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
             _buildContextNote(),
             // 拍照後練習造句的紀錄，點一筆可再看語法小教室
             _buildSentenceSection(vocabs),
-            Text(
-              '在這個場景中識別出 ${vocabs.length} 個單字',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '在這個場景中識別出 ${vocabs.length} 個單字',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+                const TtsSpeedChip(),
+              ],
             ),
             const SizedBox(height: 16),
             ...vocabs.map((vocab) => VocabCard(vocab: vocab)).toList(),

@@ -11,6 +11,7 @@ import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/theme_collection_intro_screen.dart';
 import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 /// 主題名稱 -> icon（對應後端 THEME_DEFS 的 icon_name）
 const Map<String, IconData> _themeIcons = {
@@ -1259,6 +1260,7 @@ void _showVocabSheet(BuildContext context, dynamic vocab) {
                   icon: const Icon(Icons.volume_up, color: AppColors.primary),
                   onPressed: () async {
                     await tts.setLanguage('ja-JP');
+                    await TtsSpeed.applyTo(tts);
                     await tts.speak(vocab['kana'] ?? vocab['word'] ?? '');
                   },
                 ),

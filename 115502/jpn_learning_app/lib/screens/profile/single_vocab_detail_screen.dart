@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 /// 單字詳情（從單字本點進來，一次只看一個字）。
 /// 跟拍照結果頁的 VocabCard 同一套視覺（情境例句黃底、分級例句灰底），
@@ -80,6 +81,7 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
 
   Future<void> _speak(String text) async {
     await _flutterTts.setLanguage('ja-JP');
+    await TtsSpeed.applyTo(_flutterTts);
     await _flutterTts.speak(text);
   }
 
@@ -121,6 +123,12 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
           icon: const Icon(AppIcons.back, color: Colors.black87, size: AppIcons.navSize),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Center(child: TtsSpeedChip()),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),

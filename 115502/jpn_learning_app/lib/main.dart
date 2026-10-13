@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 import 'package:jpn_learning_app/screens/auth/welcome_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
@@ -26,6 +27,7 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await NotificationService.init();
+  await TtsSpeed.load();
   await PushService.init(navigatorKey);
 
   // 登入通行證失效（過期、改了密碼、帳號被停用、沒有通行證）時：登出並回到歡迎畫面，提示重新登入

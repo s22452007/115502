@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:typed_data' show Uint8List;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
@@ -100,6 +101,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     super.initState();
     _fetchUsageData();
     _initSpeech();
+    TtsSpeed.slow.addListener(_onSpeedChanged);
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingText = null);
@@ -129,6 +131,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
   @override
   void dispose() {
     _speech.stop();
+    TtsSpeed.slow.removeListener(_onSpeedChanged);
     _audioPlayer.dispose();
     _controller.dispose();
     _scrollController.dispose();
@@ -194,6 +197,17 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     );
   }
 
+  // 切換速度時，正在播的那句也立刻換速度
+  void _onSpeedChanged() {
+    _audioPlayer.setPlaybackRate(TtsSpeed.playbackRate);
+  }
+
+  /// 開始播放：先設好速度再播（Android 會在開始播放時套用設定的速度）
+  Future<void> _playBytes(Uint8List bytes) async {
+    await _audioPlayer.setPlaybackRate(TtsSpeed.playbackRate);
+    await _audioPlayer.play(BytesSource(bytes));
+  }
+
   /// 把音訊存進快取，超過上限就淘汰最早加入的那筆
   void _cacheTtsAudio(String text, Uint8List bytes) {
     _ttsCache[text] = bytes;
@@ -212,7 +226,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     // 這句先前播過 → 直接用快取播放，不必再等網路
     final cached = _ttsCache[t];
     if (cached != null) {
-      await _audioPlayer.play(BytesSource(cached));
+      await _playBytes(cached);
       return;
     }
 
@@ -237,7 +251,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final bytes = base64Decode(data['audio_base64'] as String);
         _cacheTtsAudio(t, bytes);
-        await _audioPlayer.play(BytesSource(bytes));
+        await _playBytes(bytes);
       } else {
         setState(() => _playingText = null);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -999,6 +1013,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         actions: [
           Row(
             children: [
+              const TtsSpeedChip(),
+              const SizedBox(width: 8),
               const Text(
                 '漢字讀音',
                 style: TextStyle(color: Colors.grey, fontSize: 12),

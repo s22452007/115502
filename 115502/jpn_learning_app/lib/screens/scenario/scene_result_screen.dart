@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/make_sentence_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/theme_collection_screen.dart';
+import 'package:jpn_learning_app/utils/tts_speed.dart';
 
 /// 拍照辨識結果頁：
 /// 介面與「我的單字探險」詳細頁一致（照片大圖 + 單字卡列表），
@@ -203,6 +204,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                     ),
                   ),
                 ),
+                if (vocabs.isNotEmpty) const TtsSpeedChip(),
               ],
             ),
             const SizedBox(height: 16),

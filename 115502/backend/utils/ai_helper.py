@@ -266,12 +266,6 @@ def evaluate_user_sentence(sentence, vocabs, context_description):
         if not sentence or not vocabs:
             return {"success": False, "error": "缺少句子或單字資料"}
 
-        api_key = os.environ.get("GEMINI_API_KEY_camara") or os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return {"success": False, "error": "尚未設定 API Key"}
-
-        client = genai.Client(api_key=api_key)
-
         word_list = "、".join(v.get('word', '') or v.get('kana', '') for v in vocabs)
         
         prompt = f'''
@@ -313,11 +307,8 @@ def evaluate_user_sentence(sentence, vocabs, context_description):
         }}
         '''
 
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=JSON_CONFIG,
-        )
+        # 走 gemini_client：金鑰／備援模型自動切換，並可退回 OpenRouter
+        response = gemini_client.generate_content('context', prompt, config=JSON_CONFIG)
         result = parse_gemini_json(response.text)
         if not isinstance(result, dict):
             raise ValueError('AI 回傳格式不正確')

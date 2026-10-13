@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 /// 加入教室彈窗，分兩步：
 ///   1. 輸入老師給的 6 碼代碼 → 查詢
@@ -85,39 +86,28 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
   @override
   Widget build(BuildContext context) {
     final p = _preview;
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(p == null ? '加入專屬教室' : '確認是這一班嗎？'),
-      content: p == null ? _buildCodeStep() : _buildConfirmStep(p),
-      actions: p == null
-          ? [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消', style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _lookup,
-                child: _isLoading ? _spinner() : const Text('查詢'),
-              ),
-            ]
-          : [
-              TextButton(
-                onPressed: _isLoading ? null : () => setState(() => _preview = null),
-                child: const Text('不是這一班', style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                onPressed: _isLoading || p['is_open'] == false ? null : _join,
-                child: _isLoading ? _spinner() : const Text('確認加入'),
-              ),
-            ],
+    if (p == null) {
+      return AppDialog(
+        title: '加入專屬教室',
+        content: _buildCodeStep(),
+        cancelText: '取消',
+        onCancel: () => Navigator.pop(context, false),
+        confirmText: '查詢',
+        onConfirm: _lookup,
+        confirmLoading: _isLoading,
+      );
+    }
+    return AppDialog(
+      title: '確認是這一班嗎？',
+      content: _buildConfirmStep(p),
+      cancelText: '不是這一班',
+      onCancel: () => setState(() => _preview = null),
+      confirmText: '確認加入',
+      // 教室沒開放加入時停用
+      onConfirm: p['is_open'] == false ? null : _join,
+      confirmLoading: _isLoading,
     );
   }
-
-  Widget _spinner() => const SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
 
   Widget _buildCodeStep() {
     return Column(
@@ -131,10 +121,7 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
           textCapitalization: TextCapitalization.characters,
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => _isLoading ? null : _lookup(),
-          decoration: InputDecoration(
-            hintText: '例如：A1B2C3',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
+          decoration: AppDialog.inputDecoration(hintText: '例如：A1B2C3'),
         ),
       ],
     );
@@ -184,11 +171,7 @@ class _JoinClassroomDialogState extends State<JoinClassroomDialog> {
             maxLength: 50,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _isLoading ? null : _join(),
-            decoration: InputDecoration(
-              labelText: '真實姓名',
-              counterText: '',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+            decoration: AppDialog.inputDecoration(labelText: '真實姓名'),
           ),
         ],
       ],

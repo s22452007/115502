@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
 import 'package:jpn_learning_app/utils/badge_utils.dart';
 import 'package:jpn_learning_app/widgets/dialogs/level_up_dialog.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 /// 升級測驗：挑戰「比目前程度高一級」的題目。
 /// 答對率達門檻就升級，否則維持原等級（不會降級）。
@@ -127,27 +128,18 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+      builder: (ctx) => AppDialog(
+        header: Icon(
+          passed ? Icons.emoji_events_rounded : Icons.sentiment_satisfied_rounded,
+          size: 64,
+          color: passed ? Colors.amber.shade600 : Colors.grey.shade400,
+        ),
+        title: passed ? '升級成功！' : '再接再厲！',
+        titleColor: const Color(0xFF333333),
+        centered: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              passed ? Icons.emoji_events_rounded : Icons.sentiment_satisfied_rounded,
-              size: 64,
-              color: passed ? Colors.amber.shade600 : Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              passed ? '升級成功！' : '再接再厲！',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF333333),
-              ),
-            ),
-            const SizedBox(height: 10),
             Text(
               '答對 $correct / $total 題（通過需 $passCount 題）',
               style: const TextStyle(fontSize: 15, color: Colors.grey),
@@ -181,36 +173,25 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
             ],
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx); // 關閉成績對話框
+        confirmText: '完成',
+        onConfirm: () async {
+          Navigator.pop(ctx); // 關閉成績對話框
 
-              // 升級成功 → 接著噴出「程度認證」徽章升級慶祝彈窗
-              if (passed && mounted) {
-                final badgeLevel = BadgeUtils.japaneseLevelToNumber(level);
-                await LevelUpDialog.show(
-                  context,
-                  badgeId: 'level_01',
-                  level: badgeLevel,
-                  descriptionOverride:
-                      '你通過了挑戰，實力獲得認證！新的稱號是「${AppHelpers.getLevelTitle(level)}」。',
-                  buttonTextOverride: '太棒了',
-                );
-              }
+          // 升級成功 → 接著噴出「程度認證」徽章升級慶祝彈窗
+          if (passed && mounted) {
+            final badgeLevel = BadgeUtils.japaneseLevelToNumber(level);
+            await LevelUpDialog.show(
+              context,
+              badgeId: 'level_01',
+              level: badgeLevel,
+              descriptionOverride:
+                  '你通過了挑戰，實力獲得認證！新的稱號是「${AppHelpers.getLevelTitle(level)}」。',
+              buttonTextOverride: '太棒了',
+            );
+          }
 
-              if (mounted) Navigator.pop(context); // 回到個人頁
-            },
-            child: const Text(
-              '完成',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
+          if (mounted) Navigator.pop(context); // 回到個人頁
+        },
       ),
     );
   }

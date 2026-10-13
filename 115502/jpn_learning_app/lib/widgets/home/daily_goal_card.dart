@@ -4,14 +4,13 @@ import 'package:confetti/confetti.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
+import 'package:jpn_learning_app/utils/constants.dart';
 
 class DailyGoalCard extends StatelessWidget {
   final VoidCallback onReturnFromCamera;
 
   const DailyGoalCard({Key? key, required this.onReturnFromCamera})
     : super(key: key);
-
-  static const _green = Color(0xFF6AA86B);
 
   /// 還能用幾次。後端扣次數時是「先扣每日額度、用完才扣加購次數」
   /// （services/user.py 的 consume 邏輯），這裡照同一個算法還原，
@@ -62,16 +61,26 @@ class DailyGoalCard extends StatelessWidget {
     final bonusPhoto = userProvider.dailyBonusPhoto;
     // 四項都至少用過一次才能領獎（跟後端 services/daily_reward.py 一致）
     final allDone = photoDone && aiDone && sentenceDone && readingDone;
+    final doneCount = [
+      photoDone,
+      aiDone,
+      sentenceDone,
+      readingDone,
+    ].where((d) => d).length;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _green,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: _green.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -82,34 +91,56 @@ class DailyGoalCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.task_alt, color: Colors.white, size: 20),
+              const Icon(Icons.task_alt, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               const Text(
                 '今日學習目標',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _titleColor,
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              if (claimed && !userProvider.isEduStudent) ...[
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    '今日已領取',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  claimed && !userProvider.isEduStudent
+                      ? '今日已領取'
+                      : '$doneCount / 4',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-              ],
+              ),
             ],
+          ),
+          const SizedBox(height: 14),
+          // 四段式進度條：完成幾項就亮幾段
+          Row(
+            children: List.generate(4, (i) {
+              return Expanded(
+                child: Container(
+                  height: 6,
+                  margin: EdgeInsets.only(right: i == 3 ? 0 : 4),
+                  decoration: BoxDecoration(
+                    color: i < doneCount
+                        ? AppColors.primary
+                        : AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              );
+            }),
           ),
           const SizedBox(height: 16),
           _TaskRow(
@@ -140,7 +171,11 @@ class DailyGoalCard extends StatelessWidget {
             icon: Icons.edit_note_rounded,
             label: '完成造句挑戰',
             done: sentenceDone,
-            remaining: _remaining(userProvider.sentenceCountToday, userProvider.sentenceDailyLimit, 0),
+            remaining: _remaining(
+              userProvider.sentenceCountToday,
+              userProvider.sentenceDailyLimit,
+              0,
+            ),
             unlimited: userProvider.isEduStudent,
           ),
           const SizedBox(height: 10),
@@ -148,7 +183,11 @@ class DailyGoalCard extends StatelessWidget {
             icon: Icons.record_voice_over_outlined,
             label: '完成文章朗讀',
             done: readingDone,
-            remaining: _remaining(userProvider.readingCountToday, userProvider.readingDailyLimit, 0),
+            remaining: _remaining(
+              userProvider.readingCountToday,
+              userProvider.readingDailyLimit,
+              0,
+            ),
             unlimited: userProvider.isEduStudent,
           ),
           // 校園教育版學生沒有點數獎勵：只顯示任務清單，沒有領取按鈕與點數預告
@@ -160,8 +199,8 @@ class DailyGoalCard extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () => _showSelectOverlay(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: _green,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -185,16 +224,16 @@ class DailyGoalCard extends StatelessWidget {
               Text(
                 '完成全部任務即可領取 $ptsMin～$ptsMax J-Pts'
                 '${bonusPhoto > 0 ? " + 拍照次數 +$bonusPhoto" : ""}',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: _subColor, fontSize: 12),
               ),
           ],
         ],
       ),
     );
   }
+
+  static const _titleColor = Color(0xFF2C3E50);
+  static const _subColor = Color(0xFF8E9AAB);
 }
 
 class _TaskRow extends StatelessWidget {
@@ -220,43 +259,44 @@ class _TaskRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: done ? Colors.white : Colors.white.withValues(alpha: 0.2),
+            color: done
+                ? AppColors.primary
+                : AppColors.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: done
+                  ? AppColors.primary
+                  : AppColors.primary.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
           ),
           child: Icon(
             done ? Icons.check : icon,
-            size: 16,
-            color: done ? const Color(0xFF6AA86B) : Colors.white,
+            size: 20,
+            color: done ? Colors.white : AppColors.primary,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Text(
           label,
           style: TextStyle(
-            color: done ? Colors.white : Colors.white.withValues(alpha: 0.7),
+            color: done ? DailyGoalCard._titleColor : DailyGoalCard._subColor,
             fontSize: 14,
-            fontWeight: done ? FontWeight.bold : FontWeight.normal,
+            fontWeight: done ? FontWeight.bold : FontWeight.w600,
           ),
         ),
         const Spacer(),
         // 剩餘次數：用完只是變淡顯示「剩 0 次」。原本用紅底「已用完」，
         // 尤其任務已經打勾時看起來像出了錯
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: usedUp ? 0.12 : 0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            unlimited ? '不限次數' : '剩 ${usedUp ? 0 : remaining} 次',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: usedUp ? 0.6 : 1),
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+        Text(
+          unlimited ? '不限次數' : '剩 ${usedUp ? 0 : remaining} 次',
+          style: TextStyle(
+            color: DailyGoalCard._subColor.withValues(alpha: usedUp ? 0.6 : 1),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],

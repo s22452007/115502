@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/camera_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/theme_collection_intro_screen.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 /// 主題名稱 -> icon（對應後端 THEME_DEFS 的 icon_name）
 const Map<String, IconData> _themeIcons = {
@@ -644,56 +645,29 @@ class _RewardDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 28, 28, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              badgeName != null ? '「$themeName」集滿了！' : '「$themeName」收集過半！',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textDark,
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (points > 0) _RewardRow(icon: Icons.stars, text: '$points J 點'),
-            if (extraPhoto > 0)
-              _RewardRow(
-                  icon: Icons.photo_camera_outlined, text: '額外拍照次數 $extraPhoto 次'),
-            if (badgeName != null)
-              _RewardRow(icon: Icons.workspace_premium, text: '徽章「$badgeName」'),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '收下',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+    return AppDialog(
+      header: Icon(
+        badgeName != null
+            ? Icons.workspace_premium_rounded
+            : Icons.card_giftcard_rounded,
+        size: 56,
+        color: AppColors.secondary,
       ),
+      title: badgeName != null ? '「$themeName」集滿了！' : '「$themeName」收集過半！',
+      centered: true,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (points > 0) _RewardRow(icon: Icons.stars, text: '$points J 點'),
+          if (extraPhoto > 0)
+            _RewardRow(
+                icon: Icons.photo_camera_outlined, text: '額外拍照次數 $extraPhoto 次'),
+          if (badgeName != null)
+            _RewardRow(icon: Icons.workspace_premium, text: '徽章「$badgeName」'),
+        ],
+      ),
+      confirmText: '收下',
+      onConfirm: () => Navigator.pop(context),
     );
   }
 }
@@ -709,10 +683,11 @@ class _RewardRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 20, color: AppColors.secondary),
           const SizedBox(width: 12),
-          Expanded(
+          Flexible(
             child: Text(
               text,
               style: const TextStyle(

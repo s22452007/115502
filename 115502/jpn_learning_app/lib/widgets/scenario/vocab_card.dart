@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class VocabCard extends StatefulWidget {
@@ -271,100 +272,41 @@ class _VocabCardState extends State<VocabCard> {
   // 彈出建立單字本的輸入框
   // ==========================================
   Future<void> _showCreateFolderDialog(int userId) async {
-    final TextEditingController controller = TextEditingController();
+    final folderName = await AppDialog.input(
+      context,
+      title: '新增收藏夾',
+      hintText: '輸入資料夾名稱',
+      confirmText: '建立並收藏',
+    );
+    if (folderName == null || folderName.isEmpty || !mounted) return;
 
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFFE6EBE1), 
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), 
-        titlePadding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
-        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        title: const Text(
-          '新增收藏夾',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: Color(0xFF1D1D1D),
-          ),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(fontSize: 18),
-          decoration: InputDecoration(
-            hintText: '輸入資料夾名稱',
-            hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 18),
-            filled: false,
-            enabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey),
-            ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF333333), width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-          ),
-        ),
-        actionsPadding: const EdgeInsets.only(right: 24, bottom: 24),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              '取消',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6CA86B), 
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20), 
-              ),
-              elevation: 0, 
-            ),
-            onPressed: () async {
-              final folderName = controller.text.trim();
-              if (folderName.isNotEmpty) {
-                Navigator.pop(ctx); // 1. 先關閉輸入框
-                
-                // 2. 顯示過渡狀態，讓玩家知道系統正在做事
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('正在建立「$folderName」...'), 
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-
-                // 呼叫 API 建立新資料夾
-                try {
-                  final newFolderId = await ApiClient.createFolder(userId, folderName);
-                  
-                  // 4. 建立成功拿到 ID 後，立刻把這個單字「收藏」進去！
-                  if (newFolderId != null) {
-                    await _executeCollection(userId, newFolderId);
-                  }
-                } catch (e) {
-                  // 如果發生錯誤 (例如名稱重複)，顯示乾淨的錯誤訊息
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(e.toString().replaceAll('Exception: ', '')),
-                      backgroundColor: Colors.red.shade400,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text(
-              '建立並收藏',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ),
-        ],
+    // 顯示過渡狀態，讓玩家知道系統正在做事
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('正在建立「$folderName」...'),
+        duration: const Duration(seconds: 1),
       ),
     );
+
+    // 呼叫 API 建立新資料夾
+    try {
+      final newFolderId = await ApiClient.createFolder(userId, folderName);
+
+      // 建立成功拿到 ID 後，立刻把這個單字「收藏」進去！
+      if (newFolderId != null) {
+        await _executeCollection(userId, newFolderId);
+      }
+    } catch (e) {
+      // 如果發生錯誤 (例如名稱重複)，顯示乾淨的錯誤訊息
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red.shade400,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // 真正發送 API 把單字塞入指定資料夾的函式

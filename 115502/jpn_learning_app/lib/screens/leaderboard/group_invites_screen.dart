@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/widgets/study_group/group_invite_card.dart';
 import 'package:jpn_learning_app/utils/helpers.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class GroupInvitesScreen extends StatefulWidget {
   const GroupInvitesScreen({Key? key}) : super(key: key);
@@ -67,25 +68,14 @@ class _GroupInvitesScreenState extends State<GroupInvitesScreen> {
           : '您本週的免費小組額度已用完。\n\n本次加入將扣除 $deposit J-Pts 作為對賭押金（達標後退還）。\n\n⚠️ 注意：一旦加入，直到本週日結算前絕對無法中途退出！確定要繼續嗎？';
       final String confirmButtonText = isFree ? '確定加入' : '確定扣除並加入';
 
-      final bool confirm = await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(dialogTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
-          content: Text(dialogContent, style: const TextStyle(height: 1.5)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('先不要', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(confirmButtonText, style: const TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ) ?? false;
+      if (!mounted) return;
+      final bool confirm = await AppDialog.confirm(
+        context,
+        title: dialogTitle,
+        message: dialogContent,
+        cancelText: '先不要',
+        confirmText: confirmButtonText,
+      );
 
       // 如果玩家按了「先不要」取消，就直接終止
       if (!confirm) return;

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class SentenceHistoryScreen extends StatefulWidget {
   const SentenceHistoryScreen({Key? key}) : super(key: key);
@@ -46,48 +47,34 @@ class _SentenceHistoryScreenState extends State<SentenceHistoryScreen> {
 
   // 查看簡短評語的對話框
   void _showFeedbackDialog(Map<String, dynamic> record) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
+    AppDialog.message(
+      context,
+      title: '評分：${record['score']}',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('📝 你的造句', style: TextStyle(color: Colors.grey, fontSize: 13)),
+          Text(record['user_sentence'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          const Text('✨ 老師訂正', style: TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(record['corrected_sentence'] ?? '', style: const TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('評分：${record['score']}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                  ],
-                ),
-                const Divider(),
-                const Text('📝 你的造句', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                Text(record['user_sentence'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 12),
-                const Text('✨ 老師訂正', style: TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold)),
-                Text(record['corrected_sentence'] ?? '', style: const TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('💡 重點講評', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(record['ai_feedback'] ?? '表現不錯！', style: const TextStyle(height: 1.5)),
-                    ],
-                  ),
-                )
+                const Text('💡 重點講評', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(record['ai_feedback'] ?? '表現不錯！'),
               ],
             ),
-          ),
-        );
-      }
+          )
+        ],
+      ),
     );
   }
 
@@ -96,6 +83,10 @@ class _SentenceHistoryScreenState extends State<SentenceHistoryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F5),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(AppIcons.back, color: AppColors.primary, size: AppIcons.navSize),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('造句紀錄與獎勵', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: const Color(0xFFF4F7F5),
         elevation: 0,

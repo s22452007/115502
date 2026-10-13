@@ -9,6 +9,7 @@ import 'package:jpn_learning_app/screens/scenario/analyzing_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/manual_search_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/utils/face_privacy.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 import 'package:jpn_learning_app/main.dart'; // import cameras
 
 class CameraScreen extends StatefulWidget {
@@ -303,8 +304,14 @@ class _CameraScreenState extends State<CameraScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+      builder: (_) => const AppDialog(
+        scrollable: false,
+        content: SizedBox(
+          height: 48,
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        ),
       ),
     );
 
@@ -333,64 +340,42 @@ class _CameraScreenState extends State<CameraScreen>
     ].join('、');
 
     if (!mounted) return null;
-    final proceed = await showDialog<bool>(
-      context: context,
+    final proceed = await AppDialog.confirm(
+      context,
+      title: '偵測到照片中有$items',
+      message: '為保護隱私，系統已自動將該區域模糊處理。你可以選擇重新拍攝，或繼續使用這張已模糊的照片。',
+      confirmText: '繼續使用',
+      cancelText: '重新拍攝',
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('偵測到照片中有$items'),
-        content: const Text('為保護隱私，系統已自動將該區域模糊處理。你可以選擇重新拍攝，或繼續使用這張已模糊的照片。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('重新拍攝', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
-              '繼續使用',
-              style: TextStyle(color: AppColors.primary),
-            ),
-          ),
-        ],
-      ),
     );
 
-    return proceed == true ? result.imagePath : null;
+    return proceed ? result.imagePath : null;
   }
 
   Future<void> _showNamingDialogAndProceed(String rawImagePath) async {
     final imagePath = await _applyFacePrivacyGuard(rawImagePath);
     if (imagePath == null || !mounted) return;
 
+    // 兩個輸入步驟都可以留空直接按確定，而且點外面不能關，
+    // 所以不用 AppDialog.input（會把空字串擋掉、也沒有 barrierDismissible），自己組 AppDialog
     final TextEditingController nameController = TextEditingController();
     final String? customName = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('為這張照片命名（選填）'),
+        return AppDialog(
+          title: '為這張照片命名（選填）',
           content: TextField(
             controller: nameController,
-            decoration: const InputDecoration(hintText: '例如：我的書桌'),
+            decoration: AppDialog.inputDecoration(hintText: '例如：我的書桌'),
             autofocus: true,
+            cursorColor: AppColors.primary,
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, null);
-              },
-              child: const Text('跳過', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, nameController.text.trim());
-              },
-              child: const Text(
-                '確定',
-                style: TextStyle(color: AppColors.primary),
-              ),
-            ),
-          ],
+          cancelText: '跳過',
+          onCancel: () => Navigator.pop(dialogContext, null),
+          confirmText: '確定',
+          onConfirm: () =>
+              Navigator.pop(dialogContext, nameController.text.trim()),
         );
       },
     );
@@ -403,8 +388,8 @@ class _CameraScreenState extends State<CameraScreen>
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('描述當下情境（選填）'),
+        return AppDialog(
+          title: '描述當下情境（選填）',
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,31 +402,19 @@ class _CameraScreenState extends State<CameraScreen>
               TextField(
                 controller: contextController,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                decoration: AppDialog.inputDecoration(
                   hintText: '例如：我在遛狗，狗很開心',
-                  border: OutlineInputBorder(),
                 ),
                 autofocus: true,
+                cursorColor: AppColors.primary,
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, null);
-              },
-              child: const Text('跳過', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, contextController.text.trim());
-              },
-              child: const Text(
-                '確定',
-                style: TextStyle(color: AppColors.primary),
-              ),
-            ),
-          ],
+          cancelText: '跳過',
+          onCancel: () => Navigator.pop(dialogContext, null),
+          confirmText: '確定',
+          onConfirm: () =>
+              Navigator.pop(dialogContext, contextController.text.trim()),
         );
       },
     );

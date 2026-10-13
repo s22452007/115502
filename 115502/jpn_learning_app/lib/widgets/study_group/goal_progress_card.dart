@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class GoalProgressCard extends StatelessWidget {
   final double progress;
@@ -107,20 +108,16 @@ class GoalProgressCard extends StatelessWidget {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          title: const Text("🎉 恭喜達標！", style: TextStyle(fontWeight: FontWeight.bold)),
-                          content: Text(result['message'] ?? '領取成功！你已順利從小組結業！', style: const TextStyle(fontSize: 16, height: 1.5)),
-                          actions: [
-                            TextButton(
-                              child: const Text("太棒了！", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              onPressed: () {
-                                Navigator.of(ctx).pop(); 
-                                // 領完獎直接退出小組畫面，回到大廳
-                                Navigator.of(context).popUntil((route) => route.isFirst); 
-                              },
-                            )
-                          ],
+                        builder: (ctx) => AppDialog(
+                          title: "🎉 恭喜達標！",
+                          centered: true,
+                          content: Text(result['message'] ?? '領取成功！你已順利從小組結業！'),
+                          confirmText: "太棒了！",
+                          onConfirm: () {
+                            Navigator.of(ctx).pop();
+                            // 領完獎直接退出小組畫面，回到大廳
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          },
                         ),
                       );
                     }

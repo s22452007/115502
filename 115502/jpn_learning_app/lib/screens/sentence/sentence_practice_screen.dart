@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/screens/sentence/sentence_history_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/widgets/common/staged_progress_overlay.dart';
 import 'package:jpn_learning_app/widgets/common/sentence_feedback.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class SentencePracticeScreen extends StatefulWidget {
   /// 從「我的作業」進來時帶入作業 ID：題目改用老師指定的文法與單字，
@@ -213,86 +214,32 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     showDialog(
       context: context,
       builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        return AppDialog(
+          header: const Icon(Icons.stars_rounded, color: Colors.amber, size: 60),
+          title: '今日免費次數已用盡',
+          centered: true,
+          content: Text(
+            hasEnoughPoints
+                ? '您今天的 $_maxFreeCount 次免費額度已用完。\n是否花費 $cost J-pts 進行本次批改？\n(若造句完美，有機會賺回 50 點喔！)'
+                : '您今天的 $_maxFreeCount 次免費額度已用完，且目前點數不足 ($currentPts/$cost)。\n請前往商城補充點數繼續挑戰！',
+            style: const TextStyle(color: Colors.grey),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.stars_rounded, color: Colors.amber, size: 60),
-                const SizedBox(height: 16),
-                const Text(
-                  '今日免費次數已用盡',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          cancelText: '稍後再說',
+          onCancel: () => Navigator.pop(context),
+          confirmText: hasEnoughPoints ? '支付 $cost 點' : '前往商城',
+          onConfirm: () {
+            Navigator.pop(context);
+            if (hasEnoughPoints) {
+              _submitSentence(payWithPoints: true);
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const StoreDashboardScreen(),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  hasEnoughPoints
-                      ? '您今天的 $_maxFreeCount 次免費額度已用完。\n是否花費 $cost J-pts 進行本次批改？\n(若造句完美，有機會賺回 50 點喔！)'
-                      : '您今天的 $_maxFreeCount 次免費額度已用完，且目前點數不足 ($currentPts/$cost)。\n請前往商城補充點數繼續挑戰！',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          '稍後再說',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          elevation: 0,
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          if (hasEnoughPoints) {
-                            _submitSentence(payWithPoints: true);
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const StoreDashboardScreen(),
-                              ),
-                            );
-                          }
-                        },
-                        child: Text(
-                          hasEnoughPoints ? '支付 $cost 點' : '前往商城',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              );
+            }
+          },
         );
       },
     );
@@ -304,41 +251,40 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.6,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '選擇要挑戰的單字',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            return AppDialog(
+              title: '選擇要挑戰的單字',
+              scrollable: false,
+              confirmText: '確定',
+              onConfirm: () => Navigator.pop(context),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '句子每用到一個勾選的單字，獎勵 +10 點（最多 3 個）',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const Divider(height: 24),
+                  if (_allMyVocabs.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          '還沒有可以選的單字喔！\n先去拍照辨識，或在文章裡收藏單字吧。',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '句子每用到一個勾選的單字，獎勵 +10 點（最多 3 個）',
-                      style: TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                    const Divider(height: 24),
-                    Expanded(
-                      child: _allMyVocabs.isEmpty
-                          ? const Center(
-                              child: Text(
-                                '還沒有可以選的單字喔！\n先去拍照辨識，或在文章裡收藏單字吧。',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            )
-                          : ListView.builder(
+                    )
+                  else
+                    SizedBox(
+                      width: double.maxFinite,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.45,
+                        ),
+                        child: ListView.builder(
+                              shrinkWrap: true,
                               itemCount: _allMyVocabs.length,
                               itemBuilder: (context, index) {
                                 final vocab = _allMyVocabs[index];
@@ -394,26 +340,9 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                                 );
                               },
                             ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          '確定',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             );
           },
@@ -471,40 +400,52 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     final Map<String, dynamic>? assignmentResult =
         (result['assignment_result'] as Map?)?.cast<String, dynamic>();
 
+    // 下一題／再試一次：關掉結果、換題並清空輸入
+    void nextQuestion(BuildContext ctx) {
+      Navigator.pop(ctx);
+      _loadTaskAndVocabs();
+      _sentenceController.clear();
+      _selectedVocabWords.clear();
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+        final nextText = _isAssignment ? '再試一次' : '下一題';
+        return AppDialog(
+          header: Icon(
+            isCorrect
+                ? Icons.verified_rounded
+                : Icons.edit_note_rounded,
+            color: isCorrect ? const Color(0xFF10B981) : Colors.orange,
+            size: 70,
           ),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              child: Column(
+          title: isCorrect ? '太棒了！造句非常完美！' : '還有進步空間喔！',
+          titleColor: isCorrect ? const Color(0xFF10B981) : Colors.orange,
+          centered: true,
+          // 教育版學生沒有點數：只有一顆「下一題」主按鈕；一般使用者多一顆「去領點數」
+          cancelText: isEduStudent ? null : nextText,
+          onCancel: isEduStudent ? null : () => nextQuestion(context),
+          confirmText: isEduStudent ? nextText : '去領點數',
+          onConfirm: isEduStudent
+              ? () => nextQuestion(context)
+              : () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SentenceHistoryScreen(),
+                    ),
+                  );
+                },
+          content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    isCorrect
-                        ? Icons.verified_rounded
-                        : Icons.edit_note_rounded,
-                    color: isCorrect ? const Color(0xFF10B981) : Colors.orange,
-                    size: 70,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    isCorrect ? '太棒了！造句非常完美！' : '還有進步空間喔！',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
                   if (assignmentResult != null) ...[
-                    const SizedBox(height: 12),
                     _buildAssignmentResultBanner(assignmentResult),
+                    const SizedBox(height: 12),
                   ],
-                  const SizedBox(height: 24),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -566,80 +507,20 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 14, height: 1.5, color: AppColors.textDark),
                     ),
-                  SentenceFeedbackSections(
-                    userSentence: _sentenceController.text,
-                    corrections: corrections,
-                    correctedSentence: correctedSentence,
-                    translation: translation,
-                    isCorrect: isCorrect == true,
-                    fallbackFeedback: feedback,
-                  ),
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: const BorderSide(color: AppColors.primary),
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _loadTaskAndVocabs();
-                            _sentenceController.clear();
-                            _selectedVocabWords.clear();
-                          },
-                          child: Text(
-                            _isAssignment ? '再試一次' : '下一題',
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (!isEduStudent) ...[
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber[600],
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const SentenceHistoryScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            '去領點數',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      ],
-                    ],
+                  // 各段講評要靠左排，不吃彈窗置中的預設對齊
+                  DefaultTextStyle.merge(
+                    textAlign: TextAlign.start,
+                    child: SentenceFeedbackSections(
+                      userSentence: _sentenceController.text,
+                      corrections: corrections,
+                      correctedSentence: correctedSentence,
+                      translation: translation,
+                      isCorrect: isCorrect == true,
+                      fallbackFeedback: feedback,
+                    ),
                   ),
                 ],
               ),
-            ),
-          ),
         );
       },
     );
@@ -686,6 +567,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF4F7F5),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(AppIcons.back, color: AppColors.primary, size: AppIcons.navSize),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           _isAssignment ? '作業：造句挑戰' : '造句挑戰',
           style: const TextStyle(

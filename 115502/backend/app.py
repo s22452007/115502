@@ -1,3 +1,12 @@
+import sys
+# Windows 主控台預設 cp950，印出 emoji／部分字元會 UnicodeEncodeError，
+# 連帶讓 Gemini 備援模型切換與錯誤處理整個中斷（admin_app.py 同樣處理）
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 import os
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify

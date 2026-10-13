@@ -5,6 +5,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/screens/premium/subscription_checkout_screen.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class SubscriptionManagementScreen extends StatefulWidget {
   const SubscriptionManagementScreen({super.key});
@@ -88,27 +89,63 @@ class _SubscriptionManagementScreenState
     // 🌟 升級版：取消時提供挽留選項
     final choice = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('確定要取消嗎？'),
+      builder: (ctx) => AppDialog(
+        title: '確定要取消嗎？',
+        titleColor: Colors.redAccent,
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('取消後將停止自動續訂，您的 Premium 權益將於到期日後終止。'),
-            const SizedBox(height: 15),
             // 挽留選項：年繳更便宜！
-            if (_billingCycle == 'monthly')
-              ListTile(
-                leading: const Icon(Icons.workspace_premium, color: _gold),
-                title: const Text('升級為年繳方案 (更划算)'),
-                subtitle: const Text('年繳 NT\$1290，現省 NT\$498 並贈送 300 點'),
+            if (_billingCycle == 'monthly') ...[
+              const SizedBox(height: 15),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
                 onTap: () => Navigator.pop(ctx, 'upgrade'),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardGold,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _gold),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.workspace_premium, color: _gold),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              '升級為年繳方案 (更划算)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: _textDark,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              '年繳 NT\$1290，現省 NT\$498 並贈送 300 點',
+                              style: TextStyle(fontSize: 12.5, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(AppIcons.forward, color: Colors.grey.shade400, size: AppIcons.navSize),
+                    ],
+                  ),
+                ),
               ),
+            ],
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, 'back'), child: const Text('我再想想')),
-          TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('確認取消', style: TextStyle(color: Colors.red))),
-        ],
+        cancelText: '我再想想',
+        onCancel: () => Navigator.pop(ctx, 'back'),
+        confirmText: '確認取消',
+        confirmColor: Colors.redAccent,
+        onConfirm: () => Navigator.pop(ctx, 'cancel'),
       ),
     );
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class RolePlayIntroScreen extends StatefulWidget {
   final String topicTitle;
@@ -436,115 +437,103 @@ class _RolePlayIntroScreenState extends State<RolePlayIntroScreen> {
     final personalityCtrl = TextEditingController();
     final traitsCtrl = TextEditingController();
 
+    // 跟手動建立情境頁的新增角色彈窗同一套樣式：圓角填色輸入框、標題右邊標「* 必填」
+    InputDecoration fieldDecoration(String label, String hint) =>
+        AppDialog.inputDecoration(
+          labelText: label,
+          hintText: hint,
+          accent: _darkGreen,
+        ).copyWith(
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          labelStyle: const TextStyle(color: AppColors.textGrey),
+          floatingLabelStyle: TextStyle(
+            color: _darkGreen,
+            fontWeight: FontWeight.w600,
+          ),
+        );
+    const gap = SizedBox(height: 12);
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('新增對話角色', style: TextStyle(color: _darkGreen, fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl, 
-                  decoration: InputDecoration(
-                    labelText: '姓名 (必填)', 
-                    hintText: '例如: 瀨戶 景',
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
-                  ),
-                  cursorColor: _darkGreen,
-                ),
-                TextField(
-                  controller: originCtrl, 
-                  decoration: InputDecoration(
-                    labelText: '出身地', 
-                    hintText: '例如: 九州',
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
-                  ),
-                  cursorColor: _darkGreen,
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: ageCtrl, 
-                        decoration: InputDecoration(
-                          labelText: '年紀', 
-                          hintText: '23',
-                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
-                        ), 
-                        keyboardType: TextInputType.number,
-                        cursorColor: _darkGreen,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: genderCtrl, 
-                        decoration: InputDecoration(
-                          labelText: '性別', 
-                          hintText: '男/女',
-                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
-                        ),
-                        cursorColor: _darkGreen,
-                      ),
-                    ),
-                  ],
-                ),
-                TextField(
-                  controller: personalityCtrl, 
-                  decoration: InputDecoration(
-                    labelText: '個性', 
-                    hintText: '例如: 隨性慵懶、幽默',
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
-                  ),
-                  cursorColor: _darkGreen,
-                ),
-                TextField(
-                  controller: traitsCtrl, 
-                  decoration: InputDecoration(
-                    labelText: '特殊設定', 
-                    hintText: '例如: 樂團貝斯手...',
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen)),
-                  ),
-                  maxLines: 2,
-                  cursorColor: _darkGreen,
-                ),
-              ],
-            ),
+        return AppDialog(
+          title: '新增對話角色',
+          accent: _darkGreen,
+          titleTrailing: const Text(
+            '* 必填',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameCtrl.text.trim().isEmpty) return; 
-
-                setState(() {
-                  _characters.add({
-                    'name': nameCtrl.text.trim(),
-                    'role': '自訂角色', 
-                    'origin': originCtrl.text.trim(),
-                    'age': ageCtrl.text.trim(),
-                    'gender': genderCtrl.text.trim(),
-                    'personality': personalityCtrl.text.trim(),
-                    'special_traits': traitsCtrl.text.trim(),
-                  });
-                  _selectedCharacterName = nameCtrl.text.trim();
-                });
-
-                Navigator.pop(context); 
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _darkGreen,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: fieldDecoration('姓名 *', '例如: 瀨戶 景'),
+                cursorColor: _darkGreen,
               ),
-              child: const Text('新增並選擇', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+              gap,
+              TextField(
+                controller: originCtrl,
+                decoration: fieldDecoration('出身地', '例如: 九州'),
+                cursorColor: _darkGreen,
+              ),
+              gap,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: ageCtrl,
+                      decoration: fieldDecoration('年紀', '23'),
+                      keyboardType: TextInputType.number,
+                      cursorColor: _darkGreen,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: genderCtrl,
+                      decoration: fieldDecoration('性別', '男/女'),
+                      cursorColor: _darkGreen,
+                    ),
+                  ),
+                ],
+              ),
+              gap,
+              TextField(
+                controller: personalityCtrl,
+                decoration: fieldDecoration('個性', '例如: 隨性慵懶、幽默'),
+                cursorColor: _darkGreen,
+              ),
+              gap,
+              TextField(
+                controller: traitsCtrl,
+                decoration: fieldDecoration('特殊設定', '例如: 樂團貝斯手...'),
+                maxLines: 2,
+                cursorColor: _darkGreen,
+              ),
+            ],
+          ),
+          cancelText: '取消',
+          onCancel: () => Navigator.pop(context),
+          confirmText: '新增並選擇',
+          onConfirm: () {
+            if (nameCtrl.text.trim().isEmpty) return;
+
+            setState(() {
+              _characters.add({
+                'name': nameCtrl.text.trim(),
+                'role': '自訂角色',
+                'origin': originCtrl.text.trim(),
+                'age': ageCtrl.text.trim(),
+                'gender': genderCtrl.text.trim(),
+                'personality': personalityCtrl.text.trim(),
+                'special_traits': traitsCtrl.text.trim(),
+              });
+              _selectedCharacterName = nameCtrl.text.trim();
+            });
+
+            Navigator.pop(context);
+          },
         );
       },
     );

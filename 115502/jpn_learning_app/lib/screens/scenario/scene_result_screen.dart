@@ -7,6 +7,7 @@ import 'package:jpn_learning_app/utils/constants.dart';
 // 與「我的單字探險」共用同一張單字卡（含 ⭐ 收藏、分級例句、情境例句）
 import 'package:jpn_learning_app/widgets/scenario/vocab_card.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:jpn_learning_app/screens/scenario/make_sentence_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/theme_collection_screen.dart';
 
@@ -176,7 +177,12 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     return SliverToBoxAdapter(
       child: Container(
         decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          24,
+          20,
+          FloatingBottomBar.bodyBottomPadding(context),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -208,26 +214,44 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     );
   }
 
-  // 底部固定按鈕列：[📷 再拍一張] [造句] [✓ 完成]
+  // 每顆按鈕自己帶陰影，三顆並排懸浮在內容上
+  Widget _floating(Widget button) => Expanded(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: button,
+        ),
+      );
+
+  // 底部懸浮按鈕列：[📷 再拍一張] [造句] [✓ 完成]
   Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        FloatingBottomBar.horizontalMargin,
+        FloatingBottomBar.topMargin,
+        FloatingBottomBar.horizontalMargin,
+        FloatingBottomBar.bottomMargin + MediaQuery.paddingOf(context).bottom,
       ),
-      child: SafeArea(
-        top: false,
+      child: SizedBox(
+        height: FloatingBottomBar.buttonHeight,
         child: Row(
           children: [
             // 再拍一張：回到拍照畫面
-            Expanded(
-              child: OutlinedButton(
+            _floating(
+              OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
                   foregroundColor: AppColors.primary,
                   side: const BorderSide(color: AppColors.primary, width: 1.5),
-                  fixedSize: const Size.fromHeight(52),
                   padding: EdgeInsets.zero,
                   alignment: Alignment.center,
                   shape: RoundedRectangleBorder(
@@ -245,8 +269,8 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
             ),
             const SizedBox(width: 8),
             // 練習造句：進入造句頁面
-            Expanded(
-              child: ElevatedButton(
+            _floating(
+              ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -265,7 +289,6 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: EdgeInsets.zero,
-                  fixedSize: const Size.fromHeight(52),
                   alignment: Alignment.center,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -282,8 +305,8 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
             ),
             const SizedBox(width: 8),
             // 完成：直接回主頁
-            Expanded(
-              child: ElevatedButton(
+            _floating(
+              ElevatedButton(
                 onPressed: () =>
                     Navigator.popUntil(context, (route) => route.isFirst),
                 style: ElevatedButton.styleFrom(
@@ -291,7 +314,6 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: EdgeInsets.zero,
-                  fixedSize: const Size.fromHeight(52),
                   alignment: Alignment.center,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -319,6 +341,7 @@ class _SceneResultScreenState extends State<SceneResultScreen> {
     return SubPageTemplate(
       title: '辨識結果',
       hideAppBar: true,
+      extendBody: true,
       bottomNavigationBar: _buildBottomBar(),
       body: CustomScrollView(
         slivers: [

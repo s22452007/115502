@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'invite_group_members_screen.dart'; 
@@ -79,8 +80,14 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
     
     return SubPageTemplate(
       title: '建立學習小組',
+      extendBody: true,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          FloatingBottomBar.bodyBottomPadding(context),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -182,21 +189,15 @@ class _GroupConfigScreenState extends State<GroupConfigScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(18.0),
-          child: SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                elevation: 0,
-              ),
-              onPressed: _goToNextStep,
-              child: const Text('下一步：邀請好友', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
+      bottomNavigationBar: FloatingBottomBar(
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            elevation: 0,
           ),
+          onPressed: _goToNextStep,
+          child: const Text('下一步：邀請好友', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         ),
       ),
     );

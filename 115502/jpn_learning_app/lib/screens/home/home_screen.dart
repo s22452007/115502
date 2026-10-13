@@ -333,82 +333,81 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
                         const SizedBox(height: 10),
                         Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.local_fire_department,
-                                      color: Colors.orange,
-                                      size: 16,
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.local_fire_department,
+                                    color: Colors.orange,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '已連續登入 $streakDays 天',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.primary,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '已連續登入 $streakDays 天',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.primary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // 教育版學生沒有付費機制，點數標籤直接不顯示
+                            if (!isEduStudent)
+                              GestureDetector(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const StoreDashboardScreen(
+                                      initialIndex: 1,
+                                    ),
+                                  ),
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.monetization_on_outlined,
+                                        color: Colors.blue,
+                                        size: 16,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '$jPts Pts',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              // 教育版學生沒有付費機制，點數標籤直接不顯示
-                              if (!isEduStudent)
-                                GestureDetector(
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const StoreDashboardScreen(
-                                            initialIndex: 1,
-                                          ),
-                                    ),
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.monetization_on_outlined,
-                                          color: Colors.blue,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '$jPts Pts',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.blue,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -467,14 +466,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
             const SizedBox(height: 35),
 
-            // 🌟 造句挑戰區塊
-            _buildSectionHeader('AI 挑戰'),
-            _buildSentencePracticeCard(context),
-
-            const SizedBox(height: 35),
-
-            _buildSectionHeader('文章練習'),
-            _buildArticlePracticeCard(context),
+            _buildSectionHeader('練習'),
+            _buildPracticeTiles(context),
 
             const SizedBox(height: 35),
 
@@ -582,153 +575,100 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     );
   }
 
-  Widget _buildSentencePracticeCard(BuildContext context) {
-    const Color _cardGreen = Color(0xFF6AA86B);
+  Widget _buildPracticeTiles(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SentencePracticeScreen(),
-            ),
-          ).then((_) => _syncHomeData());
-        },
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: _cardGreen,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: _cardGreen.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+      child: Column(
+        children: [
+          _buildPracticeTile(
+            icon: Icons.edit_note_rounded,
+            title: 'AI 造句挑戰',
+            subtitle: '活化單字本，賺取 J-pts',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SentencePracticeScreen(),
               ),
-            ],
+            ).then((_) => _syncHomeData()),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.edit_note_rounded,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'AI 造句挑戰',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '活化單字本，賺取 J-pts！',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                AppIcons.forward,
-                color: Colors.white,
-                size: AppIcons.navSize,
-              ),
-            ],
+          const SizedBox(height: 12),
+          _buildPracticeTile(
+            icon: Icons.menu_book_rounded,
+            title: '閱讀文章',
+            subtitle: '透過閱讀提升語感與單字量',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ArticleListScreen()),
+            ).then((_) => _syncHomeData()),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildArticlePracticeCard(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ArticleListScreen()),
-          ).then((_) => _syncHomeData());
-        },
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+  Widget _buildPracticeTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(14),
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  color: AppColors.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '閱讀文章',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF2C3E50),
-                      ),
+              child: Icon(icon, color: AppColors.primary, size: 26),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: _textColor,
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      '透過閱讀提升語感與單字量',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF8E9AAB),
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF8E9AAB),
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Icon(
-                AppIcons.forward,
-                color: const Color(0xFF8E9AAB).withOpacity(0.5),
-                size: AppIcons.navSize,
-              ),
-            ],
-          ),
+            ),
+            Icon(
+              AppIcons.forward,
+              color: const Color(0xFF8E9AAB).withValues(alpha: 0.5),
+              size: AppIcons.navSize,
+            ),
+          ],
         ),
       ),
     );

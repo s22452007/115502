@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
@@ -186,27 +187,33 @@ class _MakeSentenceScreenState extends State<MakeSentenceScreen> {
   Widget build(BuildContext context) {
     return SubPageTemplate(
       title: '練習造句',
-      bottomNavigationBar: !widget.showSkipButton ? null : SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: OutlinedButton(
-            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textGrey,
-              side: const BorderSide(color: AppColors.borderLight),
-              fixedSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+      extendBody: true,
+      bottomNavigationBar: !widget.showSkipButton ? null : FloatingBottomBar(
+        borderRadius: 14,
+        child: OutlinedButton(
+          onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.white,
+            foregroundColor: AppColors.textGrey,
+            side: const BorderSide(color: AppColors.borderLight),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Text('跳過 / 回主頁', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
+          child: const Text('跳過 / 回主頁', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            widget.showSkipButton
+                ? FloatingBottomBar.bodyBottomPadding(context)
+                : 20,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

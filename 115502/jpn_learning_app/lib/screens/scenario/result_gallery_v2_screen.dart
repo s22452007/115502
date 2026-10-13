@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/scenario/scenario_detail_screen.dart';
 import 'package:jpn_learning_app/screens/scenario/theme_collection_screen.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class ResultGalleryV2Screen extends StatefulWidget {
   const ResultGalleryV2Screen({Key? key}) : super(key: key);
@@ -95,42 +96,17 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
     int photoId,
     String currentName,
   ) async {
-    final TextEditingController titleController = TextEditingController(
-      text: currentName,
+    final newTitle = await AppDialog.input(
+      context,
+      title: '修改照片名稱',
+      initialValue: currentName,
+      labelText: '照片名稱',
+      confirmText: '確認修改',
     );
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('修改照片名稱'),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(
-            labelText: '照片名稱',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newTitle = titleController.text.trim();
-              if (newTitle.isNotEmpty && newTitle != currentName) {
-                await ApiClient.renamePhoto(photoId, newTitle);
-              }
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('確認修改', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+    if (newTitle != null && newTitle.isNotEmpty && newTitle != currentName) {
+      await ApiClient.renamePhoto(photoId, newTitle);
+    }
+    if (!mounted) return;
 
     // 對話框關閉後，重新載入清單
     _loadFirstPage();

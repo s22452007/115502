@@ -6,6 +6,7 @@ import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/widgets/common/furigana_text.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
 /// AI 對話紀錄清單：列出過去每一場對話，點擊可接續聊下去。
@@ -22,26 +23,15 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   void _reload() => setState(() => _futureKey = UniqueKey());
 
   Future<void> _confirmDelete(int sessionId, String topic) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('刪除這場對話？'),
-        content: Text('「$topic」的對話紀錄將永久刪除，無法復原。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('刪除', style: TextStyle(color: Colors.redAccent)),
-          ),
-        ],
-      ),
+    final ok = await AppDialog.confirm(
+      context,
+      title: '刪除這場對話？',
+      message: '「$topic」的對話紀錄將永久刪除，無法復原。',
+      confirmText: '刪除',
+      destructive: true,
     );
 
-    if (ok != true) return;
+    if (!ok) return;
     final success = await ApiClient.deleteChatSession(sessionId);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(

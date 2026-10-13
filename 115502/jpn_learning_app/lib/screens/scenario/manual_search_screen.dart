@@ -1,11 +1,13 @@
 import 'dart:typed_data' show Uint8List;
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 import 'package:jpn_learning_app/screens/scenario/roleplay_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
@@ -179,46 +181,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       _showSnack('新增自訂角色可以解鎖一種腔調');
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          '解鎖「${d['name']}」',
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          '會用掉一個腔調名額，選了之後不能換成別的腔調。',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('再想想', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              '確定解鎖',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: '解鎖「${d['name']}」',
+      message: '會用掉一個腔調名額，選了之後不能換成別的腔調。',
+      confirmText: '確定解鎖',
+      cancelText: '再想想',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
     final dialectId = (d['id'] as num).toInt();
@@ -479,25 +449,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 
   // 長按自訂角色：刪除（不退點數）
   Future<void> _confirmDeleteCustom(Map<String, dynamic> char) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('刪除「${char['name']}」？'),
-        content: Text(_customCost > 0 ? '刪除後無法復原，也不會退還點數。' : '刪除後無法復原。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('刪除', style: TextStyle(color: Colors.redAccent)),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: '刪除「${char['name']}」？',
+      message: _customCost > 0 ? '刪除後無法復原，也不會退還點數。' : '刪除後無法復原。',
+      confirmText: '刪除',
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     final userId = context.read<UserProvider>().userId;
     if (userId == null) return;
     final res = await ApiClient.deleteCustomCharacter(
@@ -517,312 +476,306 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   Widget build(BuildContext context) {
     return SubPageTemplate(
       title: '手動建立情境',
+      extendBody: true,
+      bottomNavigationBar: FloatingBottomBar(
+        child: ElevatedButton(
+          onPressed: _searchController.text.trim().isEmpty
+              ? null
+              : _submitScenario,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            disabledBackgroundColor: Colors.grey.shade300,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          child: Text(
+            '開始生成情境',
+            style: TextStyle(
+              color: _searchController.text.trim().isEmpty
+                  ? Colors.grey.shade500
+                  : Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            FloatingBottomBar.bodyBottomPadding(context),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '想練習什麼樣的對話呢？',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        '輸入您想模擬的情境或主題，AI 將為您量身打造專屬的日語課程！',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+              const Text(
+                '想練習什麼樣的對話呢？',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '輸入您想模擬的情境或主題，AI 將為您量身打造專屬的日語課程！',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
 
-                      TextField(
-                        controller: _searchController,
-                        maxLength: 20,
-                        onChanged: (value) => setState(() {}),
-                        decoration: InputDecoration(
-                          hintText: '例如：在便利商店買咖啡...',
-                          hintStyle: TextStyle(color: Colors.grey.shade400),
-                          prefixIcon: const Icon(
-                            Icons.search,
+              TextField(
+                controller: _searchController,
+                maxLength: 20,
+                onChanged: (value) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: '例如：在便利商店買咖啡...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.primary,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.clear,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              const Text(
+                '快速選擇主題',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 12,
+                children: _scenes.map((scene) {
+                  final int? codepoint =
+                      scene['icon_codepoint'] as int?;
+                  final String text = scene['name'] as String;
+
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      setState(() {
+                        _searchController.text = text;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            codepoint != null
+                                ? IconData(
+                                    codepoint,
+                                    fontFamily: 'MaterialIcons',
+                                  )
+                                : Icons.category,
+                            size: 16,
                             color: AppColors.primary,
                           ),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(
-                                    Icons.clear,
-                                    color: Colors.grey,
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() {});
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
+                          const SizedBox(width: 6),
+                          Text(
+                            text,
+                            style: const TextStyle(
                               color: AppColors.primary,
-                              width: 2,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 32),
+
+              const Text(
+                '選擇對話對象',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              SizedBox(
+                height: 60,
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(right: 16),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _characters.length,
+                  itemBuilder: (context, index) {
+                    // 渲染一般角色卡片
+                    final char = _characters[index];
+                    final isSelected =
+                        _selectedCharacterName == char['name'];
+
+                    return GestureDetector(
+                      onLongPress: char['custom_id'] == null
+                          ? null
+                          : () => _confirmDeleteCustom(char),
+                      onTap: () => setState(
+                        () => _selectedCharacterName = char['name'],
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              char['name'],
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              char['role'],
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white70
+                                    : Colors.black54,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
 
-                      const Text(
-                        '快速選擇主題',
+              // 自訂角色按鈕放在角色列下面，角色變多也不用滑到最右邊才找得到
+              GestureDetector(
+                onTap: () => _showAddCharacterDialog(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.grey.shade400,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '自訂角色',
                         style: TextStyle(
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: AppColors.textDark,
                         ),
                       ),
-                      const SizedBox(height: 16),
-
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 12,
-                        children: _scenes.map((scene) {
-                          final int? codepoint =
-                              scene['icon_codepoint'] as int?;
-                          final String text = scene['name'] as String;
-
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () {
-                              setState(() {
-                                _searchController.text = text;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    codepoint != null
-                                        ? IconData(
-                                            codepoint,
-                                            fontFamily: 'MaterialIcons',
-                                          )
-                                        : Icons.category,
-                                    size: 16,
-                                    color: AppColors.primary,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    text,
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      const Text(
-                        '選擇對話對象',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      SizedBox(
-                        height: 60,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(right: 16),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _characters.length,
-                          itemBuilder: (context, index) {
-                            // 渲染一般角色卡片
-                            final char = _characters[index];
-                            final isSelected =
-                                _selectedCharacterName == char['name'];
-
-                            return GestureDetector(
-                              onLongPress: char['custom_id'] == null
-                                  ? null
-                                  : () => _confirmDeleteCustom(char),
-                              onTap: () => setState(
-                                () => _selectedCharacterName = char['name'],
-                              ),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: AppColors.primary,
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.3,
-                                            ),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      char['name'],
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? Colors.white
-                                            : AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      char['role'],
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? Colors.white70
-                                            : Colors.black54,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 自訂角色按鈕放在角色列下面，角色變多也不用滑到最右邊才找得到
-                      GestureDetector(
-                        onTap: () => _showAddCharacterDialog(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.grey.shade400,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.add,
-                                color: AppColors.primary,
-                                size: 18,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                '自訂角色',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      ..._buildDialectSection(),
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(height: 28),
 
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: _searchController.text.trim().isEmpty
-                      ? null
-                      : _submitScenario,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.9),
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    elevation: _searchController.text.trim().isEmpty ? 0 : 2,
-                  ),
-                  child: Text(
-                    '開始生成情境',
-                    style: TextStyle(
-                      color: _searchController.text.trim().isEmpty
-                          ? Colors.grey.shade500
-                          : Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
+              ..._buildDialectSection(),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -944,195 +897,255 @@ class _AddCharacterDialogState extends State<_AddCharacterDialog> {
     TextEditingController controller,
   ) {
     final isMissing = _attemptedSubmit && controller.text.trim().isEmpty;
-    final color = isMissing ? Colors.red : AppColors.primary;
 
-    return InputDecoration(
+    return AppDialog.inputDecoration(
       labelText: '$label *',
       hintText: '例如：${_example[label]}',
-      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-      floatingLabelBehavior: FloatingLabelBehavior.always,
-      labelStyle: TextStyle(color: isMissing ? Colors.red : null),
       errorText: isMissing ? '此欄位為必填' : null,
-      enabledBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: isMissing ? Colors.red : Colors.grey),
+    ).copyWith(
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      labelStyle: TextStyle(
+        color: isMissing ? Colors.redAccent : AppColors.textGrey,
       ),
-      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: color)),
+      floatingLabelStyle: TextStyle(
+        color: isMissing ? Colors.redAccent : AppColors.primary,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 
-  Widget _dialectOption(int? id, String label, String? samplePath) {
+  // 欄位之間的固定間距
+  static const _gap = SizedBox(height: 12);
+
+  // 腔調選項：跟主畫面的腔調列同一套樣式（圓角卡片、選中淡綠底＋綠框、右邊試聽）
+  Widget _dialectOption(
+    int? id,
+    String label, {
+    String? region,
+    String? samplePath,
+  }) {
     final selected = _dialectId == id;
-    return Row(
-      children: [
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: ChoiceChip(
-              label: Text(label),
-              selected: selected,
-              showCheckmark: false,
-              selectedColor: AppColors.primary,
-              backgroundColor: Colors.white,
-              labelStyle: TextStyle(
-                color: selected ? Colors.white : AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-              onSelected: (_) => setState(() => _dialectId = id),
-            ),
+    return GestureDetector(
+      onTap: () => setState(() => _dialectId = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(left: 14, right: 4),
+        constraints: const BoxConstraints(minHeight: 46),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary.withValues(alpha: 0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppColors.primary : Colors.grey.shade300,
+            width: selected ? 1.5 : 1,
           ),
         ),
-        if (samplePath != null)
-          IconButton(
-            tooltip: '試聽',
-            icon: const Icon(Icons.play_circle_outline),
-            color: AppColors.primary,
-            onPressed: () => widget.onPreview(samplePath),
-          ),
-      ],
+        child: Row(
+          children: [
+            // 單選圓點
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? AppColors.primary : Colors.grey.shade400,
+                  width: selected ? 5 : 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: id == null && !selected
+                        ? Colors.grey.shade600
+                        : AppColors.textDark,
+                  ),
+                  children: [
+                    if (region != null && region.isNotEmpty)
+                      TextSpan(
+                        text: '　$region',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                  ],
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (samplePath != null)
+              IconButton(
+                tooltip: '試聽',
+                icon: const Icon(Icons.play_circle_outline),
+                color: AppColors.primary,
+                onPressed: () {
+                  // 按試聽就順便選起來
+                  setState(() => _dialectId = id);
+                  widget.onPreview(samplePath);
+                },
+              )
+            else
+              const SizedBox(width: 48, height: 48),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Row(
+    return AppDialog(
+      title: '新增對話角色',
+      titleTrailing: const Text(
+        '* 必填',
+        style: TextStyle(color: Colors.grey, fontSize: 12),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Text(
-              '新增對話角色',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _fillExample,
+              icon: const Icon(Icons.auto_fix_high, size: 16),
+              label: const Text('不知道怎麼填？帶入範例'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                padding: EdgeInsets.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
           ),
-          Text('必填', style: TextStyle(color: Colors.red, fontSize: 14)),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _fillExample,
-                icon: const Icon(Icons.auto_fix_high, size: 16),
-                label: const Text('不知道怎麼填？帶入範例'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: EdgeInsets.zero,
+          const SizedBox(height: 8),
+          TextField(
+            controller: nameCtrl,
+            decoration: requiredDecoration('姓名', nameCtrl),
+            onChanged: (_) => setState(() {}),
+            cursorColor: AppColors.primary,
+          ),
+          _gap,
+          TextField(
+            controller: originCtrl,
+            decoration: requiredDecoration('出身地', originCtrl),
+            onChanged: (_) => setState(() {}),
+            cursorColor: AppColors.primary,
+          ),
+          _gap,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: ageCtrl,
+                  decoration: requiredDecoration('年紀', ageCtrl),
+                  onChanged: (_) => setState(() {}),
+                  keyboardType: TextInputType.number,
+                  cursorColor: AppColors.primary,
                 ),
               ),
-            ),
-            TextField(
-              controller: nameCtrl,
-              decoration: requiredDecoration('姓名', nameCtrl),
-              onChanged: (_) => setState(() {}),
-              cursorColor: AppColors.primary,
-            ),
-            TextField(
-              controller: originCtrl,
-              decoration: requiredDecoration('出身地', originCtrl),
-              onChanged: (_) => setState(() {}),
-              cursorColor: AppColors.primary,
-            ),
-            Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: genderCtrl,
+                  decoration: requiredDecoration('性別', genderCtrl),
+                  onChanged: (_) => setState(() {}),
+                  cursorColor: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          _gap,
+          TextField(
+            controller: personalityCtrl,
+            decoration: requiredDecoration('個性', personalityCtrl),
+            onChanged: (_) => setState(() {}),
+            cursorColor: AppColors.primary,
+          ),
+          _gap,
+          TextField(
+            controller: traitsCtrl,
+            decoration: requiredDecoration('特殊設定', traitsCtrl),
+            onChanged: (_) => setState(() {}),
+            maxLines: 2,
+            cursorColor: AppColors.primary,
+          ),
+          if (widget.dialects.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            const Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: ageCtrl,
-                    decoration: requiredDecoration('年紀', ageCtrl),
-                    onChanged: (_) => setState(() {}),
-                    keyboardType: TextInputType.number,
-                    cursorColor: AppColors.primary,
+                Text(
+                  '附贈腔調',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppColors.textDark,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: genderCtrl,
-                    decoration: requiredDecoration('性別', genderCtrl),
-                    onChanged: (_) => setState(() {}),
-                    cursorColor: AppColors.primary,
-                  ),
+                SizedBox(width: 8),
+                Text(
+                  '選了不能換',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
-            TextField(
-              controller: personalityCtrl,
-              decoration: requiredDecoration('個性', personalityCtrl),
-              onChanged: (_) => setState(() {}),
-              cursorColor: AppColors.primary,
-            ),
-            TextField(
-              controller: traitsCtrl,
-              decoration: requiredDecoration('特殊設定', traitsCtrl),
-              onChanged: (_) => setState(() {}),
-              maxLines: 2,
-              cursorColor: AppColors.primary,
-            ),
-            if (widget.dialects.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '附贈腔調（選了不能換）',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 4),
-              _dialectOption(null, '之後再選', null),
-              for (final d in widget.dialects)
-                _dialectOption(
-                  (d['id'] as num).toInt(),
-                  d['name'] as String,
-                  (d['samples'] as Map?)?[widget.voiceGender] as String?,
-                ),
-            ],
-            if (_submitError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  _submitError!,
-                  style: const TextStyle(color: Colors.red, fontSize: 13),
-                ),
+            const SizedBox(height: 10),
+            _dialectOption(null, '之後再選'),
+            for (final d in widget.dialects)
+              _dialectOption(
+                (d['id'] as num).toInt(),
+                d['name'] as String,
+                region: d['region'] as String?,
+                samplePath:
+                    (d['samples'] as Map?)?[widget.voiceGender] as String?,
               ),
           ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.pop(context),
-          child: const Text('取消', style: TextStyle(color: Colors.grey)),
-        ),
-        ElevatedButton(
-          onPressed: _submitting ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+          if (_submitError != null)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: Colors.redAccent,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _submitError!,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          child: _submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  widget.cost > 0 ? '花 ${widget.cost} 點新增' : '新增角色',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-        ),
-      ],
+        ],
+      ),
+      cancelText: '取消',
+      onCancel: () => Navigator.pop(context),
+      confirmText: widget.cost > 0 ? '花 ${widget.cost} 點新增' : '新增角色',
+      onConfirm: _submit,
+      confirmLoading: _submitting,
     );
   }
 }

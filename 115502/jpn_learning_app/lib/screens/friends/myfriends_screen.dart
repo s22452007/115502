@@ -4,8 +4,8 @@ import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart'; // 引入 API 工具
 import 'package:jpn_learning_app/screens/friends/addfriends_screen.dart';
 import 'package:jpn_learning_app/screens/leaderboard/study_group_screen.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 // 引入我們剛剛抽離出去的精美卡片積木
 import 'package:jpn_learning_app/widgets/friends/friend_list_card.dart';
 
@@ -128,94 +128,58 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   }
 
   // 2. 設定暱稱的對話框
-  void _showEditNicknameDialog(dynamic friend) {
+  Future<void> _showEditNicknameDialog(dynamic friend) async {
     final friendId = friend['friend_id']?.toString() ?? '';
     final oldNickname = friend['nickname']?.toString() ?? '';
-    final controller = TextEditingController(text: oldNickname);
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('設定暱稱', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _darkGreen, width: 2)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _darkGreen),
-            onPressed: () async {
-              final newNickname = controller.text.trim();
-              if (newNickname.isEmpty) return;
-              Navigator.pop(ctx); 
-              
-              final userId = context.read<UserProvider>().userId;
-              if (userId != null) {
-                final res = await ApiClient.updateFriendNickname(userId, friendId, newNickname);
-                if (mounted) {
-                  if (res['error'] != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱已更新！')));
-                    _fetchFriends(); 
-                  }
-                }
-              }
-            },
-            child: const Text('儲存', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final newNickname = await AppDialog.input(
+      context,
+      title: '設定暱稱',
+      initialValue: oldNickname,
+      confirmText: '儲存',
     );
+    if (newNickname == null || newNickname.isEmpty || !mounted) return;
+
+    final userId = context.read<UserProvider>().userId;
+    if (userId != null) {
+      final res = await ApiClient.updateFriendNickname(userId, friendId, newNickname);
+      if (mounted) {
+        if (res['error'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暱稱已更新！')));
+          _fetchFriends();
+        }
+      }
+    }
   }
 
   // 3. 刪除好友的確認對話框
-  void _showDeleteFriendDialog(dynamic friend) {
+  Future<void> _showDeleteFriendDialog(dynamic friend) async {
     final nickname = friend['nickname']?.toString() ?? 'Unknown';
     final friendId = friend['friend_id']?.toString() ?? '';
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('刪除好友', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-        content: Text('確定要刪除好友「$nickname」嗎？\n刪除後將無法恢復。', style: const TextStyle(height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(ctx); 
-              
-              final userId = context.read<UserProvider>().userId;
-              if (userId != null) {
-                final res = await ApiClient.deleteFriend(userId, friendId);
-                if (mounted) {
-                  if (res['error'] != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已刪除好友')));
-                    _fetchFriends(); 
-                  }
-                }
-              }
-            },
-            child: const Text('確定刪除', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final ok = await AppDialog.confirm(
+      context,
+      title: '刪除好友',
+      message: '確定要刪除好友「$nickname」嗎？\n刪除後將無法恢復。',
+      confirmText: '確定刪除',
+      destructive: true,
     );
+    if (!ok || !mounted) return;
+
+    final userId = context.read<UserProvider>().userId;
+    if (userId != null) {
+      final res = await ApiClient.deleteFriend(userId, friendId);
+      if (mounted) {
+        if (res['error'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'])));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已刪除好友')));
+          _fetchFriends();
+        }
+      }
+    }
   }
 
   // ==========================================

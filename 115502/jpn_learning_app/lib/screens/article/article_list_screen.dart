@@ -10,6 +10,7 @@ import 'package:jpn_learning_app/services/article_service.dart';
 import 'package:jpn_learning_app/screens/article/article_detail_screen.dart';
 import 'package:jpn_learning_app/screens/premium/store_dashboard_screen.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class ArticleListScreen extends StatefulWidget {
   const ArticleListScreen({Key? key}) : super(key: key);
@@ -324,99 +325,21 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
   // ====================================================
   // 解鎖確認對話框
   // ====================================================
-  void _showUnlockDialog(
+  Future<void> _showUnlockDialog(
     BuildContext context,
     int articleId,
     String articleTitle,
     int cost,
-  ) {
+  ) async {
     if (context.read<UserProvider>().isEduStudent) return;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 0,
-          backgroundColor: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '解鎖文章',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '確定要花費 $cost J-pts 解鎖「$articleTitle」嗎？',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF475569),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          backgroundColor: const Color(0xFFF1F5F9),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          '取消',
-                          style: TextStyle(
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: AppColors.primary,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () async {
-                          Navigator.pop(context);
-                          await _processUnlock(context, articleId, cost);
-                        },
-                        child: const Text(
-                          '確認解鎖',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final ok = await AppDialog.confirm(
+      context,
+      title: '解鎖文章',
+      message: '確定要花費 $cost J-pts 解鎖「$articleTitle」嗎？',
+      confirmText: '確認解鎖',
     );
+    if (!ok || !context.mounted) return;
+    await _processUnlock(context, articleId, cost);
   }
 
   // ====================================================
@@ -493,99 +416,20 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
   // ====================================================
   // 點數不足導購對話框 (已串接你的 StoreDashboardScreen)
   // ====================================================
-  void _showInsufficientPointsDialog(BuildContext context) {
+  Future<void> _showInsufficientPointsDialog(BuildContext context) async {
     if (context.read<UserProvider>().isEduStudent) return;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 0,
-          backgroundColor: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'J-pts 點數不足',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  '您的點數餘額不足以解鎖此文章。是否前往儲值中心獲取更多點數？',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF475569),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          '稍後再說',
-                          style: TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: const Color(0xFFF59E0B),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context); // 關閉對話框
-                          // 🌟 完美銜接你原有的商城與會員中心
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const StoreDashboardScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          '前往購買',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final goStore = await AppDialog.confirm(
+      context,
+      title: 'J-pts 點數不足',
+      message: '您的點數餘額不足以解鎖此文章。是否前往儲值中心獲取更多點數？',
+      cancelText: '稍後再說',
+      confirmText: '前往購買',
+    );
+    if (!goStore || !context.mounted) return;
+    // 🌟 完美銜接你原有的商城與會員中心
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const StoreDashboardScreen()),
     );
   }
 }

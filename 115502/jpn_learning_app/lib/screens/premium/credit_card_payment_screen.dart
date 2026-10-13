@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class CreditCardPaymentScreen extends StatefulWidget {
   final int points;
@@ -86,43 +88,44 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          child: SizedBox(
-            height: 54,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-              ),
-              onPressed: _isSubmitting ? null : _handleSubmit,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      '前往第三方安全付款  \$${widget.price}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+      extendBody: true,
+      bottomNavigationBar: FloatingBottomBar(
+        borderRadius: 28,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryGreen,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
             ),
           ),
+          onPressed: _isSubmitting ? null : _handleSubmit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  '前往第三方安全付款  \$${widget.price}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          FloatingBottomBar.bodyBottomPadding(context),
+        ),
         children: [
           _buildOrderCard(),
           const SizedBox(height: 18),
@@ -333,43 +336,16 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
   void _showPaymentSuccessDialog() {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            '付款成功',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: deepText,
-            ),
-          ),
-          content: Text(
-            '你已成功購買 ${widget.points} J-Pts，點數已加入帳戶。',
-            style: const TextStyle(
-              color: subText,
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // dialog
-                Navigator.pop(context); // credit card page
-                Navigator.pop(context); // checkout page
-              },
-              child: const Text(
-                '完成',
-                style: TextStyle(
-                  color: primaryGreen,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => AppDialog(
+        title: '付款成功',
+        content: Text('你已成功購買 ${widget.points} J-Pts，點數已加入帳戶。'),
+        confirmText: '完成',
+        onConfirm: () {
+          Navigator.pop(ctx); // dialog
+          Navigator.pop(context); // credit card page
+          Navigator.pop(context); // checkout page
+        },
+      ),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/scenario/scene_result_screen.dart';
 import 'package:jpn_learning_app/widgets/common/analyzing_stage_view.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
@@ -99,27 +99,16 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
     }
   }
 
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
+  Future<void> _showErrorDialog(String message) async {
+    // 點外面關不掉，只能按「返回重拍」，所以彈窗關閉就等於要退回相機頁
+    await AppDialog.message(
+      context,
+      title: '辨識沒有成功',
+      message: message,
+      buttonText: '返回重拍',
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('辨識沒有成功'),
-        content: Text(message, style: const TextStyle(height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx); // 關閉 Dialog
-              Navigator.pop(context); // 退回相機頁
-            },
-            child: const Text('返回重拍',
-                style: TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
     );
+    if (mounted) Navigator.pop(context); // 退回相機頁
   }
 
   @override

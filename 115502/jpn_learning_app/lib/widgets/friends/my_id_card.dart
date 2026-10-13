@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 /// 好友 QR Code 的內容前綴，掃描端靠它判斷是不是本 App 的好友碼
 const String kFriendQrPrefix = 'snaptolearn:friend:';
@@ -14,32 +15,26 @@ class MyIdCard extends StatelessWidget {
   void _showQrDialog(BuildContext context, Color darkGreen) {
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('我的好友 QR Code', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              QrImageView(
-                data: '$kFriendQrPrefix$myId',
-                size: 220,
-                backgroundColor: Colors.white,
-                eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: darkGreen),
-                dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: darkGreen),
-              ),
-              const SizedBox(height: 12),
-              Text(myId, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2.0, color: darkGreen)),
-              const SizedBox(height: 4),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text('關閉', style: TextStyle(color: darkGreen)),
-              ),
-            ],
-          ),
+      builder: (ctx) => AppDialog(
+        title: '我的好友 QR Code',
+        centered: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 4),
+            QrImageView(
+              data: '$kFriendQrPrefix$myId',
+              size: 220,
+              backgroundColor: Colors.white,
+              eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: darkGreen),
+              dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: darkGreen),
+            ),
+            const SizedBox(height: 12),
+            Text(myId, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2.0, color: darkGreen)),
+          ],
         ),
+        confirmText: '關閉',
+        onConfirm: () => Navigator.pop(ctx),
       ),
     );
   }

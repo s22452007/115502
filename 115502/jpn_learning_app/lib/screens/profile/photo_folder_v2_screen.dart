@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 import 'package:jpn_learning_app/screens/profile/folder_card.dart';
 import 'folder_detail_screen.dart';
@@ -58,152 +59,47 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
 
   Future<void> _loadFolders() => _loadAll();
 
-  void _showAddFolderDialog() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          '新增收藏夾',
-          style: TextStyle(fontWeight: FontWeight.w900, color: textColor),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: textColor),
-          decoration: InputDecoration(
-            hintText: '輸入資料夾名稱',
-            hintStyle: const TextStyle(color: subColor),
-            filled: true,
-            fillColor: bgColor,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-        actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: subColor, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-
-              final userId = context.read<UserProvider>().userId;
-              if (userId == null) return;
-
-              await ApiClient.createFolder(userId, name);
-              _loadFolders();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('建立', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  Future<void> _showAddFolderDialog() async {
+    final name = await AppDialog.input(
+      context,
+      title: '新增收藏夾',
+      hintText: '輸入資料夾名稱',
+      confirmText: '建立',
     );
+    if (name == null || name.isEmpty || !mounted) return;
+
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null) return;
+
+    await ApiClient.createFolder(userId, name);
+    _loadFolders();
   }
 
-  void _showRenameFolderDialog(Map<String, dynamic> folder) {
-    final controller = TextEditingController(text: folder['name']);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          '編輯名稱',
-          style: TextStyle(fontWeight: FontWeight.w900, color: textColor),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: textColor),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: bgColor,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-        actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: subColor, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-              await ApiClient.renameFolder(folder['id'], name);
-              _loadFolders();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('儲存', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  Future<void> _showRenameFolderDialog(Map<String, dynamic> folder) async {
+    final name = await AppDialog.input(
+      context,
+      title: '編輯名稱',
+      initialValue: folder['name'],
+      confirmText: '儲存',
     );
+    if (name == null || name.isEmpty || !mounted) return;
+
+    await ApiClient.renameFolder(folder['id'], name);
+    _loadFolders();
   }
 
-  void _showDeleteFolderDialog(Map<String, dynamic> folder) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_rounded, color: Colors.redAccent, size: 24),
-            SizedBox(width: 8),
-            Text('確認刪除', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.redAccent)),
-          ],
-        ),
-        content: Text(
-          '確定要刪除「${folder['name']}」嗎？\n裡面的單字會移回預設單字本。',
-          style: const TextStyle(color: textColor, fontWeight: FontWeight.w600, height: 1.5),
-        ),
-        actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消', style: TextStyle(color: subColor, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ApiClient.deleteFolder(folder['id']);
-              _loadFolders();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('刪除', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  Future<void> _showDeleteFolderDialog(Map<String, dynamic> folder) async {
+    final ok = await AppDialog.confirm(
+      context,
+      title: '確認刪除',
+      message: '確定要刪除「${folder['name']}」嗎？\n裡面的單字會移回預設單字本。',
+      confirmText: '刪除',
+      destructive: true,
     );
+    if (!ok || !mounted) return;
+
+    await ApiClient.deleteFolder(folder['id']);
+    _loadFolders();
   }
 
   @override

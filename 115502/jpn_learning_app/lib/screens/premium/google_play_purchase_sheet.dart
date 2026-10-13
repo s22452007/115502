@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 Future<void> showGooglePlayPurchaseSheet({
   required BuildContext context,
@@ -78,42 +79,15 @@ class _GooglePlayPurchaseSheetState extends State<_GooglePlayPurchaseSheet> {
 
       showDialog(
         context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: const Text(
-              '購買成功',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: deepText,
-              ),
-            ),
-            content: Text(
-              '你已成功購買 ${widget.points} J-Pts，點數已加入帳戶。',
-              style: const TextStyle(
-                color: subText,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext); // close dialog
-                  Navigator.pop(context); // close checkout page
-                },
-                child: const Text(
-                  '完成',
-                  style: TextStyle(
-                    color: green,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+        builder: (dialogContext) => AppDialog(
+          title: '購買成功',
+          content: Text('你已成功購買 ${widget.points} J-Pts，點數已加入帳戶。'),
+          confirmText: '完成',
+          onConfirm: () {
+            Navigator.pop(dialogContext); // close dialog
+            Navigator.pop(context); // close checkout page
+          },
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

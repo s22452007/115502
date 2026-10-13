@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class PointCheckoutScreen extends StatefulWidget {
   final String title;
@@ -54,36 +56,17 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 60,
-                height: 60,
-                child: CircularProgressIndicator(
-                  color: primaryGreen,
-                  strokeWidth: 3,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '付款處理中...',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: deepText,
-                ),
-              ),
-            ],
+      builder: (ctx) => const AppDialog(
+        centered: true,
+        header: SizedBox(
+          width: 60,
+          height: 60,
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 3,
           ),
         ),
+        title: '付款處理中...',
       ),
     );
 
@@ -124,15 +107,10 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(
-          children: [
-            const Icon(Icons.check_circle, color: primaryGreen, size: 56),
-            const SizedBox(height: 8),
-            const Text('付款成功！', textAlign: TextAlign.center),
-          ],
-        ),
+      builder: (ctx) => AppDialog(
+        header: const Icon(Icons.check_circle, color: AppColors.primary, size: 56),
+        title: '付款成功！',
+        centered: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -145,23 +123,11 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
             ),
           ],
         ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('完成'),
-            ),
-          ),
-        ],
+        confirmText: '完成',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          Navigator.pop(context);
+        },
       ),
     );
   }
@@ -187,46 +153,44 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          decoration: const BoxDecoration(
-            color: bgColor,
-          ),
-          child: SizedBox(
-            height: 54,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-              ),
-              onPressed: _isProcessing ? null : _handleCheckout,
-              child: _isProcessing
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      _bottomButtonText,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+      extendBody: true,
+      bottomNavigationBar: FloatingBottomBar(
+        borderRadius: 28,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryGreen,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
             ),
           ),
+          onPressed: _isProcessing ? null : _handleCheckout,
+          child: _isProcessing
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _bottomButtonText,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          FloatingBottomBar.bodyBottomPadding(context),
+        ),
         children: [
           _buildCurrentPlanCard(),
           const SizedBox(height: 18),

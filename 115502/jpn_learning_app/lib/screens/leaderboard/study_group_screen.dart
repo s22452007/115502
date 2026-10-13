@@ -13,6 +13,7 @@ import 'package:jpn_learning_app/widgets/study_group/empty_group_banner.dart';
 import 'package:jpn_learning_app/widgets/study_group/invites_status_card.dart';
 import 'package:jpn_learning_app/widgets/study_group/rules_card.dart';
 import 'package:jpn_learning_app/utils/sub_page_template.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class StudyGroupScreen extends StatefulWidget {
   final bool showAppBar;
@@ -56,33 +57,12 @@ class _StudyGroupScreenState extends State<StudyGroupScreen> {
             }
 
             Future.delayed(Duration.zero, () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  title: const Text(
-                    '上週結算通知',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  content: Text(
-                    groupResult['message'] ?? '',
-                    style: const TextStyle(fontSize: 16, height: 1.5),
-                  ),
-                  actions: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                      ),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text(
-                        '我知道了',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
+              if (!mounted) return;
+              AppDialog.message(
+                context,
+                title: '上週結算通知',
+                message: groupResult['message'] ?? '',
+                buttonText: '我知道了',
               );
             });
           } else if (groupResult['has_group'] == true) {

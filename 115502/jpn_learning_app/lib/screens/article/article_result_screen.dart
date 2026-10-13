@@ -6,15 +6,42 @@ class ArticleResultScreen extends StatelessWidget {
 
   const ArticleResultScreen({Key? key, required this.resultData}) : super(key: key);
 
+  /// 把後端評語統一轉成純文字：遇到 Map / List（AI 偶爾回的 JSON 物件）就攤平成一句話，
+  /// 畫面上只會出現文字，不會出現 {word: ..., correct: ...} 這種格式。
+  static String _toPlainText(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value.trim();
+    if (value is Map) {
+      return value.values
+          .map(_toPlainText)
+          .where((t) => t.isNotEmpty)
+          .join('，');
+    }
+    if (value is List) {
+      return value
+          .map(_toPlainText)
+          .where((t) => t.isNotEmpty)
+          .join('，');
+    }
+    return value.toString().trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     // 🛡️ 終極安全解析 (Safe Parse)：無論後端傳字串、整數還是小數，都不會崩潰！
     final int score = double.tryParse(resultData['score']?.toString() ?? '0')?.toInt() ?? 0;
     final String completionRate = resultData['completion_rate']?.toString() ?? "0%";
-    final String overallFeedback = resultData['overall_feedback']?.toString() ?? "分析完成，請持續保持練習。";
-    
-    // 確保 mistakes 絕對是一個 List
-    final List<dynamic> mistakes = (resultData['mistakes'] is List) ? resultData['mistakes'] : [];
+    final String overallFeedback = _toPlainText(resultData['overall_feedback']).isEmpty
+        ? "分析完成，請持續保持練習。"
+        : _toPlainText(resultData['overall_feedback']);
+
+    // 確保 mistakes 絕對是一個 List，而且每一項都是純文字（不會把 JSON 物件直接印在畫面上）
+    final List<String> mistakes = (resultData['mistakes'] is List)
+        ? (resultData['mistakes'] as List)
+            .map(_toPlainText)
+            .where((t) => t.isNotEmpty)
+            .toList()
+        : <String>[];
 
     // 🌟 嚴格同步主頁 (HomeScreen) 的色彩與文字系統
     const Color textColor = Color(0xFF2C3E50); 
@@ -186,7 +213,7 @@ class ArticleResultScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          m.toString(),
+                          m,
                           style: const TextStyle(fontSize: 15, color: textColor, fontWeight: FontWeight.w600, height: 1.6),
                         ),
                       ),

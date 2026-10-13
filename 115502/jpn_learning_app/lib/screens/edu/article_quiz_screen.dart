@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 /// 文章閱讀作業（附測驗）的作答畫面。
 ///
@@ -82,63 +83,76 @@ class _ArticleQuizScreenState extends State<ArticleQuizScreen> {
     return showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(
-          children: [
-            Icon(
-              score >= 60 ? Icons.verified_rounded : Icons.edit_note_rounded,
-              color: score >= 60 ? const Color(0xFF10B981) : Colors.orange,
-              size: 56,
-            ),
-            const SizedBox(height: 8),
-            Text('$score 分', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-            Text(
-              result['message'] ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: results.length,
-            separatorBuilder: (_, __) => const Divider(height: 16),
-            itemBuilder: (_, i) {
-              final r = results[i];
-              final ok = r['is_correct'] == true;
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(ok ? Icons.check_circle : Icons.cancel,
-                      color: ok ? Colors.green : Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${i + 1}. ${r['question'] ?? ''}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        if (!ok)
-                          Text('正確答案：${r['correct_answer'] ?? ''}',
-                              style: const TextStyle(fontSize: 12, color: Colors.red)),
-                        if ((r['explanation'] ?? '').toString().isNotEmpty)
-                          Text(r['explanation'],
-                              style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
+      builder: (ctx) {
+        final passed = score >= 60;
+        final resultColor = passed ? const Color(0xFF10B981) : Colors.orange;
+        return AppDialog(
+          header: Icon(
+            passed ? Icons.verified_rounded : Icons.edit_note_rounded,
+            color: resultColor,
+            size: 56,
+          ),
+          title: '$score 分',
+          titleColor: resultColor,
+          centered: true,
+          scrollable: false,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                result['message'] ?? '',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              // 逐題結果：靠左排，不吃彈窗置中的預設對齊
+              SizedBox(
+                width: double.maxFinite,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.45),
+                  child: DefaultTextStyle.merge(
+                    textAlign: TextAlign.start,
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: results.length,
+                      separatorBuilder: (_, __) => const Divider(height: 16),
+                      itemBuilder: (_, i) {
+                        final r = results[i];
+                        final ok = r['is_correct'] == true;
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(ok ? Icons.check_circle : Icons.cancel,
+                                color: ok ? Colors.green : Colors.red, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${i + 1}. ${r['question'] ?? ''}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  if (!ok)
+                                    Text('正確答案：${r['correct_answer'] ?? ''}',
+                                        style: const TextStyle(fontSize: 12, color: Colors.red)),
+                                  if ((r['explanation'] ?? '').toString().isNotEmpty)
+                                    Text(r['explanation'],
+                                        style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                ],
-              );
-            },
+                ),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('回作業清單')),
-        ],
-      ),
+          confirmText: '回作業清單',
+          onConfirm: () => Navigator.pop(ctx),
+        );
+      },
     );
   }
 
@@ -157,7 +171,10 @@ class _ArticleQuizScreenState extends State<ArticleQuizScreen> {
           style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.w900),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Color(0xFF2C3E50)),
+        leading: IconButton(
+          icon: const Icon(AppIcons.back, color: AppColors.primary, size: AppIcons.navSize),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),

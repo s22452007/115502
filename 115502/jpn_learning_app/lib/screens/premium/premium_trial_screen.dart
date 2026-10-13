@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:jpn_learning_app/widgets/common/floating_bottom_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/utils/api_client.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
+import 'package:jpn_learning_app/widgets/dialogs/app_dialog.dart';
 
 class PremiumTrialScreen extends StatefulWidget {
   final int priceMonthly;
@@ -33,31 +35,29 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
 
     return Scaffold(
       backgroundColor: _bgColor,
+      extendBody: true,
+      bottomNavigationBar: _buildBottomButton(context),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTopBar(context),
-                    const SizedBox(height: 24),
-                    _buildHeroCard(),
-                    const SizedBox(height: 16),
-                    _buildTrialInfoCard(trialEndText),
-                    const SizedBox(height: 16),
-                    _buildPaymentCard(),
-                  ],
-                ),
-              ),
-            ),
-            _buildBottomButton(context),
-          ],
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            FloatingBottomBar.bodyBottomPadding(context),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTopBar(context),
+              const SizedBox(height: 24),
+              _buildHeroCard(),
+              const SizedBox(height: 16),
+              _buildTrialInfoCard(trialEndText),
+              const SizedBox(height: 16),
+              _buildPaymentCard(),
+            ],
+          ),
         ),
       ),
     );
@@ -268,32 +268,34 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
   }
 
   Widget _buildBottomButton(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+    return FloatingBottomBar(
+      borderRadius: 16,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          onPressed: _isProcessing ? null : () => _handleActivate(context),
-          child: _isProcessing
-              ? const CircularProgressIndicator(color: Colors.white)
-              : const Text(
-                  '開始 7 天免費試用',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
         ),
+        onPressed: _isProcessing ? null : () => _handleActivate(context),
+        child: _isProcessing
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: Colors.white,
+                ),
+              )
+            : const Text(
+                '開始 7 天免費試用',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
       ),
     );
   }
@@ -367,37 +369,24 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
   void _showTrialSuccessDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          '免費試用已啟用',
-          style: TextStyle(fontWeight: FontWeight.w900, color: _textDark),
+      builder: (dialogContext) => AppDialog(
+        header: const Icon(
+          Icons.workspace_premium_rounded,
+          color: AppColors.primary,
+          size: 64,
         ),
-        content: const Text(
-          '你現在可以開始使用 Premium 的完整功能。',
-          style: TextStyle(color: _subText, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-                (route) => false,
-              );
-            },
-            child: const Text(
-              '開始使用',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+        title: '免費試用已啟用',
+        centered: true,
+        content: const Text('你現在可以開始使用 Premium 的完整功能。'),
+        confirmText: '開始使用',
+        onConfirm: () {
+          Navigator.pop(dialogContext);
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+        },
       ),
     );
   }

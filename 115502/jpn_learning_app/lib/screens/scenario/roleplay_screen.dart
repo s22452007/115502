@@ -343,7 +343,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -353,9 +353,11 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                 children: [
                   const Icon(Icons.smart_toy, color: Colors.orange),
                   const SizedBox(width: 8),
-                  const Text(
-                    '今日AI對話次數已用完',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  const Flexible(
+                    child: Text(
+                      '今日AI對話次數已用完',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
@@ -807,12 +809,14 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             color: color,
           ),
           const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -855,7 +859,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       .where((l) => l.isNotEmpty && _isJapaneseLine(l))
       .join('\n');
 
-  Widget _buildAiBubble(String displayText) {
+  // showSpeaker：開場歡迎訊息是中文介面說明，不需要朗讀按鈕
+  Widget _buildAiBubble(String displayText, {bool showSpeaker = true}) {
     final cleaned = displayText.replaceAll('**', '').replaceAll('*', '');
     final lines = cleaned
         .split('\n')
@@ -872,7 +877,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       children: [
         Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.fromLTRB(16, 12, 44, 12),
+          padding: EdgeInsets.fromLTRB(16, 12, showSpeaker ? 44 : 16, 12),
           decoration: BoxDecoration(
             color: AppColors.primaryLighter,
             borderRadius: BorderRadius.circular(20),
@@ -949,18 +954,19 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
             }).toList(),
           ),
         ),
-        Positioned(
-          top: 8,
-          right: 10,
-          child: GestureDetector(
-            onTap: () => _playTts(japaneseOnly),
-            child: Icon(
-              isWholePlaying ? Icons.graphic_eq : Icons.volume_up,
-              size: 20,
-              color: AppColors.primary,
+        if (showSpeaker)
+          Positioned(
+            top: 8,
+            right: 10,
+            child: GestureDetector(
+              onTap: () => _playTts(japaneseOnly),
+              child: Icon(
+                isWholePlaying ? Icons.graphic_eq : Icons.volume_up,
+                size: 20,
+                color: AppColors.primary,
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -980,6 +986,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
           ),
           title: Text(
             widget.topicTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.textDark,
               fontSize: 16,
@@ -993,6 +1001,14 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       );
     }
 
+    // 矮螢幕開鍵盤時，對話區會被上下的橫條擠到沒空間（甚至溢出），先收起次數／作業橫條
+    final mq = MediaQuery.of(context);
+    final compact = mq.size.height -
+            mq.viewInsets.bottom -
+            mq.padding.top -
+            kToolbarHeight <
+        360;
+
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
@@ -1004,6 +1020,8 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
         ),
         title: Text(
           widget.topicTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.textDark,
             fontSize: 16,
@@ -1034,42 +1052,43 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
       ),
       body: Column(
         children: [
-          if (_isAssignment) _buildAssignmentBanner(),
-          Builder(
-            builder: (_) {
-              // 教育版學生不限次數：只顯示今天對話幾次，不顯示上限，也不會變紅
-              final isEduStudent = context.watch<UserProvider>().isEduStudent;
-              final dailyRemaining = (_aiMax - _aiUsed).clamp(0, _aiMax);
-              final effectiveRemaining = dailyRemaining + _aiExtra;
-              final countColor = isEduStudent
-                  ? AppColors.primary
-                  : effectiveRemaining <= 0
-                  ? Colors.red.shade600
-                  : effectiveRemaining == 1
-                  ? Colors.orange.shade700
-                  : AppColors.primary;
-              final extraText = _aiExtra > 0 ? ' 額外$_aiExtra次' : '';
-              return Container(
-                width: double.infinity,
-                color: AppColors.primaryLighter.withValues(alpha: 0.2),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 16,
-                ),
-                child: Text(
-                  isEduStudent
-                      ? '今日對話：$_aiUsed 次（不限次數）'
-                      : '今日對話：$_aiUsed / $_aiMax 次$extraText',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: countColor,
-                    fontWeight: FontWeight.bold,
+          if (_isAssignment && !compact) _buildAssignmentBanner(),
+          if (!compact)
+            Builder(
+              builder: (_) {
+                // 教育版學生不限次數：只顯示今天對話幾次，不顯示上限，也不會變紅
+                final isEduStudent = context.watch<UserProvider>().isEduStudent;
+                final dailyRemaining = (_aiMax - _aiUsed).clamp(0, _aiMax);
+                final effectiveRemaining = dailyRemaining + _aiExtra;
+                final countColor = isEduStudent
+                    ? AppColors.primary
+                    : effectiveRemaining <= 0
+                    ? Colors.red.shade600
+                    : effectiveRemaining == 1
+                    ? Colors.orange.shade700
+                    : AppColors.primary;
+                final extraText = _aiExtra > 0 ? ' 額外$_aiExtra次' : '';
+                return Container(
+                  width: double.infinity,
+                  color: AppColors.primaryLighter.withValues(alpha: 0.2),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
                   ),
-                ),
-              );
-            },
-          ),
+                  child: Text(
+                    isEduStudent
+                        ? '今日對話：$_aiUsed 次（不限次數）'
+                        : '今日對話：$_aiUsed / $_aiMax 次$extraText',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: countColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
+            ),
 
           Expanded(
             child: ListView.builder(
@@ -1191,7 +1210,10 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                                       ),
                                     );
                                   }
-                                  return _buildAiBubble(displayText);
+                                  return _buildAiBubble(
+                                    displayText,
+                                    showSpeaker: msg['isGreeting'] != true,
+                                  );
                                 },
                               ),
                             ),
@@ -1271,9 +1293,12 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                   ),
                 ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                // 底部留出系統導覽列的高度（鍵盤打開時這個值是 0）
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  12,
+                  16,
+                  12 + mq.padding.bottom,
                 ),
                 decoration: const BoxDecoration(
                   color: Colors.white,

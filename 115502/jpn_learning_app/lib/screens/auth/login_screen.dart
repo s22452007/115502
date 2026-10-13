@@ -660,9 +660,14 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
-              "使用 Google 帳號登入",
-              style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+            const Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  "使用 Google 帳號登入",
+                  style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+                ),
+              ),
             ),
             const SizedBox(width: 36), 
           ],

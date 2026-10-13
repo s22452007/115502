@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -323,6 +324,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         const SizedBox(height: 4),
                         Text(
                           '$userName!',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
@@ -484,7 +487,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ),
               ),
             ),
-            const SizedBox(height: 120),
+            // 底部懸浮導覽列會依系統導覽列墊高，這裡一起加上
+            SizedBox(height: 120 + MediaQuery.paddingOf(context).bottom),
           ],
         ),
       ),
@@ -702,7 +706,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
+          // 窄螢幕（360 以下）七個 38 寬的圓放不下，依可用寬度縮小
+          LayoutBuilder(
+            builder: (context, constraints) {
+            final circleSize = math.min(38.0, constraints.maxWidth / 7 - 2);
+            return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final date = weekDates[index];
@@ -723,8 +731,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                   ),
                   const SizedBox(height: 10),
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: circleSize,
+                    height: circleSize,
                     decoration: BoxDecoration(
                       color: isToday
                           ? AppColors.primary
@@ -752,6 +760,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ],
               );
             }),
+            );
+            },
           ),
         ],
       ),

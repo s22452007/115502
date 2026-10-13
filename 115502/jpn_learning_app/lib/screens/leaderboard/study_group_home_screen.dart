@@ -84,12 +84,16 @@ class StudyGroupHomeScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                       ),
                     ),
-                    child: const Text(
-                      '提醒隊友',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
+                    child: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '提醒隊友',
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -116,9 +120,13 @@ class StudyGroupHomeScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                       ),
                     ),
-                    child: const Text(
-                      '邀請成員',
-                      style: TextStyle(color: AppColors.primary, fontSize: 17, fontWeight: FontWeight.w800),
+                    child: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '邀請成員',
+                        maxLines: 1,
+                        style: TextStyle(color: AppColors.primary, fontSize: 17, fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ),
                 ),
@@ -150,6 +158,8 @@ class StudyGroupHomeScreen extends StatelessWidget {
         ),
         title: Text(
           groupName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.primary, 
             fontWeight: FontWeight.bold,

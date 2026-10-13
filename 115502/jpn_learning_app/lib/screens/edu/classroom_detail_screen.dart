@@ -134,29 +134,33 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     final teacher = c['teacher_name']?.toString() ?? '老師';
     final description = (c['description'] ?? '').toString().trim();
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '老師：$teacher',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-          if (description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            // 說明可能很長，先收成三行，點一下展開
-            GestureDetector(
-              onTap: () => setState(() => _showFullDescription = !_showFullDescription),
-              child: Text(
-                description,
-                maxLines: _showFullDescription ? null : 3,
-                overflow: _showFullDescription ? null : TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, height: 1.5, color: AppColors.textDark),
-              ),
+    // 說明展開後可能很長：限制高度、在裡面捲動，下面的分頁才不會被擠爆
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.35),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '老師：$teacher',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
+            if (description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              // 說明可能很長，先收成三行，點一下展開
+              GestureDetector(
+                onTap: () => setState(() => _showFullDescription = !_showFullDescription),
+                child: Text(
+                  description,
+                  maxLines: _showFullDescription ? null : 3,
+                  overflow: _showFullDescription ? null : TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, height: 1.5, color: AppColors.textDark),
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

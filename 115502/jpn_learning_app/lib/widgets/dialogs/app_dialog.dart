@@ -205,13 +205,19 @@ class AppDialog extends StatelessWidget {
         foregroundColor: Colors.grey.shade700,
         side: BorderSide(color: Colors.grey.shade300),
         minimumSize: const Size(0, buttonHeight),
+        // 彈窗只有約 280 寬，取消鈕占 1/3，預設左右 24 會把字擠成直排
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(buttonRadius),
         ),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          maxLines: 1,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -232,6 +238,7 @@ class AppDialog extends StatelessWidget {
         disabledForegroundColor: Colors.white,
         elevation: 0,
         minimumSize: const Size(0, buttonHeight),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(buttonRadius),
         ),
@@ -245,12 +252,16 @@ class AppDialog extends StatelessWidget {
                 color: Colors.white,
               ),
             )
-          : Text(
-              text,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+          : FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                text,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
     );

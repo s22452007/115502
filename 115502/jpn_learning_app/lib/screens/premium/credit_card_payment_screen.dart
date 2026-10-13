@@ -109,12 +109,16 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
                     color: Colors.white,
                   ),
                 )
-              : Text(
-                  '前往第三方安全付款  \$${widget.price}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '前往第三方安全付款  \$${widget.price}',
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
         ),
@@ -218,12 +222,14 @@ class _CreditCardPaymentScreenState extends State<CreditCardPaymentScreen> {
                 size: 24,
               ),
               SizedBox(width: 10),
-              Text(
-                '付款安全說明',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: deepText,
+              Flexible(
+                child: Text(
+                  '付款安全說明',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: deepText,
+                  ),
                 ),
               ),
             ],

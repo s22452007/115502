@@ -191,9 +191,13 @@ class _SubscriptionCheckoutScreenState extends State<SubscriptionCheckoutScreen>
               ),
               child: _isProcessing 
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(
-                      _isTrialFlow ? '確認試用' : '立即支付 NT\$ $_price',
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white),
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _isTrialFlow ? '確認試用' : '立即支付 NT\$ $_price',
+                        maxLines: 1,
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
                     ),
             ),
           ),

@@ -161,8 +161,16 @@ class _ScenarioDetailScreenState extends State<ScenarioDetailScreen> {
           ),
       ],
       flexibleSpace: FlexibleSpaceBar(
+        // 右邊留出編輯按鈕的寬度，長名稱才不會蓋到按鈕
+        titlePadding: EdgeInsetsDirectional.only(
+          start: 72,
+          end: widget.scene['photo_id'] != null ? 56 : 16,
+          bottom: 16,
+        ),
         title: Text(
-          widget.scene['scene_name'], 
+          widget.scene['scene_name'],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,

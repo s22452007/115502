@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show BorderRadius, BuildContext, Color, Colors, Column, Container, CrossAxisAlignment, Divider, Drawer, EdgeInsets, Expanded, FontWeight, Icon, IconData, Icons, InkWell, Key, ListView, Material, MaterialPageRoute, Navigator, Padding, Row, SizedBox, StatelessWidget, Text, TextStyle, VoidCallback, Widget;
+import 'package:flutter/material.dart' show BorderRadius, BuildContext, Color, Colors, Column, Container, CrossAxisAlignment, Divider, Drawer, EdgeInsets, Expanded, FontWeight, Icon, IconData, Icons, InkWell, Key, ListView, Material, MaterialPageRoute, Navigator, Padding, Row, SizedBox, StatelessWidget, Text, TextOverflow, TextStyle, VoidCallback, Widget;
 import 'package:provider/provider.dart';
 import 'package:jpn_learning_app/providers/user_provider.dart';
 import 'package:jpn_learning_app/screens/home/home_screen.dart';
@@ -51,6 +51,8 @@ class AppDrawer extends StatelessWidget {
                     children: [
                       Text(
                         userName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,

@@ -89,8 +89,12 @@ class _StagedProgressOverlayState extends State<StagedProgressOverlay>
       child: Container(
         color: Colors.black87,
         child: SafeArea(
-          child: Padding(
+          // 鍵盤開著或矮螢幕時內容可能超過可用高度：改成可捲動，夠高時仍垂直置中
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -175,6 +179,8 @@ class _StagedProgressOverlayState extends State<StagedProgressOverlay>
                   ),
                 ],
               ],
+            ),
+            ),
             ),
           ),
         ),

@@ -124,7 +124,10 @@ class _ArticleHistoryScreenState extends State<ArticleHistoryScreen> {
                             children: [
                               const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF94A3B8)),
                               const SizedBox(width: 4),
-                              Text(date, style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
+                              Flexible(
+                                child: Text(date, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
+                              ),
                             ],
                           ),
                         ],

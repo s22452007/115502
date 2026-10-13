@@ -109,7 +109,7 @@ class _GooglePlayPurchaseSheetState extends State<_GooglePlayPurchaseSheet> {
         ),
         child: SafeArea(
           top: false,
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -213,11 +213,15 @@ class _GooglePlayPurchaseSheetState extends State<_GooglePlayPurchaseSheet> {
                               color: Colors.white,
                             ),
                           )
-                        : Text(
-                            '購買  \$${widget.price}',
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '購買  \$${widget.price}',
+                              maxLines: 1,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                   ),
@@ -258,13 +262,16 @@ class _GooglePlayPurchaseSheetState extends State<_GooglePlayPurchaseSheet> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: isBold ? 18 : 15,
-            color: deepText,
-            fontWeight: isBold ? FontWeight.w800 : FontWeight.w700,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: isBold ? 18 : 15,
+              color: deepText,
+              fontWeight: isBold ? FontWeight.w800 : FontWeight.w700,
+            ),
           ),
         ),
       ],

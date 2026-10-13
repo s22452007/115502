@@ -222,28 +222,33 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isUnlocked
-                            ? AppColors.primary.withOpacity(0.1)
-                            : const Color(0xFFCBD5E1).withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        article.theme,
-                        style: TextStyle(
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
                           color: isUnlocked
-                              ? AppColors.primary
-                              : const Color(0xFF64748B),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                              ? AppColors.primary.withOpacity(0.1)
+                              : const Color(0xFFCBD5E1).withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          article.theme,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isUnlocked
+                                ? AppColors.primary
+                                : const Color(0xFF64748B),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -292,21 +297,22 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                       color: isUnlocked ? Colors.grey : AppColors.primary,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      isUnlocked
-                          ? '點擊開始閱讀'
-                          : isEduStudent
-                          ? '校園版內容'
-                          : '花費 ${article.unlockCost} J-pts 解鎖此文章',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isUnlocked
-                            ? Colors.grey[600]
-                            : AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        isUnlocked
+                            ? '點擊開始閱讀'
+                            : isEduStudent
+                            ? '校園版內容'
+                            : '花費 ${article.unlockCost} J-pts 解鎖此文章',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isUnlocked
+                              ? Colors.grey[600]
+                              : AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     Icon(
                       AppIcons.forward,
                       size: AppIcons.navSize,

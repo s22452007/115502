@@ -269,8 +269,9 @@ class _PremiumTabState extends State<PremiumTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isCurrent ? AppColors.primary : _textDark)),
-              if (badgeText != null && badgeText.isNotEmpty)
+              Expanded(child: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isCurrent ? AppColors.primary : _textDark))),
+              if (badgeText != null && badgeText.isNotEmpty) ...[
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -279,6 +280,7 @@ class _PremiumTabState extends State<PremiumTab> {
                   ),
                   child: Text(badgeText, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 6),
@@ -322,13 +324,17 @@ class _PremiumTabState extends State<PremiumTab> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 onPressed: onTap,
-                child: Text(
-                  btnText, 
-                  style: TextStyle(
-                    color: isCurrent ? AppColors.primary : Colors.white, 
-                    fontWeight: FontWeight.w900, 
-                    fontSize: 15
-                  )
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    btnText,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: isCurrent ? AppColors.primary : Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15
+                    )
+                  ),
                 ),
               ),
             ),

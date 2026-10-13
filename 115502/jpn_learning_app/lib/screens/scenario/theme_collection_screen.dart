@@ -114,7 +114,7 @@ class _ThemeCollectionScreenState extends State<ThemeCollectionScreen> {
                 }
                 if (snapshot.hasError) {
                   return Center(
-                    child: Padding(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
                       child: Text('載入失敗：\n${snapshot.error}',
                           textAlign: TextAlign.center,
@@ -252,6 +252,8 @@ class _ThemeCard extends StatelessWidget {
     final int bonus = theme['bonus_count'] ?? 0;
     final double progress = (theme['progress'] ?? 0.0).toDouble();
     final coverUrl = _photoUrl(theme['cover_image']);
+    // 字體放大時卡片跟著長高，避免文字把固定高度的卡片撐爆
+    final textScale = MediaQuery.textScalerOf(context).scale(10) / 10;
 
     // 里程碑獎勵：後端回 {half: {state, points, ...}, complete: {...}}
     final Map<String, dynamic> rewards =
@@ -280,7 +282,7 @@ class _ThemeCard extends StatelessWidget {
         ).then((_) => onReturn());
       },
       child: Container(
-        height: 180,
+        height: (180 * textScale).clamp(180.0, 240.0),
         margin: const EdgeInsets.only(bottom: 16),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
@@ -384,6 +386,8 @@ class _ThemeCard extends StatelessWidget {
                     children: [
                       Text(
                         name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
@@ -410,6 +414,8 @@ class _ThemeCard extends StatelessWidget {
                             ? '已解鎖 $unlocked / $target 個單字 · $photoCount 張探索照'
                                 '${bonus > 0 ? ' · 額外 $bonus 字' : ''}'
                             : '收了 $bonus 個單字 · $photoCount 張探索照',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12.5,
                           color: Colors.white.withOpacity(0.95),
@@ -1141,7 +1147,7 @@ void _showLockedHint(BuildContext context, String hint) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (sheetContext) => Padding(
+    builder: (sheetContext) => SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1241,7 +1247,7 @@ void _showVocabSheet(BuildContext context, dynamic vocab) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     builder: (context) {
-      return Padding(
+      return SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,

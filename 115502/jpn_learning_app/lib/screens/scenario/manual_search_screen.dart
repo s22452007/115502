@@ -630,12 +630,14 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                             color: AppColors.primary,
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            text,
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                          Flexible(
+                            child: Text(
+                              text,
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ],
@@ -658,7 +660,9 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
               const SizedBox(height: 16),
 
               SizedBox(
-                height: 60,
+                // 字體放大時角色卡（名字＋說明兩行）會變高，列高跟著放大
+                height: (60 * MediaQuery.textScalerOf(context).scale(14) / 14)
+                    .clamp(60.0, double.infinity),
                 child: ListView.builder(
                   padding: const EdgeInsets.only(right: 16),
                   scrollDirection: Axis.horizontal,

@@ -870,9 +870,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     children: [
                       const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 24),
                       const SizedBox(width: 8),
-                      Text(
-                        '獲得 $points 點 J-pts',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
+                      Flexible(
+                        child: Text(
+                          '獲得 $points 點 J-pts',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
+                        ),
                       ),
                     ],
                   ),
@@ -906,10 +908,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _buildTag(widget.article.theme, AppColors.primary),
-                const SizedBox(width: 8),
                 _buildTag(AppHelpers.getDifficultyLabel(widget.article.level), Colors.orange),
               ],
             ),
@@ -931,8 +934,9 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('日文內文', style: TextStyle(fontSize: 14, color: Color(0xFF8E9AAB), fontWeight: FontWeight.bold)),
+                      const Flexible(child: Text('日文內文', style: TextStyle(fontSize: 14, color: Color(0xFF8E9AAB), fontWeight: FontWeight.bold))),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text('顯示假名', style: TextStyle(fontSize: 13, color: Color(0xFF8E9AAB), fontWeight: FontWeight.w600)),
                           const SizedBox(width: 4),
@@ -1015,7 +1019,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(children: [Icon(Icons.lightbulb_circle, color: Colors.amber, size: 28), SizedBox(width: 8), Text('重點文法解析', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50)))]),
+        const Row(children: [Icon(Icons.lightbulb_circle, color: Colors.amber, size: 28), SizedBox(width: 8), Flexible(child: Text('重點文法解析', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2C3E50))))]),
         const SizedBox(height: 16),
         ...grammars.map((g) => Container(
           margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(18),

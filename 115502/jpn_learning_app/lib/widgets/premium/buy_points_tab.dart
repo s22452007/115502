@@ -135,13 +135,19 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
             child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 30)
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('目前可用點數', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.85), fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text('$pts J-Pts', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('目前可用點數', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.85), fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text('$pts J-Pts', maxLines: 1, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -178,11 +184,16 @@ class _BuyPointsTabState extends State<BuyPointsTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('$pts J-Pts', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textDark)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('$pts J-Pts', maxLines: 1, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textDark)),
+                    ),
                     if (badgeText.isNotEmpty) ...[
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(

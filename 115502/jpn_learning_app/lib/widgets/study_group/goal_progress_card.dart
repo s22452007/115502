@@ -78,7 +78,10 @@ class GoalProgressCard extends StatelessWidget {
               // 達標後一律顯示金黃色的領獎按鈕
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.card_giftcard, size: 24),
-                label: Text(isEduStudent ? "完成結業！" : "領取獎勵並結業！", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(isEduStudent ? "完成結業！" : "領取獎勵並結業！", maxLines: 1, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber.shade600, 
                   foregroundColor: Colors.white,

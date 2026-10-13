@@ -109,9 +109,15 @@ class ArticleResultScreen extends StatelessWidget {
                             valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                           ),
                         ),
-                        Text(
-                          '$score',
-                          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: statusColor, height: 1),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '$score',
+                              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: statusColor, height: 1),
+                            ),
+                          ),
                         ),
                       ],
                     ),

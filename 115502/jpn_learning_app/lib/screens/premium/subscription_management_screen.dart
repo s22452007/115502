@@ -269,9 +269,11 @@ class _SubscriptionManagementScreenState
                 const Icon(Icons.verified, color: _green, size: 28),
                 const SizedBox(width: 10),
                 // 試用結束後轉月繳，所以試用也顯示月繳方案
-                Text(
-                  _billingCycle == 'yearly' ? 'Premium (年繳)' : 'Premium (月繳)',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark),
+                Flexible(
+                  child: Text(
+                    _billingCycle == 'yearly' ? 'Premium (年繳)' : 'Premium (月繳)',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark),
+                  ),
                 ),
               ]),
               const SizedBox(height: 16),
@@ -353,9 +355,11 @@ class _SubscriptionManagementScreenState
                   Row(children: [
                     const Icon(Icons.check_circle, color: _gold, size: 18),
                     const SizedBox(width: 8),
-                    const Text(
-                      '✓ 已排程升級至年繳',
-                      style: TextStyle(color: _gold, fontWeight: FontWeight.w700, fontSize: 13),
+                    const Flexible(
+                      child: Text(
+                        '✓ 已排程升級至年繳',
+                        style: TextStyle(color: _gold, fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
                     ),
                   ]),
                   const SizedBox(height: 6),
@@ -527,11 +531,13 @@ class _SubscriptionManagementScreenState
           Text(label,
               style: const TextStyle(color: Colors.grey, fontSize: 14)),
           const SizedBox(width: 12),
-          Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: _textDark)),
+          Flexible(
+            child: Text(value,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: _textDark)),
+          ),
         ],
       ),
     );

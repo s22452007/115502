@@ -370,7 +370,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
             children: [
               Icon(status == 'pending' ? Icons.pending_actions : Icons.assignment_turned_in_rounded, color: color),
               const SizedBox(width: 8),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15)),
+              Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15))),
             ],
           ),
           if (status != 'pending') ...[
@@ -410,8 +410,11 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         child: ElevatedButton.icon(
           onPressed: null,
           icon: const Icon(Icons.lock_clock_outlined),
-          label: const Text('已截止，老師設定不收遲交',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          label: const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('已截止，老師設定不收遲交',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
           style: ElevatedButton.styleFrom(
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

@@ -25,9 +25,13 @@ class SystemSettingsScreen extends StatelessWidget {
     return SubPageTemplate(
       title: '系統設定',
       body: SafeArea(
-        child: Center(
+        // 矮螢幕／大字體時整頁可捲動；IntrinsicHeight 讓 Spacer 在空間足夠時照舊把刪除帳號推到底部
+        child: LayoutBuilder(
+          builder: (context, viewport) => SingleChildScrollView(
+            child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
+            constraints: BoxConstraints(maxWidth: 430, minHeight: viewport.maxHeight),
+            child: IntrinsicHeight(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
@@ -139,6 +143,9 @@ class SystemSettingsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            ),
+          ),
             ),
           ),
         ),
@@ -848,10 +855,11 @@ class FontSizeSettingsScreen extends StatelessWidget {
     return SubPageTemplate(
       title: '字體大小',
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1193,9 +1201,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                 ),
               ),
-              Text(
-                fb['created_at'] ?? '',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  fb['created_at'] ?? '',
+                  textAlign: TextAlign.end,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
               ),
             ],
           ),

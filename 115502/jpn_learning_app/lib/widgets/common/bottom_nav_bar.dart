@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:jpn_learning_app/utils/constants.dart';
 
@@ -15,7 +17,8 @@ class AppBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     // 使用 Padding 或 Margin 讓導航欄不貼齊邊緣，產生懸浮感
     return Container(
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 30), // 左右外距 24，底部距離螢幕 30
+      // 左右外距 24，底部距離螢幕 30；三鍵導覽列的手機要避開系統列
+      margin: EdgeInsets.fromLTRB(24, 0, 24, math.max(30, MediaQuery.paddingOf(context).bottom + 8)),
       height: 70,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -32,11 +35,12 @@ class AppBottomNavBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(0, Icons.home_rounded, '主頁'),
-          _buildNavItem(1, Icons.camera_alt_rounded, '相機'),
-          _buildNavItem(2, Icons.search_rounded, '搜尋'),
-          _buildNavItem(3, Icons.history_rounded, '紀錄'),
-          _buildNavItem(4, Icons.person_rounded, '個人'),
+          // 五格各 60 寬，窄螢幕（320）放不下時讓每格縮小
+          Flexible(child: _buildNavItem(0, Icons.home_rounded, '主頁')),
+          Flexible(child: _buildNavItem(1, Icons.camera_alt_rounded, '相機')),
+          Flexible(child: _buildNavItem(2, Icons.search_rounded, '搜尋')),
+          Flexible(child: _buildNavItem(3, Icons.history_rounded, '紀錄')),
+          Flexible(child: _buildNavItem(4, Icons.person_rounded, '個人')),
         ],
       ),
     );

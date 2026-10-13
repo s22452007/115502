@@ -460,7 +460,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (trailingText != null) Text(trailingText, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
+            if (trailingText != null)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(trailingText, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
+                ),
+              ),
             const SizedBox(width: 8),
             Icon(AppIcons.forward, color: Colors.grey.shade400, size: AppIcons.navSize),
           ],

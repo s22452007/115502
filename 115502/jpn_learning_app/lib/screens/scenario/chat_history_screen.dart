@@ -207,9 +207,13 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  s['last_message_at']?.toString() ?? '',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                Flexible(
+                  child: Text(
+                    s['last_message_at']?.toString() ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                  ),
                 ),
                 const Row(
                   children: [

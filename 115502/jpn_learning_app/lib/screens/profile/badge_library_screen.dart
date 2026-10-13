@@ -139,7 +139,9 @@ class _BadgeLibraryScreenState extends State<BadgeLibraryScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(badge.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333))),
+                            Flexible(
+                              child: Text(badge.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333))),
+                            ),
                             if (currentLevel > 0)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

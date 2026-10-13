@@ -248,9 +248,12 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
+        fit: StackFit.expand,
         children: [
           SafeArea(
-            child: Padding(
+            // 整頁一起捲動：矮螢幕或大字體時選項不會被擠出畫面，捲動時會滑到玻璃標題列與底部按鈕底下
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.only(left: 28, right: 28, top: 85, bottom: 100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,20 +266,14 @@ class _UpgradeTestScreenState extends State<UpgradeTestScreen> {
                         fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Flexible(
-                    flex: 2,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Text(
-                        currentQ['question'],
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black87,
-                          height: 1.3,
-                          fontFamily: '微軟正黑體',
-                        ),
-                      ),
+                  Text(
+                    currentQ['question'],
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                      height: 1.3,
+                      fontFamily: '微軟正黑體',
                     ),
                   ),
                   const SizedBox(height: 20),

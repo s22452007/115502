@@ -277,7 +277,9 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       ),
                     )
                   else
-                    SizedBox(
+                    // Flexible：矮螢幕時清單跟著縮短，不會把對話框撐爆
+                    Flexible(
+                      child: SizedBox(
                       width: double.maxFinite,
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
@@ -340,6 +342,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                                 );
                               },
                             ),
+                      ),
                       ),
                     ),
                 ],
@@ -450,13 +453,16 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Column(
+                      Flexible(
+                        child: Column(
                         children: [
                           const Text(
                             'AI 評分',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
-                          Text(
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
                             '$score',
                             style: TextStyle(
                               fontSize: 32,
@@ -466,7 +472,9 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                                   : Colors.red,
                             ),
                           ),
+                          ),
                         ],
+                      ),
                       ),
                       if (!isEduStudent) ...[
                       Container(
@@ -475,13 +483,16 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                         color: Colors.grey[300],
                         margin: const EdgeInsets.symmetric(horizontal: 24),
                       ),
-                      Column(
+                      Flexible(
+                        child: Column(
                         children: [
                           const Text(
                             '可領取獎勵',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
-                          Text(
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
                             '$points 點',
                             style: const TextStyle(
                               fontSize: 24,
@@ -489,7 +500,9 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                               color: Colors.amber,
                             ),
                           ),
+                          ),
                         ],
+                      ),
                       ),
                       ],
                     ],

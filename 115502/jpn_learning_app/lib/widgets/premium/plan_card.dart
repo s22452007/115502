@@ -51,9 +51,9 @@ class PlanCard extends StatelessWidget {
             children: [
               if (isPro) const Icon(Icons.workspace_premium, color: AppColors.secondary, size: 24),
               if (isPro) const SizedBox(width: 8),
-              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: titleColor)),
-              const Spacer(),
-              if (badgeText != null)
+              Expanded(child: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: titleColor))),
+              if (badgeText != null) ...[
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -66,6 +66,7 @@ class PlanCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.secondary),
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 12),

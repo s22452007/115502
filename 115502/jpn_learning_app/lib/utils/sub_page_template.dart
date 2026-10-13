@@ -52,6 +52,8 @@ class SubPageTemplate extends StatelessWidget {
               // 4. 標題字體：沿用你的 heading 樣式，並將顏色換成主綠色
               title: Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.heading.copyWith(
                   color: AppColors.textGrey,
                 ),

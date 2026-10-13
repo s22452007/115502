@@ -274,10 +274,13 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '已使用：$_vocabCount / $_vocabSlot 個',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                  Flexible(
+                    child: Text(
+                      '已使用：$_vocabCount / $_vocabSlot 個',
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     '還可收藏 $remaining 個',
                     style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w600),
@@ -329,7 +332,10 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
                     ),
                     child: _isExpanding
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('花 $expandCost J-Pts 擴充 +20 空間', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('花 $expandCost J-Pts 擴充 +20 空間', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
+                          ),
                   ),
                 ),
               ],
@@ -365,7 +371,13 @@ class _PhotoFolderV2ScreenState extends State<PhotoFolderV2Screen> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: Center(
-            child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 6),

@@ -106,43 +106,45 @@ class _ArticleQuizScreenState extends State<ArticleQuizScreen> {
               ),
               const SizedBox(height: 12),
               // 逐題結果：靠左排，不吃彈窗置中的預設對齊
-              SizedBox(
-                width: double.maxFinite,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.45),
-                  child: DefaultTextStyle.merge(
-                    textAlign: TextAlign.start,
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: results.length,
-                      separatorBuilder: (_, __) => const Divider(height: 16),
-                      itemBuilder: (_, i) {
-                        final r = results[i];
-                        final ok = r['is_correct'] == true;
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(ok ? Icons.check_circle : Icons.cancel,
-                                color: ok ? Colors.green : Colors.red, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${i + 1}. ${r['question'] ?? ''}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                  if (!ok)
-                                    Text('正確答案：${r['correct_answer'] ?? ''}',
-                                        style: const TextStyle(fontSize: 12, color: Colors.red)),
-                                  if ((r['explanation'] ?? '').toString().isNotEmpty)
-                                    Text(r['explanation'],
-                                        style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                ],
+              Flexible(
+                child: SizedBox(
+                  width: double.maxFinite,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.45),
+                    child: DefaultTextStyle.merge(
+                      textAlign: TextAlign.start,
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: results.length,
+                        separatorBuilder: (_, __) => const Divider(height: 16),
+                        itemBuilder: (_, i) {
+                          final r = results[i];
+                          final ok = r['is_correct'] == true;
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(ok ? Icons.check_circle : Icons.cancel,
+                                  color: ok ? Colors.green : Colors.red, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('${i + 1}. ${r['question'] ?? ''}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    if (!ok)
+                                      Text('正確答案：${r['correct_answer'] ?? ''}',
+                                          style: const TextStyle(fontSize: 12, color: Colors.red)),
+                                    if ((r['explanation'] ?? '').toString().isNotEmpty)
+                                      Text(r['explanation'],
+                                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        );
-                      },
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -168,6 +170,8 @@ class _ArticleQuizScreenState extends State<ArticleQuizScreen> {
         elevation: 0,
         title: Text(
           widget.assignment['title'] ?? '文章閱讀作業',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.w900),
         ),
         centerTitle: true,

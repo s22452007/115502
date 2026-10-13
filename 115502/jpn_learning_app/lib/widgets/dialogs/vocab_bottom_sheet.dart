@@ -78,7 +78,7 @@ class VocabBottomSheet {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('此場景的單字圖鑑', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
+                        Flexible(child: Text('此場景的單字圖鑑', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor))),
                         IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: () => Navigator.pop(context)),
                       ],
                     ),

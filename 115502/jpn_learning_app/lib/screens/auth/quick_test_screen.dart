@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -125,9 +126,9 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // 1. 底層：固定佈局內容 (移除滾動)
+          // 1. 底層：題目與選項（矮螢幕或字放大時可捲動）
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: EdgeInsets.only(
                 left: 28,
                 right: 28,
@@ -150,21 +151,15 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // --- 題目本文 (使用 Flexible 避免過長文字擠壓選項) ---
-                  Flexible(
-                    flex: 2,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Text(
-                        currentQ['question'],
-                        style: const TextStyle(
-                          fontSize: 22, // 稍微縮小一點點
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black87,
-                          height: 1.3,
-                          fontFamily: '微軟正黑體',
-                        ),
-                      ),
+                  // --- 題目本文 ---
+                  Text(
+                    currentQ['question'],
+                    style: const TextStyle(
+                      fontSize: 22, // 稍微縮小一點點
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                      height: 1.3,
+                      fontFamily: '微軟正黑體',
                     ),
                   ),
 
@@ -350,7 +345,8 @@ class _QuickTestScreenState extends State<QuickTestScreen> {
 
   Widget _buildFixedBottomButton() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 10, 28, 30),
+      // 三鍵導覽列的手機底部安全區比 30 高，按鈕不能被系統列蓋住
+      padding: EdgeInsets.fromLTRB(28, 10, 28, math.max(30, MediaQuery.paddingOf(context).bottom + 10)),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,

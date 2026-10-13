@@ -80,12 +80,12 @@ class _GrammarTipScreenState extends State<GrammarTipScreen> {
                   _TabBtn(label: '道地說法', selected: _showNative, onTap: () => setState(() => _showNative = true)),
                 ]),
                 const SizedBox(height: 12),
-                _buildSentenceBox(),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildSentenceBox(),
                         if (widget.corrections.isNotEmpty) ...[
                           _label('重點'),
                           ...widget.corrections.map(_correctionItem),

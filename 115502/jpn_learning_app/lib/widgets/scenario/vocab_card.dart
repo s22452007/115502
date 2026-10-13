@@ -371,12 +371,15 @@ class _VocabCardState extends State<VocabCard> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text(
-                          widget.vocab['word'],
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF333333),
+                        // 長的片假名單字（コントローラー…）在窄螢幕會超出，要能換行
+                        Flexible(
+                          child: Text(
+                            widget.vocab['word'],
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF333333),
+                            ),
                           ),
                         ),
                         IconButton(

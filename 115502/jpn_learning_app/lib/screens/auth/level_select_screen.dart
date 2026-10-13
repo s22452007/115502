@@ -55,8 +55,13 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     return Scaffold(
       backgroundColor: _flatCanvasColor,
       body: SafeArea(
-        child: Padding(
+        // 矮螢幕或字放大時內容會超過一頁：改成可捲動，內容不滿一頁時按鈕仍貼底
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+          child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: (constraints.maxHeight - 64).clamp(0.0, double.infinity)),
+          child: IntrinsicHeight(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -99,6 +104,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
 
               const Spacer(),
+              const SizedBox(height: 24),
 
               // Commit 3: 底部按鈕完全扁平化，增加大圓角
               AnimatedContainer(
@@ -120,6 +126,9 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               ),
               const SizedBox(height: 10),
             ],
+          ),
+          ),
+          ),
           ),
         ),
       ),

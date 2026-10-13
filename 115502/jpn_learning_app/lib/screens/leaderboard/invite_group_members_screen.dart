@@ -248,12 +248,16 @@ class _InviteGroupMembersScreenState extends State<InviteGroupMembersScreen> {
           ),
           // 把 null 判斷拿掉，永遠都可以按！
           onPressed: () => _submitAction(selectedCount),
-          child: Text(
-            // 根據選擇人數，動態改變按鈕文字
-            isCreating
-                ? (selectedCount == 0 ? '建立個人挑戰 🔥' : '確認建立小組 ($selectedCount 位)')
-                : (selectedCount == 0 ? '略過邀請' : '發送邀請 ($selectedCount 位)'),
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              // 根據選擇人數，動態改變按鈕文字
+              isCreating
+                  ? (selectedCount == 0 ? '建立個人挑戰 🔥' : '確認建立小組 ($selectedCount 位)')
+                  : (selectedCount == 0 ? '略過邀請' : '發送邀請 ($selectedCount 位)'),
+              maxLines: 1,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+            ),
           ),
         ),
       ),

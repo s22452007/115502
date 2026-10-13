@@ -13,6 +13,7 @@ Future<String?> showAvatarPicker(BuildContext context, {String? currentAvatar}) 
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (_) => _AvatarPickerSheet(currentAvatar: currentAvatar),
   );
 }
@@ -103,6 +104,8 @@ class _AvatarPickerSheetState extends State<_AvatarPickerSheet> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
+      // 16 個頭像四排，矮螢幕放不下整張表單時要能捲動
+      child: SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -241,6 +244,7 @@ class _AvatarPickerSheetState extends State<_AvatarPickerSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

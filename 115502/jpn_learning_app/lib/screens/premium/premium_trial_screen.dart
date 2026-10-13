@@ -74,12 +74,16 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        const Text(
-          '開始免費試用',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-            color: _textDark,
+        const Flexible(
+          child: Text(
+            '開始免費試用',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: _textDark,
+            ),
           ),
         ),
       ],
@@ -113,27 +117,29 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Premium (月繳)',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: _textDark,
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Premium (月繳)',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: _textDark,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    '免費試用 7 天',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
+                    SizedBox(height: 4),
+                    Text(
+                      '免費試用 7 天',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -246,15 +252,16 @@ class _PremiumTrialScreenState extends State<PremiumTrialScreen> {
               size: 22,
             ),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: isSelected ? _textDark : _subText,
-                fontSize: 15,
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? _textDark : _subText,
+                  fontSize: 15,
+                ),
               ),
             ),
-            const Spacer(),
             if (isSelected)
               const Icon(
                 Icons.check_circle_rounded,

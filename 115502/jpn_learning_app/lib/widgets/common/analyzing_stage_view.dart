@@ -90,8 +90,12 @@ class _AnalyzingStageViewState extends State<AnalyzingStageView>
     final currentStage = stages[_stageIndex];
 
     return SafeArea(
-      child: Padding(
+      // 矮螢幕、字放大或鍵盤沒收起時內容可能超過一頁：改成可捲動，夠高時仍垂直置中
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -176,6 +180,8 @@ class _AnalyzingStageViewState extends State<AnalyzingStageView>
               ),
             ],
           ],
+        ),
+        ),
         ),
       ),
     );

@@ -110,7 +110,7 @@ class _CameraScreenState extends State<CameraScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -120,9 +120,11 @@ class _CameraScreenState extends State<CameraScreen>
                 children: [
                   const Icon(Icons.camera_alt, color: Colors.orange),
                   const SizedBox(width: 8),
-                  const Text(
-                    '今日拍照次數已用完',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  const Flexible(
+                    child: Text(
+                      '今日拍照次數已用完',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
@@ -465,6 +467,9 @@ class _CameraScreenState extends State<CameraScreen>
 
   @override
   Widget build(BuildContext context) {
+    // 瀏海／狀態列較高的手機，頂部按鈕要往下避開；底部要避開系統導覽列
+    final padding = MediaQuery.of(context).padding;
+    final topInset = padding.top + 8 > 48 ? padding.top + 8 : 48.0;
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -479,7 +484,7 @@ class _CameraScreenState extends State<CameraScreen>
 
           // 返回按鈕
           Positioned(
-            top: 48,
+            top: topInset,
             left: 16,
             child: IconButton(
               icon: const Icon(AppIcons.back, color: Colors.white, size: AppIcons.navSize),
@@ -489,7 +494,7 @@ class _CameraScreenState extends State<CameraScreen>
 
           // 手動搜尋入口
           Positioned(
-            top: 48,
+            top: topInset,
             right: 16,
             child: IconButton(
               icon: const Icon(Icons.search, color: Colors.white, size: 28),
@@ -502,7 +507,7 @@ class _CameraScreenState extends State<CameraScreen>
 
           // 頂部中央的「次數顯示條」
           Positioned(
-            top: 54,
+            top: topInset + 6,
             left: 60,
             right: 60,
             child: Builder(
@@ -578,7 +583,7 @@ class _CameraScreenState extends State<CameraScreen>
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 32),
+              padding: EdgeInsets.only(top: 32, bottom: 32 + padding.bottom),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

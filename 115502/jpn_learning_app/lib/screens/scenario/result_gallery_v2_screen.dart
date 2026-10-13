@@ -195,7 +195,7 @@ class _ResultGalleryV2ScreenState extends State<ResultGalleryV2Screen> {
     if (_error != null) {
       debugPrint('取得單字探險發生錯誤: $_error');
       return Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Text(
             '載入失敗原因：\n$_error',

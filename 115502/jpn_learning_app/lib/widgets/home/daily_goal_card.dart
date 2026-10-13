@@ -93,15 +93,18 @@ class DailyGoalCard extends StatelessWidget {
             children: [
               const Icon(Icons.task_alt, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                '今日學習目標',
-                style: TextStyle(
-                  color: _titleColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
+              const Expanded(
+                child: Text(
+                  '今日學習目標',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _titleColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-              const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -280,15 +283,19 @@ class _TaskRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Text(
-          label,
-          style: TextStyle(
-            color: done ? DailyGoalCard._titleColor : DailyGoalCard._subColor,
-            fontSize: 14,
-            fontWeight: done ? FontWeight.bold : FontWeight.w600,
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: done ? DailyGoalCard._titleColor : DailyGoalCard._subColor,
+              fontSize: 14,
+              fontWeight: done ? FontWeight.bold : FontWeight.w600,
+            ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 8),
         // 剩餘次數：用完只是變淡顯示「剩 0 次」。原本用紅底「已用完」，
         // 尤其任務已經打勾時看起來像出了錯
         Text(
@@ -437,9 +444,13 @@ class _RewardOverlayState extends State<_RewardOverlay>
                   ),
                 ),
                 const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [0, 1, 2].map((i) => _buildBox(i)).toList(),
+                // 三個盒子加起來約 360 寬，窄螢幕整排等比縮小
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [0, 1, 2].map((i) => _buildBox(i)).toList(),
+                  ),
                 ),
                 const SizedBox(height: 36),
                 if (_revealed)

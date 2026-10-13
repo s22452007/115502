@@ -9,7 +9,7 @@ OpenRouter 呼叫封裝（OpenAI 相容的 Chat Completions API）。
 
 .env 設定方式：
     OPENROUTER_API_KEY=sk-or-v1-xxx
-    OPENROUTER_MODEL=google/gemini-2.5-flash          # 預設模型
+    OPENROUTER_MODEL=google/gemini-3-flash-preview    # 預設模型（實測拍照約 8 秒）
     OPENROUTER_FALLBACK_MODELS=openai/gpt-4o-mini     # 選填，逗號分隔，前面的模型失敗時 OpenRouter 自動接手
     OPENROUTER_MODEL_CAMERA=...                       # 選填，個別功能指定模型（CAMERA/TUTOR/CONTEXT/ARTICLE）
 
@@ -26,7 +26,7 @@ _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_BASE_DIR, '.env'), override=True)
 
 API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-DEFAULT_MODEL = 'google/gemini-2.5-flash'
+DEFAULT_MODEL = 'google/gemini-3-flash-preview'
 # 拍照、文章評分要等模型看完圖片／聽完錄音，給長一點
 TIMEOUT_SECONDS = 60
 

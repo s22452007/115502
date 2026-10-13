@@ -104,7 +104,6 @@ class LevelUpDialog extends StatelessWidget {
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(28), 
@@ -118,152 +117,158 @@ class LevelUpDialog extends StatelessWidget {
             )
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ---------------- 🌟 升級版：金色發光與外圍裝飾的勳章 ----------------
-            Stack(
-              clipBehavior: Clip.none, // 允許裝飾的星星稍微超出邊界
-              alignment: Alignment.center,
-              children: [
-                // 1. 金色霓虹發光底層 (Golden Aura)
-                Container(
-                  width: 100, // 控制發光範圍
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      // 內層：強烈金色光暈
-                      BoxShadow(color: goldGlow.withOpacity(0.65), blurRadius: 30, spreadRadius: 6),
-                      // 外層：擴散的淡淡金色光圈
-                      BoxShadow(color: goldGlow.withOpacity(0.25), blurRadius: 60, spreadRadius: 20),
-                    ],
+        // 矮螢幕＋大字體時內容會超過螢幕高度，讓它可以捲
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ---------------- 🌟 升級版：金色發光與外圍裝飾的勳章 ----------------
+              Stack(
+                clipBehavior: Clip.none, // 允許裝飾的星星稍微超出邊界
+                alignment: Alignment.center,
+                children: [
+                  // 1. 金色霓虹發光底層 (Golden Aura)
+                  Container(
+                    width: 100, // 控制發光範圍
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        // 內層：強烈金色光暈
+                        BoxShadow(color: goldGlow.withOpacity(0.65), blurRadius: 30, spreadRadius: 6),
+                        // 外層：擴散的淡淡金色光圈
+                        BoxShadow(color: goldGlow.withOpacity(0.25), blurRadius: 60, spreadRadius: 20),
+                      ],
+                    ),
                   ),
-                ),
-                
-                // 2. 外圍金色裝飾 (漂浮的星星與閃光)
-                Positioned(
-                  top: -10, 
-                  left: -15, 
-                  child: Icon(Icons.auto_awesome_rounded, color: goldGlow, size: 32),
-                ),
-                Positioned(
-                  bottom: -5, 
-                  right: -20, 
-                  child: Icon(Icons.star_rounded, color: darkGold, size: 28),
-                ),
-                Positioned(
-                  top: 15, 
-                  right: -10, 
-                  child: Icon(Icons.circle, color: goldGlow.withOpacity(0.8), size: 8),
-                ),
-                Positioned(
-                  bottom: 20, 
-                  left: -25, 
-                  child: Icon(Icons.star_border_rounded, color: darkGold, size: 22),
-                ),
+                  
+                  // 2. 外圍金色裝飾 (漂浮的星星與閃光)
+                  Positioned(
+                    top: -10, 
+                    left: -15, 
+                    child: Icon(Icons.auto_awesome_rounded, color: goldGlow, size: 32),
+                  ),
+                  Positioned(
+                    bottom: -5, 
+                    right: -20, 
+                    child: Icon(Icons.star_rounded, color: darkGold, size: 28),
+                  ),
+                  Positioned(
+                    top: 15, 
+                    right: -10, 
+                    child: Icon(Icons.circle, color: goldGlow.withOpacity(0.8), size: 8),
+                  ),
+                  Positioned(
+                    bottom: 20, 
+                    left: -25, 
+                    child: Icon(Icons.star_border_rounded, color: darkGold, size: 22),
+                  ),
 
-                // 3. 實體深綠色外框 + 白底單色圖示 (核心徽章)
-                Container(
-                  padding: const EdgeInsets.all(26),
-                  decoration: BoxDecoration(
-                    color: Colors.white, 
-                    shape: BoxShape.circle,
-                    border: Border.all(color: primaryGreen, width: 4.5), // 厚實的金屬感邊框
+                  // 3. 實體深綠色外框 + 白底單色圖示 (核心徽章)
+                  Container(
+                    padding: const EdgeInsets.all(26),
+                    decoration: BoxDecoration(
+                      color: Colors.white, 
+                      shape: BoxShape.circle,
+                      border: Border.all(color: primaryGreen, width: 4.5), // 厚實的金屬感邊框
+                    ),
+                    child: Icon(
+                      iconData, 
+                      color: primaryGreen, // 保持扁平化單色 Icon
+                      size: 68,
+                    ),
                   ),
-                  child: Icon(
-                    iconData, 
-                    color: primaryGreen, // 保持扁平化單色 Icon
-                    size: 68,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 36),
-            
-            // ---------------- 小標題 (帶單色 Icon) ----------------
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(topIcon, color: primaryGreen, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  topTitle,
-                  style: const TextStyle(
-                    color: primaryGreen,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            // ---------------- 徽章大標題 ----------------
-            Text(
-              badgeTitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: darkTextColor,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 36),
+              
+              // ---------------- 小標題 (帶單色 Icon) ----------------
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(topIcon, color: primaryGreen, size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      topTitle,
+                      style: const TextStyle(
+                        color: primaryGreen,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // ---------------- 徽章大標題 ----------------
+              Text(
+                badgeTitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: darkTextColor,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
 
-            // ---------------- 已解鎖稱號 (若有) ----------------
-            if (theme['name'] != null && theme['name'].toString().isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  '已解鎖【${theme['name']}】', 
-                  style: const TextStyle(
-                    fontSize: 16, 
-                    color: primaryGreen, 
-                    fontWeight: FontWeight.w800,
-                  )
-                ),
-              ),
-            
-            // ---------------- 內文描述 ----------------
-            Text(
-              descText,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: grayTextColor,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 36),
-            
-            // ---------------- 扁平化確認按鈕 ----------------
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryGreen, 
-                  elevation: 0, 
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+              // ---------------- 已解鎖稱號 (若有) ----------------
+              if (theme['name'] != null && theme['name'].toString().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    '已解鎖【${theme['name']}】', 
+                    style: const TextStyle(
+                      fontSize: 16, 
+                      color: primaryGreen, 
+                      fontWeight: FontWeight.w800,
+                    )
                   ),
                 ),
-                child: Text(
-                  buttonText,
-                  style: const TextStyle(
-                    color: Colors.white, 
-                    fontSize: 16, 
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
-                  ),
+              
+              // ---------------- 內文描述 ----------------
+              Text(
+                descText,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: grayTextColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  height: 1.6,
                 ),
               ),
-            )
-          ],
+              const SizedBox(height: 36),
+              
+              // ---------------- 扁平化確認按鈕 ----------------
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryGreen, 
+                    elevation: 0, 
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Colors.white, 
+                      fontSize: 16, 
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );

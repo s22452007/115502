@@ -175,11 +175,15 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                     color: Colors.white,
                   ),
                 )
-              : Text(
-                  _bottomButtonText,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _bottomButtonText,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
         ),
@@ -233,7 +237,10 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       widget.title,
@@ -244,7 +251,6 @@ class _PointCheckoutScreenState extends State<PointCheckoutScreen> {
                       ),
                     ),
                     if (widget.badge != null && widget.badge!.isNotEmpty) ...[
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,

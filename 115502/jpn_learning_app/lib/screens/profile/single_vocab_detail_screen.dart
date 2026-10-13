@@ -237,7 +237,9 @@ class _SingleVocabDetailScreenState extends State<SingleVocabDetailScreen> {
         children: [
           Icon(icon, size: 14, color: AppColors.primary),
           const SizedBox(width: 4),
-          Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+          Flexible(
+            child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+          ),
         ],
       ),
     );

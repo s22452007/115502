@@ -489,118 +489,121 @@ class _MilestoneCelebrationState extends State<_MilestoneCelebration>
               ),
             ),
           ),
-          // 卡片
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 48),
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.35),
-                  blurRadius: 30,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 56)),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: accent,
+          // 卡片（矮螢幕＋大字體時內容可能超出畫面，所以可以捲動）
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.35),
+                    blurRadius: 30,
+                    spreadRadius: 2,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  theme,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '已收集 $unlocked / $total 個單字',
-                  style: const TextStyle(fontSize: 13, color: AppColors.textGrey),
-                ),
-                // 有獎勵可領：說清楚領得到什麼，並給一個直接去領的出口
-                if (_hasReward) ...[
-                  const SizedBox(height: 18),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          '獎勵待領取',
-                          style: TextStyle(fontSize: 12, color: AppColors.textGrey),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          _rewardLine,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w900,
-                            color: accent,
-                          ),
-                        ),
-                      ],
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 56)),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: accent,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accent,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(23),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).maybePop(); // 先收掉慶祝動畫
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ThemeCollectionScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        '去收集冊領取',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    theme,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    child: const Text(
-                      '晚點再領',
-                      style: TextStyle(fontSize: 13, color: AppColors.textGrey),
-                    ),
+                  Text(
+                    '已收集 $unlocked / $total 個單字',
+                    style: const TextStyle(fontSize: 13, color: AppColors.textGrey),
                   ),
+                  // 有獎勵可領：說清楚領得到什麼，並給一個直接去領的出口
+                  if (_hasReward) ...[
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            '獎勵待領取',
+                            style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _rewardLine,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w900,
+                              color: accent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accent,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(23),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).maybePop(); // 先收掉慶祝動畫
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ThemeCollectionScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          '去收集冊領取',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      child: const Text(
+                        '晚點再領',
+                        style: TextStyle(fontSize: 13, color: AppColors.textGrey),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],

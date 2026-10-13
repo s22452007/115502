@@ -68,8 +68,10 @@ class FolderCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        AspectRatio(
-          aspectRatio: 1.0, 
+        // Flexible：字體放大時方塊自動縮小，讓下方文字不會超出格子
+        Flexible(
+          child: AspectRatio(
+          aspectRatio: 1.0,
           child: GestureDetector(
             onTap: onTap,
             child: Container(
@@ -123,8 +125,9 @@ class FolderCard extends StatelessWidget {
               ),
             ),
           ),
+          ),
         ),
-        
+
         Padding(
           padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
           child: Column(

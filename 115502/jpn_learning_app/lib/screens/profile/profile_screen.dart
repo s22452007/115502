@@ -286,7 +286,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   friendId: userProvider.friendId,
                                   originalName: userName,
                                   radius: 50,
-                                  isPremium: userProvider.isPremium,
+                                  // 編輯時右下角換成筆的按鈕，會員徽章也在右下角會疊在一起，先藏起來
+                                  isPremium: userProvider.isPremium && !_isEditing,
                                 ),
                               ),
                             ),

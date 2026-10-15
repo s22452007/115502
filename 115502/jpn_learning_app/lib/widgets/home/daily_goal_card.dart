@@ -427,20 +427,11 @@ class _RewardOverlayState extends State<_RewardOverlay>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _revealed ? '恭喜！' : '選一個禮物盒！',
+                  _revealed ? '今日獎勵' : '選一個禮物盒',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 26,
+                    fontSize: 24,
                     fontWeight: FontWeight.w900,
-                    shadows: [Shadow(color: Colors.black38, blurRadius: 8)],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _revealed ? '' : '今日獎勵就藏在其中一個',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -544,9 +535,8 @@ class _RewardOverlayState extends State<_RewardOverlay>
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.amber.withValues(alpha: 0.6),
-                    blurRadius: 24,
-                    spreadRadius: 2,
+                    color: Colors.white.withValues(alpha: 0.35),
+                    blurRadius: 20,
                   ),
                 ]
               : [
@@ -561,15 +551,23 @@ class _RewardOverlayState extends State<_RewardOverlay>
     );
   }
 
+  /// 禮物盒本體：白底加十字緞帶，用色塊畫，不用 emoji
+  Widget _buildRibbon({required bool faded}) {
+    final color = faded
+        ? Colors.white.withValues(alpha: 0.35)
+        : AppColors.primary;
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(width: 14, color: color),
+        Container(height: 14, color: color),
+      ],
+    );
+  }
+
   Widget _buildBoxContent(bool isSelected, bool isOther) {
     if (isOther) {
-      return Text(
-        '❓',
-        style: TextStyle(
-          fontSize: 36,
-          color: Colors.white.withValues(alpha: 0.6),
-        ),
-      );
+      return _buildRibbon(faded: true);
     }
 
     if (isSelected && _loading) {
@@ -591,7 +589,6 @@ class _RewardOverlayState extends State<_RewardOverlay>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🎁', style: TextStyle(fontSize: 28)),
             Text(
               '+$_pts',
               style: const TextStyle(
@@ -609,6 +606,6 @@ class _RewardOverlayState extends State<_RewardOverlay>
       );
     }
 
-    return const Text('🎁', style: TextStyle(fontSize: 46));
+    return _buildRibbon(faded: false);
   }
 }

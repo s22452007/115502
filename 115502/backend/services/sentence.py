@@ -141,6 +141,14 @@ def get_task():
 _RUBY_PATTERN = re.compile(
     r'\[([^|\]]+)\|[^\]]+\]|([一-鿿㐀-䶿々]+)\[[぀-ヿ]+\]|\[([^|\[\]]+)\]')
 
+# AI 就算被要求不要用，偶爾還是會在總評、原因裡加 emoji，這裡統一拿掉
+_EMOJI_PATTERN = re.compile(
+    '[\U0001F000-\U0001FAFF☀-➿⬀-⯿⌀-⏿️‍]+')
+
+
+def _strip_emoji(text):
+    return re.sub(r'[ \t]{2,}', ' ', _EMOJI_PATTERN.sub('', str(text or ''))).strip()
+
 
 def _normalize_feedback(result):
     """整理 AI 批改結果，讓 App 能穩定分區顯示，也讓存進資料庫的內容維持純文字。
@@ -155,9 +163,12 @@ def _normalize_feedback(result):
     corrections = []
     for c in result.get('corrections') or []:
         if isinstance(c, dict) and c.get('original') and c.get('corrected'):
-            corrections.append({k: str(c.get(k) or '').strip() for k in ('original', 'corrected', 'reason')})
+            corrections.append({k: _strip_emoji(c.get(k)) for k in ('original', 'corrected', 'reason')})
     corrections = corrections[:5]
     result['corrections'] = corrections
+    for key in ('summary', 'translation', 'strict_feedback'):
+        if result.get(key):
+            result[key] = _strip_emoji(result[key])
 
     ruby = str(result.get('corrected_ruby') or result.get('corrected_sentence') or '').strip()
     result['corrected_ruby'] = ruby
@@ -173,10 +184,10 @@ def _normalize_feedback(result):
     return result
 
 
-# 選用單字加分：每用到一個選用的單字 +10 點，最多算 3 個（+30）。
+# 選用單字加分：每用到一個選用的單字 +1 點，最多算 3 個（+3）。
 # 原本寫在 AI 計分規則裡（基礎 60 分、每個單字 +10），但 AI 遇到好句子一律給 100，
 # 有沒有用單字分數都一樣；現在改成 AI 分數只看文法，單字另外加在獎勵點數上。
-VOCAB_BONUS_EACH = 10
+VOCAB_BONUS_EACH = 1
 VOCAB_BONUS_MAX_WORDS = 3
 
 
@@ -273,7 +284,7 @@ def evaluate_sentence():
         - corrected_ruby：同一句，但漢字一律用 [漢字|平假名] 標記讀音，例如 [犬|いぬ]に、[新|あたら]しい。
           方括號只能用來標讀音，片假名、平假名和指定單字都不要加方括號（不要寫成 [リード]）。
         - translation：修正後句子的繁體中文翻譯。
-        所有說明用繁體中文，不要夾雜英文術語，不要用 markdown 符號。
+        所有說明用繁體中文，不要夾雜英文術語，不要用 markdown 符號，也不要用任何 emoji 或表情符號。
         請以純 JSON 格式回傳（絕對不可加 Markdown 標籤）：
         {{
             "score": 85,
@@ -297,7 +308,7 @@ def evaluate_sentence():
         # 交由 Gemini 批改
         result = _normalize_feedback(_analyze())
         score = result.get('score', 0)
-        base_points = 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
+        base_points = 8 if score >= 90 else (5 if score >= 80 else (2 if score >= 60 else 0))
         # 單字加分：及格（60 分以上）才給，避免把單字硬塞進不通的句子來拿點數
         used = _used_vocabs(user_sentence, selected_vocabs, result.get('used_vocabs'))
         vocab_bonus = VOCAB_BONUS_EACH * min(len(used), VOCAB_BONUS_MAX_WORDS) if score >= 60 else 0
@@ -322,7 +333,8 @@ def evaluate_sentence():
                 ai_feedback=result.get('strict_feedback', ''),
                 score=score,
                 points_earned=points_earned,
-                is_claimed=not uses_points(user)
+                # 不及格 0 點也直接標已領取，歷史頁才不會出現「領取 0 點」
+                is_claimed=not uses_points(user) or points_earned == 0
             )
             db.session.add(new_record)
             db.session.commit()
@@ -384,7 +396,7 @@ def get_history(user_id):
             "grammar_point": r.grammar_point,
             "user_sentence": r.user_sentence,
             "corrected_sentence": r.corrected_sentence,
-            "ai_feedback": r.ai_feedback,
+            "ai_feedback": _strip_emoji(r.ai_feedback),  # 舊紀錄可能還帶 emoji
             "score": r.score,
             "points_earned": r.points_earned,
             "is_claimed": r.is_claimed,

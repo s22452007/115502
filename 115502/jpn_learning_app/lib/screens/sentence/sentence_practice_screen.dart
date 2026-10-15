@@ -417,14 +417,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       builder: (context) {
         final nextText = _isAssignment ? '再試一次' : '下一題';
         return AppDialog(
-          header: Icon(
-            isCorrect
-                ? Icons.verified_rounded
-                : Icons.edit_note_rounded,
-            color: isCorrect ? const Color(0xFF10B981) : Colors.orange,
-            size: 70,
-          ),
-          title: isCorrect ? '太棒了！造句非常完美！' : '還有進步空間喔！',
+          title: isCorrect ? '文法正確' : '還有地方可以修改',
           titleColor: isCorrect ? const Color(0xFF10B981) : Colors.orange,
           centered: true,
           // 教育版學生沒有點數：只有一顆「下一題」主按鈕；一般使用者多一顆「去領點數」

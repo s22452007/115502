@@ -36,7 +36,7 @@ class _SentenceHistoryScreenState extends State<SentenceHistoryScreen> {
       setState(() => _records[index]['is_claimed'] = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('成功領取 $points 點 J-pts！ 🎉'),
+          content: Text('已領取 $points 點 J-pts'),
           backgroundColor: Colors.amber[700],
           behavior: SnackBarBehavior.floating,
         )
@@ -45,36 +45,47 @@ class _SentenceHistoryScreenState extends State<SentenceHistoryScreen> {
     }
   }
 
-  // 查看簡短評語的對話框
+  // 查看批改內容的對話框：與批改結果同一套分區（你的句子 → 參考句子 → 修改建議）
   void _showFeedbackDialog(Map<String, dynamic> record) {
+    final sentence = (record['user_sentence'] ?? '').toString();
+    final corrected = (record['corrected_sentence'] ?? '').toString();
+    final feedback = (record['ai_feedback'] ?? '').toString().trim();
+
     AppDialog.message(
       context,
-      title: '評分：${record['score']}',
+      title: '${record['grammar_point'] ?? ''}　${record['score']} 分',
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('📝 你的造句', style: TextStyle(color: Colors.grey, fontSize: 13)),
-          Text(record['user_sentence'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          const Text('✨ 老師訂正', style: TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold)),
-          Text(record['corrected_sentence'] ?? '', style: const TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('💡 重點講評', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(record['ai_feedback'] ?? '表現不錯！'),
-              ],
+          _label('你的句子', first: true),
+          Text(sentence, style: const TextStyle(fontSize: 16, height: 1.5, color: AppColors.textGrey)),
+          if (corrected.isNotEmpty && corrected != sentence) ...[
+            _label('參考句子'),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(corrected,
+                  style: const TextStyle(fontSize: 17, height: 1.5, color: AppColors.textDark)),
             ),
-          )
+          ],
+          if (feedback.isNotEmpty) ...[
+            _label(corrected.isNotEmpty && corrected != sentence ? '修改建議' : '講評'),
+            Text(feedback, style: const TextStyle(fontSize: 14, height: 1.6, color: AppColors.textDark)),
+          ],
         ],
       ),
+    );
+  }
+
+  static Widget _label(String text, {bool first = false}) {
+    return Padding(
+      padding: EdgeInsets.only(top: first ? 0 : 18, bottom: 8),
+      child: Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textSubtle)),
     );
   }
 

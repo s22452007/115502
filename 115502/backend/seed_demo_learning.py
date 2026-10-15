@@ -57,8 +57,14 @@ def _insert(conn, table, now, **vals):
 
 
 def _points(score):
-    # 與 services/sentence.py、services/article.py 的發點規則相同
+    # 與 services/article.py 的朗讀發點規則相同
     return 50 if score >= 90 else (30 if score >= 80 else (10 if score >= 60 else 5))
+
+
+def _sentence_points(score, vocab_count):
+    # 與 services/sentence.py 的造句發點規則相同（單字加分及格才給）
+    base = 8 if score >= 90 else (5 if score >= 80 else (2 if score >= 60 else 0))
+    return base + (min(vocab_count, 3) if score >= 60 else 0)
 
 
 def clean(conn):
@@ -136,10 +142,11 @@ def seed(conn):
         ('心怡', '〜てください', ['ちょっと'], 'ちょっと待ってください。', 'ちょっと待ってください。', '1. 正確。', 92, 1),
     ]
     for i, (who, grammar, vocabs, sentence, corrected, feedback, score, claimed) in enumerate(sentences):
+        pts = _sentence_points(score, len(vocabs))
         _insert(conn, 'sentence_practice_record', now, user_id=users[who], grammar_point=grammar,
                 selected_vocabs=json.dumps(vocabs, ensure_ascii=False), user_sentence=sentence,
                 corrected_sentence=corrected, ai_feedback=feedback, score=score,
-                points_earned=_points(score), is_claimed=claimed,
+                points_earned=pts, is_claimed=1 if pts == 0 else claimed,
                 created_at=now - timedelta(minutes=37 * (len(sentences) - i)))
 
     # ---- 朗讀成績（柏宇對同一篇唸 6 次，示範重複測驗偵測）----

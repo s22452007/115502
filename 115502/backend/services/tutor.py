@@ -1,8 +1,54 @@
+import re
 from flask import Blueprint, request, jsonify
 from utils import gemini_client
 
 # 建立 Blueprint
 tutor_bp = Blueprint('tutor', __name__)
+
+# 回覆開頭的訂正行：[訂正]、【訂正】、[訂正|ていせい]、訂正：…（和 App 端的判斷一致）
+_CORRECTION_LINE = re.compile(
+    r'^[\s\*_#>•·\-]*(?:[\[【（(]\s*訂正(?:\|[^\]】）)]*)?\s*[\]】）)]|訂正\s*[:：])\s*[:：]?\s*(.*)$')
+_FURIGANA = re.compile(r'\[([^|\]]+)\|[^\]]+\]')
+_KANA = re.compile(r'[぀-ゟ゠-ヿ]')
+
+
+def _normalize(s):
+    """去標音、去標點與空白，只留文字本體，方便比對「訂正的是不是這一句」"""
+    s = _FURIGANA.sub(r'\1', s or '')
+    return re.sub(r'[\s。、，,.!！?？「」『』（）()\[\]【】・…～~\-]', '', s)
+
+
+def strip_stale_corrections(reply, user_message):
+    """
+    只保留「針對使用者這一次發言」的訂正行。
+
+    AI 看得到前文，偶爾會把對話紀錄裡以前說錯的句子再拿出來訂正一次；
+    提示詞已經禁止，但模型不一定每次都遵守，所以後端再守一道：
+      - 使用者這次說的是中文（沒有假名）→ 訂正行全部拿掉
+      - 訂正的「錯誤說法」在這次發言裡找不到 → 拿掉
+    其餘內容原樣保留。
+    """
+    if not reply:
+        return reply
+    msg_norm = _normalize(user_message)
+    msg_is_japanese = bool(_KANA.search(user_message or ''))
+    kept = []
+    for line in reply.split('\n'):
+        m = _CORRECTION_LINE.match(line.strip())
+        if not m:
+            kept.append(line)
+            continue
+        if not msg_is_japanese:
+            continue
+        body = m.group(1).replace('*', '')
+        wrong = re.split(r'\s*(?:→|->|⇒|=>)\s*', body, maxsplit=1)[0]
+        wrong_norm = _normalize(wrong)
+        # 「錯誤說法」要出現在這次發言裡（AI 可能少抄一兩個字，所以也接受大部分字元都在）
+        if wrong_norm and (wrong_norm in msg_norm or
+                           sum(ch in msg_norm for ch in wrong_norm) >= 0.8 * len(wrong_norm)):
+            kept.append(line)
+    text = '\n'.join(kept)
+    return re.sub(r'^\s*\n+', '', text) if text.strip() else reply
 
 # 金鑰與模型由 utils/gemini_client 統一管理
 #（AI 對話有專用金鑰，額度用完會自動切換到備用金鑰）
@@ -94,7 +140,11 @@ def get_ai_reply(topic, user_message, chat_history, japanese_level, dialect_id=N
         print("🔍 準備呼叫 Gemini API...")
         response = gemini_client.generate_content('tutor', prompt)
         print("✅ Gemini 回覆完成！")
-        return response.text, True   # (回覆內容, 是否成功)
+        # 把不是針對這一句的訂正拿掉（開場白沒有使用者發言，整段照原樣回）
+        reply = response.text
+        if user_message != "[幫我開場]":
+            reply = strip_stale_corrections(reply, user_message)
+        return reply, True   # (回覆內容, 是否成功)
 
     except gemini_client.GeminiQuotaExhausted as e:
         # 額度用完：明確說明原因，不要讓使用者以為是暫時故障而一直重試

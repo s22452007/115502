@@ -4,26 +4,56 @@
     {
       "name": "backend",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd /d C:\\Users\\user\\115502\\115502\\backend && C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe app.py"],
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\user\\115502\\115502\\backend && C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe app.py"
+      ],
       "port": 5050
     },
     {
       "name": "admin",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd /d C:\\Users\\user\\115502\\115502\\backend && C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe admin_app.py"],
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\user\\115502\\115502\\backend && C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe admin_app.py"
+      ],
       "port": 5001
     },
     {
       "name": "admin-demo",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd /d C:\\Users\\user\\115502\\115502\\backend && set DATABASE_URL=sqlite:///C:/Users/user/AppData/Local/Temp/claude/C--Users-user-115502/58573cdd-a06a-4910-9ca4-7be690122a61/scratchpad/demo/jlens_demo.db&& set PYTHONIOENCODING=utf-8&& C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe admin_app.py"],
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\user\\115502\\115502\\backend && set DATABASE_URL=sqlite:///C:/Users/user/AppData/Local/Temp/claude/C--Users-user-115502/58573cdd-a06a-4910-9ca4-7be690122a61/scratchpad/demo/jlens_demo.db&& set PYTHONIOENCODING=utf-8&& C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe admin_app.py"
+      ],
       "port": 5001
     },
     {
       "name": "frontend",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd /d C:\\Users\\user\\115502\\115502\\jpn_learning_app && flutter run -d web-server --release --web-port 8080 --web-hostname localhost"],
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\user\\115502\\115502\\jpn_learning_app && flutter run -d web-server --release --web-port 8080 --web-hostname localhost"
+      ],
       "port": 8080
+    },
+    {
+      "name": "backend-demo",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\user\\115502\\115502\\backend && set DATABASE_URL=sqlite:///C:/Users/user/AppData/Local/Temp/claude/C--Users-user-115502/ba1b4573-a157-44ec-9db0-dc9da009a901/scratchpad/demo/jlens_demo.db&& set PYTHONIOENCODING=utf-8&& C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe app.py"
+      ],
+      "port": 5050
+    },
+    {
+      "name": "webdbg",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python313\\python.exe -m http.server 8099 --directory C:/Users/user/AppData/Local/Temp/claude/C--Users-user-115502/ba1b4573-a157-44ec-9db0-dc9da009a901/scratchpad/webdbg"
+      ],
+      "port": 8099
     }
   ]
 }

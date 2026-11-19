@@ -5,6 +5,7 @@ AI 對話歷史紀錄 API。
 一次進入對話畫面 = 一個「場次」(ChatSession)，
 場次底下掛著一則則訊息 (ChatMessage)。
 """
+import re
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 
@@ -13,6 +14,9 @@ from utils.auth_token import forbid_unless_owner
 from models import ChatSession, ChatMessage, Dialect
 
 chat_history_bp = Blueprint('chat_history', __name__)
+
+# AI 回覆開頭的文法訂正行（[訂正]、【訂正】、[訂正|ていせい]、訂正：…），和 App 端的判斷一致
+_CORRECTION_LINE = re.compile(r'^[\s\*_#>•·\-]*(?:[\[【（(]\s*訂正(?:\|[^\]】）)]*)?\s*[\]】）)]|訂正\s*[:：])')
 
 
 def _session_to_dict(s, preview=None):
@@ -88,7 +92,10 @@ def list_sessions():
                     .first())
         preview = last_msg.content if last_msg else None
         if preview:
-            preview = preview.split('\n')[0][:40]  # 只取第一行、限制長度
+            # AI 回覆開頭可能有 [訂正] 行，預覽要跳過它、取真正的第一句
+            lines = [l.strip() for l in preview.split('\n')
+                     if l.strip() and not _CORRECTION_LINE.match(l.strip())]
+            preview = (lines[0] if lines else preview.split('\n')[0])[:40]
         results.append(_session_to_dict(s, preview))
 
     return jsonify({'sessions': results}), 200

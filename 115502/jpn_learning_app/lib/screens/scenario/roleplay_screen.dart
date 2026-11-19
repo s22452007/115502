@@ -499,12 +499,20 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     final messages = (data['messages'] as List?) ?? [];
     setState(() {
       _messages.addAll(
-        messages.map(
-          (m) => {
-            'text': m['content']?.toString() ?? '',
-            'isUserMessage': m['role'] == 'user',
-          },
-        ),
+        messages.map((m) {
+          final isUser = m['role'] == 'user';
+          final content = m['content']?.toString() ?? '';
+          // 紀錄裡存的是 AI 原始回覆（含 [訂正] 那一行），
+          // 接續對話時也要拆出來，才不會和一般回覆混在一起
+          final parsed = isUser
+              ? (reply: content, correction: null)
+              : _extractCorrection(content);
+          return {
+            'text': parsed.reply,
+            'isUserMessage': isUser,
+            'correction': parsed.correction,
+          };
+        }),
       );
       _isLoadingHistory = false;
       // 接續對話時給幾個常用的回應選項
@@ -824,21 +832,128 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
     );
   }
 
+  // AI 不一定完全照格式輸出，常見變形有：**[訂正]**、【訂正】、[訂正|ていせい]、訂正：
+  // 這些都要認得出來，否則訂正會混在一般回覆裡、看不出差別。
+  static final RegExp _correctionTagRegExp = RegExp(
+    r'^[\s\*_#>•·\-]*(?:[\[【（(]\s*訂正(?:\|[^\]】）)]*)?\s*[\]】）)]|訂正\s*[:：])\s*[:：]?\s*(.*)$',
+  );
+
+  /// 一句話有多個錯誤時 AI 會給多行 [訂正]，全部抓出來（用換行隔開），
+  /// 不能只抓第一行，否則其餘的會混進一般回覆裡。
   ({String reply, String? correction}) _extractCorrection(String raw) {
-    final lines = raw.split('\n');
-    final index = lines.indexWhere((l) => l.trim().startsWith('[訂正]'));
-    if (index == -1) {
+    final corrections = <String>[];
+    final rest = <String>[];
+    for (final line in raw.split('\n')) {
+      final m = _correctionTagRegExp.firstMatch(line.trim());
+      if (m == null) {
+        rest.add(line);
+        continue;
+      }
+      final c = (m.group(1) ?? '')
+          .replaceAll('**', '')
+          .replaceAll('*', '')
+          .trim();
+      if (c.isNotEmpty) corrections.add(c);
+    }
+    if (corrections.isEmpty) {
       return (reply: raw, correction: null);
     }
-
-    final correction = lines[index].trim().replaceFirst('[訂正]', '').trim();
-    lines.removeAt(index);
     // 去掉訂正行後可能留下開頭空行
-    final reply = lines.join('\n').replaceFirst(RegExp(r'^\s*\n+'), '');
-
+    final reply = rest.join('\n').replaceFirst(RegExp(r'^\s*\n+'), '');
     return (
       reply: reply.trim().isEmpty ? raw : reply,
-      correction: correction.isEmpty ? null : correction,
+      correction: corrections.join('\n'),
+    );
+  }
+
+  // 訂正卡片：用紅字＋粗體和一般回覆做出區分。
+  // 訂正內容格式為「錯誤說法 → 正確說法（說明）」，拆開後分別顯示：
+  //   錯誤：紅色＋刪除線；正確：紅色粗體；說明：灰色小字。
+  // 拆不開（AI 沒照格式）就整句紅色粗體顯示。
+  Widget _buildCorrectionCard(String correction) {
+    final red = Colors.red.shade700;
+    final items = correction
+        .split('\n')
+        .map((l) => FuriganaText.cleanFuriganaForTts(l).trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+
+    final children = <Widget>[
+      Text(
+        '文法訂正',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: red),
+      ),
+    ];
+    for (var i = 0; i < items.length; i++) {
+      final text = items[i];
+      final arrowMatch = RegExp(r'\s*(→|->|⇒|=>)\s*').firstMatch(text);
+      String? wrong;
+      String right = text;
+      String? note;
+      if (arrowMatch != null) {
+        wrong = text.substring(0, arrowMatch.start).trim();
+        right = text.substring(arrowMatch.end).trim();
+        // 句尾的（說明）另外拆出來
+        final noteMatch = RegExp(r'[（(]([^（()）]*)[）)]\s*$').firstMatch(right);
+        if (noteMatch != null) {
+          note = noteMatch.group(1)?.trim();
+          right = right.substring(0, noteMatch.start).trim();
+        }
+      }
+      children.add(SizedBox(height: i == 0 ? 4 : 10));
+      if (wrong != null && wrong.isNotEmpty) {
+        children.add(
+          Text(
+            wrong,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: red,
+              decoration: TextDecoration.lineThrough,
+              decorationColor: red,
+            ),
+          ),
+        );
+      }
+      children.add(
+        Text(
+          right,
+          style: TextStyle(
+            fontSize: 15,
+            height: 1.4,
+            fontWeight: FontWeight.bold,
+            color: red,
+          ),
+        ),
+      );
+      if (note != null && note.isNotEmpty) {
+        children.add(const SizedBox(height: 4));
+        children.add(
+          Text(
+            note,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        );
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
     );
   }
 
@@ -1129,57 +1244,7 @@ class _RoleplayScreenState extends State<RoleplayScreen> {
                               : CrossAxisAlignment.start,
                           children: [
                             if (correction != null && !isUserMessage)
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.orange.shade200,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(
-                                      Icons.lightbulb,
-                                      color: Colors.orange,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '文法小提醒',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.orange.shade800,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 3),
-                                          // 訂正內容也可能含標音，顯示前先清掉
-                                          Text(
-                                            FuriganaText.cleanFuriganaForTts(
-                                              correction,
-                                            ),
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              height: 1.4,
-                                              color: Colors.orange.shade800,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              _buildCorrectionCard(correction),
                             GestureDetector(
                               onLongPress: () {
                                 if (!isUserMessage) {

@@ -3,6 +3,7 @@
   py render.py                  完整輸出 Snap_to_Learn_宣傳影片.mp4
   py render.py --preview 5 40   只截指定秒數的畫面到 build/preview/，檢查用
   py render.py --fps 24         降低幀率加快輸出
+  py render.py --real           手機畫面改用真實 App 截圖（先在 真實畫面/ 跑 py compose.py）
 """
 import argparse
 import json
@@ -48,12 +49,16 @@ def write_srt(cues):
     (ROOT / "Snap_to_Learn_宣傳影片.srt").write_text("\n".join(lines), encoding="utf-8")
 
 
+REAL = "--real" in sys.argv  # 手機改用真實 App 截圖（真實畫面/real_phone.js）
+
+
 def open_page(p):
     browser = p.chromium.launch(channel="chrome")
     page = browser.new_page(viewport={"width": 1920, "height": 1080})
-    page.add_init_script("window.__RENDER__=true")
+    page.add_init_script("window.__RENDER__=true" + (";window.__REAL__=true" if REAL else ""))
     page.goto((ROOT / "video.html").as_uri())
     page.evaluate("document.fonts.ready")
+    page.evaluate("window.READY")
     page.wait_for_timeout(300)
     return browser, page
 
@@ -120,6 +125,7 @@ if __name__ == "__main__":
     ap.add_argument("--preview", nargs="*", type=float)
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--audio-only", action="store_true", help="只重混音軌（畫面沿用上次）")
+    ap.add_argument("--real", action="store_true", help="手機畫面用真實 App 截圖")
     a = ap.parse_args()
     cues = prepare()
     if a.preview is not None:

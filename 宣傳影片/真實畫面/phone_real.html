@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Snap to Learn 手機畫面</title>
+<script src="timeline.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:500px;height:1000px;overflow:hidden;background:#F5F5F0}
+/* 手機：螢幕 393×896（上方 44 狀態列＋App 畫面 852），四周 16px 邊框 */
+#phone{position:absolute;left:37px;top:36px;width:426px;height:928px;border-radius:62px;background:#15181B;
+  box-shadow:0 30px 60px rgba(34,49,63,.22),0 0 0 2px #2B3036 inset}
+#screen{position:absolute;left:53px;top:52px;width:394px;height:896px;border-radius:47px;overflow:hidden;background:#fff}
+#bar{position:absolute;left:0;top:0;width:100%;height:44px;z-index:5;display:flex;align-items:center;justify-content:space-between;
+  padding:4px 30px 0;font:700 15px "Segoe UI",sans-serif;color:#22313F}
+#bar.light{color:#fff}
+#bar .icons{display:flex;gap:5px;align-items:center}
+#bar .icons i{display:block;width:3px;background:currentColor;border-radius:1px}
+#bar .batt{width:24px;height:11px;border:1.5px solid currentColor;border-radius:3px;padding:1px;opacity:.9}
+#bar .batt b{display:block;height:100%;width:80%;background:currentColor;border-radius:1px}
+#island{position:absolute;left:50%;top:10px;width:118px;height:32px;margin-left:-59px;border-radius:18px;background:#000;z-index:6}
+.shot{position:absolute;left:0;top:44px;width:394px;height:852px;display:none;will-change:transform,opacity}
+.shot img{width:100%;height:100%;display:block}
+.shot.dim::after{content:'';position:absolute;inset:0;background:#000;opacity:var(--dim,0)}
+#tap{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.55);
+  border:3px solid rgba(34,49,63,.45);z-index:8;opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="phone"></div>
+<div id="screen">
+  <div id="bar"><span>9:41</span><span class="icons"><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i><i style="height:11px"></i><span class="batt"><b></b></span></span></div>
+  <div id="island"></div>
+  <div id="shots"></div>
+  <div id="tap"></div>
+</div>
+<script>
+const T = window.TIMELINE, TRANS = .45, TAP = .45;
+const host = document.getElementById('shots'), bar = document.getElementById('bar'), tap = document.getElementById('tap');
+const els = T.map(it => {
+  const d = document.createElement('div'); d.className = 'shot dim';
+  const img = document.createElement('img'); img.src = it.src; d.appendChild(img); host.appendChild(d); return d;
+});
+window.READY = Promise.all([...document.images].map(i => i.decode().catch(() => {})));
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const clamp = x => Math.max(0, Math.min(1, x));
+function place(el, x, y, o, dim) {
+  el.style.display = 'block';
+  el.style.transform = `translate(${x}px,${y}px)`;
+  el.style.opacity = o;
+  el.style.setProperty('--dim', dim || 0);
+}
+function seek(t) {
+  els.forEach(e => e.style.display = 'none');
+  let i = T.findIndex((it, k) => t < it.t + it.dur || k === T.length - 1);
+  if (i < 0) i = T.length - 1;
+  const cur = T[i], prev = T[i - 1], local = t - cur.t;
+  const p = prev && cur.trans !== 'none' ? ease(clamp(local / TRANS)) : 1;
+  const W = 394, H = 852;
+  if (p < 1) {
+    const a = els[i - 1], b = els[i];
+    switch (cur.trans) {
+      case 'push': place(a, -W * .3 * p, 0, 1, .25 * p); place(b, W * (1 - p), 0, 1); break;
+      case 'scroll': place(a, 0, -H * .35 * p, 1 - p); place(b, 0, H * .35 * (1 - p), p); break;
+      case 'tab': place(a, -40 * p, 0, 1 - p); place(b, 40 * (1 - p), 0, p); break;
+      default: place(a, 0, 0, 1); place(b, 0, 0, p);
+    }
+    if (cur.trans === 'push') b.style.boxShadow = '-12px 0 24px rgba(0,0,0,.12)';
+  } else {
+    place(els[i], 0, 0, 1); els[i].style.boxShadow = 'none';
+  }
+  const showBar = p < .5 && prev ? prev : cur;
+  bar.style.background = showBar.bar;
+  bar.classList.toggle('light', showBar.dark);
+  // 點擊圈：在離開這張之前出現
+  const left = cur.t + cur.dur - t;
+  if (cur.tap && left < TAP && i < T.length - 1) {
+    const k = 1 - left / TAP;
+    tap.style.left = cur.tap[0] + 'px'; tap.style.top = (cur.tap[1] + 44) + 'px';
+    tap.style.opacity = k < .7 ? Math.min(1, k * 4) : (1 - k) / .3;
+    tap.style.transform = `scale(${.6 + .5 * Math.min(1, k * 2)})`;
+  } else tap.style.opacity = 0;
+}
+seek(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>後台段落</title>
+<script src="admin_timeline.js"></script>
+<style>
+:root{--g:#4E8B4C;--g-d:#2F5E33;--bg:#F5F5F0;--ink:#22313F;--ink2:#5B6670}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+body{font-family:"Segoe UI","Microsoft JhengHei UI","Microsoft JhengHei",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;
+  background:radial-gradient(900px 700px at 1350px 520px,rgba(78,139,76,.14),transparent 70%),
+             radial-gradient(700px 500px at 200px 980px,rgba(198,177,59,.12),transparent 70%),var(--bg)}
+/* 左上：章節字卡（和 App 段同一套字） */
+#kicker{position:absolute;left:150px;top:64px;display:flex;align-items:center;gap:18px;font-size:26px;font-weight:700;color:var(--g);letter-spacing:2px}
+#kicker b{font-family:"Segoe UI";font-size:26px;color:#fff;background:var(--g);border-radius:8px;padding:2px 12px;letter-spacing:0}
+#title{position:absolute;left:150px;top:150px;width:300px;font-size:52px;line-height:1.25;font-weight:900;letter-spacing:2px}
+#title em{font-style:normal;color:var(--g)}
+/* 瀏覽器視窗：內容 1280×720（截圖 1440×810 等比縮小） */
+#browser{position:absolute;left:520px;top:130px;width:1280px;height:760px;border-radius:16px;background:#fff;overflow:hidden;
+  box-shadow:0 40px 80px rgba(34,49,63,.22)}
+#chrome{height:40px;background:#EEF0EC;display:flex;align-items:center;gap:8px;padding:0 16px}
+#chrome i{width:12px;height:12px;border-radius:50%;display:block}
+#url{margin-left:18px;flex:1;height:24px;border-radius:12px;background:#fff;font:600 13px "Segoe UI";color:#8E9AAB;display:flex;align-items:center;padding:0 14px}
+#view{position:absolute;left:0;top:40px;width:1280px;height:720px;overflow:hidden;background:#fff}
+.page{position:absolute;inset:0;opacity:0}
+.page img{width:1280px;height:720px;display:block;transform-origin:50% 30%}
+#who{position:absolute;left:150px;top:470px;width:300px;display:flex;flex-direction:column;gap:14px}
+#who div{font-size:22px;font-weight:700;color:var(--ink2);padding:12px 18px;border-radius:12px;background:rgba(255,255,255,.7);border:2px solid transparent;transition:none}
+#who div.on{color:var(--g-d);border-color:var(--g);background:#fff}
+#cap{position:absolute;left:0;right:0;top:968px;text-align:center;opacity:0}
+#cap span{display:inline-block;max-width:1500px;padding:14px 38px;border-radius:16px;background:rgba(25,32,38,.82);color:#fff;font-size:42px;font-weight:700;letter-spacing:2px;line-height:1.3}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="kicker"><b>10</b>網頁後台</div>
+  <div id="title">一個後台，<br><em>管理與教學</em><br>都搞定</div>
+  <div id="who"></div>
+  <div id="browser">
+    <div id="chrome"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><div id="url"></div></div>
+    <div id="view"></div>
+  </div>
+  <div id="cap"><span id="captxt"></span></div>
+</div>
+<script>
+const A = window.ADMIN_TL;
+const view = document.getElementById('view'), url = document.getElementById('url'), who = document.getElementById('who');
+const pages = A.pages.map(p => { const d = document.createElement('div'); d.className = 'page';
+  const img = document.createElement('img'); img.src = p.src; d.appendChild(img); view.appendChild(d); return d; });
+A.roles.forEach(r => { const d = document.createElement('div'); d.textContent = r; who.appendChild(d); });
+window.READY = Promise.all([...document.images].map(i => i.decode().catch(() => {})));
+const clamp = x => Math.max(0, Math.min(1, x)), ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function seek(t) {
+  // 整段淡入（前 0.5 秒）
+  document.getElementById('stage').style.opacity = 1;
+  let cur = 0;
+  A.pages.forEach((p, k) => { if (t >= p.t) cur = k; });
+  pages.forEach((el, k) => {
+    const p = A.pages[k], local = t - p.t;
+    let o = 0;
+    if (k === cur) o = k === 0 ? 1 : ease(clamp(local / .5));
+    else if (k === cur - 1) o = 1;  // 下一張淡入時舊的墊在下面
+    el.style.opacity = o; el.style.zIndex = k === cur ? 2 : 1;
+  });
+  url.textContent = A.pages[cur].url;
+  [...who.children].forEach((d, k) => d.classList.toggle('on', A.pages[cur].role === k));
+  const c = A.caps.find(c => t >= c.start && t < c.end), cap = document.getElementById('cap');
+  if (c) { document.getElementById('captxt').textContent = c.text; cap.style.opacity = Math.min(1, (t - c.start) / .12, (c.end - t) / .12); }
+  else cap.style.opacity = 0;
+}
+seek(0);
+</script>
+</body>
+</html>

@@ -1297,5 +1297,7 @@ window.TOTAL=SCENES.reduce((a,s)=>a+s.dur,0);
   if(q.has('t')){seek(+q.get('t'));return}
   const t0=performance.now();(function loop(){const T=(performance.now()-t0)/1000%TOTAL;seek(T);requestAnimationFrame(loop)})();})();
 </script>
+<script src="真實畫面/timeline_video.js"></script>
+<script src="真實畫面/real_phone.js"></script>
 </body>
 </html>
